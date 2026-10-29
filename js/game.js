@@ -1,5 +1,4 @@
 import { save, persist } from './storage.js';
-import { sfx } from './audio.js';
 import { openModal, toast, confetti, updateCoins, starsHTML } from './ui.js';
 import { worldInfo, canFollow, packGroups, solve } from './levels.js';
 import { cardBack, svgUrl, icon, star, coin, placeIcon, lockIcon, keyIcon } from './lowpoly.js';
@@ -9,6 +8,40 @@ const RANKS = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K']
 export const COST = { extra: 150, wild: 250, undo: 50 };
 const STREAK_REWARD = 10; // cada 10 de racha: +1 comodín
 const LOCK_HUES = [350, 45, 200]; // color de cada pareja candado/llave
+const FLY_MS = 400;
+const FLY_EASE = 'cubic-bezier(0.33, 0.6, 0.35, 1)';
+const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+const buzz = () => navigator.vibrate?.(30);
+
+// Asentarse al aterrizar: un aplastón leve, el protagonismo es el vuelo.
+function squash(el) {
+  if (!el || reduced()) return;
+  el.animate([{ transform: 'scale(1.06, 0.94)' }, { transform: 'scale(0.98, 1.02)', offset: 0.5 }, { transform: 'none' }], {
+    duration: 240,
+    easing: 'ease-out',
+  });
+}
+
+// Lanzamiento: la carta se levanta, gira en el aire y cae en su destino.
+// spin = grados de giro (360 = una vuelta; 0 = solo un ladeo leve).
+// Las coordenadas son desplazamientos (px) respecto a donde está el elemento.
+function toss(el, { x0 = 0, y0 = 0, s0 = 1, r0 = 0 }, { x1 = 0, y1 = 0, s1 = 1, r1 = 0 }, spin = 0) {
+  const dir = x1 - x0 >= 0 ? 1 : -1;
+  const lift = Math.min(50, 18 + Math.hypot(x1 - x0, y1 - y0) * 0.1);
+  // Propiedades separadas (translate, rotate, scale): así el desplazamiento no gira con la carta
+  // y el giro es sobre su propio centro. Con transform: translate() + rotate el camino salía en espiral.
+  const k = (x, y, sc, r, offset) => ({ translate: `${x}px ${y}px`, scale: `${sc}`, rotate: `${r}deg`, ...(offset != null && { offset }) });
+  const mid = spin ? spin / 2 : 14;
+  const frames = [
+    k(x0, y0, s0, r0),
+    k(x0, y0 - 6, s0 * 1.06, r0 - 4 * dir, 0.12),
+    k((x0 + x1) / 2, (y0 + y1) / 2 - lift, Math.max(s0, s1) * 1.1, (r0 + r1) / 2 + mid * dir, 0.55),
+    k(x1, y1, s1, r1 + spin * dir),
+  ];
+  return el.animate(frames, { duration: reduced() ? 1 : spin ? FLY_MS + 80 : FLY_MS, easing: FLY_EASE, fill: 'forwards' }).finished;
+}
+
+const center = (r) => [r.left + r.width / 2, r.top + r.height / 2];
 
 export function faceHTML(c) {
   if (c.wild) return `<div class="face front wild">${star(true)}</div>`;
@@ -43,6 +76,8 @@ export class Game {
     root.append(this.el);
     this.onResize = () => this.layout();
     window.addEventListener('resize', this.onResize);
+    this.onKey = (e) => this.key(e);
+    window.addEventListener('keydown', this.onKey);
     this.layout();
     this.cards.forEach((c, i) => this.makeCardEl(c, i));
     this.renderPiles();
@@ -52,7 +87,18 @@ export class Game {
 
   destroy() {
     window.removeEventListener('resize', this.onResize);
+    window.removeEventListener('keydown', this.onKey);
     this.done = true;
+  }
+
+  // Teclado (PC): espacio roba, Z deshace, C comodín, Esc sale.
+  key(e) {
+    if (this.done || e.repeat || e.metaKey || e.ctrlKey || document.querySelector('.modal-back')) return;
+    const k = e.key.toLowerCase();
+    const act = { ' ': () => this.draw(), enter: () => this.draw(), z: () => this.undo(), backspace: () => this.undo(), c: () => this.useWild(), escape: () => this.exit() }[k];
+    if (!act) return;
+    e.preventDefault();
+    act();
   }
 
   build() {
@@ -66,10 +112,7 @@ export class Game {
       <header class="hud">
         <button class="icon-btn" data-a="exit" aria-label="Salir">${icon('close')}</button>
         <div class="hud-title"><b>${placeIcon(info.place)} Mundo ${level.world + 1}</b><small>Nivel ${level.index + 1}${level.boss ? ` · ${icon('crown', '#ffe46b', '#f5a712')} Jefe` : ''}</small></div>
-        <div class="hud-right">
-          <div class="pill coins">${coin()}<span data-coins>${save.coins}</span></div>
-          <button class="icon-btn" data-a="hint" aria-label="Pista">${icon('bulb', '#fff6b0', '#ffc93d')}</button>
-        </div>
+        <div class="pill coins">${coin()}<span data-coins>${save.coins}</span></div>
       </header>
       <div class="progress"><div class="bar"></div></div>
       <div class="board-wrap"><div class="board"></div><div class="streak"></div></div>
@@ -99,7 +142,6 @@ export class Game {
         exit: () => this.exit(),
         undo: () => this.undo(),
         wild: () => this.useWild(),
-        hint: () => this.hint(),
       };
       actions[a]?.();
     });
@@ -116,6 +158,7 @@ export class Game {
     if (dealIndex != null) {
       d.classList.add('deal');
       d.style.animationDelay = `${dealIndex * 18}ms`;
+      d.addEventListener('animationend', () => d.classList.remove('deal'), { once: true });
     }
     this.boardEl.append(d);
     c.el = d;
@@ -132,7 +175,7 @@ export class Game {
   layout() {
     const r = this.wrapEl.getBoundingClientRect();
     if (!r.width) return;
-    const { u, bw, bh, offsets } = packGroups(this.level.groups, r.width - 16, r.height - 16);
+    const { u, bw, bh, offsets } = packGroups(this.level.groups, r.width - 10, r.height - 10);
     this.u = Math.max(18, u);
     this.offsets = offsets;
     this.boardEl.style.width = `${bw * this.u}px`;
@@ -160,9 +203,7 @@ export class Game {
       if (c.removed || !c.el) continue;
       c.el.classList.toggle('up', this.isFree(c));
       if (c.lock != null) {
-        const locked = this.isLocked(c);
-        if (!locked && !c.el.classList.contains('unlocked')) sfx.unlock();
-        c.el.classList.toggle('unlocked', !locked);
+        c.el.classList.toggle('unlocked', !this.isLocked(c));
       }
     }
     const gone = this.cards.filter((c) => c.removed).length;
@@ -174,21 +215,55 @@ export class Game {
     this.renderWaste();
   }
 
-  // Mazo en abanico: la carta de la derecha es la siguiente que sale.
+  // Mazo en abanico alineado a la derecha: la carta de la derecha es la siguiente que sale.
+  // El ancho es fijo (según el mazo más grande que ha tenido), así robar no empuja la bandeja;
+  // lo que se recorre es el manojo.
   renderStock() {
     const n = this.stock.length;
     const cw = this.stockEl.offsetHeight / 1.4 || 56;
-    const step = n > 1 ? Math.min(cw * 0.16, (cw * 1.6) / (n - 1)) : 0;
-    this.stockEl.style.width = `${cw + step * Math.max(0, n - 1)}px`;
-    this.stockEl.innerHTML = n
-      ? Array.from({ length: n }, (_, i) => `<div class="card" style="left:${i * step}px">${inner({})}</div>`).join('') +
-        `<span class="badge count">${n}</span>`
-      : `<div class="empty-slot">+5</div>`;
+    this.stockMax = Math.max(this.stockMax || 0, n, 1);
+    const m = this.stockMax;
+    const step = m > 1 ? Math.min(cw * 0.16, (cw * 1.6) / (m - 1)) : 0;
+    const right = step * (m - 1);
+    this.stockEl.style.width = `${cw + right}px`;
+    const els = (this.stockEls ||= []);
+    while (els.length > n) els.pop().remove();
+    while (els.length < n) {
+      const d = document.createElement('div');
+      d.className = 'card';
+      d.style.left = `${right}px`;
+      d.innerHTML = inner({});
+      this.stockEl.append(d);
+      els.push(d);
+    }
+    els.forEach((d, i) => (d.style.left = `${right - (n - 1 - i) * step}px`));
+    this.stockEl.querySelector('.count, .empty-slot')?.remove();
+    this.stockEl.insertAdjacentHTML('beforeend', n ? `<span class="badge count">${n}</span>` : `<div class="empty-slot">+5</div>`);
+  }
+
+  stockTop() {
+    return this.stockEls?.[this.stockEls.length - 1] || this.stockEl;
+  }
+
+  // Carta suelta que vuela por encima de todo (del mazo, del comodín, de regreso al mazo).
+  flyer(c, rect, up) {
+    const f = document.createElement('div');
+    f.className = `card flyer${up ? ' up' : ''}`;
+    f.style.cssText = `position:fixed;left:${rect.left}px;top:${rect.top}px;--cw:${rect.width}px;z-index:9999;pointer-events:none`;
+    f.style.setProperty('--back', this.back);
+    f.innerHTML = inner(c);
+    document.body.append(f);
+    return f;
   }
 
   renderWaste() {
     const top = this.waste[this.waste.length - 1];
     this.wasteEl.innerHTML = top ? `<div class="card up">${inner(top)}</div>` : '';
+  }
+
+  landWaste() {
+    this.renderWaste();
+    squash(this.wasteEl.firstElementChild);
   }
 
   updateCounts() {
@@ -217,7 +292,7 @@ export class Game {
     const c = this.cards[id];
     if (!c || c.removed) return;
     if (!this.isFree(c) || !this.canPlay(c) || this.isLocked(c)) {
-      sfx.bad();
+      buzz();
       if (this.isFree(c) && this.isLocked(c) && !this.lockTold) {
         this.lockTold = true;
         toast('Juega la carta con la llave del mismo color');
@@ -242,25 +317,23 @@ export class Game {
       this.updateCounts();
     }
     this.history.push(h);
-    sfx.play(this.streak);
     this.showStreak();
 
     const el = c.el;
     c.el = null;
-    // Vuela de centro a centro (el giro es sobre el centro, así que no afecta).
+    // Vuela de centro a centro en arco y aterriza con rebote.
     el.classList.remove('deal', 'shake');
-    const a = el.getBoundingClientRect();
+    el.getAnimations().forEach((a) => a.cancel());
+    const [ax, ay] = center(el.getBoundingClientRect());
     const b = this.wasteEl.getBoundingClientRect();
-    const dx = b.left + b.width / 2 - (a.left + a.width / 2);
-    const dy = b.top + b.height / 2 - (a.top + a.height / 2);
+    const [bx, by] = center(b);
     el.classList.add('up', 'flying');
     el.style.zIndex = 9999;
     el.style.rotate = '0deg';
-    el.style.transform = `translate(${dx}px,${dy}px) scale(${b.width / this.u})`;
-    setTimeout(() => {
+    toss(el, { r0: c.rot }, { x1: bx - ax, y1: by - ay, s1: b.width / this.u }, 360).then(() => {
       el.remove();
-      this.renderWaste();
-    }, 260);
+      this.landWaste();
+    });
 
     this.refresh();
     this.checkEnd();
@@ -274,34 +347,79 @@ export class Game {
       }
       return this.stuck();
     }
+    const missed = this.playable();
     const c = this.stock.shift();
     this.history.push({ t: 'draw', streak: this.streak, bonus: this.bonus });
     this.streak = 0;
     this.waste.push(c);
-    sfx.draw();
     this.flyFromStock(c);
+    if (missed.length) setTimeout(() => this.warnMissed(missed), FLY_MS);
     this.checkEnd();
   }
 
+  // Robaste teniendo jugada: tiemblan las cartas que podías jugar y late el botón de deshacer.
+  warnMissed(missed) {
+    if (this.done) return;
+    const els = missed.filter((c) => !c.removed && c.el).map((c) => c.el);
+    if (!els.length) return;
+    for (const el of els) {
+      this.shake(el);
+    }
+    const u = this.el.querySelector('.undo-btn');
+    u.classList.remove('nudge');
+    void u.offsetWidth;
+    u.classList.add('nudge');
+  }
+
   flyFromStock(c) {
-    const from = this.stockEl.querySelector('.card:last-of-type') || this.stockEl;
-    const a = from.getBoundingClientRect();
+    const a = this.stockTop().getBoundingClientRect();
     const b = this.wasteEl.getBoundingClientRect();
-    const f = document.createElement('div');
-    f.className = 'card flyer';
-    f.style.cssText = `position:fixed;left:${a.left}px;top:${a.top}px;--cw:${b.width}px;z-index:9999`;
-    f.style.setProperty('--back', this.back);
-    f.innerHTML = inner(c);
-    document.body.append(f);
+    const f = this.flyer(c, { left: a.left, top: a.top, width: b.width }, false);
     // Quita la carta del mazo ya, pero deja el descarte viejo hasta que aterrice.
     this.renderStock();
     f.getBoundingClientRect();
-    f.classList.add('up', 'flying');
-    f.style.transform = `translate(${b.left - a.left}px,${b.top - a.top}px)`;
-    setTimeout(() => {
+    f.classList.add('up');
+    toss(f, {}, { x1: b.left - a.left, y1: b.top - a.top }, 0).then(() => {
       f.remove();
-      this.renderPiles();
-    }, 260);
+      this.landWaste();
+    });
+  }
+
+  // Deshacer una jugada: la carta sale del descarte y regresa volando a su lugar.
+  returnToBoard(c) {
+    const from = this.wasteEl.getBoundingClientRect();
+    this.waste.pop();
+    this.renderWaste();
+    this.makeCardEl(c);
+    c.el.classList.add('up');
+    const [ax, ay] = center(from);
+    const [bx, by] = center(c.el.getBoundingClientRect());
+    const el = c.el;
+    el.style.rotate = '0deg';
+    el.style.zIndex = 9999;
+    toss(el, { x0: ax - bx, y0: ay - by, s0: from.width / this.u }, { r1: c.rot }).then(() => {
+      el.style.rotate = `${c.rot}deg`;
+      el.style.zIndex = c.z * 100 + c.id;
+      el.getAnimations().forEach((x) => x.cancel());
+      squash(el);
+    });
+  }
+
+  // Deshacer un robo: la carta regresa al mazo y se voltea.
+  returnToStock() {
+    const c = this.waste.pop();
+    const a = this.wasteEl.getBoundingClientRect();
+    this.renderWaste();
+    this.stock.unshift(c);
+    const f = this.flyer(c, a, true);
+    const b = this.stockEl.getBoundingClientRect();
+    f.getBoundingClientRect();
+    f.classList.remove('up');
+    toss(f, {}, { x1: b.right - a.width - a.left, y1: b.top - a.top }, 0).then(() => {
+      f.remove();
+      this.renderStock();
+      squash(this.stockTop());
+    });
   }
 
   undo() {
@@ -312,20 +430,18 @@ export class Game {
     if (h.t === 'play') {
       const c = this.cards[h.id];
       c.removed = false;
-      this.waste.pop();
-      this.makeCardEl(c);
-      c.el.classList.add('up');
+      this.returnToBoard(c);
       if (h.granted) save.wild = Math.max(0, save.wild - 1);
     } else if (h.t === 'draw') {
-      this.stock.unshift(this.waste.pop());
+      this.returnToStock();
     } else if (h.t === 'wild') {
       this.waste.pop();
+      this.renderWaste();
       save.wild++;
     }
     this.streak = h.streak;
     this.bonus = h.bonus;
     persist();
-    this.renderPiles();
     this.refresh();
     this.updateCounts();
   }
@@ -337,8 +453,13 @@ export class Game {
     persist();
     this.history.push({ t: 'wild', streak: this.streak, bonus: this.bonus });
     this.waste.push({ wild: true });
-    sfx.wild();
-    this.renderPiles();
+    const a = this.el.querySelector('.wild-card').getBoundingClientRect();
+    const b = this.wasteEl.getBoundingClientRect();
+    const f = this.flyer({ wild: true }, { left: a.left + (a.width - b.width) / 2, top: a.top + (a.height - b.height) / 2, width: b.width }, true);
+    toss(f, {}, { x1: b.left - a.left - (a.width - b.width) / 2, y1: b.top - a.top - (a.height - b.height) / 2 }).then(() => {
+      f.remove();
+      this.landWaste();
+    });
     this.updateCounts();
   }
 
@@ -350,10 +471,10 @@ export class Game {
     return this.playable().length > 0;
   }
 
-  hint() {
+  hint(quiet = false) {
     const c = this.playable()[0];
-    const target = c ? c.el : this.stock.length ? this.stockEl : null;
-    if (!target) return toast('Sin jugadas: usa un comodín o compra cartas');
+    const target = c ? c.el : this.stock.length ? this.stockTop() : null;
+    if (!target) return quiet || toast('Sin jugadas: usa un comodín o compra cartas');
     target.classList.remove('hint');
     void target.offsetWidth;
     target.classList.add('hint');
@@ -405,7 +526,6 @@ export class Game {
   stuck() {
     if (this.done || this.modalOpen || this.stock.length || this.hasMove()) return;
     this.modalOpen = true;
-    sfx.lose();
     const left = this.cards.filter((c) => !c.removed).length;
     openModal({
       title: '¡Sin movimientos!',
@@ -441,7 +561,6 @@ export class Game {
     const prev = save.stars[this.level.g] || 0;
     this.opts.onWin(stars, coins);
     setTimeout(() => {
-      sfx.win();
       confetti();
       openModal({
         title: this.level.boss ? `¡Jefe derrotado! ${icon('crown', '#ffe46b', '#f5a712')}` : '¡Nivel completado!',

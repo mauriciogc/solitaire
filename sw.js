@@ -1,8 +1,8 @@
 // Red primero, caché como respaldo: siempre la última versión y funciona sin conexión.
-const CACHE = 'solitario-v3';
+const CACHE = 'solitario-v4';
 const FILES = [
   './', 'index.html', 'css/styles.css', 'manifest.webmanifest', 'icon.svg',
-  'js/main.js', 'js/game.js', 'js/lowpoly.js', 'js/dev.js', 'js/levels.js', 'js/rng.js', 'js/storage.js', 'js/ui.js', 'js/audio.js',
+  'js/main.js', 'js/game.js', 'js/lowpoly.js', 'js/dev.js', 'js/levels.js', 'js/rng.js', 'js/storage.js', 'js/ui.js',
 ];
 
 self.addEventListener('install', (e) => {

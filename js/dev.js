@@ -15,6 +15,9 @@ export const dev = {
   },
 };
 
+// Dónde estaba la galería, para volver a la misma página y filtros al salir de un nivel.
+export const gallery = { start: 0, tpl: 'todas', boss: false, active: false };
+
 export function initDevFromUrl() {
   const q = new URLSearchParams(location.search);
   if (!q.has('dev')) return;
@@ -41,11 +44,13 @@ export function casualRate(level, tries = 60) {
 }
 
 // ---------- Barra dentro de la partida ----------
-export function attachDevBar(game, { go }) {
+export function attachDevBar(game, { go, toGallery }) {
   const g = game.level.g;
   const bar = document.createElement('div');
   bar.className = 'dev-bar';
   bar.innerHTML = `
+    <button data-d="gal">▦ Galería</button>
+    <span class="sep"></span>
     <button data-d="prev" ${g === 0 ? 'disabled' : ''}>◀</button>
     <button data-d="goto" title="Ir a nivel">#${g + 1}</button>
     <button data-d="next" ${g >= TOTAL_LEVELS - 1 ? 'disabled' : ''}>▶</button>
@@ -61,6 +66,7 @@ export function attachDevBar(game, { go }) {
     const b = e.target.closest('[data-d]');
     if (!b) return;
     const act = {
+      gal: () => toGallery(),
       prev: () => go(g - 1),
       next: () => go(g + 1),
       goto: () => {
@@ -126,8 +132,8 @@ function preview(L, W = 150, H = 104) {
     .join('');
 }
 
-export function galleryScreen({ start = 0, onPlay, onBack }) {
-  const st = { start, tpl: 'todas', boss: false };
+export function galleryScreen({ onPlay, onBack }) {
+  const st = gallery;
   const el = document.createElement('div');
   el.className = 'screen gallery';
   el.innerHTML = `
@@ -140,8 +146,8 @@ export function galleryScreen({ start = 0, onPlay, onBack }) {
       <button data-g="prev">◀</button>
       <button data-g="goto" class="g-range"></button>
       <button data-g="next">▶</button>
-      <select data-g="tpl">${TEMPLATES.map((t) => `<option>${t}</option>`).join('')}</select>
-      <label><input type="checkbox" data-g="boss"> solo jefes</label>
+      <select data-g="tpl">${TEMPLATES.map((t) => `<option${t === st.tpl ? ' selected' : ''}>${t}</option>`).join('')}</select>
+      <label><input type="checkbox" data-g="boss"${st.boss ? ' checked' : ''}> solo jefes</label>
     </div>
     <div class="g-grid"></div>`;
   const grid = el.querySelector('.g-grid');
@@ -179,14 +185,23 @@ export function galleryScreen({ start = 0, onPlay, onBack }) {
       setTimeout(next, 0);
     };
     setTimeout(next, 30); // tras montar la pantalla
-    grid.scrollTop = 0;
+    const y = st.scroll || 0;
+    st.scroll = 0;
+    requestAnimationFrame(() => (grid.scrollTop = y));
   }
 
   el.addEventListener('click', (e) => {
     const t = e.target.closest('[data-play]');
-    if (t) return onPlay(+t.dataset.play);
+    if (t) {
+      st.active = true;
+      st.scroll = grid.scrollTop;
+      return onPlay(+t.dataset.play);
+    }
     const a = e.target.closest('[data-g]')?.dataset.g;
-    if (a === 'back') return onBack();
+    if (a === 'back') {
+      st.active = false;
+      return onBack();
+    }
     if (a === 'prev') {
       st.start = Math.max(0, st.start - PAGE);
       render();

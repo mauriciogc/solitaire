@@ -3,7 +3,7 @@ import { WORLD_COUNT, LEVELS_PER_WORLD, TOTAL_LEVELS, worldInfo, generateLevel }
 import { Game, COST } from './game.js';
 import { openModal, toast, updateCoins, starsHTML } from './ui.js';
 import { icon, star, coin, placeIcon } from './lowpoly.js';
-import { dev, initDevFromUrl, attachDevBar, galleryScreen, openDevMenu } from './dev.js';
+import { dev, gallery, initDevFromUrl, attachDevBar, galleryScreen, openDevMenu } from './dev.js';
 
 initDevFromUrl();
 
@@ -35,6 +35,7 @@ const totalStars = () => Object.values(save.stars).reduce((a, b) => a + b, 0);
 
 // ---------- Mapa de mundos ----------
 function showMap() {
+  gallery.active = false;
   const cur = currentWorld();
   let items = '';
   for (let w = 0; w < WORLD_COUNT; w++) {
@@ -55,7 +56,6 @@ function showMap() {
         <div class="pill stars-pill">${star(true)}${totalStars()}</div>
         <div class="pill coins">${coin()}<span data-coins>${save.coins}</span></div>
         <button class="icon-btn" data-a="shop" aria-label="Tienda">${icon('bag', '#ffd0e6', '#ff7fb6')}</button>
-        <button class="icon-btn" data-a="sound" aria-label="Sonido">${icon(save.sound ? 'sound' : 'mute')}</button>
       </div>
     </header>
     <div class="world-list">${items}<div class="list-end">¡${WORLD_COUNT} mundos · ${TOTAL_LEVELS} niveles!</div></div>
@@ -65,12 +65,6 @@ function showMap() {
     const a = e.target.closest('[data-a]')?.dataset.a;
     if (a === 'shop') return openShop();
     if (a === 'dev') return openDevMenu({ onGallery: () => showGallery(save.next), onPlay: startLevel, onRefresh: showMap });
-    if (a === 'sound') {
-      save.sound = !save.sound;
-      persist();
-      e.target.closest('[data-a]').innerHTML = icon(save.sound ? 'sound' : 'mute');
-      return;
-    }
     if (a === 'continue') return done ? null : startLevel(save.next);
     const w = e.target.closest('[data-w]');
     if (!w) return;
@@ -83,6 +77,7 @@ function showMap() {
 
 // ---------- Pantalla de un mundo ----------
 function showWorld(w) {
+  gallery.active = false;
   const i = worldInfo(w);
   const cur = currentWorld();
   let nodes = '';
@@ -130,7 +125,8 @@ function startLevel(g) {
   const level = generateLevel(g);
   const w = level.world;
   game = new Game(app, level, {
-    onExit: () => showWorld(w),
+    // Si se entró desde la galería dev, salir regresa a la galería donde estaba.
+    onExit: () => (dev.on && gallery.active ? showGallery() : showWorld(w)),
     onRetry: () => startLevel(g),
     onNext: () => {
       const n = g + 1;
@@ -151,7 +147,7 @@ function startLevel(g) {
       updateCoins();
     },
   });
-  if (dev.on) attachDevBar(game, { go: startLevel });
+  if (dev.on) attachDevBar(game, { go: startLevel, toGallery: () => showGallery(gallery.active ? undefined : g) });
   if (!save.tutorial) {
     save.tutorial = true;
     persist();
@@ -162,7 +158,7 @@ function startLevel(g) {
         <li>La <b>A</b> y la <b>K</b> se conectan.</li>
         <li>Sin jugadas, toca el <b>mazo</b> para sacar otra carta.</li>
         <li>Limpia el tablero. ¡Las cartas que sobren dan estrellas y monedas!</li>
-        <li>${star(true)} Comodín: cualquier carta vale encima. ${icon('undo')} Deshacer. ${icon('bulb', '#fff6b0', '#ffc93d')} Pista.</li>
+        <li>${star(true)} Comodín: cualquier carta vale encima. ${icon('undo')} Deshacer.</li>
       </ul>`,
       buttons: [{ label: '¡A jugar!' }],
     });
@@ -171,7 +167,8 @@ function startLevel(g) {
 
 // ---------- Galería (modo dev) ----------
 function showGallery(start) {
-  mount(galleryScreen({ start: Math.max(0, start - (start % 24)), onPlay: startLevel, onBack: showMap }));
+  if (start != null) gallery.start = Math.max(0, start - (start % 24));
+  mount(galleryScreen({ onPlay: startLevel, onBack: showMap }));
 }
 
 // ---------- Tienda ----------

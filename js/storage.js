@@ -6,7 +6,6 @@ const DEFAULTS = {
   undo: 5,
   stars: {}, // índice global de nivel -> estrellas (1..3)
   next: 0, // primer nivel sin completar
-  sound: true,
   tutorial: false,
   gift: '',
 };

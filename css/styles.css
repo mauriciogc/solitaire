@@ -3,6 +3,7 @@
   --ink: #1c1f2e;
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --spring: cubic-bezier(0.34, 1.45, 0.64, 1);
   --press: 120ms var(--ease-out);
   font-family: ui-rounded, 'SF Pro Rounded', 'Nunito', 'Segoe UI', system-ui, sans-serif;
 }
@@ -110,15 +111,15 @@ button, [role='button'] { font: inherit; color: inherit; border: 0; background: 
 /* ---------- Partida ---------- */
 .game { background: radial-gradient(110% 70% at 50% 30%, hsl(var(--hue) 55% 42%), hsl(calc(var(--hue) + 30) 50% 16%)); }
 .hud-title b .place { width: 1.3em; height: 1.3em; }
-.hud { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 12px 4px; }
-.hud-right { display: flex; gap: 6px; align-items: center; }
-.hud-title { display: flex; flex-direction: column; align-items: center; line-height: 1.15; text-shadow: 0 2px 0 #0004; min-width: 0; }
-.hud-title small { opacity: 0.85; }
-@media (max-width: 380px) { .hud .pill.coins { display: none; } }
-.progress { height: 6px; margin: 4px 16px; background: #0004; border-radius: 9px; overflow: hidden; }
+.hud { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px; padding: 6px 10px 2px; }
+.hud .icon-btn { width: 40px; height: 40px; border-radius: 12px; font-size: 17px; }
+.hud .pill { justify-self: end; font-size: 14px; padding: 5px 10px 5px 6px; }
+.hud-title { display: flex; flex-direction: column; align-items: center; line-height: 1.15; text-shadow: 0 2px 0 #0004; min-width: 0; font-size: 15px; }
+.hud-title small { opacity: 0.85; font-size: 12px; }
+.progress { height: 5px; margin: 4px 14px 2px; background: #0004; border-radius: 9px; overflow: hidden; }
 .progress .bar { height: 100%; width: 0; background: linear-gradient(90deg, #7cf, var(--gold)); transition: width 250ms var(--ease-out); }
 .game::after { content: ""; position: absolute; inset: auto 0 0; height: 150px; z-index: -1; background: linear-gradient(#0000, #0006); pointer-events: none; }
-.board-wrap { flex: 1; min-height: 0; position: relative; display: flex; align-items: center; justify-content: center; }
+.board-wrap { flex: 1; min-height: 0; position: relative; display: flex; align-items: center; justify-content: center; margin-bottom: 14px; }
 .board { position: relative; }
 .streak {
   position: absolute; top: 6px; left: 50%; translate: -50% 0; pointer-events: none;
@@ -134,14 +135,17 @@ button, [role='button'] { font: inherit; color: inherit; border: 0; background: 
 
 /* Bandeja: mazo en abanico · descarte · deshacer · … · comodín */
 .tray {
-  --cw: clamp(48px, 14vw, 72px);
+  --cw: clamp(44px, 12vw, 68px);
   display: flex; align-items: center; gap: clamp(8px, 3vw, 20px);
   width: 100%; max-width: 620px; margin: 0 auto;
-  padding: 10px clamp(10px, 4vw, 28px) 14px;
+  padding: 8px clamp(12px, 4vw, 28px) 12px;
 }
+/* Celular en vertical: la bandeja cede espacio al tablero. */
+@media (max-aspect-ratio: 3/4) { .tray { --cw: clamp(40px, 11vw, 60px); padding-top: 4px; padding-bottom: 8px; } }
+@media (max-height: 520px) { .tray { --cw: 44px; padding: 4px 16px 6px; } }
 .tray-space { flex: 1; }
 .stock { position: relative; height: calc(var(--cw) * 1.4); min-width: var(--cw); flex: none; cursor: pointer; touch-action: manipulation; }
-.stock .card { top: 0; transition: left 200ms var(--ease-out); }
+.stock .card { top: 0; transition: left 260ms var(--ease-out); }
 .pile { position: relative; width: var(--cw); height: calc(var(--cw) * 1.4); flex: none; }
 .pile .card { left: 0; top: 0; }
 .badge {
@@ -151,7 +155,7 @@ button, [role='button'] { font: inherit; color: inherit; border: 0; background: 
 }
 .stock .count { top: auto; bottom: -8px; right: -8px; }
 .empty-slot {
-  position: absolute; inset: 0; width: var(--cw); border: 2px dashed #fff8; border-radius: calc(var(--cw) * 0.12);
+  position: absolute; inset: 0 0 0 auto; width: var(--cw); border: 2px dashed #fff8; border-radius: calc(var(--cw) * 0.12);
   display: grid; place-items: center; font-weight: 900; font-size: 20px; color: #fffc;
 }
 .undo-btn {
@@ -174,7 +178,7 @@ button, [role='button'] { font: inherit; color: inherit; border: 0; background: 
 .card { position: absolute; width: var(--cw); height: calc(var(--cw) * 1.4); cursor: pointer; perspective: 600px; touch-action: manipulation; transition: scale var(--press); }
 .card .inner {
   position: absolute; inset: 0; transform-style: preserve-3d; transform: rotateY(180deg);
-  transition: transform 280ms var(--ease-out);
+  transition: transform 380ms var(--spring);
 }
 .card.up .inner { transform: none; }
 .board .card.up:active { scale: 0.96; }
@@ -191,13 +195,16 @@ button, [role='button'] { font: inherit; color: inherit; border: 0; background: 
 .back { transform: rotateY(180deg); background: var(--back, #3b5bd6) center / cover; border: calc(var(--cw) * 0.06) solid #fff; }
 .wild { display: grid; place-items: center; background: conic-gradient(from 10deg, #ff6b6b 0 17%, #ffcf3a 0 33%, #5ce28b 0 50%, #4ab8ff 0 67%, #9f6bff 0 83%, #ff7ad1 0); }
 .wild .star { width: 70%; height: auto; }
-.card.deal { animation: deal 300ms var(--ease-out) backwards; }
-@keyframes deal { from { opacity: 0; transform: translateY(-24px) scale(0.9); } }
-.card.flying { transition: transform 240ms var(--ease-out), rotate 240ms var(--ease-out); pointer-events: none; }
+.card.deal { animation: deal 420ms var(--spring) backwards; }
+@keyframes deal { from { opacity: 0; transform: translateY(-28px) scale(0.85); } }
+.card.flying { pointer-events: none; }
 /* Temblor corto: avisa sin frenar el ritmo. */
-.card.shake { animation: shake 180ms linear; }
-@keyframes shake { 25% { translate: -3px 0; } 75% { translate: 3px 0; } }
+.card.shake { animation: shake 220ms ease-out; }
+@keyframes shake { 20% { translate: -4px 0; } 45% { translate: 3px 0; } 70% { translate: -2px 0; } 90% { translate: 1px 0; } }
 .hint { animation: glow 1.2s var(--ease-out); }
+/* Jugada que se te pasó al robar: late el botón de deshacer. */
+.undo-btn.nudge { animation: nudge 700ms var(--spring); }
+@keyframes nudge { 0%, 100% { scale: 1; } 30% { scale: 1.18; } 55% { scale: 0.95; } 75% { scale: 1.05; } }
 @keyframes glow { 0%, 100% { filter: none; } 30%, 70% { filter: drop-shadow(0 0 8px var(--gold)) drop-shadow(0 0 4px var(--gold)) brightness(1.1); } }
 
 /* ---------- Modal, toast, confeti ---------- */
@@ -207,9 +214,9 @@ button, [role='button'] { font: inherit; color: inherit; border: 0; background: 
 }
 .modal-back.show { opacity: 1; }
 .modal {
-  width: min(100%, 380px); padding: 22px 20px 20px; border-radius: 24px; text-align: center;
+  width: min(100%, 380px); max-height: calc(100dvh - 40px); overflow-y: auto; padding: 22px 20px 20px; border-radius: 24px; text-align: center;
   background: linear-gradient(#3b4796, #232a5c); box-shadow: 0 20px 50px #000a, inset 0 1px 0 #fff3;
-  transform: scale(0.94); transition: transform 240ms var(--ease-out);
+  transform: scale(0.9); transition: transform 320ms var(--spring);
 }
 .show .modal { transform: none; }
 .modal h2 { margin: 0 0 10px; font-size: 24px; text-shadow: 0 2px 0 #0004; }
@@ -234,8 +241,8 @@ button, [role='button'] { font: inherit; color: inherit; border: 0; background: 
 @keyframes fall { to { transform: translate(var(--dx), 110vh) rotate(var(--r)); } }
 
 @media (prefers-reduced-motion: reduce) {
-  .card.deal, .card.shake, .streak.pop, .confetti, .node.current::after { animation: none !important; }
-  .card .inner, .card.flying { transition-duration: 0.01ms !important; }
+  .card.deal, .card.shake, .undo-btn.nudge, .streak.pop, .confetti, .node.current::after { animation: none !important; }
+  .card .inner, .stock .card { transition-duration: 0.01ms !important; }
 }
 
 /* ---------- Candados y llaves ---------- */
