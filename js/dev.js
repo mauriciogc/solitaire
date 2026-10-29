@@ -1,7 +1,8 @@
 // Modo dev: probar niveles rápido sin jugarlos a mano.
 // Se activa con ?dev en la URL (y se apaga con ?dev=0). Queda guardado en el navegador.
 import { save, prefs, persist, resetProfile } from './storage.js';
-import { generateLevel, packGroups, playCasual, solve, worldInfo, TOTAL_LEVELS, LEVELS_PER_WORLD } from './levels.js';
+import { generateLevel, packGroups, worldInfo, TOTAL_LEVELS, LEVELS_PER_WORLD, MECH_NAMES, MECHANICS } from './levels.js';
+import { playCasual, solve, initState } from './engine.js';
 import { openModal, toast, updateCoins } from './ui.js';
 import { mulberry32 } from './rng.js';
 import { icon } from './lowpoly.js';
@@ -16,7 +17,7 @@ export const dev = {
 };
 
 // Dónde estaba la galería, para volver a la misma página y filtros al salir de un nivel.
-export const gallery = { start: 0, tpl: 'todas', boss: false, active: false };
+export const gallery = { start: 0, tpl: 'todas', boss: false, mA: '', mB: '', active: false };
 
 export function initDevFromUrl() {
   const q = new URLSearchParams(location.search);
@@ -94,7 +95,7 @@ export function attachDevBar(game, { go, toGallery }) {
 
 function showInfo(L) {
   const t0 = performance.now();
-  const sol = solve(L, new Array(L.cards.length).fill(false), L.stock, L.waste0);
+  const sol = solve(L, initState(L));
   const ms = Math.round(performance.now() - t0);
   const free = L.cards.filter((c) => !c.coveredBy.length).length;
   const rows = [
@@ -103,6 +104,7 @@ function showInfo(L) {
     ['Dificultad d', L.d.toFixed(2)],
     ['Cartas tablero', `${L.cards.length} (${free} libres al inicio)`],
     ['Mazo', `${L.stock.length} = ${L.meta.chains - 1} inicios de cadena + ${L.meta.decoys} señuelos + ${L.meta.spares} sobrantes`],
+    ['Mecánicas', L.meta.mechs.length ? L.meta.mechs.map((m) => MECH_NAMES[m]).join(', ') : 'ninguna'],
     ['Candados', L.meta.locks],
     ['Carta regalo', L.meta.pack ? `+${L.meta.pack} cartas al mazo` : 'no'],
     ['Bot casual gana', `${casualRate(L)}%`],
@@ -127,7 +129,7 @@ function preview(L, W = 150, H = 104) {
   return L.cards
     .map((c) => {
       const o = offsets[c.group];
-      const cls = ['m', c.coveredBy.length ? '' : 'free', c.lock != null ? 'lock' : '', c.key != null ? 'key' : '', c.pack ? 'pack' : ''].join(' ');
+      const cls = ['m', c.coveredBy.length ? '' : 'free', c.lock != null ? 'lock' : '', c.key != null ? 'key' : '', c.pack ? 'pack' : '', c.ice ? 'ice' : '', c.bomb ? 'bomb' : '', c.live ? 'live' : '', c.alt != null ? 'alt' : '', c.arrow ? 'arrow' : '', c.curtain != null ? 'curtain' : ''].join(' ');
       return `<i class="${cls}" style="left:${ox + (o.x + c.x) * u}px;top:${oy + (o.y + c.y) * u}px;width:${u}px;height:${u * 1.4}px;rotate:${c.rot}deg;z-index:${c.z};--hue:${hue}"></i>`;
     })
     .join('');
@@ -149,6 +151,15 @@ export function galleryScreen({ onPlay, onBack }) {
       <button data-g="next">▶</button>
       <select data-g="tpl">${TEMPLATES.map((t) => `<option${t === st.tpl ? ' selected' : ''}>${t}</option>`).join('')}</select>
       <label><input type="checkbox" data-g="boss"${st.boss ? ' checked' : ''}> solo jefes</label>
+      ${['mA', 'mB']
+        .map(
+          (k, i) => `<select data-g="${k}">
+            <option value="">${i ? '+ otra mecánica' : 'mecánica: todas'}</option>
+            ${i ? '' : `<option value="none"${st[k] === 'none' ? ' selected' : ''}>sin mecánicas</option>`}
+            ${MECHANICS.map((m) => `<option value="${m}"${st[k] === m ? ' selected' : ''}>${MECH_NAMES[m]}</option>`).join('')}
+          </select>`,
+        )
+        .join('')}
     </div>
     <div class="g-grid"></div>`;
   const grid = el.querySelector('.g-grid');
@@ -159,7 +170,9 @@ export function galleryScreen({ onPlay, onBack }) {
     while (items.length < PAGE && g < TOTAL_LEVELS) {
       if (!st.boss || g % LEVELS_PER_WORLD === LEVELS_PER_WORLD - 1) {
         const L = generateLevel(g);
-        if (st.tpl === 'todas' || L.template === st.tpl) items.push(L);
+        const ms = L.meta.mechs;
+        const okM = (m) => !m || (m === 'none' ? !ms.length : ms.includes(m));
+        if ((st.tpl === 'todas' || L.template === st.tpl) && okM(st.mA) && okM(st.mB)) items.push(L);
       }
       g++;
       if (g - st.start > 4000) break; // filtros muy estrictos: no colgar la página
@@ -171,7 +184,8 @@ export function galleryScreen({ onPlay, onBack }) {
         (L) => `<button class="tile" data-play="${L.g}">
           <div class="pv">${preview(L)}</div>
           <div class="tl"><b>#${L.g + 1}</b> ${label(L.g)}${L.boss ? ' · jefe' : ''}</div>
-          <div class="tl">${L.template} · d ${L.d.toFixed(2)} · ${L.cards.length} cartas · mazo ${L.stock.length}${L.meta.locks ? ` · ${L.meta.locks} candado` : ''}${L.meta.pack ? ` · regalo +${L.meta.pack}` : ''}</div>
+          <div class="tl">${L.template} · d ${L.d.toFixed(2)} · ${L.cards.length} cartas · mazo ${L.stock.length}</div>
+          <div class="tl mechs">${L.meta.mechs.map((m) => `<i class="tag m-${m}">${MECH_NAMES[m]}</i>`).join('') || '—'}</div>
           <div class="tl rate" data-rate="${L.g}">bot …</div>
         </button>`,
       )
@@ -222,6 +236,10 @@ export function galleryScreen({ onPlay, onBack }) {
   el.addEventListener('change', (e) => {
     if (e.target.dataset.g === 'tpl') st.tpl = e.target.value;
     if (e.target.dataset.g === 'boss') st.boss = e.target.checked;
+    if (e.target.dataset.g === 'mA' || e.target.dataset.g === 'mB') {
+      st[e.target.dataset.g] = e.target.value;
+      st.start = 0;
+    }
     render();
   });
   render();
@@ -252,6 +270,15 @@ export function openDevMenu({ onGallery, onPlay, onRefresh }) {
         },
       },
       {
+        label: 'Volver a explicar las mecánicas',
+        cls: 'ghost',
+        onClick: () => {
+          save.seen = {};
+          persist();
+          toast('Las explicaciones saldrán otra vez');
+        },
+      },
+      {
         label: '+1000 monedas',
         cls: 'ghost',
         onClick: () => {
@@ -265,6 +292,7 @@ export function openDevMenu({ onGallery, onPlay, onRefresh }) {
         cls: 'ghost',
         onClick: () => {
           save.next = TOTAL_LEVELS - 1;
+          save.open = Math.floor(save.next / LEVELS_PER_WORLD);
           save.run = null;
           persist();
           onRefresh();

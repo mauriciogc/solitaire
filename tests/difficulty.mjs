@@ -1,7 +1,8 @@
 // Simula un jugador casual (juega cualquier carta válida al azar; si no hay, roba)
 // y muestra el % de victorias por tramo de niveles, sin comodines ni deshacer.
 // Uso: node tests/difficulty.mjs [partidas por nivel]
-import { generateLevel, TOTAL_LEVELS, playCasual } from '../js/levels.js';
+import { generateLevel, TOTAL_LEVELS } from '../js/levels.js';
+import { playCasual } from '../js/engine.js';
 import { mulberry32 } from '../js/rng.js';
 
 const TRIES = +(process.argv[2] || 4);

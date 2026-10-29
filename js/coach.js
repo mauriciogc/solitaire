@@ -1,6 +1,7 @@
 // Tutorial guiado del primer nivel: señala qué tocar y no deja tocar otra cosa
 // hasta que el jugador entiende la dinámica. Después suelta el control.
 import { RANKS } from './game.js';
+import { rankOf } from './engine.js';
 
 const GUIDED = 10; // jugadas guiadas antes de dejarlo solo
 
@@ -52,15 +53,16 @@ export class Coach {
     if (this.steps >= GUIDED) return this.finish();
     const t = this.target();
     if (!t) return this.end();
-    const top = g.waste[g.waste.length - 1];
+    const top = g.top;
     let msg;
     if (t.stock) {
       msg = 'No hay jugadas: toca el <b>mazo</b> para sacar otra carta. Ojo: robar corta tu racha.';
     } else {
-      const r = RANKS[t.card.rank];
+      const rank = rankOf(t.card, g.st);
+      const r = RANKS[rank];
       const tr = RANKS[top.rank];
       if (this.steps === 0) msg = `Toca una carta que sea <b>uno más o uno menos</b> que la de abajo. La <b>${r}</b> va sobre la <b>${tr}</b>.`;
-      else if (Math.abs(t.card.rank - top.rank) === 12) msg = `La <b>A</b> y la <b>K</b> se conectan: toca la <b>${r}</b>.`;
+      else if (Math.abs(rank - top.rank) === 12) msg = `La <b>A</b> y la <b>K</b> se conectan: toca la <b>${r}</b>.`;
       else if (g.streak >= 3) msg = `¡Racha ×${g.streak}! Si llegas a 6 seguidas te regalan una carta. Sigue con la <b>${r}</b>.`;
       else msg = `¡Eso! Ahora la <b>${r}</b> va sobre la <b>${tr}</b>.`;
     }

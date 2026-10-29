@@ -140,7 +140,7 @@ button, [role='button'] { font: inherit; color: inherit; border: 0; background: 
 .board-wrap { flex: 1; min-height: 0; position: relative; display: flex; align-items: center; justify-content: center; margin-bottom: 14px; }
 .board { position: relative; }
 .streak {
-  position: absolute; top: 6px; left: 50%; translate: -50% 0; pointer-events: none;
+  position: absolute; top: 6px; left: 50%; translate: -50% 0; pointer-events: none; z-index: 10000; /* encima de las cartas */
   font-weight: 900; font-size: 22px; color: var(--gold); text-shadow: 0 2px 0 #0007; opacity: 0;
 }
 .streak.pop { animation: pop 0.9s var(--ease-out); }
@@ -310,7 +310,15 @@ button, [role='button'] { font: inherit; color: inherit; border: 0; background: 
 .pv .m.free { background: #fff; }
 .pv .m.lock { border: 2px solid #ff4d6d; }
 .pv .m.key { background: var(--gold); }
-.pv .m.pack { background: #2fc06b; }
+.pv .m.pack { background: #9b5cf0; }
+.pv .m.ice { background: #bfeaff; }
+.pv .m.bomb { background: #333; border-color: #ff5a5a; }
+.pv .m.live { background: #2ec4b6; }
+.pv .m.alt { background: #7cf; }
+.pv .m.arrow { background: #5ce28b; }
+.pv .m.curtain { background: #c0392b; }
+.tl.mechs { display: flex; flex-wrap: wrap; gap: 3px; }
+.tl.mechs .tag { font-style: normal; font-size: 10px; font-weight: 800; padding: 1px 5px; border-radius: 6px; background: #fff2; }
 .tl { font-size: 12px; opacity: .85; }
 .tl b { font-size: 13px; }
 .tl.rate { color: var(--gold); opacity: 1; font-weight: 800; }
@@ -370,3 +378,85 @@ button, [role='button'] { font: inherit; color: inherit; border: 0; background: 
   position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; z-index: 2;
   color: #fff; font: 900 calc(var(--cw) * 0.48) / 1 ui-rounded, system-ui, sans-serif; text-shadow: 0 2px 0 #4a1a8a, 0 0 10px #0005;
 }
+
+/* ---------- Regalo diario, boleto dorado ---------- */
+.gift-btn { position: relative; }
+.gift-btn.ready::after { content: ''; position: absolute; right: 4px; top: 4px; width: 10px; height: 10px; border-radius: 50%; background: #ff4d6d; box-shadow: 0 0 0 2px #fff; }
+.daily-path { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; margin-top: 10px; }
+.day { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 5px 2px; border-radius: 10px; background: #fff1; font-size: 10px; font-weight: 800; line-height: 1.1; }
+.day small { opacity: 0.7; font-size: 9px; }
+.day span { display: flex; flex-direction: column; align-items: center; }
+.day .ico { width: 14px; height: 14px; }
+.day.big { background: #ffc83d22; }
+.day.got { opacity: 0.4; }
+.day.today { background: var(--gold); color: #5a3500; box-shadow: 0 0 0 2px #fff; }
+.pill.gold { background: #f5a91c55; }
+.world.gate { filter: none; outline: 2px dashed var(--gold); outline-offset: 3px; }
+.world.gate .w-stars { background: #f5a91c66; }
+.gate-list li { opacity: 0.6; }
+.gate-list li.ok { opacity: 1; color: #7dffb0; }
+.summary li.gold { color: var(--gold); }
+
+/* ---------- Mecánicas (dibujo provisional hasta la dirección visual) ---------- */
+/* Hielo: capa escarchada con cuántas jugadas faltan; se rompe al llegar a 0. */
+.ice-ov {
+  position: absolute; inset: 0; z-index: 2; pointer-events: none; display: grid; place-items: center;
+  border-radius: calc(var(--cw) * 0.12); border: calc(var(--cw) * 0.05) solid #e6f8ff;
+  background: linear-gradient(150deg, #e9f9ffcc, #9fdcffaa 45%, #d8f3ffcc 70%, #8fd0f5bb);
+  box-shadow: inset 0 0 calc(var(--cw) * 0.15) #fff; transition: opacity 300ms var(--ease-out), scale 300ms var(--ease-out);
+}
+.ice-ov b { font: 900 calc(var(--cw) * 0.5) / 1 ui-rounded, system-ui, sans-serif; color: #1f6fa8; text-shadow: 0 2px 0 #fff; }
+.card.melted .ice-ov { opacity: 0; scale: 1.25; }
+
+/* Bomba: carta especial oscura con la cuenta regresiva; hay que destaparla antes de 0. */
+.card.bomb-card .face { background: radial-gradient(circle at 50% 40%, #5a5f73, #23263a 65%, #12131c); border: calc(var(--cw) * 0.06) solid #ff7a3d; }
+.bomb-face { position: absolute; inset: 0; z-index: 2; display: grid; place-items: center; pointer-events: none; }
+.bomb-face i {
+  position: absolute; top: 18%; width: 52%; aspect-ratio: 1; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #6b6b6b, #111 70%); box-shadow: 0 3px 6px #0008;
+}
+.bomb-face i::before { content: ''; position: absolute; right: 2%; top: -12%; width: 26%; height: 26%; border-radius: 30%; background: #8a6a3a; rotate: 35deg; }
+.bomb-face i::after { content: ''; position: absolute; right: -10%; top: -26%; width: 22%; height: 22%; border-radius: 50%; background: #ffcf3a; box-shadow: 0 0 8px 3px #ff7a3d; animation: spark 300ms steps(2) infinite; }
+@keyframes spark { 50% { scale: 0.6; background: #fff3b0; } }
+.bomb-face b { position: absolute; bottom: 10%; color: #fff; font: 900 calc(var(--cw) * 0.42) / 1 ui-rounded, system-ui, sans-serif; text-shadow: 0 2px 0 #000; }
+.card.bomb-hot .bomb-face b { color: #ff5a3d; animation: bomb-pulse 500ms ease-in-out infinite alternate; }
+.card.bomb-hot .face { border-color: #ff3d3d; box-shadow: 0 0 calc(var(--cw) * 0.2) #ff3d3d; }
+.card.defused .bomb-face i::after { animation: none; background: #777; box-shadow: none; }
+@keyframes bomb-pulse { to { scale: 1.2; } }
+.boom-flash {
+  position: fixed; z-index: 10001; width: 160px; height: 160px; margin: -80px 0 0 -80px; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(circle, #fff 0 15%, #ffd75a 30%, #ff7a1f 55%, #ff3d1f00 72%);
+}
+.card.burning .back { background: linear-gradient(#ffcf3a, #ff5a1f 60%, #7a1d00); }
+
+/* Cortina: boca abajo con telón rojo hasta jugar su carta llave (que lleva un mini telón). */
+.card.curtain:not(.curtain-open) .back {
+  background: repeating-linear-gradient(90deg, #b3202a 0 12%, #d33a3f 12% 20%, #9a1a22 20% 26%), #b3202a;
+  border-color: #ffd75a;
+}
+.curtain-mark {
+  position: absolute; right: -7%; bottom: -5%; z-index: 3; width: 34%; aspect-ratio: 1; border-radius: 50%; pointer-events: none;
+  background: repeating-linear-gradient(90deg, #b3202a 0 25%, #e0484c 25% 45%), #b3202a; box-shadow: 0 2px 4px #0006, 0 0 0 2px #ffd75a;
+}
+
+/* Carta doble: los dos números partidos en grande ("5/8"), palos chicos; resalta un poco. */
+.front.double { box-shadow: inset 0 0 0 calc(var(--cw) * 0.045) #ffc83d; }
+.front .dbl {
+  position: absolute; left: 6%; right: 6%; top: 6%; display: flex; align-items: center; justify-content: center;
+  font-weight: 900; font-size: calc(var(--cw) * 0.36); line-height: 1; letter-spacing: -0.05em;
+}
+.front .dbl i { width: calc(var(--cw) * 0.05); height: calc(var(--cw) * 0.36); margin: 0 4%; background: currentColor; opacity: 0.5; rotate: 18deg; border-radius: 2px; }
+.front.double .st { left: auto; right: 10%; top: auto; bottom: 34%; font-size: calc(var(--cw) * 0.2); }
+.front.double .big { right: auto; left: 10%; bottom: 6%; font-size: calc(var(--cw) * 0.4); }
+.board .card:has(.front.double) { scale: 1.06; }
+/* Flecha y carta viva: insignia en la esquina superior derecha. */
+.arrow-badge, .live-badge {
+  position: absolute; right: 6%; top: 4%; width: 34%; aspect-ratio: 1; border-radius: 50%;
+  display: grid; place-items: center; font-weight: 900; font-size: calc(var(--cw) * 0.26); line-height: 1; color: #fff;
+}
+.arrow-badge { background: linear-gradient(#5ce28b, #1fa85a); box-shadow: 0 1px 0 #0003; }
+/* Color provisional de la carta viva (turquesa); el definitivo sale en la dirección visual. */
+.live-badge { background: linear-gradient(#4fe3d2, #129e8f); box-shadow: 0 1px 0 #0003; }
+.front.live { box-shadow: inset 0 0 0 calc(var(--cw) * 0.04) #2ec4b6; }
+.front.live .rk { display: inline-block; }
+.waste.arrowed .card { filter: drop-shadow(0 0 6px #5ce28b); }

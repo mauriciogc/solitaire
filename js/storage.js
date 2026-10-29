@@ -13,11 +13,14 @@ const fresh = (name, avatar = 0) => ({
   ...START,
   stars: {}, // índice global de nivel -> mejores estrellas (1..3)
   next: 0, // primer nivel sin completar
+  open: 0, // último mundo abierto (para pasar de mundo hace falta boleto dorado y estrellas)
+  gold: 0, // boletos dorados (los da cada jefe la primera vez)
   tries: {}, // intentos por nivel (cambia las cartas de cada intento)
   run: null, // partida en curso de un nivel nuevo (se retoma al volver)
   tutorial: false,
   named: false, // la primera vez se le pide el nombre
-  gift: '',
+  daily: { day: 0, last: '' }, // camino del regalo diario: día siguiente a reclamar y fecha del último
+  seen: {}, // mecánicas que ya se le explicaron
 });
 
 function load() {
@@ -40,6 +43,8 @@ function load() {
 
 const root = load();
 root.prefs ||= {};
+// Guardados de antes del boleto dorado: el mundo en el que ya estaba queda abierto.
+for (const p of Object.values(root.profiles)) if (p.open == null) p.open = Math.floor((p.next || 0) / 10);
 
 // Preferencias del dispositivo (no del jugador): modo dev.
 export const prefs = root.prefs;

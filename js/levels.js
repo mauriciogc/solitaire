@@ -1,4 +1,5 @@
 import { mulberry32, hash, randInt, pick, shuffle } from './rng.js';
+import { follows, mod13, solve, initState } from './engine.js';
 
 // Unidades del tablero: una carta mide W x H. Posiciones = esquina superior izquierda.
 export const W = 1;
@@ -306,18 +307,28 @@ export function generateLevel(g) {
     order.push(i);
   }
 
+  const boss = index === LEVELS_PER_WORLD - 1;
+  // Mecánicas del nivel: cada una aparece a partir de su mundo y luego se combinan (máximo 2 tipos).
+  const mech = new Set(chooseMechanics(r, world, index, boss, n));
+
   // Carta regalo: una carta especial (sin número) que se activa sola al quedar destapada del todo
   // y manda 2-5 cartas al final del mazo. Va tapada y en el primer 40% del orden de retirada.
   let packId = null;
-  if (d >= 0.1 && n >= 8 && r() < 0.2 + d * 0.35) {
+  if (mech.has('pack')) {
     const early = order.slice(0, Math.floor(n * 0.4)).filter((i) => coveredBy[i].length);
     if (early.length) packId = pick(r, early);
   }
-  const play = packId == null ? order : order.filter((i) => i !== packId); // cartas con número, en orden de solución
+  // Bombas (1-3): cartas especiales sin número, tapadas, que hay que destapar antes de que su cuenta llegue a 0.
+  const bombIds = [];
+  if (mech.has('bomb')) {
+    const mid = order.slice(Math.floor(n * 0.15), Math.floor(n * 0.75)).filter((i) => coveredBy[i].length && i !== packId);
+    shuffle(r, mid);
+    bombIds.push(...mid.slice(0, randInt(r, 1, n >= 20 ? 3 : 2)));
+  }
+  const play = order.filter((i) => i !== packId && !bombIds.includes(i)); // cartas con número, en orden de solución
   const np = play.length;
 
   const minC = d < 0.15 ? 4 : d < 0.35 ? 3 : 2;
-  const boss = index === LEVELS_PER_WORLD - 1;
   const maxC = Math.max(minC + 1, Math.round(9 - d * 5.5) - (boss ? 2 : 0));
   const ranks = new Array(n);
   const starts = [];
@@ -349,18 +360,28 @@ export function generateLevel(g) {
   for (let i = 0; i < spares; i++) stock.push(helpfulCard((1 - d) * 0.85));
 
   const cards = pos.map((p, i) => ({ id: i, ...p, rank: ranks[i], suit: randInt(r, 0, 3), coveredBy: coveredBy[i] }));
+  for (const id of bombIds) delete cards[id].rank;
+  const SPECIAL = ['lock', 'key', 'pack', 'ice', 'alt', 'arrow', 'curtain', 'curtainKey', 'bomb', 'live'];
+  const plain = (id) => SPECIAL.every((f) => cards[id][f] == null);
 
   // Candados y llaves: la carta con candado no se puede jugar hasta retirar su llave.
   // La llave siempre va antes que el candado en la solución, así el nivel sigue siendo ganable.
-  const pairs = np < 10 || d < 0.12 ? 0 : boss ? (d < 0.4 ? 1 : 2) : r() < Math.min(0.4, d) ? 1 : 0;
+  const pairs = !mech.has('lock') || np < 10 ? 0 : boss ? (d < 0.4 ? 1 : 2) : 1;
   const keys = [];
+  // Llave y candado lejos uno del otro (de preferencia en grupos distintos): se prueban varias parejas y gana la más separada.
+  const apart = (a, b) => (a.group !== b.group ? 100 : 0) + Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
   for (let k = 0; k < pairs; k++) {
-    const used = (i) => cards[play[i]].lock != null || cards[play[i]].key != null;
-    let li = randInt(r, Math.ceil(np * 0.45), np - 1);
-    while (li > 1 && used(li)) li--;
-    let ki = randInt(r, 0, li - 1);
-    while (ki > 0 && used(ki)) ki--;
-    if (used(li) || used(ki) || ki >= li) continue;
+    const used = (i) => !plain(play[i]);
+    let best = null;
+    for (let t = 0; t < 30; t++) {
+      const li = randInt(r, Math.ceil(np * 0.45), np - 1);
+      const ki = randInt(r, 0, li - 1);
+      if (used(li) || used(ki)) continue;
+      const sc = apart(cards[play[li]], cards[play[ki]]);
+      if (!best || sc > best.sc) best = { li, ki, sc };
+    }
+    if (!best) continue;
+    const { li, ki } = best;
     cards[play[li]].lock = keys.length;
     cards[play[ki]].key = keys.length;
     keys.push(play[ki]);
@@ -377,7 +398,7 @@ export function generateLevel(g) {
     let si = 0;
     let at = null;
     for (const id of play) {
-      while (!canFollow(top, ranks[id])) top = stock[si++];
+      while (!follows(top, ranks[id])) top = stock[si++];
       rem[id] = true;
       top = cards[id];
       if (coveredBy[packId].every((j) => rem[j])) {
@@ -393,136 +414,152 @@ export function generateLevel(g) {
     pack = want;
   }
 
-  return {
+  // Tiempos de la solución de referencia (sin premios de racha): acciones antes de cada jugada
+  // y si la jugada siguiente va sin robar en medio. Las mecánicas se colocan para que la referencia las cumpla.
+  const act = [];
+  const drew = [];
+  const bombFree = {}; // acciones al quedar destapada cada bomba en la referencia
+  {
+    const stk = stock.slice();
+    const rem = new Array(n).fill(false);
+    let top = waste0;
+    let si = 0;
+    let a = 0;
+    let packed = packId == null;
+    play.forEach((id, k) => {
+      let dn = 0;
+      while (!follows(top, ranks[id])) {
+        top = stk[si++];
+        a++;
+        dn++;
+      }
+      drew[k] = dn;
+      act[k] = a;
+      rem[id] = true;
+      top = { rank: ranks[id] };
+      a++;
+      if (!packed && coveredBy[packId].every((j) => rem[j])) {
+        stk.push(...cards[packId].pack);
+        packed = true;
+      }
+      for (const id of bombIds) if (bombFree[id] == null && coveredBy[id].every((j) => rem[j])) bombFree[id] = a;
+    });
+  }
+  const pickPlain = (from, to, ok = () => true) => {
+    const c = [];
+    for (let k = Math.max(0, from); k < Math.min(np, to); k++) if (plain(play[k]) && ok(k)) c.push(k);
+    return c.length ? pick(r, c) : null;
+  };
+
+  // Hielo: se derrite tras N cartas jugadas; N nunca pasa de las jugadas que la referencia hace antes.
+  if (mech.has('ice')) {
+    for (let t = randInt(r, 1, 3); t > 0; t--) {
+      const k = pickPlain(3, np);
+      if (k != null) cards[play[k]].ice = Math.min(k, randInt(r, 3, 8));
+    }
+  }
+  // Carta doble: un segundo número cualquiera (la referencia usa el principal).
+  if (mech.has('double')) {
+    for (let t = randInt(r, 1, 3); t > 0; t--) {
+      const k = pickPlain(0, np);
+      if (k == null) continue;
+      let alt = randInt(r, 0, 12);
+      if (alt === ranks[play[k]]) alt = (alt + 6) % 13;
+      cards[play[k]].alt = alt;
+    }
+  }
+  // Flecha: solo donde la referencia juega justo después, sin robar, el número de arriba (o de abajo).
+  if (mech.has('arrow')) {
+    for (let t = randInt(r, 1, 2); t > 0; t--) {
+      const k = pickPlain(0, np - 1, (k) => drew[k + 1] === 0);
+      if (k == null) continue;
+      const a = ranks[play[k]];
+      const b = ranks[play[k + 1]];
+      cards[play[k]].arrow = (a + 1) % 13 === b ? 1 : -1;
+    }
+  }
+  // Cortina: una fila de 3+ cartas que siguen boca abajo hasta retirar su carta llave (anterior en la referencia).
+  const curtains = [];
+  if (mech.has('curtain')) {
+    const rows = new Map();
+    play.forEach((id, k) => {
+      const key = `${cards[id].group}|${Math.round(cards[id].y * 10)}`;
+      if (!rows.has(key)) rows.set(key, []);
+      rows.get(key).push(k);
+    });
+    const opts = [...rows.values()].filter((ks) => ks.length >= 3 && ks.length <= 7 && Math.min(...ks) >= 3 && ks.every((k) => plain(play[k])));
+    // A veces, en vez de una fila, cartas sueltas repartidas por el tablero.
+    if (!opts.length || r() < 0.4) {
+      const loose = [];
+      for (let k = Math.ceil(np * 0.35); k < np; k++) if (plain(play[k])) loose.push(k);
+      if (loose.length >= 3) opts.splice(0, opts.length, shuffle(r, loose).slice(0, randInt(r, 3, Math.min(5, loose.length))));
+    }
+    if (opts.length) {
+      const ks = pick(r, opts);
+      const kk = pickPlain(0, Math.min(...ks));
+      if (kk != null) {
+        ks.forEach((k) => (cards[play[k]].curtain = 0));
+        cards[play[kk]].curtainKey = 0;
+        curtains.push(play[kk]);
+      }
+    }
+  }
+  // Bomba: explota si llevas `bomb` acciones sin destaparla. La referencia la destapa antes, con 2-5 de margen.
+  for (const id of bombIds) cards[id].bomb = (bombFree[id] ?? 0) + randInt(r, 2, 5);
+  // Carta viva: su número cambia ±1 con cada acción; se calcula para que encaje justo cuando la referencia la juega.
+  // Puede haber dos (una que sube y otra que baja) para complicar más.
+  if (mech.has('live')) {
+    let dir = r() < 0.5 ? 1 : -1;
+    for (let t = r() < 0.45 ? 2 : 1; t > 0; t--, dir = -dir) {
+      const k = pickPlain(1, np);
+      if (k == null) continue;
+      cards[play[k]].live = dir;
+      cards[play[k]].rank = mod13(ranks[play[k]] - dir * act[k]);
+    }
+  }
+
+  const level = {
     g, world, index, d, template, boss,
     groups: groups.map(({ w, h }) => ({ w, h })),
     cards,
     keys,
+    curtains,
     waste0,
     stock,
     solution: play, // la carta regalo no está: se activa sola
     meta: { spares, decoys, chains: starts.length, locks: keys.length, pack },
   };
-}
-
-// ¿Puede jugarse ya? (libre, sin candado cerrado y ±1 del descarte)
-export function isOpen(level, c, removed) {
-  return !c.pack && !removed[c.id] && c.coveredBy.every((j) => removed[j]) && (c.lock == null || !!removed[level.keys[c.lock]]);
-}
-
-// ---------- Premios de racha ----------
-// Racha 6: +1 carta útil al mazo · 9: un comodín al mazo · 12: +1 comodín al inventario
-// · después, cada 3: +1 carta útil. Las cartas de premio entran en un lugar "al azar" del mazo, nunca entre las 3 primeras,
-// (determinista según el estado, para que juego, solucionador y bot coincidan).
-// Los premios solo añaden cartas, así que nunca hacen imposible un nivel.
-export function streakReward(streak) {
-  if (streak === 6) return 'card';
-  if (streak === 9) return 'wild';
-  if (streak === 12) return 'bank';
-  if (streak > 12 && streak % 3 === 0) return 'card';
-  return null;
-}
-
-export function nextReward(streak) {
-  for (let s = streak + 1; ; s++) {
-    const kind = streakReward(s);
-    if (kind) return { at: s, kind };
+  // Bomba y carta viva dependen de cuántas acciones haces, y en el juego los premios de racha añaden robos.
+  // Se comprueba con el solucionador (que sí aplica premios); si no hay solución, se quitan.
+  // Si no hay solución: primero se quita la carta viva y luego se le da más margen a la bomba.
+  const check = () => !cards.some((c) => c.live || c.bomb) || !!solve(level, initState(level), 60000);
+  if (!check()) {
+    for (const c of cards) if (c.live) (c.rank = ranks[c.id]), delete c.live;
+    for (let extra = 4; !check() && extra <= 40; extra *= 2) for (const c of cards) if (c.bomb) c.bomb += extra;
   }
+  level.meta.mechs = MECHANICS.filter((m) => cards.some((c) => c[MECH_FIELD[m]] != null));
+  return level;
 }
 
-// La carta útil es vecina (+1) de la primera carta jugable del tablero, por id: determinista,
-// así el juego, el solucionador y el bot la calculan igual.
-export function rewardCard(level, removed, kind) {
-  if (kind === 'wild') return { wild: true, reward: true };
-  const c = level.cards.find((c) => isOpen(level, c, removed)) || level.cards.find((c) => !removed[c.id] && !c.pack);
-  return { rank: c ? (c.rank + 1) % 13 : 0, suit: c ? (c.id + 1) % 4 : 0, reward: true };
-}
+// ---------- Mecánicas por mundo ----------
+export const MECHANICS = ['lock', 'pack', 'ice', 'double', 'arrow', 'curtain', 'bomb', 'live'];
+const MECH_FIELD = { lock: 'lock', pack: 'pack', ice: 'ice', double: 'alt', arrow: 'arrow', curtain: 'curtain', bomb: 'bomb', live: 'live' };
+// Mundo (índice desde 0) en el que se presenta cada una.
+export const MECH_INTRO = { lock: 1, pack: 2, ice: 4, double: 7, arrow: 11, curtain: 15, bomb: 19, live: 24 };
+export const MECH_NAMES = {
+  lock: 'Candado', pack: 'Carta regalo', ice: 'Hielo', double: 'Carta doble', arrow: 'Flecha', curtain: 'Cortina', bomb: 'Bomba', live: 'Carta viva',
+};
 
-// Pone en el mazo el premio de alcanzar `streak` (si toca). Devuelve { kind, pos } o null.
-export function applyReward(level, removed, stock, streak) {
-  const kind = streakReward(streak);
-  if (!kind) return null;
-  let pos = -1;
-  if (kind === 'card' || kind === 'wild') {
-    const gone = removed.reduce((a, b) => a + (b ? 1 : 0), 0);
-    // Nunca entre las 3 primeras del mazo (salvo que haya menos de 3: entonces al final).
-    const h = hash(level.g * 131 + streak * 17 + gone * 7 + stock.length);
-    pos = stock.length < 3 ? stock.length : 3 + (h % (stock.length - 2));
-    stock.splice(pos, 0, rewardCard(level, removed, kind));
-  }
-  return { kind, pos };
-}
-
-// Cartas regalo que ya quedaron destapadas: se quitan del tablero y su contenido va al final del mazo.
-// Devuelve los ids activados (para poder deshacer).
-export function activatePacks(level, removed, stock) {
-  const out = [];
-  for (const c of level.cards) {
-    if (!c.pack || removed[c.id] || !c.coveredBy.every((j) => removed[j])) continue;
-    removed[c.id] = true;
-    stock.push(...c.pack.map((x) => ({ ...x })));
-    out.push(c.id);
-  }
-  return out;
-}
-
-// Busca una solución desde un estado (profundidad primero, con memoria). null = no hay o se agotó el límite.
-// Tiene en cuenta los premios de racha que caen en el mazo.
-export function solve(level, removed, stock0, top, streak0 = 0, limit = 250000) {
-  const rem = removed.slice();
-  const seen = new Set();
-  const path = [];
-  let nodes = 0;
-  const sig = (st) => st.map((c) => (c.wild ? 'w' : c.rank)).join(',');
-  const dfs = (stock, top, left, streak) => {
-    if (left === 0) return true;
-    if (++nodes > limit) return false;
-    const key = `${rem.map((b) => (b ? 1 : 0)).join('')}|${sig(stock)}|${top.wild ? 'w' : top.rank}|${Math.min(streak, 13 + (streak % 3))}`;
-    if (seen.has(key)) return false;
-    seen.add(key);
-    for (const c of level.cards) {
-      if (!isOpen(level, c, rem) || !canFollow(top, c.rank)) continue;
-      rem[c.id] = true;
-      path.push(c.id);
-      const next = stock.slice();
-      const act = activatePacks(level, rem, next);
-      applyReward(level, rem, next, streak + 1);
-      if (dfs(next, c, left - 1 - act.length, streak + 1)) return true;
-      path.pop();
-      rem[c.id] = false;
-      for (const id of act) rem[id] = false;
-    }
-    if (stock.length) {
-      path.push('draw');
-      if (dfs(stock.slice(1), stock[0], left, 0)) return true;
-      path.pop();
-    }
-    return false;
-  };
-  return dfs(stock0.slice(), top, rem.filter((b) => !b).length, streak0) ? path : null;
-}
-
-// Jugador casual: juega cualquier carta válida al azar; si no hay, roba. Sin boosters, con premios de racha.
-export function playCasual(level, r = Math.random) {
-  const removed = new Array(level.cards.length).fill(false);
-  const stock = [...level.stock];
-  let top = level.waste0;
-  let left = level.cards.length;
-  let streak = 0;
-  for (;;) {
-    const moves = level.cards.filter((c) => isOpen(level, c, removed) && canFollow(top, c.rank));
-    if (moves.length) {
-      const c = moves[Math.floor(r() * moves.length)];
-      removed[c.id] = true;
-      top = c;
-      left -= 1 + activatePacks(level, removed, stock).length;
-      if (left === 0) return true;
-      applyReward(level, removed, stock, ++streak);
-    } else if (stock.length) {
-      top = stock.shift();
-      streak = 0;
-    } else return false;
-  }
+function chooseMechanics(r, world, index, boss, n) {
+  if (n < 8) return [];
+  const avail = MECHANICS.filter((m) => world >= MECH_INTRO[m]);
+  if (!avail.length) return [];
+  const newest = avail.find((m) => MECH_INTRO[m] === world);
+  const others = avail.filter((m) => m !== newest);
+  // Mundo de presentación: la nueva va sola en los primeros niveles y luego acompañada.
+  if (newest) return index < 5 || !others.length ? [newest] : [newest, pick(r, others)];
+  const k = boss ? 2 : r() < 0.2 ? 0 : r() < 0.55 ? 1 : 2;
+  return shuffle(r, avail.slice()).slice(0, k);
 }
 
 // Cada intento de un nivel cambia las cartas sin cambiar el tablero: se suma lo mismo a todos los rangos
@@ -532,12 +569,10 @@ export function variantLevel(level, v) {
   const r = mulberry32(hash(level.g * 7919 + v));
   const k = randInt(r, 1, 12);
   const perm = shuffle(r, [0, 1, 2, 3]);
-  const map = (c) => (c.rank == null ? { ...c } : { ...c, rank: (c.rank + k) % 13, suit: perm[c.suit] });
+  const map = (c) => (c.rank == null ? { ...c } : { ...c, rank: (c.rank + k) % 13, suit: perm[c.suit], ...(c.alt != null && { alt: (c.alt + k) % 13 }) });
   const mapCard = (c) => ({ ...map(c), ...(c.pack && { pack: c.pack.map(map) }) });
   return { ...level, variant: v, cards: level.cards.map(mapCard), stock: level.stock.map(map), waste0: map(level.waste0) };
 }
-
-export const canFollow = (top, rank) => top.wild || Math.abs(top.rank - rank) === 1 || Math.abs(top.rank - rank) === 12;
 
 // Acomoda los grupos en filas: prueba 1..n filas y elige la que deja las cartas más grandes.
 // Devuelve el tamaño de carta (u, en px), el tablero (bw, bh, en unidades) y la posición de cada grupo.

@@ -1,15 +1,29 @@
-// Comprueba que todos los niveles se pueden ganar siguiendo la solución con la que se generaron
-// y muestra estadísticas de tamaño. Uso: node tests/verify-levels.mjs
-import { generateLevel, TOTAL_LEVELS, canFollow, overlaps, activatePacks } from '../js/levels.js';
+// Comprueba que todos los niveles se pueden ganar y muestra estadísticas.
+// Primero sigue la solución con la que se generó cada nivel (robando cuando hace falta) con el motor
+// de reglas real, que aplica premios de racha, cartas regalo, bombas, etc. Si esa ruta no alcanza,
+// prueba con el solucionador. Uso: node tests/verify-levels.mjs
+import { generateLevel, TOTAL_LEVELS, overlaps, MECHANICS } from '../js/levels.js';
+import { initState, playRank, play, draw, won, solve } from '../js/engine.js';
 
 let fails = 0;
-const stats = { cards: [], stock: [], left: [], tpl: {} };
+let bySolver = 0;
+const stats = { cards: [], stock: [], tpl: {}, mechs: {} };
+
+function reference(L) {
+  let s = initState(L);
+  for (const id of L.solution) {
+    if (s.rem[id]) continue;
+    while (playRank(L, L.cards[id], s) == null) {
+      if (!s.stock.length) return false;
+      s = draw(L, s).s;
+    }
+    s = play(L, s, id).s;
+  }
+  return won(s);
+}
 
 for (let g = 0; g < TOTAL_LEVELS; g++) {
   const L = generateLevel(g);
-  const removed = new Set();
-  const stock = [...L.stock];
-  let top = L.waste0;
   let ok = true;
 
   // Las capas deben ser coherentes: cartas que se solapan nunca comparten capa.
@@ -17,40 +31,27 @@ for (let g = 0; g < TOTAL_LEVELS; g++) {
     for (const b of L.cards)
       if (a.id < b.id && a.group === b.group && a.z === b.z && overlaps(a, b)) { ok = false; console.log('misma capa', g, L.template, a.id, b.id); }
 
-  for (const id of L.solution) {
-    const c = L.cards[id];
-    if (!c.coveredBy.every((j) => removed.has(j))) { ok = false; break; }
-    if (c.lock != null && !removed.has(L.keys[c.lock])) { ok = false; break; }
-    while (!canFollow(top, c.rank)) {
-      if (!stock.length) { ok = false; break; }
-      top = stock.shift();
-    }
-    if (!ok) break;
-    removed.add(id);
-    top = c;
-    const rm = L.cards.map((x) => removed.has(x.id));
-    for (const pid of activatePacks(L, rm, stock)) removed.add(pid);
+  if (ok && !reference(L)) {
+    bySolver++;
+    ok = !!solve(L, initState(L));
   }
-  if (ok && removed.size !== L.cards.length) ok = false; // también deben irse las cartas regalo
   if (!ok) {
     fails++;
-    if (fails < 10) console.log('FALLA nivel', g, L.template);
+    if (fails < 10) console.log('FALLA nivel', g + 1, L.template, L.meta.mechs.join(','));
   }
   stats.cards.push(L.cards.length);
   stats.stock.push(L.stock.length);
-  stats.left.push(stock.length);
   stats.tpl[L.template] = (stats.tpl[L.template] || 0) + 1;
-  stats.locks = (stats.locks || 0) + (L.keys.length ? 1 : 0);
-  if (L.meta.pack) { stats.packs = (stats.packs || 0) + 1; stats.short = (stats.short || 0) + (L.stock.length <= 3 ? 1 : 0); }
+  for (const m of L.meta.mechs) stats.mechs[m] = (stats.mechs[m] || 0) + 1;
+  if (L.meta.pack) stats.short = (stats.short || 0) + (L.stock.length <= 3 ? 1 : 0);
 }
 
 const sum = (a) => a.reduce((x, y) => x + y, 0);
 const fmt = (a) => `min ${Math.min(...a)} · media ${(sum(a) / a.length).toFixed(1)} · max ${Math.max(...a)}`;
-console.log(`Niveles: ${TOTAL_LEVELS} · fallidos: ${fails}`);
+console.log(`Niveles: ${TOTAL_LEVELS} · fallidos: ${fails} · resueltos con el solucionador: ${bySolver}`);
 console.log('Cartas en tablero:', fmt(stats.cards));
 console.log('Cartas en mazo:   ', fmt(stats.stock));
-console.log('Sobrantes (ideal):', fmt(stats.left));
 console.log('Plantillas:', stats.tpl);
-console.log('Niveles con candado:', stats.locks);
-console.log('Niveles con carta regalo:', stats.packs, `(${stats.short} empiezan con 3 cartas o menos en el mazo)`);
+console.log('Niveles por mecánica:', Object.fromEntries(MECHANICS.map((m) => [m, stats.mechs[m] || 0])));
+console.log('Con carta regalo y mazo de 3 o menos:', stats.short || 0);
 process.exit(fails ? 1 : 0);

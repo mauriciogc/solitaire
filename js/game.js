@@ -1,6 +1,7 @@
 import { save, persist } from './storage.js';
 import { openModal, toast, confetti, updateCoins, starsHTML } from './ui.js';
-import { worldInfo, canFollow, packGroups, solve, applyReward, nextReward, activatePacks } from './levels.js';
+import { worldInfo, packGroups, MECH_NAMES } from './levels.js';
+import * as E from './engine.js';
 import { price } from './economy.js';
 import { cardBack, svgUrl, icon, star, coin, placeIcon, lockIcon, keyIcon } from './lowpoly.js';
 import { Coach } from './coach.js';
@@ -13,6 +14,19 @@ const FLY_EASE = 'cubic-bezier(0.33, 0.6, 0.35, 1)';
 const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 const buzz = () => navigator.vibrate?.(30);
 const REWARD_TEXT = { card: '+1 carta al mazo', wild: 'comodín al mazo', bank: '+1 comodín' };
+const ARROW = { 1: '↑', '-1': '↓' };
+// Explicación de cada mecánica la primera vez que aparece (modo jugador).
+const TIPS = {
+  lock: 'Esta carta tiene <b>candado</b>: no se puede jugar hasta que juegues la carta con la <b>llave</b> del mismo color.',
+  pack: 'La <b>carta regalo</b> no se juega: cuando la destapes por completo, mete cartas extra al final de tu mazo.',
+  ice: 'Carta de <b>hielo</b>: cada carta que juegas del tablero le quita 1. Cuando llega a 0 se derrite y ya la puedes jugar.',
+  double: 'La <b>carta doble</b> es dos números a la vez. Puedes jugarla si conecta con cualquiera de los dos, y cuando queda abajo puedes seguir desde cualquiera de sus dos números.',
+  arrow: 'Después de jugar una carta con <b>flecha</b>, la siguiente tiene que ser justo un número arriba (↑) o abajo (↓).',
+  curtain: 'Estas cartas tienen <b>cortina</b>: siguen boca abajo hasta que juegues la carta con el telón.',
+  bomb: 'La <b>bomba</b> no se juega: tienes que <b>destaparla</b> antes de que su cuenta llegue a 0 (baja con cada jugada o robo). Si no, explota y quema 3 cartas de tu mazo.',
+  live: 'La <b>carta viva</b> cambia de número cada vez que juegas o robas: sube (↑) o baja (↓). Juégala cuando encaje.',
+};
+const MECH_FIELD = { lock: 'lock', pack: 'pack', ice: 'ice', double: 'alt', arrow: 'arrow', curtain: 'curtain', bomb: 'bomb', live: 'live' };
 
 // Asentarse al aterrizar: un aplastón leve, el protagonismo es el vuelo.
 function squash(el) {
@@ -44,16 +58,24 @@ function toss(el, { x0 = 0, y0 = 0, s0 = 1, r0 = 0 }, { x1 = 0, y1 = 0, s1 = 1, 
 
 const center = (r) => [r.left + r.width / 2, r.top + r.height / 2];
 
-export function faceHTML(c) {
+// rank: número a mostrar (la carta viva cambia); si no se da, el de la carta.
+export function faceHTML(c, rank = c.rank) {
   if (c.wild) return `<div class="face front wild">${star(true)}</div>`;
-  if (c.rank == null) return '';
+  if (rank == null) return '';
   const s = SUITS[c.suit];
   const red = c.suit === 1 || c.suit === 2 ? ' red' : '';
-  return `<div class="face front${red}"><span class="rk">${RANKS[c.rank]}</span><span class="st">${s}</span><span class="big">${s}</span></div>`;
+  const arrow = c.arrow ? `<span class="arrow-badge">${ARROW[c.arrow]}</span>` : '';
+  const live = c.live ? `<span class="live-badge">${ARROW[c.live]}</span>` : '';
+  // Carta doble: los dos números partidos en grande ("5/8"), palos más chicos.
+  if (c.alt != null)
+    return `<div class="face front double${red}"><span class="dbl"><b>${RANKS[c.rank]}</b><i></i><b>${RANKS[c.alt]}</b></span><span class="st">${s}</span><span class="big">${s}</span></div>`;
+  return `<div class="face front${red}${c.live ? ' live' : ''}"><span class="rk">${RANKS[rank]}</span><span class="st">${s}</span><span class="big">${s}</span>${arrow}${live}</div>`;
 }
 const inner = (c) => `<div class="inner">${faceHTML(c)}<div class="face back"></div></div>`;
 // Marcas que se ven aunque la carta esté boca abajo, para poder planear.
 const marks = (c) =>
+  (c.ice ? `<span class="ice-ov"><b></b></span>` : '') +
+  (c.curtainKey != null ? `<span class="curtain-mark"></span>` : '') +
   (c.key != null ? `<span class="key-mark">${keyIcon(LOCK_HUES[c.key])}</span>` : '') +
   (c.lock != null ? `<span class="lock-ov">${lockIcon(LOCK_HUES[c.lock])}</span>` : '');
 
@@ -65,10 +87,8 @@ export class Game {
     this.opts = opts;
     this.info = worldInfo(level.world);
     this.cards = level.cards.map((c) => ({ ...c, removed: false, el: null }));
-    this.stock = level.stock.map((c) => ({ ...c }));
-    this.waste = [{ ...level.waste0 }];
-    this.history = [];
-    this.streak = 0;
+    this.st = E.initState(level); // estado de reglas (js/engine.js): la única fuente de verdad
+    this.history = []; // { t, before: estado anterior, ev: lo que pasó (para animar el deshacer), best, bonus }
     this.best = 0;
     this.bonus = 0;
     this.extras = 0;
@@ -76,7 +96,8 @@ export class Game {
     this.busy = true; // mientras hay una animación que bloquea (barajeo, carta regalo) no se puede tocar
     this.dealing = true; // durante el barajeo las cartas no se voltean
     this.modalOpen = false;
-    if (opts.resume) this.restore(opts.resume);
+    if (opts.resume?.st) this.restore(opts.resume); // partidas guardadas con el formato viejo se empiezan de nuevo
+    this.sync();
 
     this.el = this.build();
     root.append(this.el);
@@ -89,12 +110,58 @@ export class Game {
     this.renderPiles();
     this.updateCounts();
     this.showCombo();
-    this.intro().then(() => {
-      if (this.done) return;
-      this.busy = false;
-      this.dealing = false;
-      this.refresh();
-      if (opts.tutorial) this.coach = new Coach(this);
+    this.intro()
+      .then(() => {
+        if (this.done) return;
+        this.dealing = false;
+        this.refresh();
+        return this.presentBombs();
+      })
+      .then(() => {
+        if (this.done) return;
+        this.busy = false;
+
+        if (opts.tutorial) this.coach = new Coach(this);
+        else this.tips();
+      });
+  }
+
+  // Atajos de lectura del estado.
+  get stock() {
+    return this.st.stock;
+  }
+  get streak() {
+    return this.st.streak;
+  }
+  get top() {
+    return this.st.top;
+  }
+  sync() {
+    this.cards.forEach((c, i) => (c.removed = this.st.rem[i]));
+  }
+
+  // La primera vez que aparece una mecánica se explica (solo en modo jugador; en dev se ve en la galería).
+  tips() {
+    const next = (this.level.meta.mechs || []).find((m) => TIPS[m] && !save.seen[m]);
+    if (!next) return;
+    save.seen[next] = true;
+    persist();
+    const c = this.cards.find((x) => !x.removed && x.el && x[MECH_FIELD[next]] != null);
+    this.modalOpen = true;
+    openModal({
+      title: `Nuevo: ${MECH_NAMES[next]}`,
+      body: `<p>${TIPS[next]}</p>`,
+      onClose: () => {
+        this.modalOpen = false;
+        if (c?.el) {
+          c.el.classList.remove('hint');
+          void c.el.offsetWidth;
+          c.el.classList.add('hint');
+          setTimeout(() => c.el?.classList.remove('hint'), 1600);
+        }
+        setTimeout(() => this.tips(), 300);
+      },
+      buttons: [{ label: '¡Entendido!' }],
     });
   }
 
@@ -107,31 +174,11 @@ export class Game {
 
   // ---------- Guardar y retomar ----------
   snapshot() {
-    return {
-      removed: this.cards.map((c) => c.removed),
-      stock: this.stock,
-      waste: this.waste,
-      history: this.history,
-      streak: this.streak,
-      best: this.best,
-      bonus: this.bonus,
-      extras: this.extras,
-      stockMax: this.stockMax,
-    };
+    return { st: this.st, history: this.history, best: this.best, bonus: this.bonus, extras: this.extras, stockMax: this.stockMax };
   }
 
   restore(s) {
-    s.removed.forEach((r, i) => (this.cards[i].removed = r));
-    Object.assign(this, {
-      stock: s.stock,
-      waste: s.waste,
-      history: s.history,
-      streak: s.streak,
-      best: s.best,
-      bonus: s.bonus,
-      extras: s.extras,
-      stockMax: s.stockMax,
-    });
+    Object.assign(this, { st: s.st, history: s.history, best: s.best, bonus: s.bonus, extras: s.extras, stockMax: s.stockMax });
   }
 
   // Se llama tras cada acción. Solo guarda si el nivel es nuevo (ver main.js).
@@ -202,7 +249,9 @@ export class Game {
   // Todas las cartas empiezan juntas en el centro como un mazo, se barajan dos veces
   // (se parten en dos y se vuelven a juntar) y salen volando a su lugar una tras otra.
   intro() {
-    const live = this.cards.filter((c) => c.el);
+    // Las bombas no se reparten: se presentan aparte al final (presentBombs).
+    for (const c of this.cards) if (c.bomb && c.el && !reduced()) c.el.style.opacity = 0;
+    const live = this.cards.filter((c) => c.el && !c.bomb);
     if (reduced() || !live.length) return Promise.resolve();
     const cx = (parseFloat(this.boardEl.style.width) - this.u) / 2;
     const cy = (parseFloat(this.boardEl.style.height) - this.u * 1.4) / 2;
@@ -236,13 +285,57 @@ export class Game {
     return last.finished.catch(() => {});
   }
 
+  // Al armarse el tablero, cada bomba aparece grande al frente con su cuenta y luego vuela a su lugar,
+  // una tras otra: así se ve dónde cae cada una y cuántas jugadas tiene.
+  presentBombs() {
+    const bombs = this.cards.filter((c) => c.bomb && c.el && !c.removed);
+    if (!bombs.length || reduced()) return Promise.resolve();
+    const w = parseFloat(this.boardEl.style.width);
+    const h = parseFloat(this.boardEl.style.height);
+    // Grandes, pero que quepan todas en el ancho de la pantalla.
+    const avail = this.wrapEl.getBoundingClientRect().width * 0.9;
+    const big = Math.min(2.2, avail / (bombs.length * this.u * 1.15));
+    const gap = this.u * big * 1.15;
+    const runs = bombs.map((c, i) => {
+      const el = c.el;
+      const x = parseFloat(el.style.left);
+      const y = parseFloat(el.style.top);
+      const cx = w / 2 - this.u / 2 + (i - (bombs.length - 1) / 2) * gap;
+      const cy = h / 2 - (this.u * 1.4) / 2;
+      el.style.zIndex = 9800 + i;
+      el.style.opacity = '';
+      const k = (tx, ty, sc, rot, offset, easing) => ({ translate: `${tx}px ${ty}px`, scale: sc, rotate: `${rot}deg`, offset, easing });
+      const a = el.animate(
+        [
+          { ...k(cx - x, cy - y, 0.2, -20, 0, 'cubic-bezier(0.34, 1.45, 0.64, 1)'), opacity: 0 },
+          { ...k(cx - x, cy - y, big * 0.9, -4, 0.15, 'cubic-bezier(0.34, 1.45, 0.64, 1)'), opacity: 1 },
+          k(cx - x, cy - y, big, 0, 0.25, 'linear'),
+          k(cx - x, cy - y, big, 0, 0.55 + i * 0.05, 'cubic-bezier(0.5, 0, 0.3, 1)'),
+          k(0, 0, 1, c.rot, 1),
+        ],
+        { duration: 1500 + i * 350, fill: 'backwards' },
+      );
+      return a.finished.then(() => {
+        el.style.zIndex = c.z * 100 + c.id;
+        squash(el);
+      });
+    });
+    return Promise.all(runs);
+  }
+
   // ---------- Render ----------
   makeCardEl(c) {
     const d = document.createElement('div');
-    d.className = c.pack ? 'card pack-card' : 'card';
+    d.className = c.pack ? 'card pack-card' : c.bomb ? 'card bomb-card' : 'card';
     d.dataset.id = c.id;
     // La carta regalo se ve igual tapada o destapada: violeta con su "+n".
-    d.innerHTML = c.pack ? `<div class="inner"><div class="face front"></div><div class="face back"></div></div><span class="pack-num">+${c.pack.length}</span>` : inner(c) + marks(c);
+    // Las cartas especiales (regalo y bomba) se ven igual tapadas o destapadas.
+    d.innerHTML = c.pack
+      ? `<div class="inner"><div class="face front"></div><div class="face back"></div></div><span class="pack-num">+${c.pack.length}</span>`
+      : c.bomb
+        ? `<div class="inner"><div class="face front"></div><div class="face back"></div></div><span class="bomb-face"><i></i><b></b></span>`
+        : `<div class="inner">${faceHTML(c, E.rankOf(c, this.st))}<div class="face back"></div></div>` + marks(c);
+    if (c.curtain != null) d.classList.add('curtain');
     d.style.zIndex = c.z * 100 + c.id;
     this.boardEl.append(d);
     c.el = d;
@@ -270,25 +363,39 @@ export class Game {
     this.coach?.update();
   }
 
-  isFree(c) {
-    return c.coveredBy.every((j) => this.cards[j].removed);
-  }
-
-  isLocked(c) {
-    return c.lock != null && !this.cards[this.level.keys[c.lock]].removed;
-  }
-
-  canPlay(c) {
-    const top = this.waste[this.waste.length - 1];
-    return !!top && canFollow(top, c.rank);
-  }
-
+  // Pinta lo que depende del estado: boca arriba, candados, cortinas, hielo, bomba y carta viva.
   refresh() {
-    if (!this.dealing) {
-      for (const c of this.cards) {
-        if (c.removed || !c.el) continue;
-        c.el.classList.toggle('up', this.isFree(c));
-        if (c.lock != null) c.el.classList.toggle('unlocked', !this.isLocked(c));
+    const { level, st } = this;
+    for (const c of this.cards) {
+      if (c.removed || !c.el) continue;
+      const el = c.el;
+      if (!this.dealing) el.classList.toggle('up', E.faceUp(level, c, st));
+      if (c.lock != null) el.classList.toggle('unlocked', E.lockOpen(level, c, st));
+      if (c.curtain != null) el.classList.toggle('curtain-open', E.curtainOpen(level, c, st));
+      if (c.ice) {
+        const left = E.iceLeft(c, st);
+        el.querySelector('.ice-ov b').textContent = left || '';
+        el.classList.toggle('melted', !left);
+      }
+      if (c.bomb) {
+        const left = E.bombLeft(c, st);
+        el.querySelector('.bomb-face b').textContent = left == null ? '' : left;
+        el.classList.toggle('bomb-hot', left != null && left <= 2);
+
+      }
+      if (c.live) {
+        const r = E.rankOf(c, st);
+        if (el.dataset.rank !== String(r)) {
+          const old = el.dataset.rank;
+          el.dataset.rank = r;
+          // Solo cambia el número (la carta no se mueve): el viejo sale y el nuevo entra.
+          const rk = el.querySelector('.front .rk');
+          rk.textContent = RANKS[r];
+          if (old != null && !reduced()) {
+            const up = c.live > 0 ? 1 : -1;
+            rk.animate([{ translate: `0 ${up * 40}%`, opacity: 0 }, { translate: '0 0', opacity: 1 }], { duration: 240, easing: 'ease-out' });
+          }
+        }
       }
     }
   }
@@ -346,8 +453,9 @@ export class Game {
   }
 
   renderWaste() {
-    const top = this.waste[this.waste.length - 1];
-    this.wasteEl.innerHTML = top ? `<div class="card up">${inner(top)}</div>` : '';
+    const top = this.st.top;
+    this.wasteEl.innerHTML = top ? `<div class="card up">${inner({ ...top, arrow: top.arrow })}</div>` : '';
+    this.wasteEl.classList.toggle('arrowed', !!top?.arrow);
   }
 
   landWaste() {
@@ -364,7 +472,7 @@ export class Game {
   // Indicador de racha por puntos: del 1 al 6, luego hasta 9 y luego hasta 12 (después, tramos de 3).
   // Al final de los puntos se dibuja el premio del tramo (carta violeta, comodín dorado o estrella al inventario).
   showCombo() {
-    const { at, kind } = nextReward(this.streak);
+    const { at, kind } = E.nextReward(this.streak);
     const from = at <= 12 ? 0 : at - 3;
     let dots = '';
     for (let i = from + 1; i < at; i++) dots += `<i class="${i <= this.streak ? 'on' : ''}"></i>`;
@@ -394,45 +502,47 @@ export class Game {
   tapCard(id) {
     const c = this.cards[id];
     if (!c || c.removed) return;
-    if (c.pack) {
+    const { level, st } = this;
+    if (c.pack || c.bomb) {
       buzz();
-      if (!this.packTold) {
-        this.packTold = true;
-        toast('Destápala por completo y te regala cartas');
-      }
+      if (c.pack) this.tell('pack', 'Destápala por completo y te regala cartas');
+      else this.tell('bomb', 'Destápala antes de que llegue a 0 para desactivarla');
       return this.shake(c.el);
     }
     if (this.coach && !this.coach.allows(c)) return;
-    if (!this.isFree(c) || !this.canPlay(c) || this.isLocked(c)) {
+    if (E.playRank(level, c, st) == null) {
       buzz();
-      if (this.isFree(c) && this.isLocked(c) && !this.lockTold) {
-        this.lockTold = true;
-        toast('Juega la carta con la llave del mismo color');
+      if (E.faceUp(level, c, st)) {
+        if (!E.lockOpen(level, c, st)) this.tell('lock', 'Juega la carta con la llave del mismo color');
+        else if (E.iceLeft(c, st)) this.tell('ice', `Juega ${E.iceLeft(c, st)} carta(s) más para derretir el hielo`);
+        else if (st.top?.arrow) this.tell('arrow', `La flecha pide un ${RANKS[E.mod13(st.top.rank + st.top.arrow)]}`);
       }
       return this.shake(c.el);
     }
     this.play(c);
   }
 
-  play(c) {
-    const h = { t: 'play', id: c.id, streak: this.streak, bonus: this.bonus, reward: null };
-    c.removed = true;
-    this.waste.push({ rank: c.rank, suit: c.suit });
-    this.streak++;
-    this.best = Math.max(this.best, this.streak);
-    this.bonus += this.streak;
-    this.history.push(h);
-    // Cartas regalo que quedaron destapadas: se activan solas y mandan sus cartas al final del mazo
-    // (antes del premio de racha, igual que en el solucionador).
-    const rm = this.cards.map((x) => x.removed);
-    h.packs = activatePacks(this.level, rm, this.stock);
-    for (const id of h.packs) this.cards[id].removed = true;
-    this.giveReward(h);
-    for (const id of h.packs) this.flyPack(this.cards[id]);
+  // Avisos cortos, una vez por partida cada uno.
+  tell(key, msg) {
+    this.told ||= {};
+    if (this.told[key]) return;
+    this.told[key] = true;
+    toast(msg);
+  }
 
+  play(c) {
+    const before = this.st;
+    const { s, ev } = E.play(this.level, before, c.id);
+    const burnRects = this.burnRects(ev.boom);
+    this.history.push({ t: 'play', before, ev, best: this.best, bonus: this.bonus });
+    this.st = s;
+    this.sync();
+    this.best = Math.max(this.best, s.streak);
+    this.bonus += s.streak;
+
+    // Vuela de centro a centro dando una vuelta y se asienta al caer.
     const el = c.el;
     c.el = null;
-    // Vuela de centro a centro dando una vuelta y se asienta al caer.
     el.classList.remove('shake');
     el.getAnimations().forEach((a) => a.cancel());
     const [ax, ay] = center(el.getBoundingClientRect());
@@ -446,28 +556,99 @@ export class Game {
       this.landWaste();
     });
 
+    // Cartas regalo que quedaron destapadas, premio de racha y bombas.
+    this.renderStock();
+    for (const id of ev.packs) this.flyPack(this.cards[id]);
+    for (const id of ev.defused) this.defuse(this.cards[id]);
+    this.giveReward(ev.reward);
+    this.burn(ev.boom, burnRects);
+
     this.refresh();
     this.save();
     this.checkEnd();
     this.coach?.after();
   }
 
-  // Premio por racha (ver streakReward en levels.js). Deshacer la jugada lo quita.
-  giveReward(h) {
-    const r = applyReward(this.level, this.cards.map((c) => c.removed), this.stock, this.streak);
+  // Premio por racha (ver streakReward en engine.js). Deshacer la jugada lo quita.
+  giveReward(r) {
     if (!r) return this.showStreak();
-    h.reward = r.kind;
-    h.rewardAt = r.pos;
     if (r.kind === 'bank') {
       save.wild++;
       persist();
       this.updateCounts();
       squash(this.el.querySelector('.wild-card'));
     } else {
-      this.renderStock();
       this.flyReward(r.kind, this.stockEls[this.stockEls.length - 1 - r.pos]);
     }
     this.showStreak(`¡Racha ×${this.streak}! ${REWARD_TEXT[r.kind]}`);
+  }
+
+  // Dónde están ahora las cartas que una bomba va a quemar (las primeras del mazo, a la derecha).
+  // skip: cartas de la derecha que ya no cuentan (al robar, la que se acaba de robar).
+  burnRects(boom, skip = 0) {
+    if (!boom?.length) return [];
+    const n = boom.reduce((a, b) => a + b.burned.length, 0);
+    const els = this.stockEls || [];
+    return els.slice(Math.max(0, els.length - skip - n), els.length - skip).map((e) => e.getBoundingClientRect());
+  }
+
+  // Bomba destapada a tiempo: la mecha se apaga y la carta se encoge y desaparece.
+  defuse(c) {
+    const el = c.el;
+    c.el = null;
+    if (!el) return;
+    el.classList.add('defused');
+    toast('¡Bomba desactivada!');
+    el.animate([{ scale: 1, opacity: 1 }, { scale: 1.15, opacity: 1, offset: 0.35 }, { scale: 0.3, opacity: 0 }], { duration: 520, easing: 'ease-in', fill: 'forwards' }).finished.then(() => el.remove());
+  }
+
+  // La bomba explota: baja volando hasta el mazo, estalla (destello y temblor) y las primeras cartas del mazo salen ardiendo.
+  // `rects` son las posiciones de las cartas quemadas antes de quitarlas: se dejan "fantasmas" ahí hasta que estalla.
+  burn(boom, rects) {
+    if (!boom?.length) return;
+    const ghosts = rects.map((a) => this.flyer({}, a, false));
+    const target = this.stockEl.getBoundingClientRect();
+    const [tx, ty] = center(target);
+    const flights = boom.map((b) => {
+      const c = this.cards[b.id];
+      const el = c.el;
+      c.el = null;
+        if (!el || reduced()) {
+        el?.remove();
+        return Promise.resolve();
+      }
+      const [ax, ay] = center(el.getBoundingClientRect());
+      el.style.zIndex = 9999;
+      el.style.rotate = '0deg';
+      return toss(el, { r0: c.rot }, { x1: tx - ax, y1: ty - ay - 20, s1: 1.2 }, 0).then(() => el.remove());
+    });
+    Promise.all(flights).then(() => {
+      if (!reduced()) {
+        const flash = document.createElement('div');
+        flash.className = 'boom-flash';
+        flash.style.cssText = `left:${tx}px;top:${ty}px`;
+        document.body.append(flash);
+        flash.animate([{ scale: 0.2, opacity: 1 }, { scale: 3.2, opacity: 0 }], { duration: 650, easing: 'ease-out', fill: 'forwards' }).finished.then(() => flash.remove());
+        this.el.animate(
+          [{ translate: '0 0' }, { translate: '-8px 4px' }, { translate: '7px -5px' }, { translate: '-5px 3px' }, { translate: '3px -2px' }, { translate: '0 0' }],
+          { duration: 420, easing: 'ease-out' },
+        );
+      }
+      buzz();
+      toast(`¡Bum! La bomba quemó ${rects.length} carta${rects.length === 1 ? '' : 's'} de tu mazo`);
+      ghosts.forEach((f, k) => {
+        f.classList.add('burning');
+        if (reduced()) return f.remove();
+        f.animate(
+          [
+            { translate: '0 0', rotate: '0deg', scale: 1, opacity: 1 },
+            { translate: `${(k - 1) * 20}px -40px`, rotate: `${(k - 1) * 15}deg`, scale: 1.25, opacity: 1, offset: 0.35 },
+            { translate: `${(k - 1) * 60}px -170px`, rotate: `${(k - 1) * 45}deg`, scale: 0.6, opacity: 0 },
+          ],
+          { duration: 1000, easing: 'ease-out', fill: 'forwards', delay: k * 80 },
+        ).finished.then(() => f.remove());
+      });
+    });
   }
 
   // Vuela a un hueco del mazo: la carta voladora llega justo encima de su lugar y ahí la releva
@@ -550,18 +731,14 @@ export class Game {
   }
 
   // Deshacer una carta regalo: sus cartas salen del final del mazo y regresan a ella, que reaparece.
-  unflyPack(c) {
-    const n = c.pack.length;
-    const slots = this.stockEls.slice(0, n).map((e) => e.getBoundingClientRect());
-    this.stock.splice(this.stock.length - n, n);
-    c.removed = false;
+  // `rects` son las posiciones de esas cartas en el mazo antes de deshacer (el estado ya está restaurado).
+  unflyPack(c, rects) {
     this.makeCardEl(c);
-    this.renderStock();
     const el = c.el;
     if (reduced()) return;
     el.style.opacity = 0;
     const b = el.getBoundingClientRect();
-    const runs = slots.map((a, k) => {
+    const runs = rects.map((a, k) => {
       const f = this.flyer({}, a, false);
       return new Promise((ok) => setTimeout(ok, k * 90))
         .then(() => toss(f, {}, { x1: b.left + b.width / 2 - a.left - a.width / 2, y1: b.top + b.height / 2 - a.top - a.height / 2, s1: b.width / a.width }, 360))
@@ -574,17 +751,21 @@ export class Game {
   }
 
   // Deshacer un premio de racha: la carta sale de su hueco del mazo y regresa a los puntos de racha.
-  unflyReward(pos) {
-    const slot = this.stockEls[this.stockEls.length - 1 - pos];
-    const a = slot?.getBoundingClientRect();
-    const kind = this.stock[pos]?.wild ? 'gift-wild' : 'gift-card';
-    this.stock.splice(pos, 1);
-    this.renderStock();
+  unflyReward(a, kind) {
     if (!a || reduced()) return;
     const f = this.flyer({}, a, false);
-    f.classList.add(kind);
+    f.classList.add(kind === 'wild' ? 'gift-wild' : 'gift-card');
     const [px, py] = center((this.comboEl.querySelector('.prize') || this.comboEl).getBoundingClientRect());
     toss(f, {}, { x1: px - a.left - a.width / 2, y1: py - a.top - a.height / 2, s1: 0.4 }, 360).then(() => f.remove());
+  }
+
+  // Deshacer una explosión: las cartas quemadas caen de vuelta al principio del mazo.
+  unburn(boom) {
+    const n = (boom || []).reduce((a, b) => a + b.burned.length, 0);
+    if (!n || reduced()) return;
+    this.stockEls.slice(-n).forEach((e, k) =>
+      e.animate([{ translate: '0 -70px', opacity: 0 }, { translate: '0 0', opacity: 1 }], { duration: 320, delay: k * 70, easing: 'ease-in', fill: 'backwards' }),
+    );
   }
 
   draw() {
@@ -597,12 +778,16 @@ export class Game {
       return this.stuck();
     }
     const missed = this.playable();
-    const c = this.stock.shift();
-    this.history.push({ t: 'draw', streak: this.streak, bonus: this.bonus });
-    this.streak = 0;
+    const before = this.st;
+    const { s, ev } = E.draw(this.level, before);
+    this.history.push({ t: 'draw', before, ev, best: this.best, bonus: this.bonus });
+    const a = this.stockTop().getBoundingClientRect();
+    const burnRects = this.burnRects(ev.boom, 1);
+    this.st = s;
     this.showCombo();
-    this.waste.push(c);
-    this.flyFromStock(c);
+    this.flyFromStock(ev.card, a);
+    this.burn(ev.boom, burnRects);
+    this.refresh();
     if (missed.length) setTimeout(() => this.warnMissed(missed), FLY_MS);
     this.save();
     this.checkEnd();
@@ -623,8 +808,7 @@ export class Game {
     u.classList.add('nudge');
   }
 
-  flyFromStock(c) {
-    const a = this.stockTop().getBoundingClientRect();
+  flyFromStock(c, a) {
     const b = this.wasteEl.getBoundingClientRect();
     const f = this.flyer(c, { left: a.left, top: a.top, width: b.width }, false);
     // Quita la carta del mazo ya, pero deja el descarte viejo hasta que aterrice.
@@ -638,10 +822,7 @@ export class Game {
   }
 
   // Deshacer una jugada: la carta sale del descarte y regresa volando a su lugar.
-  returnToBoard(c) {
-    const from = this.wasteEl.getBoundingClientRect();
-    this.waste.pop();
-    this.renderWaste();
+  returnToBoard(c, from) {
     this.makeCardEl(c);
     c.el.classList.add('up');
     const [ax, ay] = center(from);
@@ -658,27 +839,22 @@ export class Game {
   }
 
   // Deshacer un robo: la carta regresa al mazo y se voltea.
-  returnToStock() {
-    const c = this.waste.pop();
-    const a = this.wasteEl.getBoundingClientRect();
-    this.renderWaste();
-    this.stock.unshift(c);
+  returnToStock(c, a) {
+    const slot = this.stockTop();
+    slot.style.opacity = 0;
     const f = this.flyer(c, a, true);
-    const b = this.stockEl.getBoundingClientRect();
+    const b = slot.getBoundingClientRect();
     f.getBoundingClientRect();
     f.classList.remove('up');
-    toss(f, {}, { x1: b.right - a.width - a.left, y1: b.top - a.top }, 360).then(() => {
+    toss(f, {}, { x1: b.left - a.left, y1: b.top - a.top }, 360).then(() => {
       f.remove();
-      this.renderStock();
-      squash(this.stockTop());
+      slot.style.opacity = '';
+      squash(slot);
     });
   }
 
   // Deshacer el comodín: sale del descarte y regresa girando a su botón.
-  returnWild() {
-    const a = this.wasteEl.getBoundingClientRect();
-    this.waste.pop();
-    this.renderWaste();
+  returnWild(a) {
     const btn = this.el.querySelector('.wild-card');
     const b = btn.getBoundingClientRect();
     const f = this.flyer({ wild: true }, a, true);
@@ -688,30 +864,53 @@ export class Game {
     });
   }
 
+  // Deshacer: se restaura el estado anterior completo y se anima al revés lo que pasó.
   undo() {
     if (this.coach) return;
     if (!this.history.length) return toast('Nada que deshacer');
-    if (save.undo <= 0 && !this.opts.dev?.infinite) return this.offerBuy('undo');
-    if (!this.opts.dev?.infinite) save.undo--;
+    const inf = this.opts.dev?.infinite;
+    if (save.undo <= 0 && !inf) return this.offerBuy('undo');
+    if (!inf) save.undo--;
     const h = this.history.pop();
-    if (h.t === 'play') {
-      // El premio de esa jugada se devuelve. Si era carta sigue en el mismo lugar del mazo:
-      // el historial es una pila, así que los robos posteriores ya se deshicieron.
-      if (h.reward === 'bank') save.wild = Math.max(0, save.wild - 1);
-      else if (h.reward) this.unflyReward(h.rewardAt ?? 0);
-      for (const id of (h.packs || []).slice().reverse()) this.unflyPack(this.cards[id]);
-      const c = this.cards[h.id];
-      c.removed = false;
-      this.returnToBoard(c);
-      this.renderStock();
-    } else if (h.t === 'draw') {
-      this.returnToStock();
-    } else if (h.t === 'wild') {
-      this.returnWild();
-      if (!this.opts.dev?.infinite) save.wild++;
+    const ev = h.ev || {};
+    // Posiciones actuales (antes de restaurar) de lo que va a regresar.
+    const wasteRect = this.wasteEl.getBoundingClientRect();
+    const els = this.stockEls || [];
+    const packRects = [];
+    let left = 0;
+    for (const id of ev.packs || []) {
+      const n = this.cards[id].pack.length;
+      packRects.push(els.slice(left, left + n).map((e) => e.getBoundingClientRect()));
+      left += n;
     }
-    this.streak = h.streak;
+    const rewardRect = ev.reward && ev.reward.kind !== 'bank' ? els[els.length - 1 - ev.reward.pos]?.getBoundingClientRect() : null;
+
+    this.st = h.before;
+    this.best = h.best;
     this.bonus = h.bonus;
+    this.sync();
+    this.renderStock();
+    this.renderWaste();
+
+    if (h.t === 'play') {
+      if (ev.reward?.kind === 'bank') save.wild = Math.max(0, save.wild - 1);
+      this.unflyReward(rewardRect, ev.reward?.kind);
+      (ev.packs || []).forEach((id, i) => this.unflyPack(this.cards[id], packRects[i]));
+      this.returnToBoard(this.cards[ev.id], wasteRect);
+    } else if (h.t === 'draw') {
+      this.returnToStock(ev.card, wasteRect);
+    } else if (h.t === 'wild') {
+      this.returnWild(wasteRect);
+      if (!inf) save.wild++;
+    }
+    // Bombas que se desactivaron o explotaron con esa acción vuelven al tablero.
+    for (const id of [...(ev.defused || []), ...(ev.boom || []).map((b) => b.id)]) {
+      const c = this.cards[id];
+      if (c.el || c.removed) continue;
+      this.makeCardEl(c);
+      if (!reduced()) c.el.animate([{ scale: 0.4, opacity: 0 }, { scale: 1.15, opacity: 1, offset: 0.6 }, { scale: 1 }], { duration: 360, easing: 'ease-out' });
+    }
+    this.unburn(ev.boom);
     this.showCombo();
     persist();
     this.refresh();
@@ -721,12 +920,12 @@ export class Game {
 
   useWild() {
     if (this.coach) return;
-    if (this.waste[this.waste.length - 1]?.wild) return toast('Ya tienes un comodín en juego');
+    if (this.st.top?.wild) return toast('Ya tienes un comodín en juego');
     if (save.wild <= 0 && !this.opts.dev?.infinite) return this.offerBuy('wild');
     if (!this.opts.dev?.infinite) save.wild--;
     persist();
-    this.history.push({ t: 'wild', streak: this.streak, bonus: this.bonus });
-    this.waste.push({ wild: true });
+    this.history.push({ t: 'wild', before: this.st, best: this.best, bonus: this.bonus });
+    this.st = { ...E.cloneState(this.st), top: { wild: true } };
     const a = this.el.querySelector('.wild-card').getBoundingClientRect();
     const b = this.wasteEl.getBoundingClientRect();
     const f = this.flyer({ wild: true }, { left: a.left + (a.width - b.width) / 2, top: a.top + (a.height - b.height) / 2, width: b.width }, true);
@@ -739,7 +938,7 @@ export class Game {
   }
 
   playable() {
-    return this.cards.filter((c) => !c.removed && !c.pack && this.isFree(c) && !this.isLocked(c) && this.canPlay(c));
+    return E.legal(this.level, this.st).map((c) => this.cards[c.id]);
   }
 
   hasMove() {
@@ -781,21 +980,27 @@ export class Game {
     });
   }
 
+  // +5 cartas compradas: van al final del mazo y también a los estados guardados para deshacer
+  // (deshacer nunca quita lo que se compró).
   addExtra() {
     this.extras++;
-    const free = this.cards.filter((c) => !c.removed && this.isFree(c) && !this.isLocked(c));
+    const free = this.cards.filter((c) => E.isOpen(this.level, c, this.st));
+    const add = [];
     for (let i = 0; i < 5; i++) {
       const f = free[i % Math.max(1, free.length)];
-      const rank = f ? (f.rank + (Math.random() < 0.5 ? 1 : 12)) % 13 : Math.floor(Math.random() * 13);
-      this.stock.push({ rank, suit: Math.floor(Math.random() * 4) });
+      const rank = f ? (E.rankOf(f, this.st) + (Math.random() < 0.5 ? 1 : 12)) % 13 : Math.floor(Math.random() * 13);
+      add.push({ rank, suit: Math.floor(Math.random() * 4) });
     }
+    this.st = E.cloneState(this.st);
+    this.st.stock.push(...add);
+    for (const h of this.history) h.before = { ...h.before, stock: [...h.before.stock, ...add] };
     this.renderPiles();
     this.save();
     toast('+5 cartas al mazo');
   }
 
   checkEnd() {
-    if (this.cards.every((c) => c.removed)) return this.win();
+    if (E.won(this.st)) return this.win();
     if (!this.stock.length && !this.hasMove()) setTimeout(() => this.stuck(), 450);
   }
 
@@ -835,7 +1040,7 @@ export class Game {
     const full = Math.min(2, this.level.meta.spares);
     let stars = left >= full ? 3 : left >= 1 ? 2 : 1;
     if (this.extras) stars = 1;
-    const { coins, tickets, prev } = this.opts.onWin(stars);
+    const { coins, tickets, prev, gold } = this.opts.onWin(stars);
     const cost = this.opts.nextCost;
     setTimeout(() => {
       confetti();
@@ -846,6 +1051,7 @@ export class Game {
             <li><span>Cartas sobrantes</span><b>${left}</b></li>
             <li><span>Racha máxima</span><b>×${this.best}</b></li>
             ${tickets ? `<li><span>Boleto de regalo</span><b>+${tickets} ${icon('ticket', '#ffd0e6', '#ff7fb6')}</b></li>` : ''}
+            ${gold ? `<li class="gold"><span>Boleto dorado</span><b>+1 ${icon('ticket', '#ffe680', '#f5a91c')}</b></li>` : ''}
             <li class="total"><span>Monedas</span><b>${coins ? `+${coin()} ${coins}` : '—'}</b></li>
           </ul>${!coins && prev >= 3 ? '<p class="note">Ya cobraste las 3 estrellas de este nivel.</p>' : stars > prev && prev ? '<p class="note">¡Nuevo récord de estrellas!</p>' : ''}`,
         buttons: [
@@ -896,7 +1102,7 @@ export class Game {
 
   // ---------- Modo dev (ver js/dev.js) ----------
   solveHere() {
-    return solve(this.level, this.cards.map((c) => c.removed), this.stock, this.waste[this.waste.length - 1], this.streak);
+    return E.solve(this.level, this.st);
   }
 
   devReveal(on) {
@@ -936,9 +1142,9 @@ export class Game {
   }
 
   devWin() {
+    this.st = { ...E.cloneState(this.st), rem: this.st.rem.map(() => true) };
     for (const c of this.cards) {
-      if (c.removed) continue;
-      c.removed = true;
+        c.removed = true;
       c.el?.remove();
       c.el = null;
     }

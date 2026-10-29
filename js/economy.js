@@ -2,7 +2,6 @@
 import { difficulty, LEVELS_PER_WORLD } from './levels.js';
 
 export const TICKET_PRICE = 40; // monedas por boleto
-export const DAILY = { coins: 150, tickets: 3 }; // regalo diario
 // Boosters: el comodín y el pack de 3 deshacer suben con el avance, en los mismos escalones que los boletos.
 // +5 cartas tiene precio fijo.
 const TIERS = { wild: [250, 350, 450], undo: [50, 75, 100] };
@@ -30,4 +29,36 @@ export const coinsFor = (g, stars, prev = 0) => Math.max(0, part(g, stars) - par
 export function price(kind, next) {
   if (kind === 'extra') return EXTRA;
   return TIERS[kind][ticketCost(next) - 1];
+}
+
+// ---------- Regalo diario: camino de 28 días ----------
+// Premios modestos para que dure semanas. Si un día no se reclama, se vuelve al día 1.
+const c = (coins) => ({ coins });
+export const DAILY_PATH = [
+  c(20), c(25), { tickets: 1 }, c(30), c(30), c(40), { undo: 2 },
+  c(30), c(35), { tickets: 1 }, c(40), c(40), c(50), { wild: 1 },
+  c(35), c(40), { tickets: 1 }, c(45), c(45), c(55), { undo: 3 },
+  c(40), c(45), { tickets: 2 }, c(50), c(50), c(60), { coins: 150, wild: 1, tickets: 2, chest: true },
+];
+
+const dayKey = (d) => d.toDateString();
+// Estado del regalo hoy: qué día toca (0..27) y si ya se reclamó.
+export function dailyState(daily, now = new Date()) {
+  const today = dayKey(now);
+  const yesterday = dayKey(new Date(now.getTime() - 864e5));
+  if (daily.last === today) return { day: daily.day, claimed: true };
+  if (daily.last === yesterday) return { day: daily.day % DAILY_PATH.length, claimed: false };
+  return { day: 0, claimed: false, reset: !!daily.last }; // primera vez o se rompió la racha
+}
+
+// ---------- Pasar de mundo ----------
+// Para abrir el mundo w (w ≥ 1) hace falta el boleto dorado del jefe anterior y un mínimo de estrellas:
+// un % de todas las estrellas posibles en los mundos anteriores (0..w-1). El % sube con el avance.
+const STAR_STEPS = [
+  [10, 0.5], [25, 0.55], [50, 0.6], [80, 0.65], [120, 0.7], [170, 0.75], [230, 0.8], [300, 0.85], [400, 0.9], [Infinity, 0.95],
+];
+export function starsNeeded(w) {
+  if (w < 1) return 0;
+  const pct = STAR_STEPS.find(([until]) => w + 1 <= until)[1];
+  return Math.ceil(w * LEVELS_PER_WORLD * 3 * pct);
 }
