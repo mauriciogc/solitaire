@@ -75,6 +75,9 @@ const PATHS = {
   lock: 'M5 10H19V21H5ZM7.5 10V7L9.5 3.5H14.5L16.5 7V10H14V7.6L13.2 6H10.8L10 7.6V10Z',
   crown: 'M2 7 7 12 12 3.5 17 12 22 7 20 19H4Z',
   gift: 'M3 8.5H21V12.5H3ZM4.5 13.5H19.5V21H4.5ZM11 8 7 3.5 5 5.5 8 8ZM13 8 17 3.5 19 5.5 16 8Z',
+  pause: 'M6 4H10.5V20H6ZM13.5 4H18V20H13.5Z',
+  ticket: 'M2 6H22V10C20.5 10 19.5 11 19.5 12S20.5 14 22 14V18H2V14C3.5 14 4.5 13 4.5 12S3.5 10 2 10ZM14 8V9.5H15.5V8ZM14 11.25V12.75H15.5V11.25ZM14 14.5V16H15.5V14.5Z',
+  user: 'M12 2 16.5 4.5 17 9 14.5 12.5H9.5L7 9 7.5 4.5ZM4 22 5.5 16 9 13.5H15L18.5 16 20 22Z',
   trophy: 'M7 3H17V9L15 13H9L7 9ZM3 4H6V8L4 7ZM18 4H21V7L18 8ZM10.5 13H13.5V17H10.5ZM7 18H17V21H7Z',
 };
 
@@ -178,4 +181,12 @@ export function keyIcon(hue, cls = '') {
     ]),
     `key ${cls}`,
   );
+}
+
+// Avatar del jugador: círculo de color con su inicial (por ahora; la tienda traerá más).
+export const AVATAR_HUES = [210, 340, 140, 40, 275, 180, 10, 95];
+export function avatarHTML(p, cls = '') {
+  const h = AVATAR_HUES[(p.avatar || 0) % AVATAR_HUES.length];
+  const ch = (p.name || '?').trim().charAt(0).toUpperCase() || '?';
+  return `<span class="avatar ${cls}" style="--ah:${h}">${ch}</span>`;
 }

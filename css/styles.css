@@ -43,6 +43,7 @@ button, [role='button'] { font: inherit; color: inherit; border: 0; background: 
   box-shadow: 0 4px 0 #c27400, 0 8px 16px #0005; transition: transform var(--press);
 }
 .btn.ghost { background: #ffffff1f; color: #fff; box-shadow: none; }
+.btn.danger { color: #ff9a9a; }
 .btn:disabled { opacity: 0.45; }
 
 .top { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 12px; flex: none; }
@@ -116,8 +117,25 @@ button, [role='button'] { font: inherit; color: inherit; border: 0; background: 
 .hud .pill { justify-self: end; font-size: 14px; padding: 5px 10px 5px 6px; }
 .hud-title { display: flex; flex-direction: column; align-items: center; line-height: 1.15; text-shadow: 0 2px 0 #0004; min-width: 0; font-size: 15px; }
 .hud-title small { opacity: 0.85; font-size: 12px; }
-.progress { height: 5px; margin: 4px 14px 2px; background: #0004; border-radius: 9px; overflow: hidden; }
-.progress .bar { height: 100%; width: 0; background: linear-gradient(90deg, #7cf, var(--gold)); transition: width 250ms var(--ease-out); }
+.progress-row { display: flex; justify-content: flex-end; margin: 2px 12px 0; }
+/* Racha por puntos que terminan en el premio del tramo */
+.combo { display: flex; align-items: center; gap: 8px; padding: 4px 10px 4px 12px; border-radius: 999px; background: #0003; }
+.combo .dots { display: flex; align-items: center; gap: 5px; }
+.combo .dots b { font-size: 11px; font-weight: 900; opacity: 0.75; margin-right: 1px; }
+.combo i { width: 11px; height: 11px; border-radius: 50%; background: #0005; box-shadow: inset 0 0 0 1.5px #fff6; transition: background 200ms var(--ease-out), scale 260ms var(--spring); }
+.combo i.on { background: var(--gold); box-shadow: 0 0 6px #ffc83d99; scale: 1.15; }
+.combo .prize { display: grid; place-items: center; margin-left: 2px; transition: scale 260ms var(--spring); }
+.combo .prize.mini { width: 16px; height: 22px; border-radius: 3px; box-shadow: 0 0 0 1.5px #fff, 0 2px 4px #0006; }
+.combo .prize.bank .ico { width: 22px; height: 22px; }
+.combo small { font-size: 11px; font-weight: 800; opacity: 0.85; white-space: nowrap; }
+.combo.hot .prize { scale: 1.25; animation: prize-glow 900ms ease-in-out infinite alternate; }
+.combo.hot small { color: var(--gold); opacity: 1; }
+@keyframes prize-glow { to { filter: drop-shadow(0 0 6px var(--gold)); } }
+.streak.reward { color: #fff; background: linear-gradient(#ffcf3a, #f59e0b); padding: 4px 14px; border-radius: 999px; font-size: 17px; text-shadow: 0 1px 0 #0004; white-space: nowrap; }
+/* Premios de racha: carta extra con reverso violeta, comodín con reverso dorado */
+:root { --gift-card: linear-gradient(150deg, #d9a6ff 0 30%, #b46bff 30% 58%, #8f45e6 58% 80%, #c58bff 80%); --gift-wild: linear-gradient(150deg, #ffe680 0 30%, #ffc93a 30% 58%, #f5a91c 58% 80%, #ffd75a 80%); }
+.card.gift-card .back, .prize.gift-card { background: var(--gift-card); }
+.card.gift-wild .back, .prize.gift-wild { background: var(--gift-wild); }
 .game::after { content: ""; position: absolute; inset: auto 0 0; height: 150px; z-index: -1; background: linear-gradient(#0000, #0006); pointer-events: none; }
 .board-wrap { flex: 1; min-height: 0; position: relative; display: flex; align-items: center; justify-content: center; margin-bottom: 14px; }
 .board { position: relative; }
@@ -195,8 +213,6 @@ button, [role='button'] { font: inherit; color: inherit; border: 0; background: 
 .back { transform: rotateY(180deg); background: var(--back, #3b5bd6) center / cover; border: calc(var(--cw) * 0.06) solid #fff; }
 .wild { display: grid; place-items: center; background: conic-gradient(from 10deg, #ff6b6b 0 17%, #ffcf3a 0 33%, #5ce28b 0 50%, #4ab8ff 0 67%, #9f6bff 0 83%, #ff7ad1 0); }
 .wild .star { width: 70%; height: auto; }
-.card.deal { animation: deal 420ms var(--spring) backwards; }
-@keyframes deal { from { opacity: 0; transform: translateY(-28px) scale(0.85); } }
 .card.flying { pointer-events: none; }
 /* Temblor corto: avisa sin frenar el ritmo. */
 .card.shake { animation: shake 220ms ease-out; }
@@ -241,7 +257,7 @@ button, [role='button'] { font: inherit; color: inherit; border: 0; background: 
 @keyframes fall { to { transform: translate(var(--dx), 110vh) rotate(var(--r)); } }
 
 @media (prefers-reduced-motion: reduce) {
-  .card.deal, .card.shake, .undo-btn.nudge, .streak.pop, .confetti, .node.current::after { animation: none !important; }
+  .card.shake, .undo-btn.nudge, .combo.hot .prize, .streak.pop, .confetti, .node.current::after { animation: none !important; }
   .card .inner, .stock .card { transition-duration: 0.01ms !important; }
 }
 
@@ -294,6 +310,63 @@ button, [role='button'] { font: inherit; color: inherit; border: 0; background: 
 .pv .m.free { background: #fff; }
 .pv .m.lock { border: 2px solid #ff4d6d; }
 .pv .m.key { background: var(--gold); }
+.pv .m.pack { background: #2fc06b; }
 .tl { font-size: 12px; opacity: .85; }
 .tl b { font-size: 13px; }
 .tl.rate { color: var(--gold); opacity: 1; font-weight: 800; }
+
+/* ---------- Tutorial guiado ---------- */
+.coach-bubble {
+  flex: none; width: min(calc(100% - 24px), 420px); min-height: 3.9em; margin: 6px auto 0; padding: 10px 14px;
+  display: grid; place-items: center; border-radius: 16px; text-align: center; line-height: 1.3;
+  background: #fff; color: var(--ink); font-weight: 700; font-size: 15px; box-shadow: 0 8px 24px #0005;
+  opacity: 0; transition: opacity 200ms var(--ease-out); pointer-events: none;
+}
+.coach-bubble.show { opacity: 1; }
+.coach-bubble b { color: #e0263a; }
+.coach-ring {
+  position: absolute; z-index: 10001; translate: -50% -50%; border-radius: 50%; pointer-events: none; /* encima de las cartas (z hasta 9999) */
+  border: 4px solid var(--gold); box-shadow: 0 0 0 4px #ffc83d55, 0 0 24px var(--gold);
+  animation: ring 1.1s var(--ease-out) infinite; transition: opacity 150ms;
+}
+@keyframes ring { 0% { scale: 0.85; } 50% { scale: 1; } 100% { scale: 0.85; } }
+.coach-ring.nudge { animation: ring-nudge 360ms ease-out; }
+@keyframes ring-nudge { 30% { scale: 1.25; } 100% { scale: 1; } }
+
+/* ---------- Jugadores y monedero ---------- */
+.pill.tickets .ico { width: 1.25em; }
+.avatar {
+  width: 36px; height: 36px; border-radius: 50%; flex: none; display: inline-grid; place-items: center;
+  font-weight: 900; font-size: 17px; color: #fff; text-shadow: 0 1px 0 #0004;
+  background: linear-gradient(150deg, hsl(var(--ah) 75% 62%), hsl(calc(var(--ah) + 25) 65% 42%)); box-shadow: 0 0 0 2px #fff8;
+}
+.profile-btn { display: flex; align-items: center; gap: 8px; min-width: 0; padding: 4px 10px 4px 4px; border-radius: 999px; background: #0004; transition: transform var(--press); }
+.profile-btn span:last-child { font-weight: 800; max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 420px) { .profile-btn span:last-child { display: none; } .profile-btn { padding: 4px; } }
+.profile-list { display: flex; flex-direction: column; gap: 8px; }
+.profile-row { display: flex; align-items: center; gap: 12px; padding: 10px; border-radius: 16px; background: #fff1; text-align: left; transition: transform var(--press); }
+.profile-row.on { background: #ffc83d33; box-shadow: inset 0 0 0 2px var(--gold); }
+.profile-row > span:last-child { display: flex; flex-direction: column; }
+.profile-row small { opacity: 0.8; }
+.text-in { width: 100%; padding: 12px 14px; border-radius: 12px; border: 0; font: inherit; font-size: 17px; font-weight: 700; }
+.avatar-preview { display: grid; place-items: center; margin-bottom: 12px; }
+.avatar.big { width: 72px; height: 72px; font-size: 34px; box-shadow: 0 0 0 3px #fff, 0 6px 16px #0006; }
+.avatar-pick { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 12px; }
+.avatar-pick button { border-radius: 50%; padding: 3px; }
+.avatar-pick button.on { box-shadow: 0 0 0 3px var(--gold); }
+.node.paused { box-shadow: 0 0 0 4px #ff7fb6, 0 6px 0 #0005; }
+.pause-mark { position: absolute; right: -6px; top: -6px; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: #ff7fb6; box-shadow: 0 2px 0 #0004, 0 0 0 2px #fff; }
+.pause-mark .ico { width: 16px; height: 16px; filter: none; }
+@media (max-width: 420px) { .world-screen .top-right .pill.coins { display: none; } }
+
+/* ---------- Carta regalo: violeta con "+n"; se activa sola al quedar destapada ---------- */
+.card.pack-card .face { background: radial-gradient(circle at 50% 45%, #c58bff, #8f45e6 60%, #6a2bc0); border: calc(var(--cw) * 0.06) solid #fff; }
+.card.pack-card .face::before, .card.pack-card .face::after {
+  content: ''; position: absolute; width: 26%; height: 18%; border: calc(var(--cw) * 0.07) solid #ffd75a; border-radius: 30%;
+}
+.card.pack-card .face::before { left: 4%; top: 4%; border-right: 0; border-bottom: 0; }
+.card.pack-card .face::after { right: 4%; bottom: 4%; border-left: 0; border-top: 0; }
+.pack-num {
+  position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; z-index: 2;
+  color: #fff; font: 900 calc(var(--cw) * 0.48) / 1 ui-rounded, system-ui, sans-serif; text-shadow: 0 2px 0 #4a1a8a, 0 0 10px #0005;
+}

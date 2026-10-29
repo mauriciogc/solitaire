@@ -306,54 +306,91 @@ export function generateLevel(g) {
     order.push(i);
   }
 
+  // Carta regalo: una carta especial (sin número) que se activa sola al quedar destapada del todo
+  // y manda 2-5 cartas al final del mazo. Va tapada y en el primer 40% del orden de retirada.
+  let packId = null;
+  if (d >= 0.1 && n >= 8 && r() < 0.2 + d * 0.35) {
+    const early = order.slice(0, Math.floor(n * 0.4)).filter((i) => coveredBy[i].length);
+    if (early.length) packId = pick(r, early);
+  }
+  const play = packId == null ? order : order.filter((i) => i !== packId); // cartas con número, en orden de solución
+  const np = play.length;
+
   const minC = d < 0.15 ? 4 : d < 0.35 ? 3 : 2;
   const boss = index === LEVELS_PER_WORLD - 1;
   const maxC = Math.max(minC + 1, Math.round(9 - d * 5.5) - (boss ? 2 : 0));
   const ranks = new Array(n);
   const starts = [];
-  for (let k = 0; k < n; ) {
-    const len = Math.min(n - k, randInt(r, minC, maxC));
+  for (let k = 0; k < np; ) {
+    const len = Math.min(np - k, randInt(r, minC, maxC));
     let cur = randInt(r, 0, 12);
     starts.push(cur);
     let dir = r() < 0.5 ? 1 : -1;
     for (let t = 0; t < len; t++) {
       if (t > 0 && r() < 0.35) dir = -dir;
       cur = (cur + dir + 13) % 13;
-      ranks[order[k + t]] = cur;
+      ranks[play[k + t]] = cur;
     }
     k += len;
   }
+  const known = ranks.filter((x) => x != null);
 
   const card = (rank) => ({ rank, suit: randInt(r, 0, 3) });
   const waste0 = card(starts[0]);
   const stock = starts.slice(1).map(card);
   const decoys = d < 0.15 ? 0 : randInt(r, 0, Math.round(d * 3)) + (boss ? 1 : 0);
   for (let i = 0; i < decoys; i++) stock.splice(randInt(r, 0, stock.length), 0, card(randInt(r, 0, 12)));
-  let spares = 2 + Math.round((1 - d) ** 1.5 * (4 + n * 0.3));
+  // Desde d ≥ 0.15 el margen base baja a 1: las 3★ (y a veces ganar) dependen de los premios de racha o de gastar.
+  let spares = (d < 0.15 ? 2 : 1) + Math.round((1 - d) ** 1.5 * (3 + n * 0.25));
   // Jefes: menos margen, para que el comodín o el +5 se sientan valiosos (siguen siendo ganables).
   if (boss && d > 0.15) spares = Math.max(1, spares - 3);
   // En niveles fáciles las sobrantes suelen ser vecinas de alguna carta del tablero.
-  for (let i = 0; i < spares; i++) {
-    const helpful = r() < (1 - d) * 0.85;
-    stock.push(card(helpful ? (pick(r, ranks) + pick(r, [1, 12])) % 13 : randInt(r, 0, 12)));
-  }
+  const helpfulCard = (p) => card(r() < p ? (pick(r, known) + pick(r, [1, 12])) % 13 : randInt(r, 0, 12));
+  for (let i = 0; i < spares; i++) stock.push(helpfulCard((1 - d) * 0.85));
 
   const cards = pos.map((p, i) => ({ id: i, ...p, rank: ranks[i], suit: randInt(r, 0, 3), coveredBy: coveredBy[i] }));
 
   // Candados y llaves: la carta con candado no se puede jugar hasta retirar su llave.
   // La llave siempre va antes que el candado en la solución, así el nivel sigue siendo ganable.
-  const pairs = n < 10 || d < 0.12 ? 0 : boss ? (d < 0.4 ? 1 : 2) : r() < Math.min(0.4, d) ? 1 : 0;
+  const pairs = np < 10 || d < 0.12 ? 0 : boss ? (d < 0.4 ? 1 : 2) : r() < Math.min(0.4, d) ? 1 : 0;
   const keys = [];
   for (let k = 0; k < pairs; k++) {
-    const used = (i) => cards[order[i]].lock != null || cards[order[i]].key != null;
-    let li = randInt(r, Math.ceil(n * 0.45), n - 1);
+    const used = (i) => cards[play[i]].lock != null || cards[play[i]].key != null;
+    let li = randInt(r, Math.ceil(np * 0.45), np - 1);
     while (li > 1 && used(li)) li--;
     let ki = randInt(r, 0, li - 1);
     while (ki > 0 && used(ki)) ki--;
     if (used(li) || used(ki) || ki >= li) continue;
-    cards[order[li]].lock = keys.length;
-    cards[order[ki]].key = keys.length;
-    keys.push(order[ki]);
+    cards[play[li]].lock = keys.length;
+    cards[play[ki]].key = keys.length;
+    keys.push(play[ki]);
+  }
+
+  // Contenido de la carta regalo: las últimas cartas del mazo (las que la solución de referencia
+  // aún no habrá robado cuando la carta se active) y, si no alcanzan, cartas útiles extra.
+  // Como vuelven al final del mazo, el mazo de la solución queda igual: sigue siendo ganable.
+  let pack = 0;
+  if (packId != null) {
+    const want = randInt(r, 2, 5);
+    const rem = new Array(n).fill(false);
+    let top = waste0;
+    let si = 0;
+    let at = null;
+    for (const id of play) {
+      while (!canFollow(top, ranks[id])) top = stock[si++];
+      rem[id] = true;
+      top = cards[id];
+      if (coveredBy[packId].every((j) => rem[j])) {
+        at = si;
+        break;
+      }
+    }
+    const take = Math.max(0, Math.min(want, stock.length - (at ?? stock.length)));
+    const content = stock.splice(stock.length - take, take);
+    while (content.length < want) content.push(helpfulCard(0.7));
+    cards[packId].pack = content;
+    delete cards[packId].rank;
+    pack = want;
   }
 
   return {
@@ -363,62 +400,141 @@ export function generateLevel(g) {
     keys,
     waste0,
     stock,
-    solution: order,
-    meta: { spares, decoys, chains: starts.length, locks: keys.length },
+    solution: play, // la carta regalo no está: se activa sola
+    meta: { spares, decoys, chains: starts.length, locks: keys.length, pack },
   };
 }
 
 // ¿Puede jugarse ya? (libre, sin candado cerrado y ±1 del descarte)
 export function isOpen(level, c, removed) {
-  return !removed[c.id] && c.coveredBy.every((j) => removed[j]) && (c.lock == null || !!removed[level.keys[c.lock]]);
+  return !c.pack && !removed[c.id] && c.coveredBy.every((j) => removed[j]) && (c.lock == null || !!removed[level.keys[c.lock]]);
+}
+
+// ---------- Premios de racha ----------
+// Racha 6: +1 carta útil al mazo · 9: un comodín al mazo · 12: +1 comodín al inventario
+// · después, cada 3: +1 carta útil. Las cartas de premio entran en un lugar "al azar" del mazo, nunca entre las 3 primeras,
+// (determinista según el estado, para que juego, solucionador y bot coincidan).
+// Los premios solo añaden cartas, así que nunca hacen imposible un nivel.
+export function streakReward(streak) {
+  if (streak === 6) return 'card';
+  if (streak === 9) return 'wild';
+  if (streak === 12) return 'bank';
+  if (streak > 12 && streak % 3 === 0) return 'card';
+  return null;
+}
+
+export function nextReward(streak) {
+  for (let s = streak + 1; ; s++) {
+    const kind = streakReward(s);
+    if (kind) return { at: s, kind };
+  }
+}
+
+// La carta útil es vecina (+1) de la primera carta jugable del tablero, por id: determinista,
+// así el juego, el solucionador y el bot la calculan igual.
+export function rewardCard(level, removed, kind) {
+  if (kind === 'wild') return { wild: true, reward: true };
+  const c = level.cards.find((c) => isOpen(level, c, removed)) || level.cards.find((c) => !removed[c.id] && !c.pack);
+  return { rank: c ? (c.rank + 1) % 13 : 0, suit: c ? (c.id + 1) % 4 : 0, reward: true };
+}
+
+// Pone en el mazo el premio de alcanzar `streak` (si toca). Devuelve { kind, pos } o null.
+export function applyReward(level, removed, stock, streak) {
+  const kind = streakReward(streak);
+  if (!kind) return null;
+  let pos = -1;
+  if (kind === 'card' || kind === 'wild') {
+    const gone = removed.reduce((a, b) => a + (b ? 1 : 0), 0);
+    // Nunca entre las 3 primeras del mazo (salvo que haya menos de 3: entonces al final).
+    const h = hash(level.g * 131 + streak * 17 + gone * 7 + stock.length);
+    pos = stock.length < 3 ? stock.length : 3 + (h % (stock.length - 2));
+    stock.splice(pos, 0, rewardCard(level, removed, kind));
+  }
+  return { kind, pos };
+}
+
+// Cartas regalo que ya quedaron destapadas: se quitan del tablero y su contenido va al final del mazo.
+// Devuelve los ids activados (para poder deshacer).
+export function activatePacks(level, removed, stock) {
+  const out = [];
+  for (const c of level.cards) {
+    if (!c.pack || removed[c.id] || !c.coveredBy.every((j) => removed[j])) continue;
+    removed[c.id] = true;
+    stock.push(...c.pack.map((x) => ({ ...x })));
+    out.push(c.id);
+  }
+  return out;
 }
 
 // Busca una solución desde un estado (profundidad primero, con memoria). null = no hay o se agotó el límite.
-export function solve(level, removed, stock, top, limit = 250000) {
+// Tiene en cuenta los premios de racha que caen en el mazo.
+export function solve(level, removed, stock0, top, streak0 = 0, limit = 250000) {
   const rem = removed.slice();
   const seen = new Set();
   const path = [];
   let nodes = 0;
-  const dfs = (si, top, left) => {
+  const sig = (st) => st.map((c) => (c.wild ? 'w' : c.rank)).join(',');
+  const dfs = (stock, top, left, streak) => {
     if (left === 0) return true;
     if (++nodes > limit) return false;
-    const key = `${rem.map((b) => (b ? 1 : 0)).join('')}|${si}|${top.wild ? 'w' : top.rank}`;
+    const key = `${rem.map((b) => (b ? 1 : 0)).join('')}|${sig(stock)}|${top.wild ? 'w' : top.rank}|${Math.min(streak, 13 + (streak % 3))}`;
     if (seen.has(key)) return false;
     seen.add(key);
     for (const c of level.cards) {
       if (!isOpen(level, c, rem) || !canFollow(top, c.rank)) continue;
       rem[c.id] = true;
       path.push(c.id);
-      if (dfs(si, c, left - 1)) return true;
+      const next = stock.slice();
+      const act = activatePacks(level, rem, next);
+      applyReward(level, rem, next, streak + 1);
+      if (dfs(next, c, left - 1 - act.length, streak + 1)) return true;
       path.pop();
       rem[c.id] = false;
+      for (const id of act) rem[id] = false;
     }
-    if (si < stock.length) {
+    if (stock.length) {
       path.push('draw');
-      if (dfs(si + 1, stock[si], left)) return true;
+      if (dfs(stock.slice(1), stock[0], left, 0)) return true;
       path.pop();
     }
     return false;
   };
-  return dfs(0, top, rem.filter((b) => !b).length) ? path : null;
+  return dfs(stock0.slice(), top, rem.filter((b) => !b).length, streak0) ? path : null;
 }
 
-// Jugador casual: juega cualquier carta válida al azar; si no hay, roba. Sin boosters.
+// Jugador casual: juega cualquier carta válida al azar; si no hay, roba. Sin boosters, con premios de racha.
 export function playCasual(level, r = Math.random) {
   const removed = new Array(level.cards.length).fill(false);
   const stock = [...level.stock];
   let top = level.waste0;
   let left = level.cards.length;
+  let streak = 0;
   for (;;) {
     const moves = level.cards.filter((c) => isOpen(level, c, removed) && canFollow(top, c.rank));
     if (moves.length) {
       const c = moves[Math.floor(r() * moves.length)];
       removed[c.id] = true;
       top = c;
-      if (--left === 0) return true;
-    } else if (stock.length) top = stock.shift();
-    else return false;
+      left -= 1 + activatePacks(level, removed, stock).length;
+      if (left === 0) return true;
+      applyReward(level, removed, stock, ++streak);
+    } else if (stock.length) {
+      top = stock.shift();
+      streak = 0;
+    } else return false;
   }
+}
+
+// Cada intento de un nivel cambia las cartas sin cambiar el tablero: se suma lo mismo a todos los rangos
+// (mod 13, así ±1 y A–K siguen valiendo igual) y se barajan los palos. El intento 0 es el original.
+export function variantLevel(level, v) {
+  if (!v) return level;
+  const r = mulberry32(hash(level.g * 7919 + v));
+  const k = randInt(r, 1, 12);
+  const perm = shuffle(r, [0, 1, 2, 3]);
+  const map = (c) => (c.rank == null ? { ...c } : { ...c, rank: (c.rank + k) % 13, suit: perm[c.suit] });
+  const mapCard = (c) => ({ ...map(c), ...(c.pack && { pack: c.pack.map(map) }) });
+  return { ...level, variant: v, cards: level.cards.map(mapCard), stock: level.stock.map(map), waste0: map(level.waste0) };
 }
 
 export const canFollow = (top, rank) => top.wild || Math.abs(top.rank - rank) === 1 || Math.abs(top.rank - rank) === 12;

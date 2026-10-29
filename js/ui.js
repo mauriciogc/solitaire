@@ -3,13 +3,17 @@ import { star } from './lowpoly.js';
 
 export function updateCoins() {
   document.querySelectorAll('[data-coins]').forEach((e) => (e.textContent = save.coins));
+  document.querySelectorAll('[data-tickets]').forEach((e) => (e.textContent = save.tickets));
 }
+
+// Para texto que escribe el jugador (nombres) dentro de HTML.
+export const esc = (s) => String(s).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 
 // Modal simple. Cada botón cierra el modal antes de ejecutar su acción.
 export function openModal({ title, body = '', buttons = [], onClose }) {
   const back = document.createElement('div');
   back.className = 'modal-back';
-  back.innerHTML = `<div class="modal" role="dialog" aria-modal="true"><h2>${title}</h2><div class="mbody">${body}</div><div class="mbtns"></div></div>`;
+  back.innerHTML = `<div class="modal" role="dialog" aria-modal="true">${title ? `<h2>${title}</h2>` : ''}<div class="mbody">${body}</div><div class="mbtns"></div></div>`;
   const box = back.querySelector('.mbtns');
   const close = () => {
     back.remove();

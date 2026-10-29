@@ -1,6 +1,6 @@
 // Comprueba que todos los niveles se pueden ganar siguiendo la solución con la que se generaron
 // y muestra estadísticas de tamaño. Uso: node tests/verify-levels.mjs
-import { generateLevel, TOTAL_LEVELS, canFollow, overlaps } from '../js/levels.js';
+import { generateLevel, TOTAL_LEVELS, canFollow, overlaps, activatePacks } from '../js/levels.js';
 
 let fails = 0;
 const stats = { cards: [], stock: [], left: [], tpl: {} };
@@ -28,7 +28,10 @@ for (let g = 0; g < TOTAL_LEVELS; g++) {
     if (!ok) break;
     removed.add(id);
     top = c;
+    const rm = L.cards.map((x) => removed.has(x.id));
+    for (const pid of activatePacks(L, rm, stock)) removed.add(pid);
   }
+  if (ok && removed.size !== L.cards.length) ok = false; // también deben irse las cartas regalo
   if (!ok) {
     fails++;
     if (fails < 10) console.log('FALLA nivel', g, L.template);
@@ -38,6 +41,7 @@ for (let g = 0; g < TOTAL_LEVELS; g++) {
   stats.left.push(stock.length);
   stats.tpl[L.template] = (stats.tpl[L.template] || 0) + 1;
   stats.locks = (stats.locks || 0) + (L.keys.length ? 1 : 0);
+  if (L.meta.pack) { stats.packs = (stats.packs || 0) + 1; stats.short = (stats.short || 0) + (L.stock.length <= 3 ? 1 : 0); }
 }
 
 const sum = (a) => a.reduce((x, y) => x + y, 0);
@@ -48,4 +52,5 @@ console.log('Cartas en mazo:   ', fmt(stats.stock));
 console.log('Sobrantes (ideal):', fmt(stats.left));
 console.log('Plantillas:', stats.tpl);
 console.log('Niveles con candado:', stats.locks);
+console.log('Niveles con carta regalo:', stats.packs, `(${stats.short} empiezan con 3 cartas o menos en el mazo)`);
 process.exit(fails ? 1 : 0);

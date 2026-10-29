@@ -1,6 +1,6 @@
 // Modo dev: probar niveles rápido sin jugarlos a mano.
 // Se activa con ?dev en la URL (y se apaga con ?dev=0). Queda guardado en el navegador.
-import { save, persist } from './storage.js';
+import { save, prefs, persist, resetProfile } from './storage.js';
 import { generateLevel, packGroups, playCasual, solve, worldInfo, TOTAL_LEVELS, LEVELS_PER_WORLD } from './levels.js';
 import { openModal, toast, updateCoins } from './ui.js';
 import { mulberry32 } from './rng.js';
@@ -8,10 +8,10 @@ import { icon } from './lowpoly.js';
 
 export const dev = {
   get on() {
-    return !!save.dev;
+    return !!prefs.dev;
   },
   get infinite() {
-    return !!save.devInfinite;
+    return !!prefs.devInfinite;
   },
 };
 
@@ -21,7 +21,7 @@ export const gallery = { start: 0, tpl: 'todas', boss: false, active: false };
 export function initDevFromUrl() {
   const q = new URLSearchParams(location.search);
   if (!q.has('dev')) return;
-  save.dev = q.get('dev') !== '0';
+  prefs.dev = q.get('dev') !== '0';
   persist();
   history.replaceState(null, '', location.pathname);
 }
@@ -89,7 +89,7 @@ export function attachDevBar(game, { go, toGallery }) {
     };
     act[b.dataset.d]?.();
   });
-  game.el.querySelector('.progress').before(bar);
+  game.el.querySelector('.progress-row').before(bar);
 }
 
 function showInfo(L) {
@@ -104,6 +104,7 @@ function showInfo(L) {
     ['Cartas tablero', `${L.cards.length} (${free} libres al inicio)`],
     ['Mazo', `${L.stock.length} = ${L.meta.chains - 1} inicios de cadena + ${L.meta.decoys} señuelos + ${L.meta.spares} sobrantes`],
     ['Candados', L.meta.locks],
+    ['Carta regalo', L.meta.pack ? `+${L.meta.pack} cartas al mazo` : 'no'],
     ['Bot casual gana', `${casualRate(L)}%`],
     ['Solucionador', sol ? `resuelve en ${sol.length} pasos (${ms} ms)` : `no encontró (${ms} ms)`],
   ];
@@ -126,7 +127,7 @@ function preview(L, W = 150, H = 104) {
   return L.cards
     .map((c) => {
       const o = offsets[c.group];
-      const cls = ['m', c.coveredBy.length ? '' : 'free', c.lock != null ? 'lock' : '', c.key != null ? 'key' : ''].join(' ');
+      const cls = ['m', c.coveredBy.length ? '' : 'free', c.lock != null ? 'lock' : '', c.key != null ? 'key' : '', c.pack ? 'pack' : ''].join(' ');
       return `<i class="${cls}" style="left:${ox + (o.x + c.x) * u}px;top:${oy + (o.y + c.y) * u}px;width:${u}px;height:${u * 1.4}px;rotate:${c.rot}deg;z-index:${c.z};--hue:${hue}"></i>`;
     })
     .join('');
@@ -170,7 +171,7 @@ export function galleryScreen({ onPlay, onBack }) {
         (L) => `<button class="tile" data-play="${L.g}">
           <div class="pv">${preview(L)}</div>
           <div class="tl"><b>#${L.g + 1}</b> ${label(L.g)}${L.boss ? ' · jefe' : ''}</div>
-          <div class="tl">${L.template} · d ${L.d.toFixed(2)} · ${L.cards.length} cartas · mazo ${L.stock.length}${L.meta.locks ? ` · ${L.meta.locks} candado` : ''}</div>
+          <div class="tl">${L.template} · d ${L.d.toFixed(2)} · ${L.cards.length} cartas · mazo ${L.stock.length}${L.meta.locks ? ` · ${L.meta.locks} candado` : ''}${L.meta.pack ? ` · regalo +${L.meta.pack}` : ''}</div>
           <div class="tl rate" data-rate="${L.g}">bot …</div>
         </button>`,
       )
@@ -242,12 +243,12 @@ export function openDevMenu({ onGallery, onPlay, onRefresh }) {
         },
       },
       {
-        label: `Boosters infinitos: ${dev.infinite ? 'SÍ' : 'no'}`,
+        label: `Boosters y boletos infinitos: ${dev.infinite ? 'SÍ' : 'no'}`,
         cls: 'ghost',
         onClick: () => {
-          save.devInfinite = !save.devInfinite;
+          prefs.devInfinite = !prefs.devInfinite;
           persist();
-          toast(`Boosters infinitos: ${save.devInfinite ? 'sí' : 'no'}`);
+          toast(`Boosters y boletos infinitos: ${prefs.devInfinite ? 'sí' : 'no'}`);
         },
       },
       {
@@ -264,6 +265,7 @@ export function openDevMenu({ onGallery, onPlay, onRefresh }) {
         cls: 'ghost',
         onClick: () => {
           save.next = TOTAL_LEVELS - 1;
+          save.run = null;
           persist();
           onRefresh();
         },
@@ -272,8 +274,7 @@ export function openDevMenu({ onGallery, onPlay, onRefresh }) {
         label: 'Reiniciar progreso',
         cls: 'ghost',
         onClick: () => {
-          Object.assign(save, { next: 0, stars: {}, coins: 300, wild: 3, undo: 5, tutorial: false });
-          persist();
+          resetProfile();
           onRefresh();
         },
       },
@@ -281,7 +282,7 @@ export function openDevMenu({ onGallery, onPlay, onRefresh }) {
         label: 'Salir del modo dev',
         cls: 'ghost',
         onClick: () => {
-          save.dev = false;
+          prefs.dev = false;
           persist();
           onRefresh();
         },
