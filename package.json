@@ -1,0 +1,1 @@
+{"name":"solitario-mundos","private":true,"type":"module","scripts":{"start":"python3 -m http.server 5173","test":"node tests/verify-levels.mjs"}}

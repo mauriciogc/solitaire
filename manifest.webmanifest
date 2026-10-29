@@ -1,0 +1,10 @@
+{
+  "name": "Solitario de los Mundos",
+  "short_name": "Solitario",
+  "start_url": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#141b33",
+  "theme_color": "#1a2142",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}
