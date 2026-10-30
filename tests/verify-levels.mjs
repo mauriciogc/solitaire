@@ -2,7 +2,7 @@
 // Primero sigue la solución con la que se generó cada nivel (robando cuando hace falta) con el motor
 // de reglas real, que aplica premios de racha, cartas regalo, bombas, etc. Si esa ruta no alcanza,
 // prueba con el solucionador. Uso: node tests/verify-levels.mjs
-import { generateLevel, TOTAL_LEVELS, overlaps, MECHANICS } from '../js/levels.js';
+import { generateLevel, TOTAL_LEVELS, WORLD_COUNT, overlaps, MECHANICS } from '../js/levels.js';
 import { initState, playRank, play, draw, won, solve } from '../js/engine.js';
 
 let fails = 0;
@@ -22,7 +22,9 @@ function reference(L) {
   return won(s);
 }
 
-for (let g = 0; g < TOTAL_LEVELS; g++) {
+// Los 5,200 niveles normales y después los 520 secretos (uno por mundo).
+const ALL = TOTAL_LEVELS + WORLD_COUNT;
+for (let g = 0; g < ALL; g++) {
   const L = generateLevel(g);
   let ok = true;
 
@@ -37,7 +39,7 @@ for (let g = 0; g < TOTAL_LEVELS; g++) {
   }
   if (!ok) {
     fails++;
-    if (fails < 10) console.log('FALLA nivel', g + 1, L.template, L.meta.mechs.join(','));
+    if (fails < 10) console.log('FALLA nivel', L.secret ? `secreto del mundo ${L.world + 1}` : g + 1, L.template, L.meta.mechs.join(','));
   }
   stats.cards.push(L.cards.length);
   stats.stock.push(L.stock.length);
@@ -48,7 +50,7 @@ for (let g = 0; g < TOTAL_LEVELS; g++) {
 
 const sum = (a) => a.reduce((x, y) => x + y, 0);
 const fmt = (a) => `min ${Math.min(...a)} · media ${(sum(a) / a.length).toFixed(1)} · max ${Math.max(...a)}`;
-console.log(`Niveles: ${TOTAL_LEVELS} · fallidos: ${fails} · resueltos con el solucionador: ${bySolver}`);
+console.log(`Niveles: ${TOTAL_LEVELS} + ${WORLD_COUNT} secretos · fallidos: ${fails} · resueltos con el solucionador: ${bySolver}`);
 console.log('Cartas en tablero:', fmt(stats.cards));
 console.log('Cartas en mazo:   ', fmt(stats.stock));
 console.log('Plantillas:', stats.tpl);

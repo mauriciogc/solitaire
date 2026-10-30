@@ -1,11 +1,11 @@
 // Modo dev: probar niveles rápido sin jugarlos a mano.
 // Se activa con ?dev en la URL (y se apaga con ?dev=0). Queda guardado en el navegador.
-import { save, prefs, persist, resetProfile } from './storage.js';
+import { save, prefs, persist, resetProfile, backupOnce, hasBackup, restoreBackup } from './storage.js';
 import { generateLevel, packGroups, worldInfo, TOTAL_LEVELS, LEVELS_PER_WORLD, MECH_NAMES, MECHANICS } from './levels.js';
 import { playCasual, solve, initState } from './engine.js';
 import { openModal, toast, updateCoins } from './ui.js';
 import { mulberry32 } from './rng.js';
-import { icon } from './lowpoly.js';
+import { icon } from './art.js';
 
 export const dev = {
   get on() {
@@ -90,7 +90,7 @@ export function attachDevBar(game, { go, toGallery }) {
     };
     act[b.dataset.d]?.();
   });
-  game.el.querySelector('.progress-row').before(bar);
+  game.el.querySelector('.board-wrap').before(bar);
 }
 
 function showInfo(L) {
@@ -247,50 +247,45 @@ export function galleryScreen({ onPlay, onBack }) {
 }
 
 // ---------- Menú dev (desde el mapa) ----------
-export function openDevMenu({ onGallery, onPlay, onRefresh }) {
+// Botones chicos en dos columnas (solo son de prueba). Lo que cambia el avance guarda antes una copia
+// de tu partida, y "Volver a mi partida" la regresa.
+const REGION = 10;
+function completeWorlds(from, to) {
+  backupOnce();
+  for (let w = from; w <= to; w++) for (let l = 0; l < LEVELS_PER_WORLD; l++) save.stars[w * LEVELS_PER_WORLD + l] = 3;
+  save.next = Math.max(save.next, Math.min(TOTAL_LEVELS - 1, (to + 1) * LEVELS_PER_WORLD));
+  save.open = Math.max(save.open, Math.min(Math.floor(save.next / LEVELS_PER_WORLD), to + 1));
+  save.run = null;
+  persist();
+}
+export function openDevMenu({ onGallery, onRefresh }) {
+  const w = Math.min(Math.floor(save.next / LEVELS_PER_WORLD), save.open);
+  const r = Math.floor(w / REGION);
+  const toggle = (k, label) => ({
+    label: `${label}: ${prefs[k] ? 'sí' : 'no'}`,
+    cls: 'ghost',
+    onClick: () => {
+      prefs[k] = !prefs[k];
+      persist();
+      toast(`${label}: ${prefs[k] ? 'sí' : 'no'}`);
+    },
+  });
   openModal({
     title: 'Modo dev',
-    body: '<p>Las victorias en niveles más allá de tu progreso no se guardan.</p>',
+    cls: 'devmenu',
+    body: '<p class="note">Ganar niveles fuera de tu avance no cuenta.</p>',
     buttons: [
-      { label: 'Galería de niveles', onClick: onGallery },
-      {
-        label: 'Ir a nivel…',
-        onClick: () => {
-          const g = askLevel(save.next);
-          if (g != null) onPlay(g);
-        },
-      },
-      {
-        label: `Boosters y boletos infinitos: ${dev.infinite ? 'SÍ' : 'no'}`,
-        cls: 'ghost',
-        onClick: () => {
-          prefs.devInfinite = !prefs.devInfinite;
-          persist();
-          toast(`Boosters y boletos infinitos: ${prefs.devInfinite ? 'sí' : 'no'}`);
-        },
-      },
-      {
-        label: 'Volver a explicar las mecánicas',
-        cls: 'ghost',
-        onClick: () => {
-          save.seen = {};
-          persist();
-          toast('Las explicaciones saldrán otra vez');
-        },
-      },
-      {
-        label: '+1000 monedas',
-        cls: 'ghost',
-        onClick: () => {
-          save.coins += 1000;
-          persist();
-          updateCoins();
-        },
-      },
+      { label: 'Galería de niveles', cls: 'gold', onClick: onGallery },
+      toggle('devInfinite', 'Boosters infinitos'),
+      { label: '+1000 monedas', cls: 'ghost', onClick: () => (backupOnce(), (save.coins += 1000), persist(), updateCoins()) },
+      { label: 'Explicar mecánicas otra vez', cls: 'ghost', onClick: () => ((save.seen = {}), persist(), toast('Las explicaciones saldrán otra vez')) },
+      { label: `Desbloquear mundo ${w + 1}`, cls: 'ghost', onClick: () => (completeWorlds(w, w), onRefresh()) },
+      { label: `Desbloquear constelación ${r + 1}`, cls: 'ghost', onClick: () => (completeWorlds(w, Math.min(r * REGION + REGION - 1, TOTAL_LEVELS / LEVELS_PER_WORLD - 1)), onRefresh()) },
       {
         label: 'Desbloquear todo',
         cls: 'ghost',
         onClick: () => {
+          backupOnce();
           save.next = TOTAL_LEVELS - 1;
           save.open = Math.floor(save.next / LEVELS_PER_WORLD);
           save.run = null;
@@ -298,23 +293,19 @@ export function openDevMenu({ onGallery, onPlay, onRefresh }) {
           onRefresh();
         },
       },
+      { label: 'Reiniciar progreso', cls: 'ghost', onClick: () => (backupOnce(), resetProfile(), onRefresh()) },
       {
-        label: 'Reiniciar progreso',
-        cls: 'ghost',
+        label: 'Volver a mi partida',
+        cls: 'green',
+        disabled: !hasBackup(),
+        title: hasBackup() ? 'Regresa tu partida a como estaba antes de usar el modo dev' : 'No has cambiado tu partida',
         onClick: () => {
-          resetProfile();
+          restoreBackup();
+          toast('Tu partida volvió a como estaba');
           onRefresh();
         },
       },
-      {
-        label: 'Salir del modo dev',
-        cls: 'ghost',
-        onClick: () => {
-          prefs.dev = false;
-          persist();
-          onRefresh();
-        },
-      },
+      { label: 'Salir del modo dev', cls: 'pink', onClick: () => ((prefs.dev = false), persist(), document.documentElement.classList.remove('dev-on')) },
     ],
   });
 }

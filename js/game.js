@@ -1,20 +1,18 @@
 import { save, persist } from './storage.js';
-import { openModal, toast, confetti, updateCoins, starsHTML } from './ui.js';
-import { worldInfo, packGroups, MECH_NAMES } from './levels.js';
+import { openModal, toast, confetti, updateCoins, starsHTML, reduced, buzz, sparkle, wait, spendFromWallet } from './ui.js';
+import { worldInfo, packGroups, MECH_NAMES, LEVELS_PER_WORLD } from './levels.js';
 import * as E from './engine.js';
 import { price } from './economy.js';
-import { cardBack, svgUrl, icon, star, coin, placeIcon, lockIcon, keyIcon } from './lowpoly.js';
+import { cardBackURL, icon, star, coin, lockIcon, keyIcon, arrowIcon, curtainIcon, suitSVG } from './art.js';
+import { tableHTML } from './biomes.js';
 import { Coach } from './coach.js';
 
-const SUITS = ['♠', '♥', '♦', '♣'];
+const SUITS = ['s', 'h', 'd', 'c'];
 export const RANKS = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
 const LOCK_HUES = [350, 45, 200]; // color de cada pareja candado/llave
 const FLY_MS = 400;
 const FLY_EASE = 'cubic-bezier(0.33, 0.6, 0.35, 1)';
-const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
-const buzz = () => navigator.vibrate?.(30);
 const REWARD_TEXT = { card: '+1 carta al mazo', wild: 'comodín al mazo', bank: '+1 comodín' };
-const ARROW = { 1: '↑', '-1': '↓' };
 // Explicación de cada mecánica la primera vez que aparece (modo jugador).
 const TIPS = {
   lock: 'Esta carta tiene <b>candado</b>: no se puede jugar hasta que juegues la carta con la <b>llave</b> del mismo color.',
@@ -59,28 +57,37 @@ function toss(el, { x0 = 0, y0 = 0, s0 = 1, r0 = 0 }, { x1 = 0, y1 = 0, s1 = 1, 
 const center = (r) => [r.left + r.width / 2, r.top + r.height / 2];
 
 // rank: número a mostrar (la carta viva cambia); si no se da, el de la carta.
+// Cara: número en la esquina, palo arriba a la derecha y el número grande al centro.
 export function faceHTML(c, rank = c.rank) {
-  if (c.wild) return `<div class="face front wild">${star(true)}</div>`;
+  if (c.wild) return `<div class="face front wild">${icon('wild')}</div>`;
   if (rank == null) return '';
-  const s = SUITS[c.suit];
+  const s = suitSVG(SUITS[c.suit]);
   const red = c.suit === 1 || c.suit === 2 ? ' red' : '';
-  const arrow = c.arrow ? `<span class="arrow-badge">${ARROW[c.arrow]}</span>` : '';
-  const live = c.live ? `<span class="live-badge">${ARROW[c.live]}</span>` : '';
-  // Carta doble: los dos números partidos en grande ("5/8"), palos más chicos.
-  if (c.alt != null)
-    return `<div class="face front double${red}"><span class="dbl"><b>${RANKS[c.rank]}</b><i></i><b>${RANKS[c.alt]}</b></span><span class="st">${s}</span><span class="big">${s}</span></div>`;
-  return `<div class="face front${red}${c.live ? ' live' : ''}"><span class="rk">${RANKS[rank]}</span><span class="st">${s}</span><span class="big">${s}</span>${arrow}${live}</div>`;
+  const arrow = c.arrow ? `<span class="arrow-badge">${arrowIcon(c.arrow > 0)}</span>` : '';
+  // Carta doble: los dos números ("5/8").
+  if (c.alt != null) return `<div class="face front double${red}"><span class="cs">${s}</span><span class="dbl"><b>${RANKS[c.rank]}</b><i></i><b>${RANKS[c.alt]}</b></span></div>`;
+  const r = RANKS[rank];
+  // Carta viva: en la esquina va la flecha de hacia dónde cambia (el número está al centro).
+  const corner = c.live ? `<span class="rk dir">${LIVE_DIR[c.live > 0 ? 'up' : 'down']}</span>` : `<span class="rk">${r}</span>`;
+  const kind = c.live ? ' live' : c.arrow ? ' arrowed' : '';
+  return `<div class="face front${red}${kind}">${corner}<span class="cs">${s}</span><span class="big${r === '10' ? ' ten' : ''}">${r}</span>${arrow}</div>`;
 }
-const inner = (c) => `<div class="inner">${faceHTML(c)}<div class="face back"></div></div>`;
+const LIVE_DIR = {
+  up: '<svg viewBox="0 0 24 24"><path d="M12 20V5M5 11.5 12 4.5l7 7" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  down: '<svg viewBox="0 0 24 24"><path d="M12 4v15M5 12.5l7 7 7-7" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+};
+// Reverso. La cortina es un telón de verdad (dos cortinas y su galería) que se recoge al abrirse.
+export const backHTML = (c) => `<div class="face back">${c.curtain != null ? '<i class="drape l"></i><i class="drape r"></i><i class="valance"></i>' : ''}</div>`;
+const inner = (c) => `<div class="inner">${faceHTML(c)}${backHTML(c)}</div>`;
 // Marcas que se ven aunque la carta esté boca abajo, para poder planear.
 const marks = (c) =>
   (c.ice ? `<span class="ice-ov"><b></b></span>` : '') +
-  (c.curtainKey != null ? `<span class="curtain-mark"></span>` : '') +
+  (c.curtainKey != null ? `<span class="curtain-mark">${curtainIcon()}</span>` : '') +
   (c.key != null ? `<span class="key-mark">${keyIcon(LOCK_HUES[c.key])}</span>` : '') +
   (c.lock != null ? `<span class="lock-ov">${lockIcon(LOCK_HUES[c.lock])}</span>` : '');
 
-// opts: onExit, onAbandon, onRetry, onNext, onWin(stars) → { coins, tickets, prev }, onSave(state)?,
-//       resume (estado guardado), saved (la partida se guarda al salir), tutorial, nextCost, dev
+// opts: onExit, onAbandon, onRetry, onWin(stars) → { coins, tickets, prev, gold, wild, chest }, onDone(res), onSave(state)?,
+//       resume (estado guardado), saved (la partida se guarda al salir), tutorial, dev
 export class Game {
   constructor(root, level, opts) {
     this.level = level;
@@ -149,8 +156,10 @@ export class Game {
     const c = this.cards.find((x) => !x.removed && x.el && x[MECH_FIELD[next]] != null);
     this.modalOpen = true;
     openModal({
-      title: `Nuevo: ${MECH_NAMES[next]}`,
-      body: `<p>${TIPS[next]}</p>`,
+      title: `Nuevo: ${MECH_NAMES[next].toLowerCase()}`,
+      color: 'blue',
+      closable: false,
+      body: `<p class="lead">${TIPS[next]}</p>`,
       onClose: () => {
         this.modalOpen = false;
         if (c?.el) {
@@ -161,7 +170,7 @@ export class Game {
         }
         setTimeout(() => this.tips(), 300);
       },
-      buttons: [{ label: '¡Entendido!' }],
+      buttons: [{ label: '¡Entendido!', cls: 'green' }],
     });
   }
 
@@ -201,22 +210,21 @@ export class Game {
     const el = document.createElement('div');
     el.className = 'screen game';
     el.style.setProperty('--hue', info.hue);
-    this.back = svgUrl(cardBack(info.hue));
+    this.back = cardBackURL();
     el.style.setProperty('--back', this.back);
-    el.innerHTML = `
+    el.innerHTML = `${tableHTML(level.world)}
       <header class="hud">
-        <button class="icon-btn" data-a="exit" aria-label="Salir">${icon('close')}</button>
-        <div class="hud-title"><b>${placeIcon(info.place)} Mundo ${level.world + 1}</b><small>Nivel ${level.index + 1}${level.boss ? ` · ${icon('crown', '#ffe46b', '#f5a712')} Jefe` : ''}</small></div>
-        <div class="pill coins">${coin()}<span data-coins>${save.coins}</span></div>
+        <button class="tb hbtn" data-a="exit" aria-label="Pausa" title="Pausa">${icon('pause')}</button>
+        <div class="hud-mid"><div class="combo tb"></div></div>
+        <div class="pill tb">${coin()}<span data-coins>${save.coins.toLocaleString('es-MX')}</span></div>
       </header>
-      <div class="progress-row"><div class="combo"></div></div>
       <div class="board-wrap"><div class="board"></div><div class="streak"></div></div>
       <footer class="tray">
+        <button class="end-btn tb" data-a="end" aria-label="Finalizar nivel">${icon('door')}<span>Finalizar nivel</span></button>
+        <button class="tool tb undo-btn" data-a="undo" aria-label="Deshacer" title="Deshacer">${icon('undo')}<b class="badge" data-n="undo"></b></button>
         <div class="stock" data-a="draw" role="button" aria-label="Mazo"></div>
         <div class="pile waste"></div>
-        <button class="undo-btn" data-a="undo" aria-label="Deshacer">${icon('undo')}<b class="badge" data-n="undo"></b></button>
-        <span class="tray-space"></span>
-        <button class="wild-card" data-a="wild" aria-label="Comodín">${star(true)}<span>COMODÍN</span><b class="badge" data-n="wild"></b></button>
+        <button class="tool tb wild-card" data-a="wild" aria-label="Comodín" title="Comodín">${icon('wild')}<b class="badge" data-n="wild"></b></button>
       </footer>`;
     this.boardEl = el.querySelector('.board');
     this.wrapEl = el.querySelector('.board-wrap');
@@ -239,6 +247,7 @@ export class Game {
       const actions = {
         undo: () => this.undo(),
         wild: () => this.useWild(),
+        end: () => this.endLevel(),
       };
       actions[a]?.();
     });
@@ -333,9 +342,10 @@ export class Game {
     d.innerHTML = c.pack
       ? `<div class="inner"><div class="face front"></div><div class="face back"></div></div><span class="pack-num">+${c.pack.length}</span>`
       : c.bomb
-        ? `<div class="inner"><div class="face front"></div><div class="face back"></div></div><span class="bomb-face"><i></i><b></b></span>`
-        : `<div class="inner">${faceHTML(c, E.rankOf(c, this.st))}<div class="face back"></div></div>` + marks(c);
+        ? `<div class="inner"><div class="face front"></div><div class="face back"></div></div><span class="bomb-face">${icon('bomb')}<b></b></span>`
+        : `<div class="inner">${faceHTML(c, E.rankOf(c, this.st))}${backHTML(c)}</div>` + marks(c);
     if (c.curtain != null) d.classList.add('curtain');
+    if (c.alt != null) d.classList.add('dbl-card');
     d.style.zIndex = c.z * 100 + c.id;
     this.boardEl.append(d);
     c.el = d;
@@ -352,7 +362,9 @@ export class Game {
   layout() {
     const r = this.wrapEl.getBoundingClientRect();
     if (!r.width) return;
-    const { u, bw, bh, offsets } = packGroups(this.level.groups, r.width - 10, r.height - 10);
+    // La carta doble se ve 10% más grande: se deja un poco de aire para que no se salga del tablero.
+    const room = this.cards.some((c) => c.alt != null) ? 0.93 : 1;
+    const { u, bw, bh, offsets } = packGroups(this.level.groups, (r.width - 10) * room, (r.height - 10) * room);
     this.u = Math.max(18, u);
     this.offsets = offsets;
     this.boardEl.style.width = `${bw * this.u}px`;
@@ -366,6 +378,7 @@ export class Game {
   // Pinta lo que depende del estado: boca arriba, candados, cortinas, hielo, bomba y carta viva.
   refresh() {
     const { level, st } = this;
+    this.updateStuck(true);
     for (const c of this.cards) {
       if (c.removed || !c.el) continue;
       const el = c.el;
@@ -388,12 +401,17 @@ export class Game {
         if (el.dataset.rank !== String(r)) {
           const old = el.dataset.rank;
           el.dataset.rank = r;
-          // Solo cambia el número (la carta no se mueve): el viejo sale y el nuevo entra.
-          const rk = el.querySelector('.front .rk');
-          rk.textContent = RANKS[r];
+          // Solo cambia el número grande (la carta no se mueve): el viejo sale y el nuevo entra hacia donde apunta.
+          const big = el.querySelector('.front .big');
+          big.textContent = RANKS[r];
+          big.classList.toggle('ten', RANKS[r] === '10');
           if (old != null && !reduced()) {
             const up = c.live > 0 ? 1 : -1;
-            rk.animate([{ translate: `0 ${up * 40}%`, opacity: 0 }, { translate: '0 0', opacity: 1 }], { duration: 240, easing: 'ease-out' });
+            big.animate(
+              [{ translate: `0 ${up * 45}%`, scale: 0.6, opacity: 0 }, { translate: `0 ${-up * 6}%`, scale: 1.15, opacity: 1, offset: 0.6 }, { translate: '0 0', scale: 1, opacity: 1 }],
+              { duration: 340, easing: 'ease-out' },
+            );
+            el.querySelector('.front .dir')?.animate([{ translate: '0 0' }, { translate: `0 ${-up * 25}%` }, { translate: '0 0' }], { duration: 340, easing: 'ease-out' });
           }
         }
       }
@@ -434,21 +452,30 @@ export class Game {
       d.classList.toggle('gift-wild', !!c?.reward && !!c.wild);
     });
     this.stockEl.querySelector('.count, .empty-slot')?.remove();
-    this.stockEl.insertAdjacentHTML('beforeend', n ? `<span class="badge count">${n}</span>` : `<div class="empty-slot">+5</div>`);
+    // Mazo vacío: queda un hueco punteado con "+5"; al tocarlo sale la ventana de compra.
+    this.stockEl.querySelector('.buy5')?.remove();
+    if (n) this.stockEl.insertAdjacentHTML('beforeend', `<span class="badge count">${n}</span>`);
+    else {
+      this.stockEl.insertAdjacentHTML('beforeend', `<div class="buy5"><b>+5</b></div>`);
+    }
+  }
+  extraCost() {
+    return this.opts.dev?.infinite ? 0 : this.priceOf('extra');
   }
 
   stockTop() {
     return this.stockEls?.[this.stockEls.length - 1] || this.stockEl;
   }
 
-  // Carta suelta que vuela por encima de todo (del mazo, del comodín, de regreso al mazo).
+  // Carta suelta que vuela por encima del tablero (del mazo, del comodín, de regreso al mazo).
   flyer(c, rect, up) {
     const f = document.createElement('div');
     f.className = `card flyer${up ? ' up' : ''}`;
     f.style.cssText = `position:fixed;left:${rect.left}px;top:${rect.top}px;--cw:${rect.width}px;z-index:9999;pointer-events:none`;
     f.style.setProperty('--back', this.back);
     f.innerHTML = inner(c);
-    document.body.append(f);
+    // Dentro de la pantalla del juego (capa aislada): así nunca pasa por encima de una ventana.
+    this.el.append(f);
     return f;
   }
 
@@ -476,7 +503,7 @@ export class Game {
     const from = at <= 12 ? 0 : at - 3;
     let dots = '';
     for (let i = from + 1; i < at; i++) dots += `<i class="${i <= this.streak ? 'on' : ''}"></i>`;
-    const prize = kind === 'bank' ? `<span class="prize bank">${star(true)}</span>` : `<span class="prize mini ${kind === 'wild' ? 'gift-wild' : 'gift-card'}"></span>`;
+    const prize = kind === 'bank' ? `<span class="prize bank">${icon('wild')}</span>` : `<span class="prize mini ${kind === 'wild' ? 'gift-wild' : 'gift-card'}"></span>`;
     this.comboEl.innerHTML = `<span class="dots">${from ? `<b>×${from}</b>` : ''}${dots}${prize}</span><small>${REWARD_TEXT[kind]}</small>`;
     this.comboEl.classList.toggle('hot', at - this.streak <= 1 && this.streak > 0);
   }
@@ -627,7 +654,7 @@ export class Game {
         const flash = document.createElement('div');
         flash.className = 'boom-flash';
         flash.style.cssText = `left:${tx}px;top:${ty}px`;
-        document.body.append(flash);
+        this.el.append(flash);
         flash.animate([{ scale: 0.2, opacity: 1 }, { scale: 3.2, opacity: 0 }], { duration: 650, easing: 'ease-out', fill: 'forwards' }).finished.then(() => flash.remove());
         this.el.animate(
           [{ translate: '0 0' }, { translate: '-8px 4px' }, { translate: '7px -5px' }, { translate: '-5px 3px' }, { translate: '3px -2px' }, { translate: '0 0' }],
@@ -673,8 +700,8 @@ export class Game {
     f.animate(
       [
         { scale: 0.2, rotate: '-20deg', opacity: 0 },
-        { scale: 1.5, rotate: '6deg', opacity: 1, offset: 0.6 },
-        { scale: 1.35, rotate: '0deg', opacity: 1 },
+        { scale: 1.12, rotate: '6deg', opacity: 1, offset: 0.6 },
+        { scale: 1, rotate: '0deg', opacity: 1 },
       ],
       { duration: 380, easing: 'cubic-bezier(0.34, 1.45, 0.64, 1)', fill: 'forwards' },
     )
@@ -775,7 +802,7 @@ export class Game {
         toast('¡Aún tienes jugadas!');
         return this.hint();
       }
-      return this.stuck();
+      return this.buyExtra();
     }
     const missed = this.playable();
     const before = this.st;
@@ -955,34 +982,89 @@ export class Game {
     setTimeout(() => target.classList.remove('hint'), 1300);
   }
 
+  // Precio de los boosters según el nivel que se juega (mismos escalones que los boletos).
+  priceOf(kind) {
+    return price(kind, this.level.world * LEVELS_PER_WORLD);
+  }
+
+  // kind: 'wild' (1 comodín), 'undo' (3 deshacer) o 'extra' (+5 cartas al mazo, solo atascado).
   offerBuy(kind) {
-    const cost = price(kind, save.next);
-    const label = kind === 'wild' ? '1 comodín ★' : '3 deshacer ↶';
+    const cost = kind === 'extra' ? this.extraCost() : this.priceOf(kind);
+    const n = { wild: 1, undo: 3, extra: 5 }[kind];
     this.modalOpen = true;
+    // Lo que se compra se ve en grande, flotando con rayos detrás.
+    const hero = {
+      wild: '<div class="hero-card wild"></div>',
+      undo: `<div class="hero-undo">${[0, 1, 2].map((k) => `<span style="--k:${k}">${icon('undo')}</span>`).join('')}</div>`,
+      extra: `<div class="hero-fan">${[0, 1, 2, 3, 4].map((k) => `<i style="--k:${k}"></i>`).join('')}</div>`,
+    }[kind];
+    const text = {
+      wild: 'El <b>comodín</b> vale cualquier número: úsalo cuando te atores.',
+      undo: 'Con <b>deshacer</b> regresas tu última jugada o robo.',
+      extra: 'Llegan <b>5 cartas</b> a tu mazo. Con +5 siempre te llevas al menos 1 estrella.',
+    }[kind];
     openModal({
-      title: kind === 'wild' ? 'Sin comodines' : 'Sin deshacer',
-      body: `<p>¿Comprar ${label} por ${coin()} ${cost}?</p>`,
+      title: { wild: '¡Te quedaste sin comodines!', undo: '¡Te quedaste sin deshacer!', extra: '¿Comprar +5 cartas?' }[kind],
+      color: { wild: 'gold', undo: 'green', extra: 'violet' }[kind],
+      cls: 'buy-modal',
+      body: `<div class="buy-hero"><div class="rays"></div>${hero}<b class="qty outl">${kind === 'extra' ? '+5' : `×${n}`}</b></div>
+        <p class="lead">${text}</p>
+        ${save.coins < cost ? '<p class="note">No te alcanzan las monedas.</p>' : ''}`,
       onClose: () => (this.modalOpen = false),
       buttons: [
+        { label: 'Ahora no', cls: 'ghost grow' },
         {
-          label: `Comprar · ${coin()} ${cost}`,
+          label: `Comprar ${coin()} ${cost}`,
+          cls: 'green grow',
           disabled: save.coins < cost,
           onClick: () => {
+            if (kind === 'extra') return this.payExtra(cost);
             save.coins -= cost;
-            if (kind === 'wild') save.wild += 1;
-            else save.undo += 3;
+            save[kind] += n;
             persist();
-            this.updateCounts();
+            this.buyFx(kind, cost, n);
           },
         },
-        { label: 'Ahora no', cls: 'ghost' },
       ],
     });
   }
 
+  // Compra con animación: las monedas salen del monedero hacia el botón y luego llega lo comprado, que rebota en su sitio.
+  async buyFx(kind, cost, n) {
+    const btn = this.el.querySelector(kind === 'wild' ? '.wild-card' : '.undo-btn');
+    const r = btn.getBoundingClientRect();
+    const to = { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+    const counter = btn.querySelector('.badge');
+    counter.textContent = save[kind] - n;
+    await spendFromWallet('coins', to, cost);
+    if (reduced()) return this.updateCounts();
+    for (let i = 0; i < n; i++) {
+      const f = document.createElement('div');
+      f.className = 'fly-prize gain';
+      f.innerHTML = icon(kind === 'wild' ? 'wild' : 'undo');
+      f.style.cssText = `left:${innerWidth / 2}px;top:${innerHeight * 0.42}px`;
+      this.el.append(f);
+      const dx = to.x - innerWidth / 2, dy = to.y - innerHeight * 0.42;
+      await f.animate(
+        [
+          { translate: '0 0', scale: 0, rotate: '-20deg' },
+          { translate: '0 -10px', scale: 2.2, rotate: '8deg', offset: 0.3 },
+          { translate: '0 -10px', scale: 2, rotate: '0deg', offset: 0.5 },
+          { translate: `${dx}px ${dy}px`, scale: 0.8, rotate: '0deg' },
+        ],
+        { duration: 760, delay: i * 120, easing: 'cubic-bezier(0.5, 0, 0.5, 1)', fill: 'backwards' },
+      ).finished;
+      f.remove();
+      counter.textContent = save[kind] - n + i + 1;
+      squash(btn);
+      sparkle(to, 8);
+      buzz(12);
+    }
+  }
+
   // +5 cartas compradas: van al final del mazo y también a los estados guardados para deshacer
-  // (deshacer nunca quita lo que se compró).
-  addExtra() {
+  // (deshacer nunca quita lo que se compró). Las monedas salen hacia el mazo y las cartas llegan volando una por una.
+  async addExtra(cost) {
     this.extras++;
     const free = this.cards.filter((c) => E.isOpen(this.level, c, this.st));
     const add = [];
@@ -991,46 +1073,98 @@ export class Game {
       const rank = f ? (E.rankOf(f, this.st) + (Math.random() < 0.5 ? 1 : 12)) % 13 : Math.floor(Math.random() * 13);
       add.push({ rank, suit: Math.floor(Math.random() * 4) });
     }
+    this.busy = true;
+    const sr = this.stockEl.getBoundingClientRect();
+    if (cost) await spendFromWallet('coins', { x: sr.left + sr.width / 2, y: sr.top + sr.height / 2 }, cost);
     this.st = E.cloneState(this.st);
     this.st.stock.push(...add);
     for (const h of this.history) h.before = { ...h.before, stock: [...h.before.stock, ...add] };
     this.renderPiles();
     this.save();
+    const slots = this.stockEls.slice(0, 5).reverse();
+    if (!reduced()) {
+      slots.forEach((e) => (e.style.opacity = 0));
+      const w = this.stockEl.offsetHeight / 1.4;
+      const x0 = innerWidth / 2 - w / 2, y0 = innerHeight * 0.38;
+      await Promise.all(
+        slots.map((slot, i) =>
+          wait(i * 140).then(async () => {
+            // Aparece al centro con un salto y luego se mete en su hueco del mazo.
+            const f = this.flyer({}, { left: x0, top: y0, width: w }, false);
+            await f.animate([{ scale: 0.2, rotate: '-25deg', opacity: 0 }, { scale: 1.15, rotate: '6deg', opacity: 1, offset: 0.7 }, { scale: 1, rotate: '0deg', opacity: 1 }], { duration: 260, easing: 'ease-out' }).finished;
+            const t = slot.getBoundingClientRect();
+            await this.intoSlot(f, slot, t.left - x0, t.top - y0, 0);
+            squash(slot);
+          }),
+        ),
+      );
+    }
+    this.busy = false;
     toast('+5 cartas al mazo');
+    this.updateStuck();
   }
 
   checkEnd() {
     if (E.won(this.st)) return this.win();
-    if (!this.stock.length && !this.hasMove()) setTimeout(() => this.stuck(), 450);
   }
 
-  stuck() {
-    if (this.done || this.modalOpen || this.stock.length || this.hasMove()) return;
+  // Sin mazo y sin jugadas: la carta +5 y "Finalizar nivel" saltan para que se vean (sin ventana).
+  updateStuck(announce) {
+    const stuck = !this.done && !this.stock.length && !this.hasMove();
+    const was = this.el.classList.contains('no-moves');
+    this.el.classList.toggle('no-moves', stuck);
+    if (!stuck || was || !announce) return;
+    setTimeout(() => {
+      if (!this.el.classList.contains('no-moves')) return;
+      toast('Sin jugadas: compra +5 cartas o finaliza el nivel');
+      if (reduced()) return;
+      const pop = [{ scale: 0.4, opacity: 0 }, { scale: 1.15, opacity: 1, offset: 0.6 }, { scale: 1, opacity: 1 }];
+      this.el.querySelector('.end-btn')?.animate(pop, { duration: 420, easing: 'ease-out' });
+      this.stockEl.querySelector('.buy5')?.animate([{ rotate: '0deg' }, { rotate: '-8deg' }, { rotate: '7deg' }, { rotate: '-4deg' }, { rotate: '0deg' }], { duration: 600, delay: 200 });
+    }, 350);
+  }
+
+  // Comprar +5 cartas tocando la carta +5 (solo si estás atascado y te alcanza).
+  // Tocar el hueco +5 del mazo: abre la ventana de compra (como comodín y deshacer).
+  buyExtra() {
+    if (this.done || this.busy || this.modalOpen) return;
+    this.offerBuy('extra');
+  }
+  payExtra(cost) {
+    save.coins -= cost;
+    persist();
+    this.el.classList.remove('no-moves');
+    this.addExtra(cost);
+  }
+
+
+  // "Finalizar nivel": reintentar con boleto nuevo, rendirse o seguir jugando (para usar comodín o deshacer).
+  endLevel() {
+    if (this.done || this.modalOpen) return;
     this.modalOpen = true;
     const left = this.cards.filter((c) => !c.removed).length;
-    const inf = this.opts.dev?.infinite;
-    openModal({
-      title: '¡Sin movimientos!',
-      body: `<p>Quedan <b>${left}</b> cartas en el tablero.</p>`,
+    const cost = this.extraCost(), short = save.coins < cost;
+    const fan = [0, 1, 2, 3, 4].map((k) => `<div class="card mini-back" style="left:${6 + k * 9}px;rotate:${-14 + k * 7}deg"></div>`).join('');
+    const m = openModal({
+      title: '¿Finalizar el nivel?',
+      color: 'pink',
+      // El cuadro grande es el botón de comprar +5: dice el precio y se toca para gastar (gris si no alcanza).
+      body: `<button class="offer buy press"${short ? ' disabled' : ''}><div class="fan">${fan}</div><div><b>Comprar +5 cartas</b><span>Quedan ${left} carta${left === 1 ? '' : 's'} en el tablero. Con +5 siempre te llevas al menos 1 estrella.</span>
+          <em class="cost${short ? ' short' : ''}">${coin()} ${cost || 'gratis'}${short ? ' · te faltan monedas' : ''}</em></div></button>`,
       onClose: () => (this.modalOpen = false),
       buttons: [
-        {
-          label: `+5 cartas · ${coin()} ${price('extra')}`,
-          disabled: save.coins < price('extra') && !inf,
-          onClick: () => {
-            if (!inf) save.coins -= price('extra');
-            persist();
-            updateCoins();
-            this.addExtra();
-          },
-        },
-        (save.wild > 0 || inf) && { label: `${star(true)} Usar comodín (${save.wild})`, onClick: () => this.useWild() },
-        this.history.length && (save.undo > 0 || inf) && { label: `Deshacer ↶ (${save.undo})`, cls: 'ghost', onClick: () => this.undo() },
-        { label: this.opts.free ? 'Reintentar' : 'Reintentar (nuevo boleto)', cls: 'ghost', onClick: () => this.opts.onRetry() },
-        { label: 'Abandonar', cls: 'ghost', onClick: () => this.opts.onAbandon() },
-      ].filter(Boolean),
+        { label: this.opts.free ? 'Reintentar' : 'Reintentar · nuevo boleto', cls: 'ghost wide', onClick: () => this.opts.onRetry() },
+        { label: 'Rendirse', cls: 'pink grow', onClick: () => this.opts.onAbandon() },
+        { label: 'Seguir jugando', cls: 'ghost grow' },
+      ],
+    });
+    m.el.querySelector('.offer.buy').addEventListener('click', () => {
+      if (short) return;
+      m.close();
+      this.payExtra(cost);
     });
   }
+
 
   win() {
     this.done = true;
@@ -1040,26 +1174,46 @@ export class Game {
     const full = Math.min(2, this.level.meta.spares);
     let stars = left >= full ? 3 : left >= 1 ? 2 : 1;
     if (this.extras) stars = 1;
-    const { coins, tickets, prev, gold } = this.opts.onWin(stars);
-    const cost = this.opts.nextCost;
+    const res = this.opts.onWin(stars);
+    const { coins, tickets, prev, gold, wild, undo } = res;
+    const title = this.level.secret ? '¡Nivel secreto!' : this.level.boss ? '¡Jefe derrotado!' : '¡Nivel superado!';
+    // Premios en fichas que saltan una tras otra (después de las estrellas).
+    const chips = [
+      `<div class="reward">${coin()}${coins ? `+${coins}` : '—'}</div>`,
+      tickets && `<div class="reward">${icon('ticket')}+${tickets}<small>primera vez</small></div>`,
+      gold && `<div class="reward gold">${icon('gold')}+1<small>boleto dorado</small></div>`,
+      wild && `<div class="reward">${icon('wild')}+${wild}<small>comodín</small></div>`,
+      undo && `<div class="reward">${icon('undo')}+${undo}<small>deshacer</small></div>`,
+    ].filter(Boolean);
+    const note = !coins && prev >= 3
+      ? '<p class="note">Ya cobraste las 3 estrellas de este nivel.</p>'
+      : this.level.secret && stars < 3 && prev < 3
+        ? `<p class="note">Con 3 estrellas el nivel secreto da además ${icon('wild')} comodín y ${icon('undo')} deshacer.</p>`
+        : stars > prev && prev ? '<p class="note">¡Nuevo récord de estrellas!</p>' : '';
     setTimeout(() => {
       confetti();
-      openModal({
-        title: this.level.boss ? `¡Jefe derrotado! ${icon('crown', '#ffe46b', '#f5a712')}` : '¡Nivel completado!',
-        body: `<div class="big-stars">${starsHTML(stars)}</div>
-          <ul class="summary">
-            <li><span>Cartas sobrantes</span><b>${left}</b></li>
-            <li><span>Racha máxima</span><b>×${this.best}</b></li>
-            ${tickets ? `<li><span>Boleto de regalo</span><b>+${tickets} ${icon('ticket', '#ffd0e6', '#ff7fb6')}</b></li>` : ''}
-            ${gold ? `<li class="gold"><span>Boleto dorado</span><b>+1 ${icon('ticket', '#ffe680', '#f5a91c')}</b></li>` : ''}
-            <li class="total"><span>Monedas</span><b>${coins ? `+${coin()} ${coins}` : '—'}</b></li>
-          </ul>${!coins && prev >= 3 ? '<p class="note">Ya cobraste las 3 estrellas de este nivel.</p>' : stars > prev && prev ? '<p class="note">¡Nuevo récord de estrellas!</p>' : ''}`,
-        buttons: [
-          { label: `Siguiente ▶${cost ? ` · ${cost} ${icon('ticket', '#7a4a00', '#5a3500')}` : ''}`, onClick: () => this.opts.onNext() },
-          { label: 'Repetir', cls: 'ghost', onClick: () => this.opts.onRetry() },
-          { label: 'Mapa', cls: 'ghost', onClick: () => this.opts.onExit() },
-        ],
+      const m = openModal({
+        title,
+        color: 'gold',
+        closable: false,
+        cls: 'win',
+        body: `<div class="win-top"><div class="rays"></div><div class="big-stars">${starsHTML(stars)}</div></div>
+          <div class="rewards">${chips.join('')}</div>${note}`,
+        buttons: [{ label: `Continuar ${icon('next')}`, cls: 'green wide', onClick: () => this.opts.onDone?.(res) }],
       });
+      if (reduced()) return;
+      // Cada estrella cae con su golpe; luego saltan los premios.
+      m.el.querySelectorAll('.big-stars .star').forEach((el, i) => {
+        if (i >= stars) return;
+        setTimeout(() => {
+          buzz(15);
+          const r = el.getBoundingClientRect();
+          sparkle({ x: r.left + r.width / 2, y: r.top + r.height / 2 }, 8);
+        }, 520 + i * 200);
+      });
+      m.el.querySelectorAll('.rewards .reward').forEach((el, i) =>
+        el.animate([{ scale: 0, rotate: '-12deg', opacity: 0 }, { scale: 1.15, rotate: '4deg', opacity: 1, offset: 0.65 }, { scale: 1, rotate: '0deg', opacity: 1 }], { duration: 420, delay: 1050 + i * 160, easing: 'ease-out', fill: 'backwards' }),
+      );
     }, 450);
   }
 
@@ -1067,36 +1221,28 @@ export class Game {
   // Repetición: salir pierde el intento.
   exit() {
     if (this.modalOpen) return;
-    const lost = this.opts.free ? '<p>Se pierde este intento.</p>' : '<p>Pierdes el boleto y lo que gastaste en este intento.</p>';
-    if (this.opts.saved) {
+    this.modalOpen = true;
+    const free = () => (this.modalOpen = false);
+    const confirmLeave = () =>
       openModal({
-        title: 'Pausa',
-        body: '<p>Tu partida se guarda: al volver sigues donde te quedaste. Mientras, no puedes jugar otros niveles.</p>',
-        buttons: [
-          { label: 'Seguir jugando' },
-          { label: 'Guardar y salir', cls: 'ghost', onClick: () => this.opts.onExit() },
-          {
-            label: 'Abandonar nivel',
-            cls: 'ghost danger',
-            onClick: () =>
-              openModal({
-                title: '¿Abandonar?',
-                body: lost,
-                buttons: [{ label: 'Seguir jugando' }, { label: 'Abandonar', cls: 'ghost danger', onClick: () => this.opts.onAbandon() }],
-              }),
-          },
-        ],
+        title: '¿Abandonar el nivel?',
+        color: 'pink',
+        onClose: free,
+        body: `<p class="lead">${this.opts.free ? 'Se pierde este intento.' : 'Pierdes el boleto y lo que gastaste en este intento.'}</p>`,
+        buttons: [{ label: 'Seguir jugando', cls: 'ghost' }, { label: 'Abandonar', cls: 'pink', onClick: () => this.opts.onAbandon() }],
       });
-      return;
-    }
-    if (!this.history.length && !this.opts.dev) return this.opts.onAbandon();
+    if (!this.opts.saved && !this.history.length && !this.opts.dev) return free(), this.opts.onAbandon();
     openModal({
-      title: '¿Salir del nivel?',
-      body: lost,
+      title: 'Pausa',
+      color: 'gray',
+      onClose: free,
+      body: this.opts.saved ? '<p class="note">Tu partida se guarda: al volver sigues donde te quedaste.</p>' : '<p class="note">Estás repitiendo un nivel: si sales, se pierde este intento.</p>',
       buttons: [
-        { label: 'Seguir jugando' },
-        { label: 'Salir', cls: 'ghost danger', onClick: () => this.opts.onAbandon() },
-      ],
+        { label: `${icon('play')} Continuar`, cls: 'green wide' },
+        this.opts.saved && { label: `${icon('door')} Guardar y salir`, cls: 'ghost wide', onClick: () => this.opts.onExit() },
+        { label: this.opts.saved ? 'Abandonar nivel' : `${icon('door')} Salir`, cls: 'pink wide', onClick: () => ((this.modalOpen = true), confirmLeave()) },
+      ].filter(Boolean),
+      cls: 'pause',
     });
   }
 

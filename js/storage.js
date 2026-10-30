@@ -21,6 +21,8 @@ const fresh = (name, avatar = 0) => ({
   named: false, // la primera vez se le pide el nombre
   daily: { day: 0, last: '' }, // camino del regalo diario: día siguiente a reclamar y fecha del último
   seen: {}, // mecánicas que ya se le explicaron
+  secret: {}, // mundo -> mejores estrellas en su nivel secreto
+  secretSeen: {}, // mundos cuyo nivel secreto ya se mostró (la revelación se anima una sola vez)
 });
 
 function load() {
@@ -80,4 +82,24 @@ export function renameProfile(name, avatar) {
   save.named = true;
   if (avatar != null) save.avatar = avatar;
   persist();
+}
+
+// Copia del jugador antes de que el modo dev toque su avance; "Volver a mi partida" la regresa.
+const BACKUP = 'solitario-mundos-respaldo-dev';
+export const hasBackup = () => !!localStorage.getItem(BACKUP);
+export function backupOnce() {
+  if (hasBackup()) return;
+  try {
+    localStorage.setItem(BACKUP, JSON.stringify(save));
+  } catch {
+    /* sin espacio */
+  }
+}
+export function restoreBackup() {
+  const raw = localStorage.getItem(BACKUP);
+  if (!raw) return false;
+  root.profiles[root.active] = JSON.parse(raw);
+  swapTo(root.active);
+  localStorage.removeItem(BACKUP);
+  return true;
 }

@@ -280,12 +280,19 @@ function normalizeGroup(cards) {
 // 2. Ese orden se corta en cadenas; cada cadena empieza con una carta del mazo
 //    y cada carta de la cadena es ±1 de la anterior (A y K se conectan).
 // 3. El mazo = inicios de cadena + señuelos en medio + sobrantes al final.
+// Nivel secreto de cada mundo (se abre con 30/30 estrellas): id aparte, después de los 5,200 normales.
+// Se arma como un jefe del mismo mundo, un poco más difícil y con otro tablero.
+export const secretId = (w) => TOTAL_LEVELS + w;
+export const isSecret = (g) => g >= TOTAL_LEVELS;
+
 export function generateLevel(g) {
-  const world = Math.floor(g / LEVELS_PER_WORLD);
-  const index = g % LEVELS_PER_WORLD;
+  const secret = isSecret(g);
+  const base = secret ? (g - TOTAL_LEVELS) * LEVELS_PER_WORLD + LEVELS_PER_WORLD - 1 : g;
+  const world = Math.floor(base / LEVELS_PER_WORLD);
+  const index = base % LEVELS_PER_WORLD;
   const r = mulberry32(hash(g));
-  const d = difficulty(g);
-  const template = chooseTemplate(r, g, d);
+  const d = secret ? Math.min(1, difficulty(base) + 0.05) : difficulty(base);
+  const template = chooseTemplate(r, base, d);
 
   const raw = template === 'clusters' ? clusters(r, d, index === LEVELS_PER_WORLD - 1) : [TEMPLATES[template](r, d)];
   const groups = raw.map(normalizeGroup);
@@ -519,7 +526,7 @@ export function generateLevel(g) {
   }
 
   const level = {
-    g, world, index, d, template, boss,
+    g, world, index, d, template, boss, secret,
     groups: groups.map(({ w, h }) => ({ w, h })),
     cards,
     keys,

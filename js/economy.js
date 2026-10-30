@@ -2,10 +2,9 @@
 import { difficulty, LEVELS_PER_WORLD } from './levels.js';
 
 export const TICKET_PRICE = 40; // monedas por boleto
-// Boosters: el comodín y el pack de 3 deshacer suben con el avance, en los mismos escalones que los boletos.
-// +5 cartas tiene precio fijo.
-const TIERS = { wild: [250, 350, 450], undo: [50, 75, 100] };
-const EXTRA = 150;
+// Boosters: el comodín, el pack de 3 deshacer y +5 cartas suben con el avance, en los mismos escalones que los boletos
+// (1, 2 o 3 boletos por nivel).
+const TIERS = { wild: [250, 350, 450], undo: [50, 75, 100], extra: [100, 150, 200] };
 
 // Boletos para entrar a un nivel: suben con el avance, con tope de 3.
 export function ticketCost(g) {
@@ -25,21 +24,28 @@ const part = (g, stars) => Math.round((levelReward(g) * stars) / 3);
 // Solo se paga lo que falta respecto al mejor resultado anterior (con 3★ ya no se paga más).
 export const coinsFor = (g, stars, prev = 0) => Math.max(0, part(g, stars) - part(g, prev));
 
-// Precio de un booster según el avance del jugador (`next` = primer nivel sin completar).
-export function price(kind, next) {
-  if (kind === 'extra') return EXTRA;
-  return TIERS[kind][ticketCost(next) - 1];
+// Precio de un booster según el avance (`g` = nivel de referencia: el que se juega o el primero sin completar).
+export function price(kind, g) {
+  return TIERS[kind][ticketCost(g) - 1];
 }
 
 // ---------- Regalo diario: camino de 28 días ----------
 // Premios modestos para que dure semanas. Si un día no se reclama, se vuelve al día 1.
+// El día 7 de cada semana es una caja sorpresa: se sabe qué trae hasta abrirla (`openSurprise`).
 const c = (coins) => ({ coins });
 export const DAILY_PATH = [
-  c(20), c(25), { tickets: 1 }, c(30), c(30), c(40), { undo: 2 },
-  c(30), c(35), { tickets: 1 }, c(40), c(40), c(50), { wild: 1 },
-  c(35), c(40), { tickets: 1 }, c(45), c(45), c(55), { undo: 3 },
-  c(40), c(45), { tickets: 2 }, c(50), c(50), c(60), { coins: 150, wild: 1, tickets: 2, chest: true },
+  c(20), c(25), { tickets: 1 }, c(30), c(30), c(40), { surprise: 1 },
+  c(30), c(35), { tickets: 1 }, c(40), c(40), c(50), { surprise: 2 },
+  c(35), c(40), { tickets: 1 }, c(45), c(45), c(55), { surprise: 3 },
+  c(40), c(45), { tickets: 2 }, c(50), c(50), c(60), { surprise: 4 },
 ];
+// Contenido de la caja sorpresa: monedas que crecen con la semana más 1 extra al azar (2 extras la semana 4).
+export function openSurprise(tier, r = Math.random) {
+  const p = { coins: 40 + tier * 20 + Math.floor(r() * 4) * 10 };
+  const extras = [{ tickets: tier > 2 ? 2 : 1 }, { undo: 2 + Math.floor(tier / 2) }, { wild: 1 }];
+  for (let k = tier >= 4 ? 2 : 1; k > 0; k--) Object.assign(p, extras.splice(Math.floor(r() * extras.length), 1)[0]);
+  return p;
+}
 
 const dayKey = (d) => d.toDateString();
 // Estado del regalo hoy: qué día toca (0..27) y si ya se reclamó.
@@ -62,3 +68,23 @@ export function starsNeeded(w) {
   const pct = STAR_STEPS.find(([until]) => w + 1 <= until)[1];
   return Math.ceil(w * LEVELS_PER_WORLD * 3 * pct);
 }
+
+// ---------- Cofre del jefe ----------
+// Al ganar el jefe por primera vez: premio según el % de estrellas del mundo (tope 100% = 30/30).
+const CHEST = [
+  [1, { coins: 50, undo: 2, wild: 1 }, 'oro'],
+  [0.9, { coins: 40, undo: 2 }, 'plata'],
+  [0.75, { coins: 30, undo: 1 }, 'bronce'],
+  [0.5, { coins: 20, undo: 1 }, 'sello'],
+  [0, { coins: 10 }, 'sello'],
+];
+export function bossChest(worldStars) {
+  const pct = worldStars / (LEVELS_PER_WORLD * 3);
+  const [, prize, tier] = CHEST.find(([min]) => pct >= min);
+  return { ...prize, tier, pct };
+}
+
+// Nivel secreto: paga el doble que el jefe de su mundo (según estrellas). La primera vez con 3★ regala además
+// 1 comodín y 2 deshacer; con menos estrellas, solo monedas.
+export const SECRET_MULT = 2;
+export const SECRET_PRIZE = { wild: 1, undo: 2 };

@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="theme-color" content="#1a2142" />
+    <meta name="theme-color" content="#17143f" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -11,11 +11,29 @@
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" href="icon.svg" type="image/svg+xml" />
     <title>Solitario de los Mundos</title>
+    <link rel="preload" href="fonts/lilita-one.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="fonts/baloo2.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="stylesheet" href="css/styles.css" />
+    <script type="importmap">{ "imports": { "three": "./vendor/three.module.min.js" } }</script>
   </head>
   <body>
     <div id="app"></div>
     <div id="modal-root"></div>
+    <!-- Pantalla de carga: se dibuja sin esperar a nada y se quita al terminar de cargar. -->
+    <div id="boot" role="status" aria-live="polite">
+      <svg class="boot-planet" viewBox="0 0 120 120" aria-hidden="true">
+        <ellipse cx="60" cy="64" rx="56" ry="17" fill="none" stroke="#2a1f5c" stroke-width="12" transform="rotate(-18 60 64)" />
+        <ellipse cx="60" cy="64" rx="56" ry="17" fill="none" stroke="#ffc83d" stroke-width="6" transform="rotate(-18 60 64)" />
+        <circle cx="60" cy="60" r="36" fill="#ec9a17" stroke="#2a1f5c" stroke-width="6" />
+        <circle cx="55" cy="53" r="31" fill="#ffc83d" />
+        <path d="M30 52c10-4 14 6 24 3s8-16 20-16c6 0 10 3 13 7v10c-7 0-10 6-17 9s-13-3-20 3-10 13-20 10z" fill="#ff9c5b" />
+        <path d="M4 64a56 17 0 0 0 112 0" fill="none" stroke="#2a1f5c" stroke-width="12" transform="rotate(-18 60 64)" />
+        <path d="M4 64a56 17 0 0 0 112 0" fill="none" stroke="#ffc83d" stroke-width="6" transform="rotate(-18 60 64)" />
+      </svg>
+      <b class="boot-title">Solitario de los Mundos</b>
+      <div class="boot-bar"><i></i></div>
+      <small class="boot-msg">Cargando…</small>
+    </div>
     <script type="module" src="js/main.js"></script>
   </body>
 </html>

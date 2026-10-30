@@ -13,8 +13,11 @@ export class Coach {
     this.bubble.className = 'coach-bubble';
     this.ring = document.createElement('div');
     this.ring.className = 'coach-ring';
-    // La burbuja va en el flujo, entre el encabezado y el tablero: el tablero se encoge para dejarle sitio.
-    game.wrapEl.before(this.bubble);
+    // Al terminar la sacudida, vuelve el pulso normal.
+    this.ring.addEventListener('animationend', (e) => e.animationName === 'ring-nudge' && this.ring.classList.remove('nudge'));
+    // La burbuja ocupa el lugar de la racha en la barra de arriba: no le quita espacio al tablero.
+    game.el.querySelector('.hud-mid').append(this.bubble);
+    game.el.classList.add('coaching');
     game.el.append(this.ring);
     game.layout();
     this.update();
@@ -85,7 +88,7 @@ export class Coach {
     this.game.coach = null;
     setTimeout(() => {
       this.bubble.remove();
-      if (!this.game.done) this.game.layout();
+      this.game.el.classList.remove('coaching');
     }, 4000);
   }
 
@@ -93,7 +96,7 @@ export class Coach {
     clearTimeout(this.t);
     this.ring.remove();
     this.bubble.remove();
+    this.game.el.classList.remove('coaching');
     if (this.game.coach === this) this.game.coach = null;
-    if (!this.game.done) this.game.layout();
   }
 }

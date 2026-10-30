@@ -1,2 +1,5 @@
 node_modules/
 .DS_Store
+
+# Pruebas de diseño locales (no se suben)
+dev/
