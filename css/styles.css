@@ -35,6 +35,11 @@ button:disabled { cursor: default; }
 
 /* ---------- Kit: piezas de color crema con contorno ---------- */
 .tb { color: var(--ink); background: var(--cream); border: 2.5px solid var(--ink); box-shadow: inset 0 -5px 0 var(--cream-d), inset 0 2px 0 #fff, 0 3px 0 var(--ink), 0 8px 14px #0b062a55; }
+/* Lo que solo informa (monedero, títulos, avisos) va plano: sin el escalón de abajo que tienen los botones. */
+.info { color: var(--ink); background: color-mix(in srgb, var(--cream) 90%, transparent); border: 2px solid var(--ink); box-shadow: 0 6px 16px #0b062a40; }
+/* Al tocar cualquier botón se hunde un poco (en teléfono :active casi no se alcanza a ver). */
+.tapped { animation: tapped 280ms var(--spring); }
+@keyframes tapped { 0% { scale: 1; } 30% { scale: .9; } 100% { scale: 1; } }
 .press { transition: translate var(--press), box-shadow var(--press); }
 .press:active, .tool:active, .hbtn:active { translate: 0 3px; }
 @media (hover: hover) and (pointer: fine) { .press:hover { translate: 0 -2px; } }
@@ -88,7 +93,7 @@ button:disabled { cursor: default; }
 .plabel .chip { display: flex; align-items: center; gap: 2px; height: calc(24px * var(--k)); padding: 0 calc(9px * var(--k)) 1px 3px; border-radius: 12px; border-width: 2px; color: var(--ink); font-weight: 800; font-size: calc(13px * var(--k)); white-space: nowrap; }
 .plabel .chip .ico { width: calc(19px * var(--k)); height: calc(19px * var(--k)); vertical-align: 0; }
 .plabel .lk .ico { width: calc(26px * var(--k)); height: calc(26px * var(--k)); }
-.galaxy .avbtn { position: absolute; left: calc(10px + var(--sl)); top: calc(8px + var(--st)); border-radius: 50%; }
+.galaxy .avbtn { position: absolute; left: calc(10px + var(--cl)); top: calc(8px + var(--st)); border-radius: 50%; }
 .galaxy .region { position: absolute; left: 50%; top: calc(56px * var(--k) + var(--st)); translate: -50% 0; display: flex; align-items: center; gap: 10px; white-space: nowrap; }
 .galaxy .region .rname { display: flex; flex-direction: column; align-items: center; line-height: 1; }
 .galaxy .region b { display: flex; align-items: center; gap: 6px; font-family: 'Lilita One'; font-weight: 400; font-size: calc(20px * var(--k)); }
@@ -97,9 +102,69 @@ button:disabled { cursor: default; }
 .region .arr { width: calc(34px * var(--k)); height: calc(34px * var(--k)); border-radius: 12px; display: grid; place-items: center; }
 .region .arr .ico { width: 55%; height: 55%; }
 .region .arr:disabled { opacity: .4; }
-.galaxy .res { position: absolute; top: calc(10px + var(--st)); right: calc(10px + var(--sr)); display: flex; gap: 6px; }
+.galaxy .res { position: absolute; top: calc(10px + var(--st)); right: calc(10px + var(--cr)); display: flex; gap: 6px; }
 .galaxy .side { position: absolute; top: 50%; translate: 0 -50%; display: flex; flex-direction: column; gap: calc(10px * var(--k)); }
-.galaxy .side.l { left: calc(10px + var(--sl)); }
+.galaxy .side.l { left: calc(10px + var(--cl)); }
+/* Eventos: columna de la derecha (solo los activos). */
+.galaxy .side.r { right: calc(10px + var(--cr)); }
+.racha-btn .rn { position: absolute; bottom: -7px; left: 50%; translate: -50% 0; min-width: 22px; padding: 0 6px 1px; border-radius: 9px; background: #ff8a3d; border: 2px solid var(--ink); color: #fff; font: 400 13px 'Lilita One'; line-height: 1.3; text-align: center; }
+/* Cerca del siguiente premio: el botón arde (brillo naranja que late y una llamita que tiembla). */
+.racha-btn.hot { animation: hot-glow 1.1s ease-in-out infinite; }
+@keyframes hot-glow { 0%, 100% { box-shadow: inset 0 -5px 0 var(--cream-d), inset 0 2px 0 #fff, 0 3px 0 var(--ink), 0 0 0 3px #ff8a3d, 0 0 14px 4px #ff8a3d88; } 50% { box-shadow: inset 0 -5px 0 var(--cream-d), inset 0 2px 0 #fff, 0 3px 0 var(--ink), 0 0 0 3px #ffc83d, 0 0 26px 10px #ffb02eaa; } }
+.fire { position: absolute; top: -14px; left: -10px; z-index: 2; pointer-events: none; transform-origin: 50% 90%; animation: flicker 600ms ease-in-out infinite alternate; }
+.fire .ico { width: 30px; height: 30px; filter: drop-shadow(0 0 4px #ff8a3d); }
+@keyframes flicker { 0% { scale: .9 1.05; rotate: -6deg; } 50% { scale: 1.08 .94; } 100% { scale: .95 1.12; rotate: 6deg; } }
+.racha-pill { position: relative; }
+.racha-pill.hot { border-color: #ff8a3d; animation: hot-pill 1.1s ease-in-out infinite; }
+@keyframes hot-pill { 50% { box-shadow: 0 0 0 2px #ffc83d, 0 0 16px 4px #ffb02eaa; } }
+.racha-pill .fire { top: -12px; left: -8px; }
+.racha-pill .fire .ico { width: 22px; height: 22px; }
+.racha-plus { position: fixed; z-index: 1600; pointer-events: none; font: 400 26px 'Lilita One'; color: #ffd75a; translate: -50% 0; }
+.racha-pill .ico { width: calc(22px * var(--k)); height: calc(22px * var(--k)); }
+/* Ventana de la racha: el número grande, el camino de premios y el reloj. */
+.rhero { position: relative; display: flex; justify-content: center; align-items: center; height: 110px; }
+.rh-ico .ico { width: 104px; height: 104px; animation: hero-float 2.6s ease-in-out infinite; }
+.rhero b { position: absolute; left: calc(50% + 30px); bottom: 4px; font: 400 44px 'Lilita One'; color: #fff; -webkit-text-stroke: 7px var(--ink); paint-order: stroke fill; }
+.rsub { text-align: center; margin: 4px 0 14px; }
+.rpath { position: relative; display: grid; grid-template-columns: repeat(7, 1fr); align-items: end; margin: 6px 0 12px; }
+.rbar { position: absolute; left: calc(100% / 14); right: calc(100% / 14); top: 51px; height: 10px; border-radius: 5px; background: #e3d6c0; border: 2px solid var(--ink); overflow: hidden; }
+.rbar i { display: block; height: 100%; width: calc(var(--fill) * 100%); background: linear-gradient(#ffc83d, #ff8a3d); transition: width 600ms var(--ease-out); }
+.rg { position: relative; display: grid; grid-template-rows: 80px 40px; justify-items: center; }
+.rps { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; padding-top: 4px; }
+.rg > i { --s: 40px; position: relative; display: grid; place-items: center; width: var(--s); height: var(--s); align-self: end; margin-bottom: calc(24px - var(--s) / 2); border-radius: 50%; background: var(--cream); border: 2.5px solid var(--ink); box-shadow: inset 0 -4px 0 var(--cream-d); font-style: normal; color: var(--ink); z-index: 1; }
+.rg > i b { font: 400 calc(var(--s) * .42) 'Lilita One'; line-height: 1; }
+.rg > i .ico { width: 55%; height: 55%; }
+/* Escalera de premios: cada uno más grande y con más color. */
+.rg.t0 > i { --s: 38px; }
+.rg.t1 > i { --s: 42px; background: #ffe7c4; box-shadow: inset 0 -4px 0 #f1c88f; }
+.rg.t2 > i { --s: 48px; background: #ffd27a; box-shadow: inset 0 -5px 0 #e9a93c; }
+.rg.t3 > i { --s: 52px; background: #ffb86b; box-shadow: inset 0 -5px 0 #e2873a; }
+.rg.t4 > i { --s: 58px; background: #ff8fb0; box-shadow: inset 0 -6px 0 #df5e86, 0 0 14px #ff8fb088; }
+.rg.t5 > i { --s: 66px; background: linear-gradient(#c792ff, #8a5cf0); box-shadow: inset 0 -6px 0 #6c3fd4, 0 0 20px #c792ffaa; color: #fff; animation: beat 1.6s ease-in-out infinite; }
+.rg.t5 > i b { -webkit-text-stroke: 4px var(--ink); paint-order: stroke fill; }
+.rg .rays { position: absolute; top: 56px; left: 50%; translate: -50% -50%; width: 150px; height: 150px; z-index: 0; }
+.rg.got > i { background: #5ad68c; box-shadow: inset 0 -4px 0 #2f9e5c; color: var(--ink); animation: none; }
+.rg.start > i { --s: 38px; background: #ffd8bd; }
+.rg.ready > i { background: var(--gold); box-shadow: inset 0 -4px 0 #e89a17, 0 0 18px #ffc83d; animation: ready-wiggle 1.6s ease-in-out infinite; }
+.rp { display: flex; align-items: center; gap: 1px; height: 18px; font-size: 12.5px; font-weight: 800; color: #5d5385; white-space: nowrap; }
+.rg.t4 .rp, .rg.t5 .rp { font-size: 14px; color: var(--ink); }
+.rg.t4 .rps { padding-top: 7px; }
+.rg.t5 .rps { padding-top: 12px; }
+.rp .ico { width: 16px; height: 16px; }
+.rg.got .rp { opacity: .55; }
+/* Reloj de la nueva racha: ficha aparte. */
+.rclock-chip { display: flex; width: fit-content; align-items: center; gap: 6px; margin: 4px auto 6px; padding: 4px 14px 5px; border-radius: 99px; background: var(--ink); color: #d9d0ff; font-size: 14px; font-weight: 800; }
+.rclock-chip b { color: #ffd75a; font: 400 18px 'Lilita One'; font-variant-numeric: tabular-nums; }
+/* "?" de ayuda en la cabecera de una ventana (a la izquierda; la × va a la derecha) y su globo. */
+.modal { position: relative; }
+.qhelp { position: absolute; left: 9px; top: 50%; translate: 0 -50%; width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; background: var(--cream); border: 2.5px solid var(--ink); box-shadow: inset 0 -4px 0 var(--cream-d), 0 2px 0 var(--ink); font: 400 21px 'Lilita One'; color: var(--ink); }
+.qhelp:active { translate: 0 calc(-50% + 2px); }
+.tip-open .qhelp { background: #ece6ff; box-shadow: inset 0 -4px 0 #cfc4f5, 0 2px 0 var(--ink); }
+.qtip { position: absolute; top: 60px; left: 10px; z-index: 5; width: min(290px, calc(100% - 20px)); padding: 10px 14px 12px; border-radius: 14px; background: #ece6ff; border-color: #6d5fc4; font-size: 14.5px; font-weight: 700; line-height: 1.3; color: var(--ink); transform-origin: 18px 0; visibility: hidden; opacity: 0; scale: .5; pointer-events: none; transition: opacity 150ms ease, scale 200ms var(--ease-out), visibility 0s 200ms; }
+.qtip::before { content: ''; position: absolute; top: -8px; left: 18px; width: 12px; height: 12px; background: #ece6ff; border: solid #6d5fc4; border-width: 2px 0 0 2px; rotate: 45deg; }
+.tip-open .qtip { visibility: visible; opacity: 1; scale: 1; pointer-events: auto; transition: opacity 150ms ease, scale 340ms var(--spring); }
+@media (max-height: 500px) { .rhero { height: 64px; } .rh-ico .ico { width: 62px; height: 62px; } .rhero b { font-size: 32px; left: calc(50% + 18px); bottom: 0; } .rsub { margin: 0 0 8px; } }
+@media (max-width: 420px) { .rg > i { --s: 34px; } .rg.t2 > i { --s: 38px; } .rg.t3 > i { --s: 42px; } .rg.t4 > i { --s: 44px; } .rg.t5 > i { --s: 48px; } .rg.t4 .rps, .rg.t5 .rps { padding-top: 4px; } .rg .rays { width: 110px; height: 110px; } .rp { font-size: 11px !important; } .rp .ico { width: 13px; height: 13px; } }
 /* Portal a la constelación vecina, en la orilla de la guía. */
 .portal { position: absolute; left: 0; top: 0; translate: -50% calc(var(--k) * -42px); display: flex; flex-direction: column; align-items: center; gap: 4px; pointer-events: auto; }
 .portal .hit { width: calc(96px * var(--k)); height: calc(84px * var(--k)); border-radius: 50%; }
@@ -116,28 +181,53 @@ button:disabled { cursor: default; }
 .universe .region .utitle { font-size: calc(32px * var(--k)); }
 .galaxy .region .rname { padding: 2px 10px 4px; border-radius: 14px; }
 .galaxy .region .rname:active { scale: .96; }
-.galaxy .cta { position: absolute; right: calc(14px + var(--sr)); bottom: calc(14px + var(--sb)); }
-.dev-pill { position: absolute; left: calc(10px + var(--sl)); bottom: calc(14px + var(--sb)); padding: 6px 10px; border-radius: 10px; background: #ff3d7f; color: #fff; font-weight: 900; font-size: 13px; letter-spacing: .05em; border: 2px solid var(--ink); }
+.galaxy .cta { position: absolute; right: calc(14px + var(--cr)); bottom: calc(14px + var(--sb)); }
+.dev-pill { position: absolute; left: calc(10px + var(--cl)); bottom: calc(14px + var(--sb)); padding: 6px 10px; border-radius: 10px; background: #ff3d7f; color: #fff; font-weight: 900; font-size: 13px; letter-spacing: .05em; border: 2px solid var(--ink); }
 .g-only, .p-only { transition: opacity 260ms ease; }
 .zoomed .g-only { opacity: 0; pointer-events: none; }
 .galaxy:not(.zoomed) .p-only { opacity: 0; pointer-events: none; }
-.phud .out-btn { position: absolute; left: calc(10px + var(--sl)); top: calc(8px + var(--st)); }
-.wtitle { position: absolute; left: calc(66px * var(--k) + var(--sl)); top: calc(8px + var(--st)); height: calc(46px * var(--k)); max-width: calc(100% - 420px * var(--k)); display: flex; align-items: center; gap: 9px; padding: 0 14px 2px 5px; border-radius: 16px; color: var(--ink); }
+.phud .out-btn { position: absolute; left: calc(10px + var(--cl)); top: calc(8px + var(--st)); }
+.wtitle { position: absolute; left: calc(66px * var(--k) + var(--cl)); top: calc(8px + var(--st)); height: calc(46px * var(--k)); max-width: calc(100% - 420px * var(--k)); display: flex; align-items: center; gap: 9px; padding: 0 14px 2px 5px; border-radius: 16px; color: var(--ink); }
 .wtitle .em { width: calc(34px * var(--k)); height: calc(34px * var(--k)); }
 .wtitle div { min-width: 0; }
 .wtitle b { display: block; font-family: 'Lilita One'; font-weight: 400; font-size: calc(18px * var(--k)); line-height: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .wtitle small { display: flex; gap: 3px; align-items: center; font-size: calc(12px * var(--k)); font-weight: 700; color: #6d6394; line-height: 1.1; margin-top: 2px; white-space: nowrap; }
 .wtitle small .ico { width: 15px; height: 15px; vertical-align: 0; }
-.newmech { position: absolute; left: calc(12px + var(--sl)); bottom: calc(14px + var(--sb)); display: flex; align-items: center; gap: 10px; padding: 6px 14px 8px 8px; border-radius: 16px; max-width: calc(330px * var(--k)); color: var(--ink); }
-.newmech .card { position: relative; --cw: calc(32px * var(--k)); flex: none; }
+.galaxy .cta { display: flex; align-items: center; gap: calc(10px * var(--k)); }
+/* Mecánica nueva: botón con la carta junto a Jugar; el aviso sale de él hacia la izquierda. */
+.mech-tog { position: relative; display: grid; place-items: center; width: calc(60px * var(--k)); height: calc(60px * var(--k)); border-radius: calc(20px * var(--k)); flex: none; animation: nudge 700ms var(--ease-out) 900ms; }
+.mech-tog .card { position: relative; --cw: calc(30px * var(--k)); rotate: -8deg; transition: rotate 300ms var(--spring), scale 300ms var(--spring); }
+.mech-tog i { position: absolute; top: calc(-7px * var(--k)); right: calc(-7px * var(--k)); width: calc(22px * var(--k)); height: calc(22px * var(--k)); border-radius: 50%; display: grid; place-items: center; background: #ffb02e; border: 2px solid var(--ink); font: 400 calc(14px * var(--k)) 'Lilita One'; font-style: normal; color: var(--ink); transition: scale 260ms var(--spring); }
+.mech-open .mech-tog .card { rotate: 0deg; scale: 1.08; }
+.mech-open .mech-tog i { scale: 0; }
+.newmech { position: absolute; right: calc(100% + 12px); top: 0; bottom: 0; display: flex; flex-direction: column; justify-content: center; width: max-content; max-width: calc(420px * var(--k)); padding: 0 16px 2px; border-radius: 16px; background: #ece6ff; border-color: #6d5fc4; color: var(--ink); transform-origin: right center; opacity: 0; scale: .4; translate: 30px 0; pointer-events: none; transition: opacity 160ms ease, scale 200ms var(--ease-out), translate 200ms var(--ease-out); }
+.newmech::after { content: ''; position: absolute; right: -8px; top: 50%; width: 12px; height: 12px; margin-top: -7px; background: #ece6ff; border: solid #6d5fc4; border-width: 2px 2px 0 0; rotate: 45deg; }
+.mech-open .newmech { opacity: 1; scale: 1; translate: 0 0; pointer-events: auto; transition: opacity 160ms ease, scale 380ms var(--spring), translate 380ms var(--spring); }
 .newmech > div > b { display: block; font-size: calc(14px * var(--k)); line-height: 1.1; }
-.newmech > div > span { display: block; font-size: calc(12.5px * var(--k)); line-height: 1.25; color: #5d5385; font-weight: 600; }
-.hint-chip { padding: 8px 14px; border-radius: 14px; background: #0b062a99; color: #fff; font-weight: 800; font-size: calc(14px * var(--k)); }
+.newmech > div > span { display: block; font-size: calc(12.5px * var(--k)); line-height: 1.2; color: #5a4a9e; font-weight: 600; }
+.hint-chip { padding: 8px 14px; border-radius: 14px; background: #0b062a99; color: #fff; font-weight: 800; font-size: calc(14px * var(--k)); pointer-events: none; animation: chip-life 4.5s var(--ease-out) forwards; }
+@keyframes chip-life { 0% { opacity: 0; translate: 0 14px; } 8% { opacity: 1; translate: 0 0; } 75% { opacity: 1; translate: 0 0; } 100% { opacity: 0; translate: 0 6px; } }
+/* Regalo y boleto listos para cobrar: se mueven (como la carta de mecánica nueva) con su punto rojo. */
+.iconbtn.ready { animation: ready-wiggle 2.8s ease-in-out infinite; }
+.iconbtn.ready:nth-child(2) { animation-delay: -1.4s; }
+@keyframes ready-wiggle { 0%, 62%, 100% { rotate: 0deg; scale: 1; } 68% { rotate: -9deg; scale: 1.1; } 74% { rotate: 8deg; scale: 1.1; } 80% { rotate: -5deg; scale: 1.05; } 86% { rotate: 3deg; scale: 1; } }
+/* Boleto ya cobrado: el botón sigue rojo y dice cuánto falta. */
+.tk-btn .wait { position: absolute; top: -9px; left: 50%; translate: -50% 0; padding: 0 7px 1px; border-radius: 9px; background: var(--ink); border: 2px solid #fff; color: #fff; font: 400 13px 'Lilita One'; line-height: 1.35; white-space: nowrap; }
+.dticket { position: relative; display: flex; justify-content: center; align-items: center; height: 150px; margin: 4px 0 6px; }
+.dticket .rays { z-index: 0; }
+.dticket span { position: absolute; z-index: 1; rotate: calc(var(--i) * 14deg); translate: calc(var(--i) * 30px) calc(var(--i) * var(--i) * 6px); animation: lootpop 460ms var(--spring) backwards, hero-float 2.6s ease-in-out 600ms infinite; animation-delay: calc(120ms + (var(--i) + 1) * 90ms), calc(600ms + var(--i) * 300ms); }
+.dticket span .ico { width: 104px; height: 104px; }
+.dticket b { position: absolute; z-index: 2; right: calc(50% - 84px); bottom: 14px; font: 400 36px 'Lilita One'; color: #fff; -webkit-text-stroke: 6px var(--ink); paint-order: stroke fill; animation: lootpop 420ms var(--spring) 500ms backwards; }
+/* Esperando: el mismo boleto con su destello, en gris y quietos. */
+.dticket.wait { filter: grayscale(1); opacity: .5; }
+.dticket.wait span, .dticket.wait .rays { animation: none; }
+.tk-clock { text-align: center; font: 400 34px 'Lilita One'; color: var(--ink); font-variant-numeric: tabular-nums; margin-bottom: 6px; }
 @media (max-aspect-ratio: 1/1) {
   .galaxy .region { top: calc(60px * var(--k) + var(--st)); }
   .galaxy .res .pill:first-child:not(:last-child) { display: none; }
-  .wtitle { max-width: none; left: calc(12px + var(--sl)); right: calc(12px + var(--sr)); top: calc(58px * var(--k) + var(--st)); }
-  .newmech { right: calc(12px + var(--sr)); max-width: none; bottom: calc(92px * var(--k) + var(--sb)); }
+  .wtitle { max-width: none; left: calc(12px + var(--cl)); right: calc(12px + var(--cr)); top: calc(58px * var(--k) + var(--st)); }
+  .newmech { right: 0; top: auto; bottom: calc(100% + 14px); min-height: calc(60px * var(--k)); width: calc(100vw - 28px - var(--cl) - var(--cr)); max-width: calc(380px * var(--k)); padding: 8px 16px 10px; transform-origin: calc(100% - 205px * var(--k)) bottom; translate: 0 20px; }
+  .newmech::after { right: auto; top: auto; left: calc(100% - 205px * var(--k) - 7px); bottom: -8px; margin: 0; rotate: 135deg; }
 }
 
 /* ---------- Partida: mesa ---------- */
@@ -158,7 +248,7 @@ button:disabled { cursor: default; }
 .frost.br { right: -4px; bottom: -4px; scale: -1 -1; }
 
 .game { color: #fff; }
-.hud { flex: none; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 8px; padding: calc(8px + var(--st)) calc(10px + var(--sr)) 4px calc(10px + var(--sl)); color: var(--ink); }
+.hud { flex: none; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 8px; padding: calc(8px + var(--st)) calc(10px + var(--cr)) 4px calc(10px + var(--cl)); color: var(--ink); }
 .hud-mid { display: flex; justify-content: center; min-width: 0; }
 .hud-r { justify-self: end; display: flex; align-items: center; gap: 6px; }
 .hud-av.avatar { width: calc(38px * var(--k)); height: calc(38px * var(--k)); font-size: calc(19px * var(--k)); border-width: 2.5px; }
@@ -224,6 +314,12 @@ button:disabled { cursor: default; }
   .game .wild-card { grid-area: wild; margin: 0; }
   .game .undo-btn { grid-area: undo; margin: 0; }
   .game .prop.tr, .game .prop.br { display: none; } /* la columna ocupa su lugar */
+}
+/* Teléfono acostado: la columna del mapa empieza bajo la barra de arriba y los botones se achican para que quepan los 5. */
+@media (orientation: landscape) and (max-height: 500px) {
+  .galaxy .side.l { top: calc(64px * var(--k) + var(--st)); bottom: calc(10px + var(--sb)); translate: none; justify-content: space-evenly; gap: 6px; }
+  .galaxy .side.r { gap: 14px; }
+  .galaxy .side .iconbtn { width: min(calc(50px * var(--k)), calc((100dvh - 64px * var(--k) - 40px) / 5.6)); height: auto; aspect-ratio: 1; }
 }
 .empty-slot { position: absolute; inset: 0 0 0 auto; width: var(--cw); border: 2.5px dashed #fff9; border-radius: calc(var(--cw) * 0.14); display: grid; place-items: center; font: 400 20px 'Lilita One'; color: #fff; }
 
@@ -655,7 +751,7 @@ button:disabled { cursor: default; }
 
 /* ---------- Menos movimiento ---------- */
 @media (prefers-reduced-motion: reduce) {
-  .hero-card, .hero-undo span, .hero-fan i, .g-ring, .card.shake, .undo-btn.nudge, .streak.pop, .confetti, .day.today, .logo-bands, .big-stars .ico, .rays, .gbox, .loot-it { animation: none !important; }
+  .hero-card, .hero-undo span, .hero-fan i, .g-ring, .card.shake, .undo-btn.nudge, .streak.pop, .confetti, .day.today, .iconbtn.ready, .racha-btn.hot, .racha-pill.hot, .fire, .rg.ready > i, .rh-ico .ico, .dticket span, .logo-bands, .big-stars .ico, .rays, .gbox, .loot-it { animation: none !important; }
   .card .inner, .stock .card { transition-duration: 0.01ms !important; }
 }
 
@@ -666,7 +762,7 @@ button:disabled { cursor: default; }
 /* Túnel de estrellas: encima de las pantallas, debajo de las ventanas. */
 .warp { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 900; pointer-events: none; }
 /* Título solo (sin botón de regresar), arriba a la izquierda. */
-.wtitle.solo { left: calc(12px + var(--sl)); }
+.wtitle.solo { left: calc(12px + var(--cl)); }
 .galaxy .wtitle b .ico { width: 18px; height: 18px; vertical-align: -2px; margin-right: 3px; }
 
 /* Recorrido de primera vez: foco en lo que hay que tocar, flecha que salta y globo con la explicación. */
@@ -704,7 +800,7 @@ button:disabled { cursor: default; }
 .hero-fan { position: relative; width: 150px; height: 120px; }
 .hero-fan i { position: absolute; left: calc(26px + var(--k) * 16px); top: 6px; width: 70px; height: 98px; border-radius: 10px; background: var(--back) center / 100% 100%; box-shadow: 2px 4px 0 #0b062a33; transform-origin: 50% 120%; rotate: calc(var(--k) * 9deg - 18deg); animation: hero-float 2.4s ease-in-out infinite; animation-delay: calc(var(--k) * -0.3s); }
 /* Botón atrás en el mapa: misma línea que la ficha del título. */
-.galaxy .out-btn { position: absolute; left: calc(10px + var(--sl)); top: calc(8px + var(--st)); }
+.galaxy .out-btn { position: absolute; left: calc(10px + var(--cl)); top: calc(8px + var(--st)); }
 /* El marcador del avatar en el mapa es el mismo dibujo que dentro del planeta. */
 /* El botón DEV solo se ve con el modo dev prendido (la tecla 0 no redibuja la pantalla). */
 html:not(.dev-on) .dev-pill { display: none; }

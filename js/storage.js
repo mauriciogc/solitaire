@@ -123,13 +123,14 @@ export function loadProfile(p) {
   swapTo(root.active);
 }
 
-// Copia del jugador antes de que el modo dev toque su avance; "Volver a mi partida" la regresa.
+// Modo dev = caja de pruebas: al prenderlo se copia tu partida; todo lo que hagas en dev (monedas, niveles,
+// compras, eventos) se juega sobre esa copia, y al apagarlo tu partida vuelve tal como estaba.
 const BACKUP = 'solitario-mundos-respaldo-dev';
 export const hasBackup = () => !!localStorage.getItem(BACKUP);
 export function backupOnce() {
   if (hasBackup()) return;
   try {
-    localStorage.setItem(BACKUP, JSON.stringify(save));
+    localStorage.setItem(BACKUP, JSON.stringify({ v: 2, p: save }));
   } catch {
     /* sin espacio */
   }
@@ -137,8 +138,27 @@ export function backupOnce() {
 export function restoreBackup() {
   const raw = localStorage.getItem(BACKUP);
   if (!raw) return false;
-  root.profiles[root.active] = JSON.parse(raw);
+  const b = JSON.parse(raw);
+  root.profiles[root.active] = b.v ? b.p : b;
   swapTo(root.active);
   localStorage.removeItem(BACKUP);
   return true;
+}
+// Prender o apagar el modo dev con su caja de pruebas.
+export function setDev(on) {
+  prefs.dev = !!on;
+  if (on) backupOnce();
+  else restoreBackup();
+  persist();
+}
+// Copias que quedaron de antes: sin dev, la partida de ahora es la real; con dev, la de ahora es el punto de partida.
+{
+  let b = null;
+  try {
+    b = JSON.parse(localStorage.getItem(BACKUP) || 'null');
+  } catch {
+    /* copia dañada */
+  }
+  if (b && (!prefs.dev || !b.v)) localStorage.removeItem(BACKUP);
+  if (prefs.dev) backupOnce();
 }

@@ -1,6 +1,7 @@
 // Modo dev: probar niveles rápido sin jugarlos a mano.
 // Se activa con ?dev en la URL (y se apaga con ?dev=0). Queda guardado en el navegador.
-import { save, prefs, persist, resetProfile, backupOnce, hasBackup, restoreBackup } from './storage.js';
+import { save, prefs, persist, resetProfile, backupOnce, restoreBackup, setDev } from './storage.js';
+import { rachaWin, rachaLose, racha, RACHA_GOALS } from './events.js';
 import { generateLevel, packGroups, worldInfo, TOTAL_LEVELS, LEVELS_PER_WORLD, MECH_NAMES, MECHANICS } from './levels.js';
 import { playCasual, solve, initState } from './engine.js';
 import { openModal, toast, updateCoins } from './ui.js';
@@ -22,8 +23,7 @@ export const gallery = { start: 0, tpl: 'todas', boss: false, mA: '', mB: '', ac
 export function initDevFromUrl() {
   const q = new URLSearchParams(location.search);
   if (!q.has('dev')) return;
-  prefs.dev = q.get('dev') !== '0';
-  persist();
+  setDev(q.get('dev') !== '0');
   history.replaceState(null, '', location.pathname);
 }
 
@@ -247,11 +247,10 @@ export function galleryScreen({ onPlay, onBack }) {
 }
 
 // ---------- Menú dev (desde el mapa) ----------
-// Botones chicos en dos columnas (solo son de prueba). Lo que cambia el avance guarda antes una copia
-// de tu partida, y "Volver a mi partida" la regresa.
+// Botones chicos en dos columnas (solo son de prueba). Todo se hace sobre la copia del modo dev:
+// al salir del modo dev tu partida vuelve como estaba.
 const REGION = 10;
 function completeWorlds(from, to) {
-  backupOnce();
   for (let w = from; w <= to; w++) for (let l = 0; l < LEVELS_PER_WORLD; l++) save.stars[w * LEVELS_PER_WORLD + l] = 3;
   save.next = Math.max(save.next, Math.min(TOTAL_LEVELS - 1, (to + 1) * LEVELS_PER_WORLD));
   save.open = Math.max(save.open, Math.min(Math.floor(save.next / LEVELS_PER_WORLD), to + 1));
@@ -273,11 +272,11 @@ export function openDevMenu({ onGallery, onRefresh }) {
   openModal({
     title: 'Modo dev',
     cls: 'devmenu',
-    body: '<p class="note">Ganar niveles fuera de tu avance no cuenta.</p>',
+    body: '<p class="note">Todo lo que hagas aquí es de prueba: al salir del modo dev vuelve tu partida.</p>',
     buttons: [
       { label: 'Galería de niveles', cls: 'gold', onClick: onGallery },
       toggle('devInfinite', 'Boosters infinitos'),
-      { label: '+1000 monedas', cls: 'ghost', onClick: () => (backupOnce(), (save.coins += 1000), persist(), updateCoins()) },
+      { label: '+1000 monedas', cls: 'ghost', onClick: () => ((save.coins += 1000), persist(), updateCoins()) },
       { label: 'Explicar mecánicas otra vez', cls: 'ghost', onClick: () => ((save.seen = {}), persist(), toast('Las explicaciones saldrán otra vez')) },
       { label: `Desbloquear mundo ${w + 1}`, cls: 'ghost', onClick: () => (completeWorlds(w, w), onRefresh()) },
       { label: `Desbloquear constelación ${r + 1}`, cls: 'ghost', onClick: () => (completeWorlds(w, Math.min(r * REGION + REGION - 1, TOTAL_LEVELS / LEVELS_PER_WORLD - 1)), onRefresh()) },
@@ -285,7 +284,6 @@ export function openDevMenu({ onGallery, onRefresh }) {
         label: 'Desbloquear todo',
         cls: 'ghost',
         onClick: () => {
-          backupOnce();
           save.next = TOTAL_LEVELS - 1;
           save.open = Math.floor(save.next / LEVELS_PER_WORLD);
           save.run = null;
@@ -293,19 +291,32 @@ export function openDevMenu({ onGallery, onRefresh }) {
           onRefresh();
         },
       },
-      { label: 'Reiniciar progreso', cls: 'ghost', onClick: () => (backupOnce(), resetProfile(), onRefresh()) },
+      { label: 'Reiniciar progreso', cls: 'ghost', onClick: () => (resetProfile(), onRefresh()) },
+      // Eventos
+      { label: `Racha +1 (va en ${racha().n})`, cls: 'ghost', onClick: () => (rachaWin(), onRefresh()) },
       {
-        label: 'Volver a mi partida',
+        label: 'Racha: al siguiente premio',
+        cls: 'ghost',
+        onClick: () => {
+          const g = RACHA_GOALS.find((x) => x.n > racha().n);
+          if (!g) return toast('Ya llegó al último premio');
+          while (racha().n < g.n) rachaWin();
+          onRefresh();
+        },
+      },
+      { label: 'Racha: perder', cls: 'ghost', onClick: () => (rachaLose(), onRefresh()) },
+      { label: 'Racha: pasar al otro día', cls: 'ghost', onClick: () => ((save.devDay = (save.devDay || 0) + 1), persist(), onRefresh()) },
+      {
+        label: 'Empezar de cero las pruebas',
         cls: 'green',
-        disabled: !hasBackup(),
-        title: hasBackup() ? 'Regresa tu partida a como estaba antes de usar el modo dev' : 'No has cambiado tu partida',
         onClick: () => {
           restoreBackup();
+          backupOnce();
           toast('Tu partida volvió a como estaba');
           onRefresh();
         },
       },
-      { label: 'Salir del modo dev', cls: 'pink', onClick: () => ((prefs.dev = false), persist(), document.documentElement.classList.remove('dev-on')) },
+      { label: 'Salir del modo dev', cls: 'pink', onClick: () => (setDev(false), document.documentElement.classList.remove('dev-on'), toast('Tu partida volvió a como estaba'), onRefresh()) },
     ],
   });
 }

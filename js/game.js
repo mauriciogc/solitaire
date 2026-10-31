@@ -220,8 +220,8 @@ export class Game {
     el.innerHTML = `${tableHTML(level.world)}
       <header class="hud">
         <button class="tb hbtn" data-a="exit" aria-label="Pausa" title="Pausa">${icon('pause')}</button>
-        <div class="hud-mid"><div class="combo tb"></div></div>
-        <div class="hud-r"><div class="pill tb">${coin()}<span data-coins>${save.coins.toLocaleString('es-MX')}</span></div>${avatarHTML(save, 'hud-av')}</div>
+        <div class="hud-mid"><div class="combo info"></div></div>
+        <div class="hud-r">${this.opts.racha ? `<div class="pill info racha-pill ${this.opts.racha.hot ? 'hot' : ''}" aria-label="Racha">${this.opts.racha.hot ? `<span class="fire">${icon('flame')}</span>` : ''}${icon(this.opts.racha.ico)}<span>${this.opts.racha.n}</span></div>` : ''}<div class="pill info">${coin()}<span data-coins>${save.coins.toLocaleString('es-MX')}</span></div>${avatarHTML(save, 'hud-av')}</div>
       </header>
       <div class="board-wrap"><div class="board"></div><div class="streak"></div></div>
       <footer class="tray">

@@ -1,4 +1,5 @@
-import { save, prefs, persist, resetProfile, renameProfile, exportCode, readCode, loadProfile } from './storage.js';
+import { save, prefs, persist, resetProfile, renameProfile, exportCode, readCode, loadProfile, setDev } from './storage.js';
+import { RACHA_GOALS, racha, rachaTheme, rachaReady, rachaHot, rachaWin, rachaLose, rachaClaim, msToMidnight } from './events.js';
 import { WORLD_COUNT, LEVELS_PER_WORLD, TOTAL_LEVELS, worldInfo, generateLevel, variantLevel, MECH_INTRO, MECH_NAMES, secretId, isSecret } from './levels.js';
 import { Game, faceHTML, backHTML } from './game.js';
 import { DAILY_PATH, dailyState, starsNeeded, TICKET_PRICE, ticketCost, ticketRefund, coinsFor, bossChest, openSurprise, SECRET_MULT, SECRET_PRIZE } from './economy.js';
@@ -48,6 +49,17 @@ const setSafe = () => {
 setSafe();
 new ResizeObserver(() => (setScale(), setSafe())).observe(document.documentElement);
 addEventListener('orientationchange', () => setTimeout(setSafe, 300));
+
+// Todo botón se hunde al tocarlo, al instante, para que se note que el toque llegó.
+addEventListener('touchstart', () => {}, { passive: true }); // en iPhone, sin esto :active no se activa
+addEventListener('pointerdown', (e) => {
+  const b = e.target.closest?.('button:not(:disabled), .go');
+  if (!b || b.closest('.board')) return;
+  b.classList.remove('tapped');
+  void b.offsetWidth; // reinicia la animación si se toca seguido
+  b.classList.add('tapped');
+  b.addEventListener('animationend', () => b.classList.remove('tapped'), { once: true });
+}, { passive: true });
 
 const app = document.getElementById('app');
 let game = null;
@@ -115,10 +127,10 @@ const regionName = (r) => `${R_A[r % R_A.length]} ${R_B[Math.floor(r / R_A.lengt
 const regionOf = (w) => Math.floor(w / REGION_SIZE);
 
 const wallet = () => `
-  ${save.gold ? `<div class="pill tb" aria-label="${save.gold} boletos dorados">${icon('gold')}<span>${save.gold}</span></div>` : ''}
-  <div class="pill tb" aria-label="Estrellas">${star(true)}<span>${fmt(totalStars())}</span></div>
-  <div class="pill tb" aria-label="Boletos">${icon('ticket')}<span data-tickets>${save.tickets}</span></div>
-  <div class="pill tb" aria-label="Monedas">${coin()}<span data-coins>${fmt(save.coins)}</span></div>
+  ${save.gold ? `<div class="pill info" aria-label="${save.gold} boletos dorados">${icon('gold')}<span>${save.gold}</span></div>` : ''}
+  <div class="pill info" aria-label="Estrellas">${star(true)}<span>${fmt(totalStars())}</span></div>
+  <div class="pill info" aria-label="Boletos">${icon('ticket')}<span data-tickets>${save.tickets}</span></div>
+  <div class="pill info" aria-label="Monedas">${coin()}<span data-coins>${fmt(save.coins)}</span></div>
   <button class="me press" data-a="me" aria-label="Tu perfil" title="Tu perfil">${avatarHTML(save)}</button>`;
 // Botón de jugar: es el mismo en todas las vistas (universo, constelación) y lleva directo al tablero;
 // al salir del tablero se vuelve al planeta de ese nivel.
@@ -165,10 +177,11 @@ function showMap({ region, start = null, anim, after = null, unlock = null } = {
     <div class="space"></div><div class="g3d"></div><div class="glabels g-only"></div>
     <div class="g-only">
       <button class="hbtn tb press out-btn" data-a="up" aria-label="Ver todas las constelaciones" title="Constelaciones">${icon('prev')}</button>
-      <div class="wtitle tb">${constIcon()}<div><b>${locked ? icon('lock') : ''}${regionName(region)}</b><small>Constelación ${region + 1} de ${REGION_COUNT} · ${star(true)}${regionStars(region)}/${REGION_SIZE * 30}</small></div></div>
+      <div class="wtitle info">${constIcon()}<div><b>${locked ? icon('lock') : ''}${regionName(region)}</b><small>Constelación ${region + 1} de ${REGION_COUNT} · ${star(true)}${regionStars(region)}/${REGION_SIZE * 30}</small></div></div>
       <button class="dev-pill" data-a="dev">DEV</button>
     </div>
     <div class="side l">${sideButtons()}</div>
+    <div class="side r" ${after ? 'style="opacity:0"' : ''}>${eventButtons(after?.res.racha ? after.res.racha - 1 : null)}</div>
     <div class="p-only phud"></div>
     <div class="res">${wallet()}</div>
     <div class="cta"></div>
@@ -180,12 +193,16 @@ function showMap({ region, start = null, anim, after = null, unlock = null } = {
     const info = worldInfo(w), b = BIOMES[biomeKey(info.place)];
     const mech = Object.entries(MECH_INTRO).find(([, iw]) => iw === w)?.[0];
     phud.innerHTML = `<button class="hbtn tb press out-btn" data-a="out" aria-label="Volver a la galaxia" title="Galaxia">${icon('prev')}</button>
-      <div class="wtitle tb">${miniPlanet(b.emblem, 'em')}<div><b>${esc(info.name)}</b><small>Mundo ${w + 1} · ${star(true)}${worldStars(w)}/30</small></div></div>
-      ${mech ? `<div class="newmech tb">${mechCard(mech)}<div><b>Aquí aparece: ${MECH_NAMES[mech].toLowerCase()}</b><span>${MECH_TEXT[mech]}</span></div></div>` : ''}`;
+      <div class="wtitle info">${miniPlanet(b.emblem, 'em')}<div><b>${esc(info.name)}</b><small>Mundo ${w + 1} · ${star(true)}${worldStars(w)}/30</small></div></div>`;
     const first = w * LEVELS_PER_WORLD, run = save.run;
-    if (run && worldOf(run.g) === w) cta.innerHTML = goBtn('Continuar', isSecret(run.g) ? 'Nivel secreto' : `Nivel ${run.g + 1}`, 'continue');
-    else if (save.next >= first && save.next < first + LEVELS_PER_WORLD) cta.innerHTML = goBtn('Jugar', `Nivel ${save.next + 1}`, 'play-next');
-    else cta.innerHTML = '<div class="hint-chip">Toca un nivel para repetirlo</div>';
+    let go;
+    if (run && worldOf(run.g) === w) go = goBtn('Continuar', isSecret(run.g) ? 'Nivel secreto' : `Nivel ${run.g + 1}`, 'continue');
+    else if (save.next >= first && save.next < first + LEVELS_PER_WORLD) go = goBtn('Jugar', `Nivel ${save.next + 1}`, 'play-next');
+    else go = '<div class="hint-chip">Toca un nivel para repetirlo</div>';
+    // Mecánica nueva: botón con su carta junto a Jugar; al tocarlo se despliega el aviso y al tocarlo otra vez se recoge.
+    cta.classList.remove('mech-open');
+    cta.innerHTML = mech ? `<div class="newmech info"><div><b>Aquí aparece: ${MECH_NAMES[mech].toLowerCase()}</b><span>${MECH_TEXT[mech]}</span></div></div>
+      <button class="mech-tog tb press" data-a="mech" aria-expanded="false" aria-label="Qué hay de nuevo en este mundo" title="Nuevo en este mundo">${mechCard(mech)}<i>?</i></button>${go}` : go;
   };
   const paint = () => (galaxy?.mode === 'planet' && galaxy.sel ? paintPlanet(galaxy.sel.wd.w) : paintGalaxyCTA());
   paintGalaxyCTA();
@@ -195,11 +212,23 @@ function showMap({ region, start = null, anim, after = null, unlock = null } = {
     if (a === 'up') return galaxy && !galaxy.anim && warp(() => showUniverse({ from: region }), { out: true });
     if (sideAction(a)) return;
     if (a === 'out') return galaxy?.zoomOut();
+    if (a === 'mech') {
+      const open = cta.classList.toggle('mech-open');
+      cta.querySelector('.mech-tog').setAttribute('aria-expanded', open);
+      return;
+    }
     if (a === 'gate') return openWorldGate(pendingWorld());
     if (a === 'continue') return playNow();
     if (a === 'play-next') return enterLevel(save.next);
   });
+  // El aviso de mecánica se recoge al tocar en cualquier otro lado (planeta, el mismo aviso, etc.).
+  el.addEventListener('pointerdown', (e) => {
+    if (!cta.classList.contains('mech-open') || e.target.closest('.mech-tog')) return;
+    cta.classList.remove('mech-open');
+    cta.querySelector('.mech-tog')?.setAttribute('aria-expanded', false);
+  });
   mount(el, anim);
+  rachaLost();
   // Al volver de ganar, el monedero muestra lo de antes y luego se suma con las piezas que vuelan.
   if (after) {
     const c = el.querySelector('[data-coins]'), t = el.querySelector('[data-tickets]');
@@ -266,6 +295,13 @@ async function celebrateWin(galaxy, a, cta, paint, slide) {
   if (coins) runs.push(flyToWallet('coins', mid, coins));
   if (a.res.tickets) runs.push(wait(300).then(() => flyToWallet('tickets', mid, a.res.tickets)));
   await Promise.all(runs);
+  // Los eventos aparecen después del monedero (como Jugar) y ahí la racha suma su +1.
+  const side = document.querySelector('.galaxy .side.r');
+  if (side) {
+    side.style.opacity = '';
+    if (!reduced()) await side.animate([{ scale: 0.4, opacity: 0 }, { scale: 1.08, opacity: 1, offset: 0.6 }, { scale: 1 }], { duration: 420, easing: 'ease-out' }).finished;
+  }
+  if (a.res.racha) bumpRacha();
   if (worldData(a.w).secret.fresh) await revealSecret(galaxy, a.w);
   galaxy.busy = false;
   paint();
@@ -340,7 +376,7 @@ function guide(view, step, screen) {
   view.guide = (kind, i) => kind === t.kind && i === t.i;
   screen.classList.add('touring');
   const el = h(`<div class="guide"><div class="g-ring" style="--s:${t.size}px"></div>
-    <div class="g-bubble tb"><b>${t.title}</b><span>${t.text}</span></div></div>`);
+    <div class="g-bubble info"><b>${t.title}</b><span>${t.text}</span></div></div>`);
   screen.append(el);
   const ring = el.querySelector('.g-ring'), bub = el.querySelector('.g-bubble');
   if (!reduced()) bub.animate([{ opacity: 0, scale: 0.7 }, { opacity: 1, scale: 1.05, offset: 0.7 }, { opacity: 1, scale: 1 }], { duration: 420, easing: 'ease-out' });
@@ -379,8 +415,9 @@ function showUniverse({ from = regionOf(currentWorld()) } = {}) {
   current = () => showUniverse({ from });
   const el = h(`<div class="screen galaxy universe">
     <div class="space"></div><div class="g3d"></div><div class="glabels"></div>
-    <div class="wtitle solo tb">${constIcon()}<div><b>Constelaciones</b><small>${REGION_COUNT} en el universo · ${star(true)}${fmt(totalStars())}</small></div></div>
+    <div class="wtitle solo info">${constIcon()}<div><b>Constelaciones</b><small>${REGION_COUNT} en el universo · ${star(true)}${fmt(totalStars())}</small></div></div>
     <div class="side l">${sideButtons()}</div>
+    <div class="side r">${eventButtons()}</div>
     <button class="dev-pill" data-a="dev">DEV</button>
     <div class="res">${wallet()}</div>
     <div class="cta">${playCTA()}</div>
@@ -401,6 +438,7 @@ function showUniverse({ from = regionOf(currentWorld()) } = {}) {
     sideAction(a);
   });
   mount(el);
+  rachaLost();
   const make = () => {
     if (!el.isConnected) return;
     const regions = Array.from({ length: REGION_COUNT }, (_, r) => regionData(r));
@@ -418,9 +456,33 @@ function showUniverse({ from = regionOf(currentWorld()) } = {}) {
   else loadGalaxy().then(make);
 }
 // Botones de la derecha (los mismos en constelaciones y en mundos).
-const sideButtons = () => `${ibtn('gift', 'Regalo diario', 'daily', !dailyState(save.daily).claimed)}${ibtn('bag', 'Tienda', 'shop')}${ibtn('album', 'Álbum de postales', 'album')}${ibtn('gear', 'Ajustes', 'settings')}`;
+// Boleto diario: cada 24 h desde que se cobra, los boletos que cuesta el siguiente nivel (para no quedarse atorado nunca).
+const TICKET_WAIT = 24 * 3600e3;
+const ticketLeft = () => Math.max(0, (save.ticketAt || 0) + TICKET_WAIT - Date.now());
+const ticketGift = () => ticketCost(Math.min(save.next, TOTAL_LEVELS - 1));
+const leftText = (ms) => (ms >= 3600e3 ? `${Math.ceil(ms / 3600e3)} h` : `${Math.max(1, Math.ceil(ms / 60e3))} min`);
+const clock = (ms) => { const t = Math.ceil(ms / 1000); return `${Math.floor(t / 3600)}:${String(Math.floor(t / 60) % 60).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`; };
+const ticketBtn = () => {
+  const left = ticketLeft();
+  return `<button class="iconbtn tb press tk-btn ${left ? 'waiting' : 'ready'}" data-a="dticket" aria-label="Boletos de regalo" title="Boletos de regalo">${icon('ticket')}${left ? `<small class="wait">${leftText(left)}</small>` : '<span class="dot"></span>'}</button>`;
+};
+// El contador del botón avanza solo; al llegar a cero, el botón vuelve a moverse con su punto.
+setInterval(() => {
+  const b = document.querySelector('[data-a="dticket"]');
+  if (b && b.classList.contains('waiting') !== !!ticketLeft()) b.outerHTML = ticketBtn();
+  else if (b?.querySelector('.wait')) b.querySelector('.wait').textContent = leftText(ticketLeft());
+}, 20e3);
+// Eventos: columna de la derecha, solo los activos.
+// prev: el número de antes de ganar (se pinta así y luego sube con el +1, sin avisos todavía).
+const rachaBtn = (prev = null) => {
+  const r = racha(), t = rachaTheme(), old = prev != null;
+  const ready = !old && rachaReady(), hot = !old && !ready && rachaHot();
+  return `<button class="iconbtn tb press racha-btn ${ready ? 'ready' : ''} ${hot ? 'hot' : ''}" data-a="racha" aria-label="${t.name}" title="${t.name}">${hot ? `<span class="fire">${icon('flame')}</span>` : ''}${icon(t.ico)}<small class="rn">${old ? prev : r.n}</small>${ready ? '<span class="dot"></span>' : ''}</button>`;
+};
+const eventButtons = (prev) => rachaBtn(prev);
+const sideButtons = () => `${ibtn('gift', 'Regalo diario', 'daily', !dailyState(save.daily).claimed)}${ticketBtn()}${ibtn('bag', 'Tienda', 'shop')}${ibtn('album', 'Álbum de postales', 'album')}${ibtn('gear', 'Ajustes', 'settings')}`;
 function sideAction(a) {
-  const act = { me: () => !tourStep() && openProfile(), shop: () => openShop(), daily: openDaily, album: openAlbum, settings: openSettings, dev: () => openDevMenu({ onGallery: () => showGallery(save.next), onRefresh: boot }) }[a];
+  const act = { me: () => !tourStep() && openProfile(), shop: () => openShop(), daily: openDaily, dticket: openDailyTicket, racha: openRacha, album: openAlbum, settings: openSettings, dev: () => openDevMenu({ onGallery: () => showGallery(save.next), onRefresh: boot }) }[a];
   act?.();
   return !!act;
 }
@@ -431,7 +493,7 @@ const regionStars = (r) => {
 };
 // Icono de constelación: tres estrellas unidas.
 const constIcon = () => `<svg class="ico em" viewBox="0 0 32 32"><path d="M6 22 14 9l12 6" fill="none" stroke="#c9bff0" stroke-width="2.4" stroke-linecap="round"/>${[[6, 22, 4.6], [14, 9, 3.8], [26, 15, 4.2]].map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r}" fill="#ffc83d" stroke="#2a1f5c" stroke-width="2.2"/>`).join('')}</svg>`;
-const ibtn = (k, label, act, dot) => `<button class="iconbtn tb press" data-a="${act}" aria-label="${label}" title="${label}">${icon(k)}${dot ? '<span class="dot"></span>' : ''}</button>`;
+const ibtn = (k, label, act, dot) => `<button class="iconbtn tb press${dot ? ' ready' : ''}" data-a="${act}" aria-label="${label}" title="${label}">${icon(k)}${dot ? '<span class="dot"></span>' : ''}</button>`;
 const loadGalaxy = () => import('./galaxy.js').then((m) => ((PlanetView = m.PlanetView), (Universe = m.Universe), (Galaxy = m.Galaxy)));
 
 // Se conserva el nombre: en dev y otros lugares se pide "el mundo w".
@@ -595,6 +657,8 @@ function startLevel(g, { resume = false, free = false, anim = 'up' } = {}) {
     persist();
   }
   const level = variantLevel(generateLevel(g), v);
+  // Cuenta para la racha: nivel nuevo del camino normal (no repetir, no secreto, no la galería dev).
+  const counts = !free && !save.stars[g] && !isSecret(g) && g <= save.next;
   const back = () => (dev.on && gallery.active ? showGallery() : showWorld(worldOf(g), 'down'));
   const clearRun = () => {
     if (save.run?.g === g) save.run = null;
@@ -606,6 +670,7 @@ function startLevel(g, { resume = false, free = false, anim = 'up' } = {}) {
     saved,
     free: !!save.stars[g] || isSecret(g) || free || dev.infinite, // intento que no costó boleto
     tutorial: g === 0 && !save.tutorial,
+    racha: counts ? { n: racha().n, ico: rachaTheme().ico, hot: rachaHot() } : null,
     onSave: saved
       ? (state) => {
           save.run = { g, v, state };
@@ -614,10 +679,12 @@ function startLevel(g, { resume = false, free = false, anim = 'up' } = {}) {
       : null,
     onExit: back,
     onAbandon: () => {
+      if (counts) rachaLose();
       clearRun();
       back();
     },
     onRetry: () => {
+      if (counts) rachaLose();
       clearRun();
       enterLevel(g);
     },
@@ -671,9 +738,10 @@ function startLevel(g, { resume = false, free = false, anim = 'up' } = {}) {
         save.undo += chest.undo || 0;
         save.wild += chest.wild || 0;
       }
+      const racha = counts && !prev ? rachaWin() : null;
       persist();
       updateCoins();
-      return { coins, tickets, prev, gold, chest, worldStars: worldStars(w), counted: true, first: !prev };
+      return { coins, tickets, prev, gold, chest, worldStars: worldStars(w), counted: true, first: !prev, racha };
     },
   });
   // El tablero sube y la pantalla anterior se queda atrás.
@@ -840,6 +908,138 @@ async function grantPrize(p, from) {
   if (p.undo || p.wild) toast(prizeIcons({ undo: p.undo, wild: p.wild }).join(' '));
   await Promise.all(runs);
 }
+function openDailyTicket() {
+  const left = ticketLeft(), n = ticketGift();
+  const pile = (k) => Array.from({ length: k }, (_, i) => `<span style="--i:${i - (k - 1) / 2}">${icon('ticket', 0, 0, 'big')}</span>`).join('');
+  const m = openModal({
+    title: left ? 'Boletos de regalo' : '¡Boletos de regalo!',
+    ico: 'ticket',
+    color: 'pink',
+    body: left
+      ? `<div class="dticket wait"><div class="rays"></div>${pile(n)}</div><p class="tk-clock">${clock(left)}</p>`
+      : `<div class="dticket"><div class="rays"></div>${pile(n)}<b>+${n}</b></div>`,
+    buttons: left
+      ? []
+      : [
+          {
+            label: `${icon('ticket')} Reclamar`,
+            cls: 'green',
+            keep: true,
+            onClick: async (btn) => {
+              btn.disabled = true;
+              const el = m.el.querySelector('.dticket'), r = el.getBoundingClientRect();
+              sparkle({ x: r.left + r.width / 2, y: r.top + r.height / 2 }, 24);
+              if (!reduced()) await el.animate([{ scale: 1 }, { scale: 1.25 }, { scale: 1 }], { duration: 420, easing: 'cubic-bezier(0.34, 1.45, 0.64, 1)' }).finished;
+              save.ticketAt = Date.now();
+              persist();
+              const b = document.querySelector('[data-a="dticket"]');
+              if (b) b.outerHTML = ticketBtn();
+              m.close();
+              grantPrize({ tickets: n }, { x: r.left + r.width / 2, y: r.top + r.height / 2 });
+            },
+          },
+        ],
+  });
+  // Esperando: el reloj corre a la vista.
+  if (left) {
+    const c = m.el.querySelector('.tk-clock');
+    const t = setInterval(() => (c.isConnected ? (c.textContent = clock(Math.max(0, ticketLeft()))) : clearInterval(t)), 1000);
+  }
+}
+// "?" en la cabecera de una ventana: abre un globo con la ayuda. Se cierra al tocar el "?" otra vez o fuera del globo.
+function helpTip(m, text) {
+  const modal = m.el.querySelector('.modal'), head = modal.querySelector('.mhead');
+  head.insertAdjacentHTML('afterbegin', '<button class="qhelp" aria-label="Ayuda" aria-expanded="false">?</button>');
+  modal.insertAdjacentHTML('beforeend', `<div class="qtip info">${text}</div>`);
+  const btn = head.querySelector('.qhelp');
+  const set = (on) => (modal.classList.toggle('tip-open', on), btn.setAttribute('aria-expanded', on));
+  btn.addEventListener('click', () => set(!modal.classList.contains('tip-open')));
+  m.el.addEventListener('pointerdown', (e) => modal.classList.contains('tip-open') && !e.target.closest('.qhelp, .qtip') && set(false));
+}
+
+// ---------- Racha diaria ----------
+// Camino: un punto de salida y los 6 premios, igual de separados; la barra se llena entre premio y premio.
+function openRacha() {
+  const r = racha(), t = rachaTheme(), next = RACHA_GOALS.find((x) => x.n > r.n);
+  const pts = [0, ...RACHA_GOALS.map((x) => x.n)];
+  let k = pts.findIndex((v) => v > r.n);
+  const fill = k < 0 ? 1 : (k - 1 + (r.n - pts[k - 1]) / (pts[k] - pts[k - 1])) / (pts.length - 1);
+  const stateOf = (i) => (r.pend.includes(i) ? 'ready' : r.got.includes(i) ? 'got' : 'next');
+  const prize = (x) => `<div class="rps"><span class="rp">${coin()}<b>${x.coins}</b></span>${x.wild ? `<span class="rp">${icon('wild')}<b>×${x.wild}</b></span>` : ''}</div>`;
+  // Entre mejor el premio, más grande y más vistoso el punto (el último lleva rayos y una caja).
+  const nodes = RACHA_GOALS.map((x, i) => {
+    const st = stateOf(i), last = i === RACHA_GOALS.length - 1;
+    return `<div class="rg t${i} ${st}" data-i="${i}">${last ? '<span class="rays"></span>' : ''}<i>${st === 'got' ? icon('check') : `<b>${x.n}</b>`}</i>${prize(x)}</div>`;
+  }).join('');
+  const m = openModal({
+    title: t.name,
+    ico: t.ico,
+    color: t.color,
+    wide: true,
+    cls: 'racha-modal',
+    body: `<div class="rhero"><span class="rh-ico">${icon(t.ico)}</span><b>${r.n}</b></div>
+      <p class="lead rsub">${next ? `Gana <b>${next.n - r.n}</b> más para el siguiente premio` : '¡Llegaste al premio más grande!'}</p>
+      <div class="rpath" style="--fill:${fill}"><div class="rbar"><i></i></div><div class="rg start"><i>${icon(t.ico)}</i><div class="rps"></div></div>${nodes}</div>
+      <div class="rclock-chip">Nueva racha en <b class="rclock">${clock(msToMidnight())}</b></div>`,
+    // Solo sirve para ver y canjear: sin botón de jugar.
+    buttons: rachaReady()
+      ? [
+          {
+            label: `${icon('gift')} Reclamar`,
+            cls: 'gold',
+            keep: true,
+            onClick: async (btn) => {
+              btn.disabled = true;
+              const cells = [...m.el.querySelectorAll('.rg.ready')];
+              const r0 = cells[0].getBoundingClientRect();
+              cells.forEach((c) => {
+                const b = c.getBoundingClientRect();
+                sparkle({ x: b.left + b.width / 2, y: b.top + b.height / 3 }, 14);
+                c.classList.replace('ready', 'got');
+                c.querySelector('i').innerHTML = icon('check');
+              });
+              const p = rachaClaim();
+              refreshRacha();
+              await wait(reduced() ? 0 : 650);
+              m.close();
+              grantPrize(p, { x: r0.left + r0.width / 2, y: r0.top + r0.height / 2 });
+            },
+          },
+        ]
+      : [],
+  });
+  helpTip(m, 'Gana niveles nuevos seguidos, con las estrellas que sea. Repetir niveles no cuenta. Si pierdes o abandonas uno, vuelves a 0.');
+  const c = m.el.querySelector('.rclock');
+  const tick = setInterval(() => (c.isConnected ? (c.textContent = clock(msToMidnight())) : clearInterval(tick)), 1000);
+}
+const refreshRacha = () => document.querySelectorAll('[data-a="racha"]').forEach((b) => (b.outerHTML = rachaBtn()));
+// Al volver de ganar: el número sube con un +1 que sale del botón.
+function bumpRacha() {
+  refreshRacha();
+  const b = document.querySelector('[data-a="racha"]');
+  if (!b || reduced()) return;
+  b.animate([{ scale: 1 }, { scale: 1.3 }, { scale: 1 }], { duration: 480, easing: 'cubic-bezier(0.34, 1.45, 0.64, 1)' });
+  const r = b.getBoundingClientRect(), plus = document.createElement('b');
+  plus.className = 'racha-plus outl';
+  plus.textContent = '+1';
+  plus.style.cssText = `left:${r.left + r.width / 2}px;top:${r.top}px`;
+  document.body.append(plus);
+  plus.animate([{ opacity: 0, translate: '-50% 0' }, { opacity: 1, translate: '-50% -26px', offset: 0.3 }, { opacity: 0, translate: '-50% -50px' }], { duration: 1100, easing: 'ease-out' }).finished.then(() => plus.remove());
+  if (rachaReady()) sparkle({ x: r.left + r.width / 2, y: r.top + r.height / 2 }, 16);
+}
+// Si se perdió una racha, al llegar al mapa el botón tiembla y lo dice.
+function rachaLost() {
+  const r = racha();
+  if (!r.lost) return;
+  delete r.lost;
+  persist();
+  wait(700).then(() => {
+    const b = document.querySelector('[data-a="racha"]');
+    b?.animate([{ rotate: '0deg' }, { rotate: '-12deg' }, { rotate: '10deg' }, { rotate: '-6deg' }, { rotate: '0deg' }], { duration: 500 });
+    toast(`${icon(rachaTheme().ico)} Tu racha volvió a 0`);
+  });
+}
+
 function openDaily() {
   const st = dailyState(save.daily);
   const N = DAILY_PATH.length;
@@ -861,8 +1061,7 @@ function openDaily() {
     ico: 'gift',
     color: 'green',
     wide: true,
-    body: `${st.reset ? '<p class="note">Se rompió tu racha: vuelves al día 1.</p>' : ''}<div class="daily"><div class="dgrid">${days}</div>${seven}</div>
-      <p class="note">Entra cada día: el día 7 abres una caja sorpresa. Si un día faltas, vuelves al inicio.</p>`,
+    body: `${st.reset ? '<p class="note">Se rompió tu racha: vuelves al día 1.</p>' : ''}<div class="daily"><div class="dgrid">${days}</div>${seven}</div>`,
     buttons: [
       {
         label: st.claimed ? 'Vuelve mañana' : `${icon('gift')} Reclamar`,
@@ -894,6 +1093,7 @@ function openDaily() {
           cell.insertAdjacentHTML('beforeend', `<i class="ok">${icon('check')}</i>`);
           save.daily = { day: (st.day + 1) % N, last: new Date().toDateString() };
           document.querySelector('[data-a="daily"] .dot')?.remove();
+          document.querySelector('[data-a="daily"]')?.classList.remove('ready');
           await wait(450);
           const r = cell.getBoundingClientRect();
           m.close();
@@ -902,6 +1102,7 @@ function openDaily() {
       },
     ],
   });
+  helpTip(m, 'Entra cada día y reclama tu regalo. El día 7 abres una caja sorpresa. Si un día faltas, vuelves al día 1.');
 }
 
 // ---------- Jefe vencido: postal del mundo (según sus estrellas) y cofre ----------
@@ -1528,15 +1729,16 @@ function boot() {
 // Atajo de pruebas: la tecla 0 prende o apaga el modo dev en cualquier pantalla (se quitará al publicar).
 window.addEventListener('keydown', (e) => {
   if (e.key !== '0' || e.metaKey || e.ctrlKey || e.target.closest?.('input, textarea')) return;
-  prefs.dev = !prefs.dev;
-  persist();
-  toast(`Modo dev ${prefs.dev ? 'activado' : 'desactivado'}`);
+  setDev(!prefs.dev);
+  toast(prefs.dev ? 'Modo dev: lo que hagas es de prueba' : 'Modo dev apagado: tu partida volvió');
   // Solo se muestran u ocultan los botones dev: la pantalla no se vuelve a dibujar.
   document.documentElement.classList.toggle('dev-on', !!prefs.dev);
+  // Al apagarlo vuelve tu partida real: se dibuja todo de nuevo.
+  if (!prefs.dev) return boot();
   if (game) {
     game.el.querySelector('.dev-bar')?.remove();
-    if (prefs.dev) game.attachDev();
-  } else if (!prefs.dev && gallery.active) showMap();
+    game.attachDev();
+  }
 });
 
 // Para pruebas automáticas en modo dev: abrir un nivel por número (desde la consola).

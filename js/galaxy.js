@@ -429,7 +429,7 @@ export class Galaxy {
     return [((v.x + 1) / 2) * r.width, ((1 - v.y) / 2) * r.height];
   }
   chipHTML(wd) {
-    return { done: `<span class="chip tb">${star(true)}${wd.stars}/30</span>`, current: `<span class="chip tb">${icon('flag')}${wd.done + 1}/10</span>`, gate: `<span class="chip tb opening">${icon('gold')}${star(true)}${wd.need}</span>`, locked: `<span class="lk">${icon('lock')}</span>` }[wd.state];
+    return { done: `<span class="chip info">${star(true)}${wd.stars}/30</span>`, current: `<span class="chip info">${icon('flag')}${wd.done + 1}/10</span>`, gate: `<span class="chip info opening">${icon('gold')}${star(true)}${wd.need}</span>`, locked: `<span class="lk">${icon('lock')}</span>` }[wd.state];
   }
   drawLabels() {
     this.labelsEl.innerHTML = '';
@@ -955,7 +955,7 @@ export class Universe {
     this.labels = this.objs.map(({ reg }) => {
       const el = document.createElement('div');
       el.className = `ulabel ${reg.state}`;
-      el.innerHTML = `<b class="outl">${reg.state === 'locked' ? icon('lock') : ''}${reg.name}</b><small class="tb">${reg.r + 1} de ${this.regions.length}${reg.state === 'locked' ? '' : ` · ${star(true)}${reg.stars}/300`}</small>`;
+      el.innerHTML = `<b class="outl">${reg.state === 'locked' ? icon('lock') : ''}${reg.name}</b><small class="info">${reg.r + 1} de ${this.regions.length}${reg.state === 'locked' ? '' : ` · ${star(true)}${reg.stars}/300`}</small>`;
       this.labelsEl.append(el);
       return el;
     });
