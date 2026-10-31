@@ -30,7 +30,7 @@ const setScale = () => document.documentElement.style.setProperty('--k', Math.ma
 setScale();
 // Se mide la página ya reacomodada (en iOS, al girar, el aviso de la ventana llega con el tamaño viejo).
 // Orillas por el notch: con el teléfono acostado, iPhone reserva lo mismo en los dos lados aunque la cámara esté en uno.
-// Se ve hacia dónde quedó la cámara y el otro lado se libera para las cartas (--cl / --cr; los botones siguen usando --sl / --sr).
+// Se ve hacia dónde quedó la cámara y el otro lado se achica (queda un poco por la esquina redondeada). --cl / --cr; los botones siguen usando --sl / --sr.
 const safeProbe = document.createElement('div');
 safeProbe.style.cssText = 'position:fixed;visibility:hidden;pointer-events:none;padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right)';
 document.body.append(safeProbe);
@@ -42,12 +42,21 @@ const setSafe = () => {
   const a = typeof window.orientation === 'number' ? window.orientation : screen.orientation?.angle;
   const both = l > 0 && Math.abs(l - r) < 1 && innerWidth > innerHeight;
   const s = document.documentElement.style;
-  s.setProperty('--cl', both && (a === -90 || a === 270) ? '0px' : 'var(--sl)');
-  s.setProperty('--cr', both && a === 90 ? '0px' : 'var(--sr)');
+  s.setProperty('--cl', both && (a === -90 || a === 270) ? '14px' : 'var(--sl)');
+  s.setProperty('--cr', both && a === 90 ? '14px' : 'var(--sr)');
 };
 setSafe();
-new ResizeObserver(() => (setScale(), setSafe())).observe(document.documentElement);
-addEventListener('orientationchange', () => setTimeout(setSafe, 300));
+// App agregada a inicio en iPhone: después de girar, iOS da un alto de ventana más corto (le resta la barra de estado)
+// y queda una franja vacía abajo. Se usa el alto real de la pantalla (screen siempre viene en vertical).
+const setAppH = () => {
+  if (!navigator.standalone) return;
+  const land = innerWidth > innerHeight;
+  const h = land ? Math.min(screen.width, screen.height) : Math.max(screen.width, screen.height);
+  document.documentElement.style.setProperty('--app-h', `${h}px`);
+};
+setAppH();
+new ResizeObserver(() => (setScale(), setSafe(), setAppH())).observe(document.documentElement);
+addEventListener('orientationchange', () => setTimeout(() => (setSafe(), setAppH()), 300));
 
 const app = document.getElementById('app');
 let game = null;
@@ -1126,7 +1135,7 @@ async function savePostcard(view, w, btn) {
     g.fillStyle = '#fff'; g.textAlign = 'center'; g.font = '900 20px "Baloo 2"'; g.fillText('SECRETO', 0, 42);
     g.restore();
   }
-  g.fillStyle = '#b3a9cf'; g.font = '800 26px "Baloo 2"'; g.textAlign = 'center'; g.fillText('Solitario de los Mundos', W / 2, H - 56);
+  g.fillStyle = '#b3a9cf'; g.font = '800 26px "Baloo 2"'; g.textAlign = 'center'; g.fillText('Solitaire', W / 2, H - 56);
   const blob = await new Promise((ok) => c.toBlob(ok, 'image/png'));
   const name = `postal-mundo-${w + 1}.png`;
   const file = new File([blob], name, { type: 'image/png' });
@@ -1333,13 +1342,18 @@ function openBackup(then) {
     ico: 'backup',
     color: 'green',
     onClose: then,
-    body: `<p class="lead">Copia tu código y guárdalo en tus notas o mándatelo por mensaje. Si borras la app o cambias de teléfono, pégalo aquí y recuperas tu avance.</p>
+    body: `<p class="lead">Copia tu código y guárdalo en tus notas o mándatelo por mensaje. Si borras el juego o lo abres en otro lado, pégalo aquí y recuperas tu avance.</p>
       <textarea class="text-in code-in" rows="3" placeholder="Pega aquí tu código" spellcheck="false" autocapitalize="off" autocomplete="off"></textarea>`,
     buttons: [
-      { label: 'Cargar código', cls: 'ghost', keep: true, onClick: () => loadBackup(m, then) },
+      { label: 'Cargar código', cls: 'ghost', keep: true, disabled: true, onClick: () => loadBackup(m, then) },
       { label: 'Copiar mi código', cls: 'green', keep: true, onClick: () => copyBackup(m) },
     ],
   });
+  // "Cargar código" solo se puede tocar cuando hay algo pegado en la caja.
+  const box = m.el.querySelector('.code-in'), load = m.el.querySelector('.mbtns .btn');
+  const sync = () => (load.disabled = !box.value.trim());
+  box.addEventListener('input', sync);
+  m.sync = sync;
 }
 
 async function copyBackup(m) {
@@ -1347,7 +1361,7 @@ async function copyBackup(m) {
   const box = m.el.querySelector('.code-in');
   try {
     // En el teléfono se abre "Compartir" (Notas, WhatsApp, correo…); en la PC se copia directo.
-    if (navigator.share && matchMedia('(pointer: coarse)').matches) await navigator.share({ title: 'Solitario de los Mundos · respaldo', text: code });
+    if (navigator.share && matchMedia('(pointer: coarse)').matches) await navigator.share({ title: 'Solitaire · respaldo', text: code });
     else {
       await navigator.clipboard.writeText(code);
       toast(`${icon('check')}¡Código copiado!`);
@@ -1356,6 +1370,7 @@ async function copyBackup(m) {
     if (e?.name === 'AbortError') return; // cerró el menú de compartir
     // Sin portapapeles: el código queda en la caja, seleccionado, para copiarlo a mano.
     box.value = code;
+    m.sync?.();
     box.focus();
     box.select();
     toast('Copia el código de la caja');
@@ -1366,7 +1381,7 @@ async function loadBackup(m, then) {
   const box = m.el.querySelector('.code-in');
   const p = box.value.trim() && (await readCode(box.value));
   if (!p) {
-    toast(box.value.trim() ? 'Ese código no sirve' : 'Primero pega tu código');
+    toast('Ese código no sirve');
     if (!reduced()) box.animate([{ translate: '0 0' }, { translate: '-8px 0' }, { translate: '7px 0' }, { translate: '-4px 0' }, { translate: '0 0' }], { duration: 340, easing: 'ease-out' });
     box.focus();
     return;
@@ -1376,7 +1391,7 @@ async function loadBackup(m, then) {
   openModal({
     title: '¿Cargar este avance?',
     color: 'pink',
-    body: `<p class="lead">El código es de <b>${esc(p.name || 'un jugador')}</b>: va en ${levelName(Math.min(p.next, TOTAL_LEVELS - 1))} con ${fmt(stars)} estrellas. Lo que tienes ahora en este teléfono se reemplaza.</p>`,
+    body: `<p class="lead">El código es de <b>${esc(p.name || 'un jugador')}</b>: va en ${levelName(Math.min(p.next, TOTAL_LEVELS - 1))} con ${fmt(stars)} estrellas. Tu avance actual en este juego se reemplaza.</p>`,
     buttons: [
       { label: 'Cancelar', cls: 'ghost', onClick: () => openBackup(then) },
       {

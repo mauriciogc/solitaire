@@ -1,6 +1,6 @@
 {
-  "name": "Solitario de los Mundos",
-  "short_name": "Solitario",
+  "name": "Solitaire",
+  "short_name": "Solitaire",
   "start_url": "./",
   "display": "fullscreen",
   "display_override": ["fullscreen", "standalone"],
