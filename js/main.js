@@ -1,4 +1,4 @@
-import { save, prefs, persist, resetProfile, renameProfile } from './storage.js';
+import { save, prefs, persist, resetProfile, renameProfile, exportCode, readCode, loadProfile } from './storage.js';
 import { WORLD_COUNT, LEVELS_PER_WORLD, TOTAL_LEVELS, worldInfo, generateLevel, variantLevel, MECH_INTRO, MECH_NAMES, secretId, isSecret } from './levels.js';
 import { Game, faceHTML, backHTML } from './game.js';
 import { DAILY_PATH, dailyState, starsNeeded, TICKET_PRICE, ticketCost, ticketRefund, coinsFor, bossChest, openSurprise, SECRET_MULT, SECRET_PRIZE } from './economy.js';
@@ -29,7 +29,25 @@ document.documentElement.style.setProperty('--back-wild', cardBackURL('comodin')
 const setScale = () => document.documentElement.style.setProperty('--k', Math.max(0.85, Math.min(1.3, Math.min(innerWidth, innerHeight) / 390)).toFixed(3));
 setScale();
 // Se mide la página ya reacomodada (en iOS, al girar, el aviso de la ventana llega con el tamaño viejo).
-new ResizeObserver(setScale).observe(document.documentElement);
+// Orillas por el notch: con el teléfono acostado, iPhone reserva lo mismo en los dos lados aunque la cámara esté en uno.
+// Se ve hacia dónde quedó la cámara y el otro lado se libera para las cartas (--cl / --cr; los botones siguen usando --sl / --sr).
+const safeProbe = document.createElement('div');
+safeProbe.style.cssText = 'position:fixed;visibility:hidden;pointer-events:none;padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right)';
+document.body.append(safeProbe);
+const setSafe = () => {
+  const cs = getComputedStyle(safeProbe);
+  const l = parseFloat(cs.paddingLeft) || 0;
+  const r = parseFloat(cs.paddingRight) || 0;
+  // 90: girado a la izquierda (la cámara queda a la izquierda) · -90 / 270: a la derecha.
+  const a = typeof window.orientation === 'number' ? window.orientation : screen.orientation?.angle;
+  const both = l > 0 && Math.abs(l - r) < 1 && innerWidth > innerHeight;
+  const s = document.documentElement.style;
+  s.setProperty('--cl', both && (a === -90 || a === 270) ? '0px' : 'var(--sl)');
+  s.setProperty('--cr', both && a === 90 ? '0px' : 'var(--sr)');
+};
+setSafe();
+new ResizeObserver(() => (setScale(), setSafe())).observe(document.documentElement);
+addEventListener('orientationchange', () => setTimeout(setSafe, 300));
 
 const app = document.getElementById('app');
 let game = null;
@@ -609,6 +627,7 @@ function startLevel(g, { resume = false, free = false, anim = 'up' } = {}) {
       const w = worldOf(g);
       const go = () => showMap({ start: w, anim: 'down', after: res.counted ? { g, w, res } : null });
       if (res.chest) return openBossReward(w, res).then(go);
+      if (res.seal) return openSecretSeal(w).then(go);
       go();
     },
     onWin: (stars) => {
@@ -627,7 +646,8 @@ function startLevel(g, { resume = false, free = false, anim = 'up' } = {}) {
         save.undo += undo;
         persist();
         updateCoins();
-        return { coins, tickets: 0, prev, wild, undo, counted: true, first: !prev };
+        // Primera vez con 3 estrellas: la postal del mundo gana el sello secreto (se celebra al continuar).
+        return { coins, tickets: 0, prev, wild, undo, counted: true, first: !prev, seal: stars >= 3 && prev < 3 };
       }
       // En modo dev se puede saltar a cualquier nivel: solo cuenta si ya estaba desbloqueado.
       if (g > save.next) return { coins: 0, tickets: 0, prev: 0 };
@@ -886,13 +906,15 @@ function openDaily() {
 
 // ---------- Jefe vencido: postal del mundo (según sus estrellas) y cofre ----------
 const TIER = { oro: '¡Perfecto!', plata: '¡Excelente!', bronce: '¡Muy bien!', sello: '¡Completado!' };
+// Segundo sello: el nivel secreto del mundo sacado con 3 estrellas.
+const sealHTML = (w) => ((save.secret[w] || 0) >= 3 ? `<div class="seal-secret" title="Nivel secreto con 3 estrellas">${icon('star')}<small>Secreto</small></div>` : '');
 // frame: el marco de la tienda (si no se dice, el que usa el jugador).
 function postcardHTML(w, stars, cls = '', frame = equipped('frame')) {
   const info = worldInfo(w), b = BIOMES[biomeKey(info.place)], tier = bossChest(stars).tier, pct = Math.round((stars / 30) * 100);
   return `<div class="postcard tier-${tier} fr-${frame} ${cls}" style="--h:${info.hue}">
     <div class="pc-art">${miniPlanet(b.emblem, 'pc-planet')}</div>
     <div class="pc-txt"><small>Postal de</small><b>${esc(info.name)}</b><span>${star(true)}${stars}/30</span></div>
-    <div class="stamp"><b>${pct}%</b><small>${TIER[tier]}</small></div>
+    <div class="stamp"><b>${pct}%</b><small>${TIER[tier]}</small></div>${sealHTML(w)}
   </div>`;
 }
 function openBossReward(w, res) {
@@ -918,6 +940,31 @@ function openBossReward(w, res) {
       const r = chest.getBoundingClientRect();
       sparkle({ x: r.left + r.width / 2, y: r.top + r.height / 3 }, 20);
     }, 1300);
+  });
+}
+
+// Nivel secreto con 3 estrellas: el sello morado cae sobre la postal del mundo.
+const SEAL_IN = [{ scale: 2.8, rotate: '20deg', opacity: 0 }, { scale: 0.9, rotate: '-16deg', opacity: 1, offset: 0.7 }, { scale: 1, rotate: '-10deg' }];
+function openSecretSeal(w) {
+  return new Promise((done) => {
+    const m = openModal({
+      title: '¡Sello secreto!',
+      color: 'violet',
+      closable: false,
+      cls: 'boss-win',
+      body: `${postcardHTML(w, worldStars(w))}
+        <p class="lead">Sacaste 3 estrellas en el nivel secreto de <b>${esc(worldInfo(w).name)}</b>. Su postal ahora lleva el sello secreto.</p>`,
+      buttons: [{ label: 'Continuar', cls: 'green wide', onClick: done }],
+    });
+    if (reduced()) return;
+    const pc = m.el.querySelector('.postcard'), seal = m.el.querySelector('.seal-secret');
+    pc.animate([{ rotate: '-8deg', scale: 0.7, opacity: 0 }, { rotate: '3deg', scale: 1.04, opacity: 1, offset: 0.7 }, { rotate: '-1.5deg', scale: 1 }], { duration: 620, delay: 150, easing: 'ease-out', fill: 'backwards' });
+    seal.animate(SEAL_IN, { duration: 460, delay: 900, easing: 'cubic-bezier(0.5, 0, 0.75, 0)', fill: 'backwards' }).finished.then(() => {
+      pc.animate([{ translate: '0 0' }, { translate: '0 5px' }, { translate: '0 0' }], { duration: 220, easing: 'ease-out' });
+      const r = seal.getBoundingClientRect();
+      sparkle({ x: r.left + r.width / 2, y: r.top + r.height / 2 }, 18);
+      confetti(50);
+    });
   });
 }
 
@@ -1008,7 +1055,7 @@ async function openPostcard(w) {
           <small>Mundo ${w + 1} · ${regionName(regionOf(w))}</small>
           <b>${esc(info.name)}</b>
           <span class="pv-stars">${starsHTML(Math.round((stars / 30) * 3))}<em>${stars}/30</em></span>
-          <div class="stamp"><b>${pct}%</b><small>${TIER[tier]}</small></div>
+          <div class="stamp"><b>${pct}%</b><small>${TIER[tier]}</small></div>${sealHTML(w)}
         </div>
       </div>`,
     buttons: [{ label: `${icon('album')} Guardar foto`, cls: 'gold wide', keep: true, onClick: (btn) => view && savePostcard(view, w, btn) }],
@@ -1021,6 +1068,7 @@ async function openPostcard(w) {
   if (!reduced()) {
     host.animate([{ scale: 0.4, opacity: 0, rotate: '-20deg' }, { scale: 1.06, opacity: 1, rotate: '3deg', offset: 0.7 }, { scale: 1, rotate: '0deg' }], { duration: 700, easing: 'ease-out' });
     st.animate([{ scale: 2.6, rotate: '-30deg', opacity: 0 }, { scale: 0.92, rotate: '12deg', opacity: 1, offset: 0.7 }, { scale: 1, rotate: '8deg' }], { duration: 420, delay: 650, easing: 'cubic-bezier(0.5, 0, 0.75, 0)', fill: 'backwards' });
+    m.el.querySelector('.pc-view .seal-secret')?.animate(SEAL_IN, { duration: 420, delay: 950, easing: 'cubic-bezier(0.5, 0, 0.75, 0)', fill: 'backwards' });
   }
 }
 
@@ -1069,6 +1117,15 @@ async function savePostcard(view, w, btn) {
   g.fillStyle = TC[2]; g.textAlign = 'center'; g.font = '64px "Lilita One"'; g.fillText(`${pct}%`, 0, 14);
   g.font = '900 24px "Baloo 2"'; g.fillText(TIER[tier].toUpperCase(), 0, 54);
   g.restore();
+  // Sello secreto: el nivel secreto con 3 estrellas.
+  if ((save.secret[w] || 0) >= 3) {
+    g.save(); g.translate(690, 1230); g.rotate(-0.17);
+    g.beginPath(); g.arc(0, 0, 74, 0, Math.PI * 2); g.fillStyle = '#8a5cf0'; g.fill(); g.lineWidth = 8; g.strokeStyle = '#2a1f5c'; g.stroke();
+    g.beginPath(); g.arc(0, 0, 60, 0, Math.PI * 2); g.lineWidth = 4; g.strokeStyle = '#fff'; g.setLineDash([12, 8]); g.stroke(); g.setLineDash([]);
+    starAt(0, -12, 30, true);
+    g.fillStyle = '#fff'; g.textAlign = 'center'; g.font = '900 20px "Baloo 2"'; g.fillText('SECRETO', 0, 42);
+    g.restore();
+  }
   g.fillStyle = '#b3a9cf'; g.font = '800 26px "Baloo 2"'; g.textAlign = 'center'; g.fillText('Solitario de los Mundos', W / 2, H - 56);
   const blob = await new Promise((ok) => c.toBlob(ok, 'image/png'));
   const name = `postal-mundo-${w + 1}.png`;
@@ -1255,6 +1312,7 @@ function openSettings(then) {
     body: `<div class="rows">
       <button class="row" data-a="help">${icon('help')}<b>Cómo jugar</b>${icon('chev')}</button>
       ${game ? '' : `<button class="row" data-a="profile">${avatarHTML(save)}<b>Perfil</b>${icon('chev')}</button>`}
+      ${game ? '' : `<button class="row" data-a="backup">${icon('backup')}<b>Respaldo<span>Guarda tu avance con un código</span></b>${icon('chev')}</button>`}
       ${installPrompt ? `<button class="row" data-a="install"><img class="ico app-ico" src="icon.svg" alt=""><b>Instalar app<span>Pantalla completa y sin conexión</span></b>${icon('chev')}</button>` : ''}
     </div>`,
   });
@@ -1262,7 +1320,76 @@ function openSettings(then) {
     const a = e.target.closest('[data-a]')?.dataset.a;
     if (a === 'help') { m.el.remove(); openHelp('basico', () => openSettings(then)); }
     if (a === 'profile') { m.el.remove(); openProfile(); }
+    if (a === 'backup') { m.el.remove(); openBackup(() => openSettings(then)); }
     if (a === 'install') installApp().then((ok) => ok && m.el.remove());
+  });
+}
+
+// ---------- Respaldo con código ----------
+// El avance vive en este navegador: si se borra la app (o Safari lo limpia) se pierde. Con el código se recupera.
+function openBackup(then) {
+  const m = openModal({
+    title: 'Respaldo',
+    ico: 'backup',
+    color: 'green',
+    onClose: then,
+    body: `<p class="lead">Copia tu código y guárdalo en tus notas o mándatelo por mensaje. Si borras la app o cambias de teléfono, pégalo aquí y recuperas tu avance.</p>
+      <textarea class="text-in code-in" rows="3" placeholder="Pega aquí tu código" spellcheck="false" autocapitalize="off" autocomplete="off"></textarea>`,
+    buttons: [
+      { label: 'Cargar código', cls: 'ghost', keep: true, onClick: () => loadBackup(m, then) },
+      { label: 'Copiar mi código', cls: 'green', keep: true, onClick: () => copyBackup(m) },
+    ],
+  });
+}
+
+async function copyBackup(m) {
+  const code = await exportCode();
+  const box = m.el.querySelector('.code-in');
+  try {
+    // En el teléfono se abre "Compartir" (Notas, WhatsApp, correo…); en la PC se copia directo.
+    if (navigator.share && matchMedia('(pointer: coarse)').matches) await navigator.share({ title: 'Solitario de los Mundos · respaldo', text: code });
+    else {
+      await navigator.clipboard.writeText(code);
+      toast(`${icon('check')}¡Código copiado!`);
+    }
+  } catch (e) {
+    if (e?.name === 'AbortError') return; // cerró el menú de compartir
+    // Sin portapapeles: el código queda en la caja, seleccionado, para copiarlo a mano.
+    box.value = code;
+    box.focus();
+    box.select();
+    toast('Copia el código de la caja');
+  }
+}
+
+async function loadBackup(m, then) {
+  const box = m.el.querySelector('.code-in');
+  const p = box.value.trim() && (await readCode(box.value));
+  if (!p) {
+    toast(box.value.trim() ? 'Ese código no sirve' : 'Primero pega tu código');
+    if (!reduced()) box.animate([{ translate: '0 0' }, { translate: '-8px 0' }, { translate: '7px 0' }, { translate: '-4px 0' }, { translate: '0 0' }], { duration: 340, easing: 'ease-out' });
+    box.focus();
+    return;
+  }
+  const stars = Object.values(p.stars || {}).reduce((a, b) => a + b, 0);
+  m.el.remove();
+  openModal({
+    title: '¿Cargar este avance?',
+    color: 'pink',
+    body: `<p class="lead">El código es de <b>${esc(p.name || 'un jugador')}</b>: va en ${levelName(Math.min(p.next, TOTAL_LEVELS - 1))} con ${fmt(stars)} estrellas. Lo que tienes ahora en este teléfono se reemplaza.</p>`,
+    buttons: [
+      { label: 'Cancelar', cls: 'ghost', onClick: () => openBackup(then) },
+      {
+        label: 'Sí, cargar',
+        cls: 'pink',
+        onClick: () => {
+          loadProfile(p);
+          applyLook();
+          boot();
+          toast(`${icon('check')}¡Avance recuperado!`);
+        },
+      },
+    ],
   });
 }
 

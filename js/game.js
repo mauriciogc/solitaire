@@ -108,8 +108,13 @@ export class Game {
 
     this.el = this.build();
     root.append(this.el);
-    this.onResize = () => this.layout();
-    window.addEventListener('resize', this.onResize);
+    // Se vigila el propio tablero y no la ventana: en iOS, al girar, el aviso de la ventana llega con el tamaño viejo.
+    this.wrapSize = '';
+    this.resizer = new ResizeObserver(([e]) => {
+      const size = `${Math.round(e.contentRect.width)}x${Math.round(e.contentRect.height)}`;
+      if (size !== this.wrapSize) this.layout();
+    });
+    this.resizer.observe(this.wrapEl);
     this.onKey = (e) => this.key(e);
     window.addEventListener('keydown', this.onKey);
     this.layout();
@@ -175,7 +180,7 @@ export class Game {
   }
 
   destroy() {
-    window.removeEventListener('resize', this.onResize);
+    this.resizer.disconnect();
     window.removeEventListener('keydown', this.onKey);
     this.coach?.end();
     this.done = true;
@@ -362,6 +367,7 @@ export class Game {
   layout() {
     const r = this.wrapEl.getBoundingClientRect();
     if (!r.width) return;
+    this.wrapSize = `${Math.round(r.width)}x${Math.round(r.height)}`;
     // La carta doble se ve 10% más grande: se deja un poco de aire para que no se salga del tablero.
     const room = this.cards.some((c) => c.alt != null) ? 0.93 : 1;
     const { u, bw, bh, offsets } = packGroups(this.level.groups, (r.width - 10) * room, (r.height - 10) * room);

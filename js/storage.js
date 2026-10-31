@@ -94,6 +94,35 @@ export function renameProfile(name, avatar, look) {
   persist();
 }
 
+// Respaldo con código: el avance cabe en un texto que el jugador guarda donde quiera (notas, chat) y luego pega.
+// Sirve para no perderlo si borra la app o para pasarlo a otro teléfono. Va comprimido: las estrellas de miles de niveles pesan.
+const CODE = 'SM1.';
+const pipe = async (bytes, stream) => new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(stream)).arrayBuffer());
+export async function exportCode() {
+  const json = new TextEncoder().encode(JSON.stringify(save));
+  const bytes = await pipe(json, new CompressionStream('gzip'));
+  let bin = '';
+  bytes.forEach((b) => (bin += String.fromCharCode(b)));
+  return CODE + btoa(bin);
+}
+// Devuelve el perfil que trae el código, o null si el código no sirve.
+export async function readCode(text) {
+  try {
+    const raw = text.replace(/\s+/g, '');
+    if (!raw.startsWith(CODE)) return null;
+    const bytes = Uint8Array.from(atob(raw.slice(CODE.length)), (c) => c.charCodeAt(0));
+    const p = JSON.parse(new TextDecoder().decode(await pipe(bytes, new DecompressionStream('gzip'))));
+    return p && typeof p === 'object' && typeof p.next === 'number' && typeof p.stars === 'object' ? p : null;
+  } catch {
+    return null;
+  }
+}
+// Reemplaza el avance del jugador por el del código (ya leído con readCode).
+export function loadProfile(p) {
+  root.profiles[root.active] = { ...fresh(p.name || 'Jugador 1'), ...p };
+  swapTo(root.active);
+}
+
 // Copia del jugador antes de que el modo dev toque su avance; "Volver a mi partida" la regresa.
 const BACKUP = 'solitario-mundos-respaldo-dev';
 export const hasBackup = () => !!localStorage.getItem(BACKUP);

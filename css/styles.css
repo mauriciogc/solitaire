@@ -13,6 +13,8 @@
   --spring: cubic-bezier(0.34, 1.45, 0.64, 1);
   --press: 120ms var(--ease-out);
   --sl: env(safe-area-inset-left, 0px); --sr: env(safe-area-inset-right, 0px); --st: env(safe-area-inset-top, 0px); --sb: env(safe-area-inset-bottom, 0px);
+  /* Orillas solo del lado de la cámara (las pone main.js): iPhone acostado reserva lo mismo en los dos lados aunque el notch esté en uno. */
+  --cl: var(--sl); --cr: var(--sr);
   /* Escala de la interfaz según el lado corto (la calcula main.js): proporcional en teléfono y sin agrandarse de más en PC. */
   --k: 1;
   font-family: 'Baloo 2', ui-rounded, system-ui, sans-serif;
@@ -178,7 +180,7 @@ button:disabled { cursor: default; }
 /* Los reversos (--back-gift, --back-wild) los pone main.js con los dibujos de art.js: se ven de la misma baraja. */
 .card.gift-card .back, .prize.gift-card { background: var(--back-gift) center / 100% 100%; }
 .card.gift-wild .back, .prize.gift-wild { background: var(--back-wild) center / 100% 100%; }
-.board-wrap { flex: 1; min-height: 0; position: relative; display: flex; align-items: center; justify-content: center; margin: 0 calc(8px + var(--sr)) 4px calc(8px + var(--sl)); }
+.board-wrap { flex: 1; min-height: 0; position: relative; display: flex; align-items: center; justify-content: center; margin: 0 calc(8px + var(--cr)) 4px calc(8px + var(--cl)); }
 .board { position: relative; }
 .streak { position: absolute; top: 4px; left: 50%; translate: -50% 0; pointer-events: none; z-index: 10000; font-family: 'Lilita One'; font-size: calc(24px * var(--k)); opacity: 0; white-space: nowrap; }
 .streak { color: #fff; text-shadow: 2px 0 0 var(--ink), -2px 0 0 var(--ink), 0 2px 0 var(--ink), 0 -2px 0 var(--ink), 0 4px 0 var(--ink); }
@@ -212,6 +214,18 @@ button:disabled { cursor: default; }
 .end-btn:active { translate: 0 3px; }
 .no-moves .end-btn { display: flex; }
 @media (max-aspect-ratio: 1/1) { .end-btn { left: 50%; translate: -50% 0; bottom: calc(var(--cw) * 1.4 + 34px + var(--sb)); } .end-btn:active { translate: -50% 3px; } }
+/* Teléfono acostado: el alto es lo que falta. La bandeja pasa a una columna a la derecha y el tablero se queda con todo el alto. */
+@media (orientation: landscape) and (max-height: 500px) {
+  .game { display: grid; grid-template: auto minmax(0, 1fr) / minmax(0, 1fr) auto; }
+  .game .hud { grid-column: 1 / -1; }
+  .game .board-wrap { grid-area: 2 / 1; margin: 0 4px calc(6px + var(--sb)) calc(4px + var(--cl)); }
+  .game .tray { grid-area: 2 / 2; display: grid; grid-template-areas: 'stock stock' 'waste wild' 'undo undo'; place-content: center; place-items: center; gap: calc(12px * var(--k)) calc(14px * var(--k)); padding: 0 calc(10px + var(--cr)) calc(8px + var(--sb)) 0; }
+  .game .stock { grid-area: stock; }
+  .game .waste { grid-area: waste; }
+  .game .wild-card { grid-area: wild; margin: 0; }
+  .game .undo-btn { grid-area: undo; margin: 0; }
+  .game .prop.tr, .game .prop.br { display: none; } /* la columna ocupa su lugar */
+}
 .empty-slot { position: absolute; inset: 0 0 0 auto; width: var(--cw); border: 2.5px dashed #fff9; border-radius: calc(var(--cw) * 0.14); display: grid; place-items: center; font: 400 20px 'Lilita One'; color: #fff; }
 
 /* ---------- Cartas ---------- */
@@ -457,6 +471,15 @@ button:disabled { cursor: default; }
 .stamp b { font: 400 21px/1 'Lilita One'; }
 .stamp small { font-size: 9.5px; font-weight: 900; line-height: 1; text-transform: uppercase; }
 .boss-win .postcard { margin-right: 34px; }
+.boss-win .postcard:has(.seal-secret) + .lead { margin-top: 20px; }
+/* Sello secreto: morado con estrella, junto al sello de estrellas (nivel secreto con 3 estrellas). */
+.seal-secret { position: absolute; right: 58px; bottom: -14px; z-index: 1; width: 52px; height: 52px; border-radius: 50%; display: grid; place-content: center; justify-items: center; rotate: -10deg;
+  background: #8a5cf0; border: 2.5px dashed #fff; box-shadow: 0 0 0 2.5px #8a5cf0, 0 0 0 5px var(--ink), 0 3px 0 4px var(--ink); color: #fff; }
+.seal-secret .ico { width: 22px; height: 22px; margin-top: 2px; }
+.seal-secret small { font-size: 7.5px; font-weight: 900; line-height: 1; text-transform: uppercase; letter-spacing: .04em; }
+.pv-info .seal-secret { right: 70px; bottom: auto; top: 4px; }
+.pv-info:has(.seal-secret) { padding-right: 130px; }
+.pv-info .seal-secret small { display: block; color: #fff; font-size: 7.5px; }
 .chest-row { display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 6px; min-height: 104px; }
 .chest { position: relative; width: 100px; height: 100px; flex: none; }
 .chest::before { content: ''; position: absolute; inset: -40px; border-radius: 50%; opacity: 0; scale: 0.4; transition: opacity 300ms, scale 500ms var(--spring);
@@ -527,8 +550,13 @@ button:disabled { cursor: default; }
   .pv-3d { height: max(150px, min(calc(100dvh - 250px), 300px)); }
   .pv-info { padding: 70px 4px 4px; }
   .pv-info .stamp { right: auto; left: 4px; top: -8px; }
+  .pv-info .seal-secret { right: auto; left: 78px; top: 4px; }
+  .pv-info:has(.seal-secret) { padding-right: 4px; }
 }
 .postcard.mini { margin: 10px 14px 4px 4px; }
+.postcard.mini .seal-secret { width: 38px; height: 38px; right: 42px; bottom: -11px; }
+.postcard.mini .seal-secret small { font-size: 6px; }
+.postcard.mini .seal-secret .ico { width: 16px; height: 16px; }
 .postcard.mini .pc-art { width: 64px; height: 52px; }
 .postcard.mini .pc-planet { width: 42px; height: 42px; }
 .postcard.mini .pc-txt b { font-size: 16px; }
@@ -563,6 +591,8 @@ button:disabled { cursor: default; }
 .avatar.big { width: calc(52px * var(--k)); height: calc(52px * var(--k)); font-size: calc(26px * var(--k)); }
 .avatar.huge { width: 104px; height: 104px; font-size: 52px; border-width: 4px; }
 .text-in { width: 100%; margin-top: 12px; padding: 12px 14px; border-radius: 14px; border: 2.5px solid var(--ink); background: #fff; font: 700 17px 'Baloo 2'; color: var(--ink); box-shadow: inset 0 3px 0 #0001; }
+/* Código de respaldo: se puede seleccionar y pegar (el resto de la ventana no). 16px para que iPhone no acerque la pantalla. */
+.code-in { display: block; resize: none; font: 600 16px/1.3 ui-monospace, Menlo, monospace; word-break: break-all; user-select: text; -webkit-user-select: text; }
 .avatar-preview { display: grid; place-items: center; }
 .avatar-pick { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 12px; }
 .avatar-pick button { width: 34px; height: 34px; border-radius: 50%; border: 2.5px solid var(--ink); box-shadow: inset 0 -4px 0 #0002; }
