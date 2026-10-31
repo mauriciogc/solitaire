@@ -28,7 +28,8 @@ document.documentElement.style.setProperty('--back-wild', cardBackURL('comodin')
 // Escala de la interfaz según el lado corto de la pantalla (390 = alto de un teléfono acostado).
 const setScale = () => document.documentElement.style.setProperty('--k', Math.max(0.85, Math.min(1.3, Math.min(innerWidth, innerHeight) / 390)).toFixed(3));
 setScale();
-addEventListener('resize', setScale);
+// Se mide la página ya reacomodada (en iOS, al girar, el aviso de la ventana llega con el tamaño viejo).
+new ResizeObserver(setScale).observe(document.documentElement);
 
 const app = document.getElementById('app');
 let game = null;
@@ -1254,13 +1255,32 @@ function openSettings(then) {
     body: `<div class="rows">
       <button class="row" data-a="help">${icon('help')}<b>Cómo jugar</b>${icon('chev')}</button>
       ${game ? '' : `<button class="row" data-a="profile">${avatarHTML(save)}<b>Perfil</b>${icon('chev')}</button>`}
+      ${installPrompt ? `<button class="row" data-a="install"><img class="ico app-ico" src="icon.svg" alt=""><b>Instalar app<span>Pantalla completa y sin conexión</span></b>${icon('chev')}</button>` : ''}
     </div>`,
   });
   m.el.addEventListener('click', (e) => {
     const a = e.target.closest('[data-a]')?.dataset.a;
     if (a === 'help') { m.el.remove(); openHelp('basico', () => openSettings(then)); }
     if (a === 'profile') { m.el.remove(); openProfile(); }
+    if (a === 'install') installApp().then((ok) => ok && m.el.remove());
   });
+}
+
+// ---------- Instalar como app ----------
+// Chrome (Android y escritorio) avisa cuando se puede instalar; se guarda el aviso y la opción sale en Ajustes.
+// En iPhone no existe: se instala desde Compartir → Agregar a inicio.
+let installPrompt = null;
+addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  installPrompt = e;
+});
+addEventListener('appinstalled', () => (installPrompt = null));
+async function installApp() {
+  if (!installPrompt) return false;
+  installPrompt.prompt();
+  const { outcome } = await installPrompt.userChoice;
+  installPrompt = null;
+  return outcome === 'accepted';
 }
 
 // ---------- Ayuda ----------

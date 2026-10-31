@@ -115,6 +115,8 @@ button:disabled { cursor: default; }
 .galaxy .region .rname { padding: 2px 10px 4px; border-radius: 14px; }
 .galaxy .region .rname:active { scale: .96; }
 .galaxy .cta { position: absolute; right: calc(14px + var(--sr)); bottom: calc(14px + var(--sb)); }
+/* Acostado no cabe debajo de la columna de botones (se enciman con el engrane): va a su izquierda. */
+@media (min-aspect-ratio: 1/1) { .galaxy .cta { right: calc(22px + 46px * var(--k) + var(--sr)); } }
 .dev-pill { position: absolute; left: calc(10px + var(--sl)); bottom: calc(14px + var(--sb)); padding: 6px 10px; border-radius: 10px; background: #ff3d7f; color: #fff; font-weight: 900; font-size: 13px; letter-spacing: .05em; border: 2px solid var(--ink); }
 .g-only, .p-only { transition: opacity 260ms ease; }
 .zoomed .g-only { opacity: 0; pointer-events: none; }
@@ -394,6 +396,7 @@ button:disabled { cursor: default; }
 .row em { font: 400 18px 'Lilita One'; font-style: normal; color: #c22c49; }
 .row.ok { background: #e4f6e9; border-color: #a8dcb8; }
 .row .avatar { width: 34px; height: 34px; font-size: 17px; }
+.row > .app-ico { border-radius: 9px; border: 2px solid var(--ink); }
 .sw { width: 58px; height: 34px; flex: none; border-radius: 17px; border: 2.5px solid var(--ink); background: #d9cdb6; position: relative; box-shadow: inset 0 3px 0 #0001; }
 .sw::after { content: ''; position: absolute; top: 2px; left: 2px; width: 25px; height: 25px; border-radius: 50%; background: var(--cream); border: 2.5px solid var(--ink); transition: left 180ms var(--spring); }
 .sw[aria-checked="true"] { background: #5ad68c; }

@@ -673,12 +673,15 @@ export class Galaxy {
     this.onResize = () => {
       const W = this.host.clientWidth, H = this.host.clientHeight;
       if (!W || !H) return;
-      if (W / H < 1 !== this.port) return this.on.relayout?.();
+      if (W / H < 1 !== this.port) return requestAnimationFrame(() => !this.dead && this.on.relayout?.());
       this.renderer.setSize(W, H, false);
       this.fit(W, H);
       if (this.sel && this.mode === 'planet' && !this.anim) { const p = this.sel.holder; p.position.set(this.camera.position.x + this.zoom.x, this.camera.position.y + this.zoom.y, 0); p.scale.setScalar(this.zoom.s); }
     };
-    addEventListener('resize', this.onResize);
+    // Se mide el propio mapa (no la ventana): al girar el teléfono, iOS avisa del cambio antes de
+    // reacomodar la página y el tamaño leído aún era el viejo, así que el dibujo quedaba estirado.
+    this.ro = new ResizeObserver(this.onResize);
+    this.ro.observe(this.host);
   }
 
   frame(now) {
@@ -731,7 +734,7 @@ export class Galaxy {
     this.dead = true;
     cancelAnimationFrame(this.raf);
     document.removeEventListener('visibilitychange', this.onVis);
-    removeEventListener('resize', this.onResize);
+    this.ro.disconnect();
     this.scene.traverse((o) => { o.geometry?.dispose(); [].concat(o.material || []).forEach((m) => { m.map?.dispose(); m.dispose(); }); });
     this.renderer.dispose();
     this.renderer.forceContextLoss();
@@ -1036,11 +1039,14 @@ export class Universe {
     this.onResize = () => {
       const W = this.host.clientWidth, H = this.host.clientHeight;
       if (!W || !H) return;
-      if (W / H < 1 !== this.port) return this.on.relayout?.();
+      if (W / H < 1 !== this.port) return requestAnimationFrame(() => !this.dead && this.on.relayout?.());
       this.renderer.setSize(W, H, false);
       this.fit(W, H);
     };
-    addEventListener('resize', this.onResize);
+    // Se mide el propio mapa (no la ventana): al girar el teléfono, iOS avisa del cambio antes de
+    // reacomodar la página y el tamaño leído aún era el viejo, así que el dibujo quedaba estirado.
+    this.ro = new ResizeObserver(this.onResize);
+    this.ro.observe(this.host);
   }
   frame(now) {
     if (this.dead) return;
@@ -1069,7 +1075,7 @@ export class Universe {
   dispose() {
     this.dead = true;
     cancelAnimationFrame(this.raf);
-    removeEventListener('resize', this.onResize);
+    this.ro.disconnect();
     this.scene.traverse((o) => { o.geometry?.dispose(); [].concat(o.material || []).forEach((m) => m.dispose()); });
     this.renderer.dispose();
     this.renderer.forceContextLoss();

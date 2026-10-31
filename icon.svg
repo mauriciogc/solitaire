@@ -1,12 +1,38 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="110" fill="#2b3486"/>
-  <g transform="rotate(-12 256 256)">
-    <rect x="120" y="120" width="190" height="266" rx="24" fill="#5b8cff" stroke="#fff" stroke-width="12"/>
+  <!-- Ícono de la app: el planeta del logo (pantalla de carga) sobre el fondo de la carga.
+       Sin esquinas redondas: cada sistema recorta el suyo. El planeta cabe en la zona segura (80% del centro). -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2=".35" y2="1">
+      <stop offset="0" stop-color="#17143f" />
+      <stop offset="1" stop-color="#352372" />
+    </linearGradient>
+    <radialGradient id="glow" cx=".5" cy=".5" r=".5">
+      <stop offset="0" stop-color="#6b4bd0" stop-opacity=".55" />
+      <stop offset="1" stop-color="#6b4bd0" stop-opacity="0" />
+    </radialGradient>
+    <clipPath id="clip"><circle cx="60" cy="60" r="31" /></clipPath>
+  </defs>
+  <rect width="512" height="512" fill="url(#bg)" />
+  <circle cx="256" cy="256" r="230" fill="url(#glow)" />
+  <g fill="#fff6e6">
+    <circle cx="92" cy="104" r="5" /><circle cx="418" cy="86" r="4" /><circle cx="440" cy="400" r="5" /><circle cx="78" cy="410" r="3.5" />
   </g>
-  <g transform="rotate(10 256 256)">
-    <rect x="190" y="110" width="190" height="266" rx="24" fill="#fff"/>
-    <text x="214" y="190" font-family="Arial, sans-serif" font-weight="900" font-size="80" fill="#e0263a">A</text>
-    <text x="300" y="350" font-family="Arial, sans-serif" font-size="110" fill="#e0263a">♥</text>
+  <g transform="translate(256 256) scale(3.55) translate(-60 -60)">
+    <g transform="rotate(-16 60 60)">
+      <path d="M8 60a52 15 0 0 1 104 0" fill="none" stroke="#2a1f5c" stroke-width="11" stroke-linecap="round" />
+      <path d="M8 60a52 15 0 0 1 104 0" fill="none" stroke="#c9a6ff" stroke-width="5.5" stroke-linecap="round" />
+    </g>
+    <circle cx="60" cy="60" r="34" fill="#5fe0c8" stroke="#2a1f5c" stroke-width="6" />
+    <g clip-path="url(#clip)">
+      <path d="M0 44q15-6 30 0t30 0t30 0t30 0V53H0z" fill="#ff7aa2" />
+      <path d="M0 68q15 5 30 0t30 0t30 0t30 0V75H0z" fill="#ffe58a" />
+      <circle cx="40" cy="61" r="3" fill="#2fb6a0" /><circle cx="70" cy="58" r="2.4" fill="#2fb6a0" />
+      <path d="M26 60a34 34 0 1 0 68 0a34 34 0 1 0-68 0zM21 55a34 34 0 1 0 68 0a34 34 0 1 0-68 0z" fill="#1c6f8f" fill-rule="evenodd" opacity=".35" />
+      <ellipse cx="46" cy="42" rx="8" ry="4.5" fill="#fff" opacity=".55" transform="rotate(-35 46 42)" />
+    </g>
+    <g transform="rotate(-16 60 60)">
+      <path d="M8 60a52 15 0 0 0 104 0" fill="none" stroke="#2a1f5c" stroke-width="11" stroke-linecap="round" />
+      <path d="M8 60a52 15 0 0 0 104 0" fill="none" stroke="#c9a6ff" stroke-width="5.5" stroke-linecap="round" />
+    </g>
   </g>
-  <text x="400" y="140" font-size="90" fill="#ffc83d">★</text>
 </svg>
