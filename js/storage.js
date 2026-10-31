@@ -5,7 +5,7 @@
 const KEY = 'solitario-mundos-v2';
 const OLD_KEY = 'solitario-mundos-v1';
 
-export const START = { coins: 300, wild: 3, undo: 5, tickets: 10 };
+export const START = { coins: 300, wild: 3, undo: 5, tickets: 5 };
 
 const fresh = (name, avatar = 0) => ({
   name,
@@ -23,6 +23,10 @@ const fresh = (name, avatar = 0) => ({
   seen: {}, // mecánicas que ya se le explicaron
   secret: {}, // mundo -> mejores estrellas en su nivel secreto
   secretSeen: {}, // mundos cuyo nivel secreto ya se mostró (la revelación se anima una sola vez)
+  look: 'letter', // avatar: 'letter' = su inicial · 'char' = un personaje (char)
+  char: 'nino', // Nico y Lila son gratis
+  owned: {}, // tienda: 'seccion:clave' -> 1 (ver shop.js)
+  equip: {}, // tienda: seccion -> clave que usa
 });
 
 function load() {
@@ -47,6 +51,8 @@ const root = load();
 root.prefs ||= {};
 // Guardados de antes del boleto dorado: el mundo en el que ya estaba queda abierto.
 for (const p of Object.values(root.profiles)) if (p.open == null) p.open = Math.floor((p.next || 0) / 10);
+// Astro era gratis antes de Nico y Lila: quien ya lo usaba se lo queda.
+for (const p of Object.values(root.profiles)) if (p.look === 'char' && p.char === 'astro') (p.owned ||= {})['avatar:astro'] = 1;
 
 // Preferencias del dispositivo (no del jugador): modo dev.
 export const prefs = root.prefs;
@@ -70,17 +76,21 @@ function swapTo(id) {
   persist();
 }
 
-// Borra todo el avance del jugador, conserva nombre y avatar.
+// Borra todo el avance del jugador (también lo comprado), conserva nombre y avatar.
 export function resetProfile() {
-  const { name, avatar, named } = save;
-  root.profiles[root.active] = { ...fresh(name, avatar), named };
+  const { name, avatar, named, look } = save;
+  // Un personaje gratis (Nico o Lila) se conserva; uno comprado se pierde y vuelve a la inicial.
+  const free = look === 'char' && ['nino', 'nina'].includes(save.char);
+  root.profiles[root.active] = { ...fresh(name, avatar), named, ...(free ? { look, char: save.char } : {}) };
   swapTo(root.active);
 }
 
-export function renameProfile(name, avatar) {
+// look: { look, char } del avatar (opcional).
+export function renameProfile(name, avatar, look) {
   save.name = name;
   save.named = true;
   if (avatar != null) save.avatar = avatar;
+  if (look) Object.assign(save, look);
   persist();
 }
 

@@ -3,7 +3,7 @@ import { openModal, toast, confetti, updateCoins, starsHTML, reduced, buzz, spar
 import { worldInfo, packGroups, MECH_NAMES, LEVELS_PER_WORLD } from './levels.js';
 import * as E from './engine.js';
 import { price } from './economy.js';
-import { cardBackURL, icon, star, coin, lockIcon, keyIcon, arrowIcon, curtainIcon, suitSVG } from './art.js';
+import { cardBackURL, icon, star, coin, lockIcon, keyIcon, arrowIcon, curtainIcon, suitSVG, avatarHTML } from './art.js';
 import { tableHTML } from './biomes.js';
 import { Coach } from './coach.js';
 
@@ -216,7 +216,7 @@ export class Game {
       <header class="hud">
         <button class="tb hbtn" data-a="exit" aria-label="Pausa" title="Pausa">${icon('pause')}</button>
         <div class="hud-mid"><div class="combo tb"></div></div>
-        <div class="pill tb">${coin()}<span data-coins>${save.coins.toLocaleString('es-MX')}</span></div>
+        <div class="hud-r"><div class="pill tb">${coin()}<span data-coins>${save.coins.toLocaleString('es-MX')}</span></div>${avatarHTML(save, 'hud-av')}</div>
       </header>
       <div class="board-wrap"><div class="board"></div><div class="streak"></div></div>
       <footer class="tray">
@@ -1228,7 +1228,7 @@ export class Game {
         title: '¿Abandonar el nivel?',
         color: 'pink',
         onClose: free,
-        body: `<p class="lead">${this.opts.free ? 'Se pierde este intento.' : 'Pierdes el boleto y lo que gastaste en este intento.'}</p>`,
+        body: `<p class="lead">${this.opts.free ? 'Se pierde este intento.' : 'Pierdes los boletos y lo que gastaste en este intento.'}</p>`,
         buttons: [{ label: 'Seguir jugando', cls: 'ghost' }, { label: 'Abandonar', cls: 'pink', onClick: () => this.opts.onAbandon() }],
       });
     if (!this.opts.saved && !this.history.length && !this.opts.dev) return free(), this.opts.onAbandon();

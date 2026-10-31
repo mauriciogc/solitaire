@@ -6,11 +6,14 @@ export const TICKET_PRICE = 40; // monedas por boleto
 // (1, 2 o 3 boletos por nivel).
 const TIERS = { wild: [250, 350, 450], undo: [50, 75, 100], extra: [100, 150, 200] };
 
-// Boletos para entrar a un nivel: suben con el avance, con tope de 3.
+// Boletos para entrar a un nivel: por tercios del universo (52 constelaciones de 10 mundos):
+// constelaciones 1-17 → 1 boleto, 18-35 → 2, 36-52 → 3. Ganar el nivel por primera vez los devuelve
+// (ticketRefund): solo se pierden al perder o abandonar.
 export function ticketCost(g) {
-  const w = Math.floor(g / LEVELS_PER_WORLD);
-  return w < 5 ? 1 : w < 20 ? 2 : 3;
+  const r = Math.floor(g / LEVELS_PER_WORLD / 10);
+  return r < 17 ? 1 : r < 35 ? 2 : 3;
 }
+export const ticketRefund = ticketCost;
 
 // Monedas que vale un nivel con 3 estrellas. Sube con la dificultad; los jefes dan +50%.
 export function levelReward(g) {

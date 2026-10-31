@@ -2,7 +2,8 @@
 // y el camino de 10 niveles aparece sobre el mismo planeta.
 import * as THREE from 'three';
 import { BIOMES, LOCKED, biomeKey } from './biomes.js';
-import { INK, AVATAR_COLORS, icon, star } from './art.js';
+import { INK, icon, star } from './art.js';
+import { makeTraveler } from './travelers.js';
 
 const K = INK;
 const TAU = Math.PI * 2;
@@ -33,6 +34,8 @@ for (let k = 0; k <= 160; k++) PATH_DIRS.push(spline.getPoint(k / 160).normalize
 const faceAt = (i) => (-LON[i] * Math.PI) / 180 - 0.12;
 const ease = (k) => (k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+// Cómo se ve un viajero: derecho y un poco girado hacia la cámara.
+const UPRIGHT = new THREE.Quaternion().setFromEuler(new THREE.Euler(0.12, -0.35, 0));
 
 // Une vértices repetidos (para normales suaves) sin depender de los ejemplos de Three.
 function merge(g) {
@@ -53,7 +56,7 @@ const texCache = {};
 
 export class Galaxy {
   // worlds: [{ w, state: 'done'|'current'|'gate'|'locked', stars, done, need, pin, levels: [{ kind, stars, paused }], secret: { open, stars, fresh } }]
-  // on: { planet(w), level(w, i), mode(m, w), relayout(), region(±1) } · player: { name, avatar } (marcador)
+  // on: { planet(w), level(w, i), mode(m, w), relayout(), region(±1) } · player: { traveler } (el viajero 3D que marca dónde vas)
   // celebrate: { w, i, kind, stars } = cómo estaba el nivel i ANTES de ganarlo (para animar el avance al volver).
   constructor(host, labelsEl, { worlds, player, on, start = null, celebrate = null }) {
     this.host = host; this.labelsEl = labelsEl; this.worlds = worlds; this.on = on; this.player = player; this.celebrate = celebrate;
@@ -78,6 +81,10 @@ export class Galaxy {
     this.layout();
     this.objs = worlds.map((wd, i) => this.makePlanet(wd, this.spots[i], i));
     this.buildTrail();
+    // Viajero sobre el planeta actual (en la vista de constelación); en el planeta hay otro en el camino.
+    this.trav = makeTraveler(this.player.traveler, this.toon);
+    this.travG = new THREE.Group(); this.travG.add(this.trav.obj); this.travG.visible = false;
+    this.scene.add(this.travG);
     this.mode = 'galaxy'; this.sel = null; this.anim = null; this.look = 0; this.down = null; this.vel = 0; this.tw = [];
     const cur = this.objs.findIndex((o) => o.wd.state === 'current' || o.wd.state === 'gate');
     this.cam = this.camClamp(this.spots[start != null ? Math.max(0, this.objs.findIndex((o) => o.wd.w === start)) : Math.max(0, cur)].u);
@@ -336,18 +343,22 @@ export class Galaxy {
     const s = (l.kind === 'cur' ? 0.25 : 0.2) * (i >= 9 ? 1.1 : 1);
     sp.userData.s = [s, s * 1.4]; sp.userData.kind = l.kind; sp.userData.pop = 1;
   }
+  // El viajero del jugador flota sobre su nivel actual, siempre derecho y de tres cuartos hacia la cámara.
   addAvatar(o, path, i) {
-    const d = NODE_DIRS[i];
-    const av = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.avatarTex(), transparent: true }));
-    av.center.set(0.5, -0.55);
-    av.userData = { s: [0.2, 0.25], avatar: true, dir: d.clone(), hop: 0 };
-    av.scale.set(0.2, 0.25, 1);
-    path.add(av); o.sprites.push(av); o.avatar = av;
+    const t = makeTraveler(this.player.traveler, this.toon), av = new THREE.Group();
+    av.add(t.obj);
+    av.userData = { s: 0.2, dir: NODE_DIRS[i].clone(), hop: 0, tick: t.tick };
+    av.scale.setScalar(0.2);
+    path.add(av); o.avatar = av;
     this.placeAvatar(o);
   }
   placeAvatar(o, bob = 0) {
     const av = o.avatar, u = av.userData;
-    av.position.copy(u.dir).multiplyScalar(this.rAt(o.t, o.seed, u.dir) + 0.08 + u.hop + bob);
+    av.parent.updateWorldMatrix(true, false);
+    const q = av.parent.getWorldQuaternion(new THREE.Quaternion()).invert();
+    const up = new THREE.Vector3(0, 1, 0).applyQuaternion(q);
+    av.position.copy(u.dir).multiplyScalar(this.rAt(o.t, o.seed, u.dir) + 0.06 + u.hop + bob).addScaledVector(up, 0.19);
+    av.quaternion.copy(q).multiply(UPRIGHT);
   }
   // Nivel secreto: un rastro de puntitos desde el castillo hasta una insignia violeta.
   secretNode(o, path, shown) {
@@ -412,21 +423,6 @@ export class Galaxy {
     const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
     return tex;
   }
-  avatarTex() { // marcador con el avatar del jugador (se dibuja aquí para usar la letra del juego)
-    const c = document.createElement('canvas'); c.width = 128; c.height = 160;
-    const g = c.getContext('2d');
-    g.fillStyle = K; g.beginPath(); g.moveTo(46, 112); g.lineTo(64, 148); g.lineTo(82, 112); g.fill();
-    g.fillStyle = AVATAR_COLORS[(this.player.avatar || 0) % AVATAR_COLORS.length];
-    g.beginPath(); g.arc(64, 62, 52, 0, 7); g.fill();
-    g.fillStyle = 'rgba(255,255,255,.16)'; g.beginPath(); g.arc(58, 54, 46, 0, 7); g.fill();
-    g.strokeStyle = K; g.lineWidth = 8; g.beginPath(); g.arc(64, 62, 52, 0, 7); g.stroke();
-    const ch = (this.player.name || '?').trim().charAt(0).toUpperCase() || '?';
-    g.font = '58px "Lilita One"'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineJoin = 'round';
-    g.lineWidth = 11; g.strokeText(ch, 64, 66); g.fillStyle = '#fff'; g.fillText(ch, 64, 66);
-    const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
-    return tex;
-  }
-
   // ---------- etiquetas HTML (siguen a la cámara al recorrer la galaxia) ----------
   proj(x, y, z = 0) {
     const v = new THREE.Vector3(x, y, z).project(this.camera), r = this.host.getBoundingClientRect();
@@ -445,14 +441,7 @@ export class Galaxy {
       return el;
     });
     const cur = this.objs.find((o) => o.wd.state === 'current');
-    this.pin = null;
-    if (cur?.wd.pin) {
-      const el = document.createElement('div');
-      el.className = 'pin';
-      el.innerHTML = cur.wd.pin;
-      this.labelsEl.append(el);
-      this.pin = { el, o: cur, from: null };
-    }
+    this.pin = cur?.wd.pin ? { o: cur, from: null } : null;
     this.placeLabels(performance.now());
   }
   placeLabels(now) {
@@ -463,17 +452,17 @@ export class Galaxy {
       this.labels[i].style.left = `${x}px`;
       this.labels[i].style.top = `${y}px`;
     });
+    // El viajero flota sobre el planeta en el que vas; al abrir un mundo salta al nuevo en arco.
     const pin = this.pin;
     if (pin) {
-      const top = (o) => this.proj(o.holder.position.x, o.holder.position.y + o.holder.scale.x * 1.18);
+      const top = (o) => [o.holder.position.x, o.holder.position.y + o.holder.scale.x * 1.05 + 0.5];
       let [x, y] = top(pin.o);
-      if (pin.from) { // salta de un planeta a otro en arco
+      if (pin.from) {
         const k = clamp((now - pin.t0) / 900, 0, 1), e = ease(k), [fx, fy] = top(pin.from);
-        x = fx + (x - fx) * e; y = fy + (y - fy) * e - Math.sin(k * Math.PI) * 70;
+        x = fx + (x - fx) * e; y = fy + (y - fy) * e + Math.sin(k * Math.PI) * 0.9;
         if (k >= 1) pin.from = null;
       }
-      pin.el.style.left = `${x}px`;
-      pin.el.style.top = `${y}px`;
+      this.travG.position.set(x, y, 0.6);
     }
   }
 
@@ -522,7 +511,8 @@ export class Galaxy {
       o.spin.rotation.y = f.ry + (t.ry - f.ry) * e; o.spin.rotation.x = f.rx + (t.rx - f.rx) * e;
     });
     const sel = this.sel, show = a.dir > 0 ? Math.max(0, (k - 0.55) / 0.45) : Math.max(0, 1 - k / 0.35);
-    if (sel?.path) { sel.path.visible = show > 0; for (const sp of sel.sprites) if (!sp.userData.hidden) sp.scale.set(sp.userData.s[0] * show, sp.userData.s[1] * show, 1); }
+    if (sel?.path) { sel.path.visible = show > 0; for (const sp of sel.sprites) if (!sp.userData.hidden) sp.scale.set(sp.userData.s[0] * show, sp.userData.s[1] * show, 1); sel.avatar?.scale.setScalar(sel.avatar.userData.s * show); }
+    this.pinShow = a.dir > 0 ? Math.max(0, 1 - k / 0.3) : Math.max(0, (k - 0.7) / 0.3);
     const cloudsOn = a.dir < 0 ? k > 0.6 : k < 0.25;
     if (sel?.orbit) sel.orbit.visible = cloudsOn;
     if (sel?.ring) sel.ring.visible = cloudsOn;
@@ -622,13 +612,7 @@ export class Galaxy {
     this.labels[i].animate([{ scale: 0 }, { scale: 1.2, offset: 0.6 }, { scale: 1 }], { duration: 420, easing: 'ease-out' });
     this.buildTrail();
     // El avatar salta desde donde estaba (o desde el planeta anterior) hasta el mundo nuevo.
-    if (!this.pin && wd.pin) {
-      const el = document.createElement('div');
-      el.className = 'pin';
-      el.innerHTML = wd.pin;
-      this.labelsEl.append(el);
-      this.pin = { el, o: this.objs[i - 1] || fresh };
-    }
+    if (!this.pin && wd.pin) this.pin = { o: this.objs[i - 1] || fresh };
     if (this.pin) { this.pin.from = this.pin.o; this.pin.o = fresh; this.pin.t0 = performance.now(); }
     await new Promise((ok) => setTimeout(ok, 950));
   }
@@ -643,7 +627,8 @@ export class Galaxy {
     el.addEventListener('pointerdown', (e) => { this.down = { x: e.clientX, y: e.clientY, lx: e.clientX, ly: e.clientY, t: performance.now() }; this.vel = 0; el.setPointerCapture(e.pointerId); });
     el.addEventListener('pointermove', (e) => {
       const d = this.down;
-      if (!d || this.anim) return;
+      // Durante el recorrido de primera vez no se arrastra ni se gira: solo se toca lo que sigue.
+      if (!d || this.anim || this.guide) return;
       const dx = e.clientX - d.lx, dy = e.clientY - d.ly, dt = Math.max(1, performance.now() - d.t);
       d.lx = e.clientX; d.ly = e.clientY; d.t = performance.now();
       if (this.mode === 'planet') {
@@ -678,7 +663,7 @@ export class Galaxy {
       setTimeout(() => this.zoomTo(o), 140);
     });
     el.addEventListener('wheel', (e) => {
-      if (this.mode !== 'galaxy' || this.anim) return;
+      if (this.mode !== 'galaxy' || this.anim || this.guide) return;
       e.preventDefault();
       this.cam = this.camClamp(this.cam + (Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY) * perPx());
     }, { passive: false });
@@ -726,13 +711,17 @@ export class Galaxy {
       if (this.mode === 'planet' && sel && !this.anim) {
         sel.spin.rotation.y = Math.round((sel.spin.rotation.y - this.look) / TAU) * TAU + this.look + (calm ? 0 : Math.sin(now / 2600) * 0.04);
         for (const sp of sel.sprites) {
-          if (sp.userData.avatar) this.placeAvatar(sel, calm || sp.userData.hop ? 0 : (Math.sin(now / 260) * 0.5 + 0.5) * 0.03);
           if (sp.userData.pop && !sp.userData.hidden) { sp.userData.pop = Math.max(0, sp.userData.pop - dt * 3); const k = 1 + Math.sin(sp.userData.pop * Math.PI) * 0.35; sp.scale.set(sp.userData.s[0] * k, sp.userData.s[1] * k, 1); }
         }
         for (const d of sel.secretDots || []) if (d.userData.pop) { d.userData.pop = Math.max(0, d.userData.pop - dt * 4); d.scale.setScalar(1 + Math.sin(d.userData.pop * Math.PI) * 0.8); }
       }
       if (this.mode === 'galaxy' || this.anim) this.placeLabels(now);
       else this.setCam();
+      // Viajeros: el de la constelación se encoge al hacer zoom; el del camino se acomoda al girar el planeta.
+      const show = this.anim ? this.pinShow ?? 1 : this.mode === 'galaxy' ? 1 : 0;
+      this.travG.visible = !!this.pin && show > 0;
+      if (this.travG.visible) { this.travG.scale.setScalar((this.port ? 0.78 : 0.66) * show); this.trav.tick(now / 1000); }
+      if (sel?.avatar && sel.path?.visible) { this.placeAvatar(sel); sel.avatar.userData.tick(now / 1000); }
       this.renderer.render(this.scene, this.camera);
     }
     this.raf = requestAnimationFrame((t) => this.frame(t));
@@ -832,7 +821,7 @@ for (const k of ['theme', 'hAt', 'rAt', 'planetGeo', 'bandMat', 'glowMat', 'desa
 // regions: [{ r, name, hue, state: 'done'|'current'|'locked', stars, worlds: ['done'|'cur'|'lock' ×10], hues: [10] }]
 // on: { open(r), relayout() } · start: constelación en la que empieza la cámara · fromZoom: entra haciendo zoom hacia atrás.
 export class Universe {
-  constructor(host, labelsEl, { regions, on, start = 0, fromZoom = false, pin = '' }) {
+  constructor(host, labelsEl, { regions, on, start = 0, fromZoom = false, traveler = null }) {
     this.host = host; this.labelsEl = labelsEl; this.regions = regions; this.on = on;
     const W = host.clientWidth, H = host.clientHeight;
     this.port = W / H < 1;
@@ -859,7 +848,12 @@ export class Universe {
     this.spots = regions.map((g, i) => ({ u: i * sp, c: Math.sin(i * 1.15) * (this.port ? 0.7 : 0.9) }));
     this.objs = regions.map((g, i) => this.cluster(g, this.spots[i]));
     this.trail();
-    this.drawLabels(pin);
+    if (traveler) {
+      this.trav = makeTraveler(traveler, this.toon);
+      this.travG = new THREE.Group(); this.travG.add(this.trav.obj); this.travG.quaternion.copy(UPRIGHT);
+      this.scene.add(this.travG);
+    }
+    this.drawLabels();
     this.cam = this.clampCam(this.spots[start]?.u ?? 0);
     this.zoomK = fromZoom && !reduced() ? 0 : 1; // 0 = pegado a la constelación, 1 = vista normal
     this.zoomAt = start;
@@ -953,7 +947,7 @@ export class Universe {
     tube(0, upTo, 0.05, '#ffe7a3', 1);
     tube(upTo, n - 1, 0.035, '#a59be0', 0.7);
   }
-  drawLabels(pin) {
+  drawLabels() {
     this.labelsEl.innerHTML = '';
     this.labels = this.objs.map(({ reg }) => {
       const el = document.createElement('div');
@@ -963,14 +957,8 @@ export class Universe {
       return el;
     });
     const cur = this.objs.find((o) => o.reg.state === 'current');
-    this.pin = null;
-    if (cur && pin) {
-      const el = document.createElement('div');
-      el.className = 'pin';
-      el.innerHTML = pin;
-      this.labelsEl.append(el);
-      this.pin = { el, o: cur };
-    }
+    this.pin = cur && this.travG ? { o: cur } : null;
+    if (this.travG) this.travG.visible = !!this.pin;
   }
   proj(x, y, z = 0) {
     const v = new THREE.Vector3(x, y, z).project(this.camera), r = this.host.getBoundingClientRect();
@@ -993,9 +981,10 @@ export class Universe {
       this.labels[i].style.top = `${y}px`;
     });
     if (this.pin) {
-      const p = this.pin.o.g.position, [x, y] = this.port ? this.proj(p.x - 1.25, p.y + 0.5) : this.proj(p.x, p.y + 1.25);
-      this.pin.el.style.left = `${x}px`;
-      this.pin.el.style.top = `${y}px`;
+      const p = this.pin.o.g.position;
+      if (this.port) this.travG.position.set(p.x - 1.3, p.y + 0.9, 0.5); else this.travG.position.set(p.x, p.y + 1.65, 0.5);
+      this.travG.scale.setScalar(0.85 * Math.max(0.0001, fade));
+      this.trav.tick(performance.now() / 1000);
     }
   }
   tween(dur, fn) {
@@ -1018,7 +1007,7 @@ export class Universe {
     el.addEventListener('pointerdown', (e) => { this.down = { x: e.clientX, y: e.clientY, lx: e.clientX, ly: e.clientY, t: performance.now() }; this.vel = 0; el.setPointerCapture(e.pointerId); });
     el.addEventListener('pointermove', (e) => {
       const d = this.down;
-      if (!d || this.busy) return;
+      if (!d || this.busy || this.guide) return;
       const dx = e.clientX - d.lx, dy = e.clientY - d.ly, dt = Math.max(1, performance.now() - d.t);
       d.lx = e.clientX; d.ly = e.clientY; d.t = performance.now();
       const du = (this.port ? -dy : -dx) * perPx();
@@ -1040,7 +1029,7 @@ export class Universe {
       this.on.open?.(i);
     });
     el.addEventListener('wheel', (e) => {
-      if (this.busy) return;
+      if (this.busy || this.guide) return;
       e.preventDefault();
       this.cam = this.clampCam(this.cam + (Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY) * perPx());
     }, { passive: false });
