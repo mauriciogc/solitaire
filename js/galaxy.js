@@ -120,13 +120,13 @@ export class Galaxy {
     delete this.spots_prev;
   }
   // Coordenadas 3D de un punto del recorrido (u = a lo largo, c = de lado).
-  at(u, c) { return this.port ? [c - 0.4, -u + 0.35] : [u, c - 0.25]; }  // en vertical la columna va a la izquierda: a la derecha están los botones
+  at(u, c) { return this.port ? [c + 0.4, -u + 0.35] : [u, c - 0.25]; }  // en vertical la columna va a la derecha: a la izquierda están los botones
   half() { return this.port ? this.hh : this.hw; }
   // Hasta dónde se puede recorrer: el primer y el último planeta quedan dentro de la pantalla
   // (en vertical, debajo del título y arriba del botón de jugar).
   camClamp(u) {
     const a = this.spots[0].u, b = this.spots.at(-1).u, H = this.half();
-    // Márgenes: arriba/izquierda el título; abajo el botón de jugar; a la derecha la columna de botones.
+    // Márgenes: arriba/izquierda el título; abajo el botón de jugar; a la izquierda la columna de botones.
     const lo = a + (this.port ? H * 0.42 : H * 0.6), hi = b - (this.port ? H * 0.3 : H * 0.42);
     return lo > hi ? (a + b) / 2 : clamp(u, lo, hi);
   }

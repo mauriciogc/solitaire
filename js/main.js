@@ -46,17 +46,8 @@ const setSafe = () => {
   s.setProperty('--cr', both && a === 90 ? '14px' : 'var(--sr)');
 };
 setSafe();
-// App agregada a inicio en iPhone: después de girar, iOS da un alto de ventana más corto (le resta la barra de estado)
-// y queda una franja vacía abajo. Se usa el alto real de la pantalla (screen siempre viene en vertical).
-const setAppH = () => {
-  if (!navigator.standalone) return;
-  const land = innerWidth > innerHeight;
-  const h = land ? Math.min(screen.width, screen.height) : Math.max(screen.width, screen.height);
-  document.documentElement.style.setProperty('--app-h', `${h}px`);
-};
-setAppH();
-new ResizeObserver(() => (setScale(), setSafe(), setAppH())).observe(document.documentElement);
-addEventListener('orientationchange', () => setTimeout(() => (setSafe(), setAppH()), 300));
+new ResizeObserver(() => (setScale(), setSafe())).observe(document.documentElement);
+addEventListener('orientationchange', () => setTimeout(setSafe, 300));
 
 const app = document.getElementById('app');
 let game = null;
@@ -177,7 +168,7 @@ function showMap({ region, start = null, anim, after = null, unlock = null } = {
       <div class="wtitle tb">${constIcon()}<div><b>${locked ? icon('lock') : ''}${regionName(region)}</b><small>Constelación ${region + 1} de ${REGION_COUNT} · ${star(true)}${regionStars(region)}/${REGION_SIZE * 30}</small></div></div>
       <button class="dev-pill" data-a="dev">DEV</button>
     </div>
-    <div class="side r">${sideButtons()}</div>
+    <div class="side l">${sideButtons()}</div>
     <div class="p-only phud"></div>
     <div class="res">${wallet()}</div>
     <div class="cta"></div>
@@ -389,7 +380,7 @@ function showUniverse({ from = regionOf(currentWorld()) } = {}) {
   const el = h(`<div class="screen galaxy universe">
     <div class="space"></div><div class="g3d"></div><div class="glabels"></div>
     <div class="wtitle solo tb">${constIcon()}<div><b>Constelaciones</b><small>${REGION_COUNT} en el universo · ${star(true)}${fmt(totalStars())}</small></div></div>
-    <div class="side r">${sideButtons()}</div>
+    <div class="side l">${sideButtons()}</div>
     <button class="dev-pill" data-a="dev">DEV</button>
     <div class="res">${wallet()}</div>
     <div class="cta">${playCTA()}</div>
@@ -1332,7 +1323,50 @@ function openSettings(then) {
     if (a === 'backup') { m.el.remove(); openBackup(() => openSettings(then)); }
     if (a === 'install') installApp().then((ok) => ok && m.el.remove());
   });
+  // Escondido: 5 toques al título prenden o apagan las medidas de pantalla (para revisar el iPhone, aun con la app instalada).
+  let taps = 0;
+  m.el.querySelector('.mhead h2').addEventListener('click', () => {
+    if (++taps < 5) return;
+    taps = 0;
+    prefs.screenInfo = !prefs.screenInfo;
+    persist();
+    screenInfo();
+    toast(prefs.screenInfo ? 'Medidas de pantalla: sí' : 'Medidas de pantalla: no');
+  });
 }
+
+// ---------- Medidas de pantalla (diagnóstico) ----------
+// Borde rojo = el área que el juego cree que tiene; el texto, lo que dice el navegador. Sirve para ver qué hace iOS.
+function screenInfo() {
+  document.getElementById('screen-info')?.remove();
+  if (!prefs.screenInfo) return;
+  const box = document.createElement('div');
+  box.id = 'screen-info';
+  box.innerHTML = '<pre></pre>';
+  document.body.append(box);
+  const probe = document.createElement('div');
+  probe.style.cssText = 'position:fixed;visibility:hidden;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)';
+  box.append(probe);
+  const paint = () => {
+    if (!box.isConnected) return;
+    const cs = getComputedStyle(probe), vv = visualViewport, app = document.getElementById('app').getBoundingClientRect();
+    const px = (v) => Math.round(parseFloat(v));
+    const mode = ['fullscreen', 'standalone', 'minimal-ui', 'browser'].find((d) => matchMedia(`(display-mode: ${d})`).matches);
+    box.querySelector('pre').textContent = [
+      `ventana   ${innerWidth} × ${innerHeight}`,
+      `pantalla  ${screen.width} × ${screen.height}`,
+      `visible   ${vv ? `${Math.round(vv.width)} × ${Math.round(vv.height)} (arriba ${Math.round(vv.offsetTop)})` : '—'}`,
+      `#app      ${Math.round(app.width)} × ${Math.round(app.height)} (y ${Math.round(app.top)})`,
+      `orillas   ↑${px(cs.paddingTop)} →${px(cs.paddingRight)} ↓${px(cs.paddingBottom)} ←${px(cs.paddingLeft)}`,
+      `modo      ${mode} · instalada ${navigator.standalone ? 'sí' : 'no'} · giro ${window.orientation ?? screen.orientation?.angle}`,
+    ].join('\n');
+  };
+  paint();
+  new ResizeObserver(paint).observe(document.documentElement);
+  visualViewport?.addEventListener('resize', paint);
+  addEventListener('orientationchange', () => setTimeout(paint, 400));
+}
+screenInfo();
 
 // ---------- Respaldo con código ----------
 // El avance vive en este navegador: si se borra la app (o Safari lo limpia) se pierde. Con el código se recupera.

@@ -29,9 +29,6 @@ button, [role='button'] { font: inherit; color: inherit; border: 0; background: 
 button:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
 button:disabled { cursor: default; }
 #app { position: fixed; inset: 0; overflow: hidden; }
-/* Instalada en iPhone, tras girar, iOS mide la ventana sin la barra de estado y queda una franja abajo:
-   main.js pone --app-h con el alto real de la pantalla. La bandeja se aparta de la barra de inicio con --sb. */
-#app { height: var(--app-h, auto); }
 .screen { position: absolute; inset: 0; display: flex; flex-direction: column; isolation: isolate; overflow: hidden; }
 .ico { display: inline-block; width: 1.3em; height: 1.3em; vertical-align: -0.28em; flex: none; overflow: visible; }
 .outl { color: #fff; text-shadow: 2px 0 0 var(--ink), -2px 0 0 var(--ink), 0 2px 0 var(--ink), 0 -2px 0 var(--ink), 1.5px 1.5px 0 var(--ink), -1.5px 1.5px 0 var(--ink), 1.5px -1.5px 0 var(--ink), -1.5px -1.5px 0 var(--ink), 0 3.5px 0 var(--ink); }
@@ -102,7 +99,7 @@ button:disabled { cursor: default; }
 .region .arr:disabled { opacity: .4; }
 .galaxy .res { position: absolute; top: calc(10px + var(--st)); right: calc(10px + var(--sr)); display: flex; gap: 6px; }
 .galaxy .side { position: absolute; top: 50%; translate: 0 -50%; display: flex; flex-direction: column; gap: calc(10px * var(--k)); }
-.galaxy .side.r { right: calc(10px + var(--sr)); }
+.galaxy .side.l { left: calc(10px + var(--sl)); }
 /* Portal a la constelación vecina, en la orilla de la guía. */
 .portal { position: absolute; left: 0; top: 0; translate: -50% calc(var(--k) * -42px); display: flex; flex-direction: column; align-items: center; gap: 4px; pointer-events: auto; }
 .portal .hit { width: calc(96px * var(--k)); height: calc(84px * var(--k)); border-radius: 50%; }
@@ -120,8 +117,6 @@ button:disabled { cursor: default; }
 .galaxy .region .rname { padding: 2px 10px 4px; border-radius: 14px; }
 .galaxy .region .rname:active { scale: .96; }
 .galaxy .cta { position: absolute; right: calc(14px + var(--sr)); bottom: calc(14px + var(--sb)); }
-/* Acostado no cabe debajo de la columna de botones (se enciman con el engrane): va a su izquierda. */
-@media (min-aspect-ratio: 1/1) { .galaxy .cta { right: calc(22px + 46px * var(--k) + var(--sr)); } }
 .dev-pill { position: absolute; left: calc(10px + var(--sl)); bottom: calc(14px + var(--sb)); padding: 6px 10px; border-radius: 10px; background: #ff3d7f; color: #fff; font-weight: 900; font-size: 13px; letter-spacing: .05em; border: 2px solid var(--ink); }
 .g-only, .p-only { transition: opacity 260ms ease; }
 .zoomed .g-only { opacity: 0; pointer-events: none; }
@@ -223,7 +218,7 @@ button:disabled { cursor: default; }
   .game .hud { grid-column: 1 / -1; }
   /* Aire entre el tablero y la columna: que no se toque el comodín por error. */
   .game .board-wrap { grid-area: 2 / 1; margin: 0 calc(22px * var(--k)) calc(6px + var(--sb)) calc(4px + var(--cl)); }
-  .game .tray { grid-area: 2 / 2; display: grid; grid-template-areas: 'stock stock' 'waste wild' 'undo undo'; place-content: center; place-items: center; gap: calc(12px * var(--k)) calc(14px * var(--k)); padding: 0 calc(10px + var(--cr)) calc(8px + var(--sb)) 0; }
+  .game .tray { grid-area: 2 / 2; display: grid; grid-template-areas: 'stock stock' 'waste wild' 'undo undo'; place-content: center; place-items: center; gap: calc(22px * var(--k)) calc(18px * var(--k)); padding: 0 calc(10px + var(--cr)) calc(8px + var(--sb)) 0; }
   .game .stock { grid-area: stock; }
   .game .waste { grid-area: waste; }
   .game .wild-card { grid-area: wild; margin: 0; }
@@ -608,6 +603,9 @@ button:disabled { cursor: default; }
 .spark { position: fixed; z-index: 2600; width: 9px; height: 9px; margin: -4.5px 0 0 -4.5px; border-radius: 2px; rotate: 45deg; pointer-events: none; box-shadow: 0 0 0 1.5px var(--ink); }
 .fly-prize { position: fixed; z-index: 2500; width: 34px; height: 34px; margin: -17px 0 0 -17px; pointer-events: none; filter: drop-shadow(0 3px 0 #0b062a55); }
 .fly-prize .ico { width: 100%; height: 100%; }
+/* Medidas de pantalla (5 toques al título de Ajustes): borde rojo = el área del juego. */
+#screen-info { position: fixed; inset: 0; z-index: 3000; pointer-events: none; border: 3px dashed #ff2d55; }
+#screen-info pre { position: absolute; left: 50%; top: 50%; translate: -50% -50%; margin: 0; padding: 8px 10px; border-radius: 10px; background: #000c; color: #7dffb0; font: 600 11px/1.45 ui-monospace, Menlo, monospace; white-space: pre; }
 .toast { position: fixed; left: 50%; top: calc(64px + var(--st)); z-index: 1500; translate: -50% 0; display: flex; align-items: center; gap: 6px; padding: 8px 16px 10px; border-radius: 99px; background: var(--cream); color: var(--ink); border: 2.5px solid var(--ink); box-shadow: 0 3px 0 var(--ink); font-weight: 800; white-space: nowrap; animation: toast 2s var(--ease-out) forwards; pointer-events: none; }
 .toast .ico { width: 22px; height: 22px; }
 @keyframes toast { 0% { opacity: 0; transform: translateY(-8px); } 10%, 85% { opacity: 1; transform: none; } 100% { opacity: 0; } }
