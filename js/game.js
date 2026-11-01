@@ -1,5 +1,5 @@
 import { save, persist } from './storage.js';
-import { openModal, toast, confetti, updateCoins, starsHTML, reduced, buzz, sparkle, wait, spendFromWallet } from './ui.js';
+import { openModal, toast, confetti, updateCoins, money, starsHTML, reduced, buzz, sparkle, wait, spendFromWallet } from './ui.js';
 import { worldInfo, packGroups, MECH_NAMES, LEVELS_PER_WORLD } from './levels.js';
 import * as E from './engine.js';
 import { price } from './economy.js';
@@ -12,7 +12,6 @@ export const RANKS = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q
 const LOCK_HUES = [350, 45, 200]; // color de cada pareja candado/llave
 const FLY_MS = 400;
 const FLY_EASE = 'cubic-bezier(0.33, 0.6, 0.35, 1)';
-const REWARD_TEXT = { card: '+1 carta al mazo', wild: 'comodín al mazo', bank: '+1 comodín' };
 // Explicación de cada mecánica la primera vez que aparece (modo jugador).
 const TIPS = {
   lock: 'Esta carta tiene <b>candado</b>: no se puede jugar hasta que juegues la carta con la <b>llave</b> del mismo color.',
@@ -221,7 +220,7 @@ export class Game {
       <header class="hud">
         <button class="tb hbtn" data-a="exit" aria-label="Pausa" title="Pausa">${icon('pause')}</button>
         <div class="hud-mid"><div class="combo info"></div></div>
-        <div class="hud-r">${this.opts.racha ? `<div class="pill info racha-pill ${this.opts.racha.hot ? 'hot' : ''}" aria-label="Racha">${this.opts.racha.hot ? `<span class="fire">${icon('flame')}</span>` : ''}${icon(this.opts.racha.ico)}<span>${this.opts.racha.n}</span></div>` : ''}<div class="pill info">${coin()}<span data-coins>${save.coins.toLocaleString('es-MX')}</span></div>${avatarHTML(save, 'hud-av')}</div>
+        <div class="hud-r">${this.opts.racha ? `<div class="pill info racha-pill ${this.opts.racha.hot ? 'hot' : ''}" aria-label="Racha">${this.opts.racha.hot ? `<span class="fire">${icon('flame')}</span>` : ''}${icon(this.opts.racha.ico)}<span>${this.opts.racha.n}</span></div>` : ''}<div class="pill info">${coin()}<span data-coins>${money(save.coins)}</span></div>${avatarHTML(save, 'hud-av')}</div>
       </header>
       <div class="board-wrap"><div class="board"></div><div class="streak"></div></div>
       <footer class="tray">
@@ -508,10 +507,13 @@ export class Game {
     const { at, kind } = E.nextReward(this.streak);
     const from = at <= 12 ? 0 : at - 3;
     let dots = '';
-    for (let i = from + 1; i < at; i++) dots += `<i class="${i <= this.streak ? 'on' : ''}"></i>`;
+    // Faltan 1 o 2: el siguiente punto late, el premio se mueve y abajo sale "¡Falta n!".
+    const left = at - this.streak, near = this.streak > 0 && left <= 2;
+    for (let i = from + 1; i < at; i++) dots += `<i class="${i <= this.streak ? 'on' : near && i === this.streak + 1 ? 'next' : ''}"></i>`;
     const prize = kind === 'bank' ? `<span class="prize bank">${icon('wild')}</span>` : `<span class="prize mini ${kind === 'wild' ? 'gift-wild' : 'gift-card'}"></span>`;
-    this.comboEl.innerHTML = `<span class="dots">${from ? `<b>×${from}</b>` : ''}${dots}${prize}</span><small>${REWARD_TEXT[kind]}</small>`;
-    this.comboEl.classList.toggle('hot', at - this.streak <= 1 && this.streak > 0);
+    this.comboEl.innerHTML = `<span class="dots">${from ? `<b>×${from}</b>` : ''}${dots}${prize}</span>${near ? `<em class="need outl">¡Falta ${left}!</em>` : ''}`;
+    this.comboEl.classList.toggle('near', near);
+    this.comboEl.classList.toggle('hot', near && left === 1);
   }
 
   showStreak(text) {
@@ -613,7 +615,7 @@ export class Game {
     } else {
       this.flyReward(r.kind, this.stockEls[this.stockEls.length - 1 - r.pos]);
     }
-    this.showStreak(`¡Racha ×${this.streak}! ${REWARD_TEXT[r.kind]}`);
+    this.showStreak(`¡Racha ×${this.streak}!`);
   }
 
   // Dónde están ahora las cartas que una bomba va a quemar (las primeras del mazo, a la derecha).
@@ -1176,10 +1178,7 @@ export class Game {
     this.done = true;
     this.coach?.end();
     const left = this.stock.length;
-    // 3★ = terminar con el margen que da el nivel (máximo 2 cartas); los jefes dan menos margen.
-    const full = Math.min(2, this.level.meta.spares);
-    let stars = left >= full ? 3 : left >= 1 ? 2 : 1;
-    if (this.extras) stars = 1;
+    const stars = this.extras ? 1 : E.starsFor(this.level, left);
     const res = this.opts.onWin(stars);
     const { coins, tickets, prev, gold, wild, undo } = res;
     const title = this.level.secret ? '¡Nivel secreto!' : this.level.boss ? '¡Jefe derrotado!' : '¡Nivel superado!';

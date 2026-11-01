@@ -64,7 +64,7 @@ export function dailyState(daily, now = new Date()) {
 // Para abrir el mundo w (w ≥ 1) hace falta el boleto dorado del jefe anterior y un mínimo de estrellas:
 // un % de todas las estrellas posibles en los mundos anteriores (0..w-1). El % sube con el avance.
 const STAR_STEPS = [
-  [10, 0.5], [25, 0.55], [50, 0.6], [80, 0.65], [120, 0.7], [170, 0.75], [230, 0.8], [300, 0.85], [400, 0.9], [Infinity, 0.95],
+  [10, 0.5], [25, 0.55], [60, 0.6], [120, 0.65], [250, 0.7], [Infinity, 0.75],
 ];
 export function starsNeeded(w) {
   if (w < 1) return 0;

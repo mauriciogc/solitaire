@@ -1,8 +1,15 @@
 import { save } from './storage.js';
 import { star, icon, coin } from './art.js';
 
+// Monedero: hasta 9,999 completo; después abreviado para que quepa (12.5K, 250K, 1.2M).
+export function money(n) {
+  if (n < 1e4) return n.toLocaleString('es-MX');
+  const [d, u] = n < 1e6 ? [1e3, 'K'] : [1e6, 'M'];
+  const v = n / d;
+  return `${v < 100 ? Math.floor(v * 10) / 10 : Math.floor(v)}${u}`;
+}
 export function updateCoins() {
-  document.querySelectorAll('[data-coins]').forEach((e) => (e.textContent = save.coins.toLocaleString('es-MX')));
+  document.querySelectorAll('[data-coins]').forEach((e) => (e.textContent = money(save.coins)));
   document.querySelectorAll('[data-tickets]').forEach((e) => (e.textContent = save.tickets));
 }
 
@@ -108,7 +115,7 @@ function rollTo(kind, from, to, ms) {
   const step = (now) => {
     const k = Math.min(1, (now - t0) / ms);
     const v = Math.round(from + (to - from) * k);
-    els.forEach((e) => (e.textContent = v.toLocaleString('es-MX')));
+    els.forEach((e) => (e.textContent = money(v)));
     if (k < 1) requestAnimationFrame(step);
   };
   requestAnimationFrame(step);

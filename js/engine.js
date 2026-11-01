@@ -215,3 +215,11 @@ export function playCasual(level, r = Math.random) {
     if (won(s)) return true;
   }
 }
+
+// Estrellas al ganar: cartas que quedan en el mazo contra las del mazo inicial (las de cartas regalo no cuentan:
+// contarlas castigaba de más esos niveles). 3★ = te queda la mitad o más (los premios de racha suman),
+// 2★ = al menos un cuarto, 1★ = menos. Comprar +5 cartas siempre deja 1★ (se decide en el juego).
+export function starsFor(level, left) {
+  const total = level.stock.length;
+  return left >= Math.ceil(total / 2) ? 3 : left >= Math.ceil(total / 4) ? 2 : 1;
+}

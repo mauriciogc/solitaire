@@ -3,7 +3,7 @@ import { RACHA_GOALS, racha, rachaTheme, rachaReady, rachaHot, rachaWin, rachaLo
 import { WORLD_COUNT, LEVELS_PER_WORLD, TOTAL_LEVELS, worldInfo, generateLevel, variantLevel, MECH_INTRO, MECH_NAMES, secretId, isSecret } from './levels.js';
 import { Game, faceHTML, backHTML } from './game.js';
 import { DAILY_PATH, dailyState, starsNeeded, TICKET_PRICE, ticketCost, ticketRefund, coinsFor, bossChest, openSurprise, SECRET_MULT, SECRET_PRIZE } from './economy.js';
-import { openModal, toast, updateCoins, esc, reduced, wait, flyToWallet, spendFromWallet, sparkle, confetti, starsHTML, warp } from './ui.js';
+import { openModal, toast, updateCoins, money, esc, reduced, wait, flyToWallet, spendFromWallet, sparkle, confetti, starsHTML, warp } from './ui.js';
 import { icon, star, coin, miniPlanet, avatarHTML, AVATAR_COLORS, cardBackURL, setDeck, lockIcon, chestBody, chestLid, boxBody, boxLid } from './art.js';
 import { GROUPS, SECTIONS, ITEMS, groupOf, owns, equipped, equip, buy, item, lockedUntil, titleHTML } from './shop.js';
 import { BIOMES, biomeKey } from './biomes.js';
@@ -103,7 +103,10 @@ function h(html) {
 const worldOf = (g) => (isSecret(g) ? g - TOTAL_LEVELS : Math.floor(g / LEVELS_PER_WORLD));
 // El mundo en el que vas: el del siguiente nivel, salvo que aún no lo hayas abierto con el boleto dorado.
 const currentWorld = () => Math.min(worldOf(save.next), save.open, WORLD_COUNT - 1);
-const starsBefore = (w) => Object.entries(save.stars).reduce((a, [g, s]) => a + (+g < w * LEVELS_PER_WORLD ? s : 0), 0);
+// Las estrellas del nivel secreto son extra: suman al total y ayudan a abrir mundos (un mundo puede quedar 33/30).
+const secretStars = (w) => save.secret[w] || 0;
+const sumSecret = (until = Infinity) => Object.entries(save.secret).reduce((a, [w, s]) => a + (+w < until ? s : 0), 0);
+const starsBefore = (w) => Object.entries(save.stars).reduce((a, [g, s]) => a + (+g < w * LEVELS_PER_WORLD ? s : 0), 0) + sumSecret(w);
 // ¿El siguiente nivel está en un mundo que hay que abrir?
 const pendingWorld = () => (worldOf(save.next) > save.open && save.next < TOTAL_LEVELS ? worldOf(save.next) : null);
 // Solo cuesta boletos un nivel que aún no has ganado; repetir uno ganado es gratis.
@@ -115,8 +118,10 @@ const worldStars = (w) => {
   for (let l = 0; l < LEVELS_PER_WORLD; l++) s += save.stars[w * LEVELS_PER_WORLD + l] || 0;
   return s;
 };
-const totalStars = () => Object.values(save.stars).reduce((a, b) => a + b, 0);
+const totalStars = () => Object.values(save.stars).reduce((a, b) => a + b, 0) + sumSecret();
 const fmt = (n) => n.toLocaleString('es-MX');
+// Estrellas del mundo con su secreto (para mostrar): la estrella se vuelve morada cuando el secreto ya se hizo.
+const worldStarsHTML = (w) => `${secretStars(w) ? icon('starSecret') : star(true)}${worldStars(w) + secretStars(w)}/30`;
 
 // ---------- Regiones: 10 mundos cada una ----------
 const REGION_SIZE = 10;
@@ -130,7 +135,7 @@ const wallet = () => `
   ${save.gold ? `<div class="pill info" aria-label="${save.gold} boletos dorados">${icon('gold')}<span>${save.gold}</span></div>` : ''}
   <div class="pill info" aria-label="Estrellas">${star(true)}<span>${fmt(totalStars())}</span></div>
   <div class="pill info" aria-label="Boletos">${icon('ticket')}<span data-tickets>${save.tickets}</span></div>
-  <div class="pill info" aria-label="Monedas">${coin()}<span data-coins>${fmt(save.coins)}</span></div>
+  <div class="pill info" aria-label="Monedas">${coin()}<span data-coins>${money(save.coins)}</span></div>
   <button class="me press" data-a="me" aria-label="Tu perfil" title="Tu perfil">${avatarHTML(save)}</button>`;
 // Botón de jugar: es el mismo en todas las vistas (universo, constelación) y lleva directo al tablero;
 // al salir del tablero se vuelve al planeta de ese nivel.
@@ -193,7 +198,7 @@ function showMap({ region, start = null, anim, after = null, unlock = null } = {
     const info = worldInfo(w), b = BIOMES[biomeKey(info.place)];
     const mech = Object.entries(MECH_INTRO).find(([, iw]) => iw === w)?.[0];
     phud.innerHTML = `<button class="hbtn tb press out-btn" data-a="out" aria-label="Volver a la galaxia" title="Galaxia">${icon('prev')}</button>
-      <div class="wtitle info">${miniPlanet(b.emblem, 'em')}<div><b>${esc(info.name)}</b><small>Mundo ${w + 1} · ${star(true)}${worldStars(w)}/30</small></div></div>`;
+      <div class="wtitle info">${miniPlanet(b.emblem, 'em')}<div><b>${esc(info.name)}</b><small>Mundo ${w + 1} · ${worldStarsHTML(w)}</small></div></div>`;
     const first = w * LEVELS_PER_WORLD, run = save.run;
     let go;
     if (run && worldOf(run.g) === w) go = goBtn('Continuar', isSecret(run.g) ? 'Nivel secreto' : `Nivel ${run.g + 1}`, 'continue');
@@ -232,7 +237,7 @@ function showMap({ region, start = null, anim, after = null, unlock = null } = {
   // Al volver de ganar, el monedero muestra lo de antes y luego se suma con las piezas que vuelan.
   if (after) {
     const c = el.querySelector('[data-coins]'), t = el.querySelector('[data-tickets]');
-    if (c) c.textContent = fmt(save.coins - after.res.coins - (after.res.chest?.coins || 0));
+    if (c) c.textContent = money(save.coins - after.res.coins - (after.res.chest?.coins || 0));
     if (t) t.textContent = save.tickets - after.res.tickets;
   }
   const host = el.querySelector('.g3d');
@@ -243,7 +248,8 @@ function showMap({ region, start = null, anim, after = null, unlock = null } = {
       worlds: worldsOf(region, unlock ?? pendingWorld()),
       player: { traveler: equipped('traveler') },
       start,
-      celebrate: after && !isSecret(after.g) ? { w: w0, i: after.g % LEVELS_PER_WORLD, kind: after.res.first ? 'cur' : 'done', stars: after.res.prev } : null,
+      // El nivel secreto se anima en su insignia (índice 10): al volver ya se ve hecho.
+      celebrate: after ? { w: w0, i: isSecret(after.g) ? 10 : after.g % LEVELS_PER_WORLD, kind: after.res.first ? 'cur' : 'done', stars: after.res.prev } : null,
       on: {
         mode: (m, w) => {
           el.classList.toggle('zoomed', m === 'planet');
@@ -403,7 +409,7 @@ function regionData(r) {
   let stars = 0;
   const worlds = [], hues = [];
   for (let w = w0; w < w0 + REGION_SIZE; w++) {
-    stars += worldStars(w);
+    stars += worldStars(w) + secretStars(w);
     worlds.push(w < cw ? 'done' : w === cw ? 'cur' : 'lock');
     hues.push(worldInfo(w).hue);
   }
@@ -488,7 +494,7 @@ function sideAction(a) {
 }
 const regionStars = (r) => {
   let n = 0;
-  for (let w = r * REGION_SIZE; w < (r + 1) * REGION_SIZE; w++) n += worldStars(w);
+  for (let w = r * REGION_SIZE; w < (r + 1) * REGION_SIZE; w++) n += worldStars(w) + secretStars(w);
   return n;
 };
 // Icono de constelación: tres estrellas unidas.
@@ -969,45 +975,45 @@ function openRacha() {
   // Entre mejor el premio, más grande y más vistoso el punto (el último lleva rayos y una caja).
   const nodes = RACHA_GOALS.map((x, i) => {
     const st = stateOf(i), last = i === RACHA_GOALS.length - 1;
-    return `<div class="rg t${i} ${st}" data-i="${i}">${last ? '<span class="rays"></span>' : ''}<i>${st === 'got' ? icon('check') : `<b>${x.n}</b>`}</i>${prize(x)}</div>`;
+    // Los premios listos también son botón: se canjean al tocarlos.
+    const tag = st === 'ready' ? 'button' : 'div';
+    return `<${tag} class="rg t${i} ${st}" data-i="${i}"${st === 'ready' ? ' aria-label="Reclamar"' : ''}>${last ? '<span class="rays"></span>' : ''}<i>${st === 'got' ? icon('check') : `<b>${x.n}</b>`}</i>${prize(x)}</${tag}>`;
   }).join('');
-  const m = openModal({
+  const ready = rachaReady();
+  let m;
+  const claim = async () => {
+    const cells = [...m.el.querySelectorAll('.rg.ready')];
+    if (!cells.length) return;
+    m.el.querySelectorAll('.rclaim, .mbtns .btn').forEach((b) => (b.disabled = true));
+    const r0 = cells[0].getBoundingClientRect();
+    cells.forEach((c) => {
+      const b = c.getBoundingClientRect();
+      sparkle({ x: b.left + b.width / 2, y: b.top + b.height / 3 }, 14);
+      c.classList.replace('ready', 'got');
+      c.querySelector('i').innerHTML = icon('check');
+    });
+    const p = rachaClaim();
+    refreshRacha();
+    await wait(reduced() ? 0 : 650);
+    m.close();
+    grantPrize(p, { x: r0.left + r0.width / 2, y: r0.top + r0.height / 2 });
+  };
+  // Acostado no cabe el botón de abajo: va arriba, junto al número (rtop se vuelve una fila).
+  m = openModal({
     title: t.name,
     ico: t.ico,
     color: t.color,
     wide: true,
     cls: 'racha-modal',
-    body: `<div class="rhero"><span class="rh-ico">${icon(t.ico)}</span><b>${r.n}</b></div>
+    body: `<div class="rtop"><div class="rhero"><span class="rh-ico">${icon(t.ico)}</span><b>${r.n}</b></div>
       <p class="lead rsub">${next ? `Gana <b>${next.n - r.n}</b> más para el siguiente premio` : '¡Llegaste al premio más grande!'}</p>
+      ${ready ? `<button class="btn gold rclaim">${icon('gift')} Reclamar</button>` : ''}</div>
       <div class="rpath" style="--fill:${fill}"><div class="rbar"><i></i></div><div class="rg start"><i>${icon(t.ico)}</i><div class="rps"></div></div>${nodes}</div>
       <div class="rclock-chip">Nueva racha en <b class="rclock">${clock(msToMidnight())}</b></div>`,
     // Solo sirve para ver y canjear: sin botón de jugar.
-    buttons: rachaReady()
-      ? [
-          {
-            label: `${icon('gift')} Reclamar`,
-            cls: 'gold',
-            keep: true,
-            onClick: async (btn) => {
-              btn.disabled = true;
-              const cells = [...m.el.querySelectorAll('.rg.ready')];
-              const r0 = cells[0].getBoundingClientRect();
-              cells.forEach((c) => {
-                const b = c.getBoundingClientRect();
-                sparkle({ x: b.left + b.width / 2, y: b.top + b.height / 3 }, 14);
-                c.classList.replace('ready', 'got');
-                c.querySelector('i').innerHTML = icon('check');
-              });
-              const p = rachaClaim();
-              refreshRacha();
-              await wait(reduced() ? 0 : 650);
-              m.close();
-              grantPrize(p, { x: r0.left + r0.width / 2, y: r0.top + r0.height / 2 });
-            },
-          },
-        ]
-      : [],
+    buttons: ready ? [{ label: `${icon('gift')} Reclamar`, cls: 'gold', keep: true, onClick: claim }] : [],
   });
+  m.el.querySelectorAll('.rclaim, .rg.ready').forEach((b) => b.addEventListener('click', claim));
   helpTip(m, 'Gana niveles nuevos seguidos, con las estrellas que sea. Repetir niveles no cuenta. Si pierdes o abandonas uno, vuelves a 0.');
   const c = m.el.querySelector('.rclock');
   const tick = setInterval(() => (c.isConnected ? (c.textContent = clock(msToMidnight())) : clearInterval(tick)), 1000);

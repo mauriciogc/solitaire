@@ -299,7 +299,7 @@ export class Galaxy {
   levelsFor(o) {
     const lv = o.wd.levels.map((x) => ({ ...x }));
     const c = this.celebrate;
-    if (c && c.w === o.wd.w && !c.used) {
+    if (c && c.w === o.wd.w && !c.used && c.i < 10) {
       if (c.kind === 'cur') { lv[c.i] = { kind: 'cur', stars: 0 }; if (c.i + 1 < 10) lv[c.i + 1] = { ...lv[c.i + 1], kind: 'lock' }; }
       else lv[c.i] = { kind: 'done', stars: c.stars };
     }
@@ -371,7 +371,8 @@ export class Galaxy {
       m.scale.setScalar(shown ? 1 : 0.0001);
       path.add(m); dots.push(m);
     }
-    const l = { kind: o.wd.secret.stars ? 'done' : 'cur', stars: o.wd.secret.stars || 0 };
+    const c = this.celebrate, before = c && c.w === o.wd.w && c.i === 10 && !c.used;
+    const l = before ? { kind: c.kind, stars: c.stars } : { kind: o.wd.secret.stars ? 'done' : 'cur', stars: o.wd.secret.stars || 0 };
     const sp = this.badge(o, 10, l);
     if (!shown) sp.scale.set(0.0001, 0.0001, 1);
     sp.userData.hidden = !shown;
@@ -416,7 +417,8 @@ export class Galaxy {
       g.fillStyle = lv.kind === 'lock' ? '#d9d2ea' : '#ffc83d'; g.fill(); g.lineWidth = 6; g.stroke();
     }
     g.font = `${n > 9 ? 46 : 54}px "Lilita One"`; g.textAlign = 'center'; g.textBaseline = 'middle';
-    if (secret) star(cx, cy + 2, 26, true, '#fff6e6');
+    // Secreto: estrella blanca mientras falta; dorada (y las 3 estrellitas arriba) cuando ya se hizo.
+    if (secret) star(cx, cy + 2, 26, true, lv.kind === 'done' ? '#ffc83d' : '#fff6e6');
     else if (lv.paused) { g.fillStyle = '#fff'; g.strokeStyle = K; g.lineWidth = 4; for (const x of [-12, 4]) { g.beginPath(); g.roundRect(cx + x, cy - 16, 9, 32, 3); g.fill(); g.stroke(); } }
     else if (lv.kind === 'lock') { g.fillStyle = '#a79ec4'; g.fillText(String(n), cx, cy + 3); }
     else { g.lineWidth = 10; g.strokeStyle = K; g.strokeText(String(n), cx, cy + 3); g.fillStyle = '#fff'; g.fillText(String(n), cx, cy + 3); }
@@ -429,7 +431,7 @@ export class Galaxy {
     return [((v.x + 1) / 2) * r.width, ((1 - v.y) / 2) * r.height];
   }
   chipHTML(wd) {
-    return { done: `<span class="chip info">${star(true)}${wd.stars}/30</span>`, current: `<span class="chip info">${icon('flag')}${wd.done + 1}/10</span>`, gate: `<span class="chip info opening">${icon('gold')}${star(true)}${wd.need}</span>`, locked: `<span class="lk">${icon('lock')}</span>` }[wd.state];
+    return { done: `<span class="chip info">${wd.secret?.stars ? icon('starSecret') : star(true)}${wd.stars + (wd.secret?.stars || 0)}/30</span>`, current: `<span class="chip info">${icon('flag')}${wd.done + 1}/10</span>`, gate: `<span class="chip info opening">${icon('gold')}${star(true)}${wd.need}</span>`, locked: `<span class="lk">${icon('lock')}</span>` }[wd.state];
   }
   drawLabels() {
     this.labelsEl.innerHTML = '';
@@ -537,7 +539,7 @@ export class Galaxy {
     const c = this.celebrate, o = this.sel;
     if (!c || !o || o.wd.w !== c.w) return;
     c.used = true;
-    const real = o.wd.levels;
+    const real = [...o.wd.levels, { kind: 'done', stars: o.wd.secret?.stars || 0 }];
     await new Promise((ok) => setTimeout(ok, 250));
     this.retex(o, c.i, real[c.i]);
     if (c.kind !== 'cur' || c.i >= 9 || !o.avatar) return;
