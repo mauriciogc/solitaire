@@ -42,9 +42,19 @@ export function planetInner(a, b, land, ring) {
 }
 export const miniPlanet = (colors, cls = '') => svg(planetInner(...colors), cls);
 
+// Flor de cempasúchil: dos vueltas de pétalos redondos y el centro (x, y = centro, r = radio).
+export const marigold = (x, y, r, a = '#ffb13d', b = '#ff8a1a') => {
+  const ring = (rr, n, pr, c, off) => Array.from({ length: n }, (_, i) => { const t = ((i + off) / n) * Math.PI * 2; return `<circle cx="${(x + Math.cos(t) * rr).toFixed(2)}" cy="${(y + Math.sin(t) * rr).toFixed(2)}" r="${pr.toFixed(2)}" fill="${c}"/>`; }).join('');
+  return `<circle cx="${x}" cy="${y}" r="${r}" fill="${K}"/>${ring(r * 0.62, 9, r * 0.36, b, 0)}${ring(r * 0.36, 7, r * 0.3, a, 0.5)}<circle cx="${x}" cy="${y}" r="${(r * 0.22).toFixed(2)}" fill="#e0700a"/>`;
+};
 const ICONS = {
   coin: () => tshape(CIRCLE(16, 16, 12.5), '#ffc83d', '#ec9a17', `<circle cx="14.6" cy="13.8" r="8" fill="none" stroke="#ec9a17" stroke-width="2"/><path d="${starPath(14.6, 14.2, 4.8, 2.2)}" fill="#fff4c7"/>`),
   star: () => tshape(starPath(16, 17, 14, 6.6), '#ffc83d', '#ec9a17', `<path d="M10.5 13.5l2.2-3.6" stroke="#fff4c7" stroke-width="2.2" stroke-linecap="round"/>`),
+  // Evento del mes: Día de Muertos.
+  calavera: () => tshape('M16 3C8.5 3 4.5 8.3 4.5 14c0 3.8 1.8 6.4 4.5 7.6V26a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4.4c2.7-1.2 4.5-3.8 4.5-7.6C27.5 8.3 23.5 3 16 3z', '#fff6ee', '#e3d6ee',
+    `${[[11, 15], [21, 15]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="4" fill="#ff5fa8"/><circle cx="${x}" cy="${y}" r="2.6" fill="${K}"/><circle cx="${x - 0.8}" cy="${y - 0.9}" r=".8" fill="#fff"/>`).join('')}<path d="M16 18.6l-1.6 2.6h3.2z" fill="${K}"/><path d="M12.5 23.5v3M16 23.5v3M19.5 23.5v3" stroke="${K}" stroke-width="1.3" stroke-linecap="round"/><path d="M10.5 23.2h11" stroke="${K}" stroke-width="1.3" stroke-linecap="round"/>${[0, 72, 144, 216, 288].map((a) => `<circle cx="${(16 + Math.cos((a * Math.PI) / 180) * 2.1).toFixed(1)}" cy="${(8 + Math.sin((a * Math.PI) / 180) * 2.1).toFixed(1)}" r="1.5" fill="#ffb13d"/>`).join('')}<circle cx="16" cy="8" r="1.1" fill="#5fd1c5"/>`, 2.2),
+  cempasuchil: () => `<path d="M16 22v8" stroke="${K}" stroke-width="4.4" stroke-linecap="round"/><path d="M16 22v8" stroke="#4fae4a" stroke-width="2" stroke-linecap="round"/>` + marigold(16, 14, 11),
+  tkMuertos: () => `<g transform="rotate(-12 16 16)">${tshape('M3 10.5a2 2 0 0 1 2-2h22a2 2 0 0 1 2 2v3a2.6 2.6 0 0 0 0 5.2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-3a2.6 2.6 0 0 0 0-5.2z', '#ff9c1a', '#e0700a', `<path d="M21 9v14" stroke="#fff" stroke-width="1.8" stroke-dasharray="2 2"/>${marigold(11.5, 15.8, 5, '#fff6e6', '#ffd6a0')}`)}</g>`,
   // Fichas de la colección (una por temática).
   concha: () => tshape('M16 27.5 4.5 14.5C5 7.5 10 4 16 4s11 3.5 11.5 10.5z', '#ffb3c7', '#f28aa5', ['M16 27V6', 'M16 27 9.5 7.5', 'M16 27 22.5 7.5', 'M16 27 5.5 12', 'M16 27 26.5 12'].map((d) => `<path d="${d}" stroke="#e0607f" stroke-width="1.6" fill="none"/>`).join(''))
     + tshape('M11 26.5h10l-1.5 3h-7z', '#ffb3c7', '#f28aa5', '', 1.8),
@@ -144,6 +154,8 @@ export const BACKS = {
   cristales: { a: '#5a3d99', b: '#47307d', dots: '#e3d8ff', art: () => `<g transform="translate(14 22) scale(1.1)">${ICONS.gema()}</g><g transform="translate(52 84) scale(1)">${ICONS.gema()}</g><g transform="translate(22 42) scale(1.75)">${ICONS.gema()}</g>` },
   hojas: { a: '#3f9a4a', b: '#2f7a3a', dots: '#d9f5c8', art: () => `${[[22, 30, -30], [78, 110, 150], [80, 34, 40]].map(([x, y, r]) => `<g transform="translate(${x} ${y}) rotate(${r})">${tshape('M0 -12Q10 0 0 12Q-10 0 0 -12z', '#8fd46a', '#5fb04a', '<path d="M0 -10V10" stroke="#3f8a3a" stroke-width="1.6"/>', 2)}</g>`).join('')}<g transform="translate(19 39) scale(1.95)">${ICONS.bellota()}</g>` },
   caramelos: { a: '#ffd6e8', b: '#ffbcd9', dots: '#ff7aa2', art: () => `<g transform="translate(12 18) rotate(-20 16 16) scale(.9)">${ICONS.caramelo()}</g><g transform="translate(58 96) rotate(25 16 16) scale(.8)">${ICONS.caramelo()}</g><g transform="translate(19 39) scale(1.95)">${ICONS.caramelo()}</g>` },
+  // Exclusivos del evento del mes.
+  calaverita: { a: '#7b2fbf', b: '#5e1f9a', dots: '#ffd27a', art: () => `${[[20, 26, 7], [80, 112, 8], [78, 28, 5], [24, 110, 5]].map(([x, y, r]) => marigold(x, y, r)).join('')}<g transform="translate(18 38) scale(2)">${ICONS.calavera()}</g>` },
   regalo: { a: '#7b4ee6', b: '#6438c8', star: ['#fff6e6', '#e3d3ff'] },
   comodin: { a: '#ffc83d', b: '#eca21f', star: ['#ff9c2b', '#e8761a'], dots: '#fff4c7' },
 };
@@ -316,6 +328,15 @@ export const AVATARS = {
     + P(ELL(50, 54, 29, 26), '#ff7a95', '#e8566f', '<ellipse cx="38" cy="40" rx="7" ry="4" fill="#fff" opacity=".45" transform="rotate(-25 38 40)"/>')
     + P(ELL(50, 64, 11, 8), '#ffb0c0', '#ff94a8') + eyes(51, 12, 4.4)
     + `<ellipse cx="50" cy="61" rx="3.6" ry="2.6" fill="${K}"/>` + smile(66, 5),
+  // Exclusivo del evento: Día de Muertos.
+  xolo: () => mirror(P('M26 46 16 10 42 30z', '#4a4560', '#36324a', '<path d="M25 37 21 18 35 30z" fill="#ff9cb0"/>'))
+    + shoulders('#4a4560', '#36324a')
+    + [22, 36, 50, 64, 78].map((x, i) => marigold(x, 86 + (i % 2 ? 2 : 0), 7.5)).join('')
+    + P(ELL(50, 56, 27, 25), '#5a5472', '#47425c')
+    + P('M41 34q3-11 9-3q5-9 9 3q-9-3-18 0z', '#efeaf7', '#cfc8e2')
+    + P(ELL(50, 67, 13, 9), '#6e6888', '#5a5472') + eyes(53, 12, 4.6)
+    + `<ellipse cx="50" cy="62" rx="4.6" ry="3.4" fill="${K}"/>` + smile(70, 5) + blush(66, 20)
+    + marigold(70, 33, 8),
   sirena: () => P('M20 50Q12 82 20 104H80Q88 82 80 50Q78 24 50 22Q22 24 20 50z', '#ff6f61', '#e0524a')
     + kid('#5fd1c5', '#2fae9e')
     + mirror(P('M34 96Q38 84 46 88Q44 98 34 96z', '#ff9cc8', '#e870a8'))
@@ -353,6 +374,9 @@ export const RINGS = {
   hojas: () => band(55, '#5fb04a', 5) + [-100, -30, 40, 110, 180, 250].map((d) => { const [x, y] = at(d, 56); return `<g transform="translate(${x} ${y}) rotate(${d + 45})">${tshape('M0 -10Q8 0 0 10Q-8 0 0 -10z', '#8fd46a', '#5fb04a', '<path d="M0 -8V8" stroke="#3f8a3a" stroke-width="1.4"/>', 2.2)}</g>`; }).join(''),
   caramelos: () => band(55, '#ff9cc8', 6) + `<circle cx="70" cy="70" r="55" fill="none" stroke="#fff" stroke-width="3" stroke-dasharray="6 8"/>`
     + [-90, 30, 150].map((d) => { const [x, y] = at(d, 56); return `<g transform="translate(${x - 9} ${y - 9}) rotate(${d + 90} 9 9) scale(.56)">${ICONS.caramelo()}</g>`; }).join(''),
+  // Exclusivo del evento: Día de Muertos.
+  cempasuchil: () => band(55, '#ff9c1a', 6) + `<circle cx="70" cy="70" r="55" fill="none" stroke="#b36bff" stroke-width="2.4" stroke-dasharray="3 9" stroke-linecap="round"/>`
+    + [-90, -30, 30, 90, 150, 210].map((d, i) => marigold(...at(d, 56), i % 2 ? 8 : 10.5)).join(''),
   arcoiris: () => `<circle cx="70" cy="70" r="56" fill="none" stroke="${K}" stroke-width="13"/><g class="r-spin">${['#ff5f7e', '#ff9c5b', '#ffc83d', '#6fd36a', '#4aa8de', '#8a5cf0'].map((c, i) => `<circle cx="70" cy="70" r="56" fill="none" stroke="${c}" stroke-width="8" pathLength="6" stroke-dasharray="1 5" stroke-dashoffset="${-i}"/>`).join('')}</g>`,
 };
 const ringOf = (p) => (RINGS[p.ring] ? p.ring : RINGS[p.equip?.ring] ? p.equip.ring : 'sencillo');

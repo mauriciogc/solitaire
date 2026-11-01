@@ -132,7 +132,13 @@ export class Galaxy {
   }
   setCam() { this.camera.position.x = this.port ? 0 : this.cam; this.camera.position.y = this.port ? 0.6 - this.cam : 0; this.camera.updateMatrixWorld(); }
 
-  theme(wd) { return wd.state === 'locked' || wd.state === 'gate' ? LOCKED : BIOMES[biomeKey(wd.place)].planet; }
+  // Los planetas del evento se ven con su temática aunque estén cerrados (apagados y con candado).
+  theme(wd) { return wd.theme || (wd.state === 'locked' || wd.state === 'gate' ? LOCKED : BIOMES[biomeKey(wd.place)].planet); }
+  // Evento del mes: planetas de 5 niveles. nodes = en qué puntos del camino van sus insignias (el último es el jefe).
+  nodes(o) { return o.wd.nodes || [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]; }
+  dirOf(o, i) { return NODE_DIRS[i >= this.nodes(o).length ? 10 : this.nodes(o)[i]]; }
+  faceOf(o, i) { return faceAt(i >= this.nodes(o).length ? 10 : this.nodes(o)[i]); }
+  lastOf(o) { return this.nodes(o).length - 1; }
 
   hAt(t, seed, v) {
     let h = fbm(v.x * t.freq + 10, v.y * t.freq + 10, v.z * t.freq + 10, seed);
@@ -145,7 +151,7 @@ export class Galaxy {
     return 1 + above * t.amp * (t.sea < 0 ? 0.8 : 2.2);
   }
   planetGeo(t, seed, detail) {
-    const ck = `${seed}:${detail}`;
+    const ck = `${seed}:${detail}:${t.sea}`;
     if (this.geo[ck]) return this.geo[ck];
     let g = merge(new THREE.IcosahedronGeometry(1, detail));
     const pos = g.attributes.position, hg = new Float32Array(pos.count), land = [], v = new THREE.Vector3();
@@ -196,8 +202,11 @@ export class Galaxy {
     if (t.prop === 'pine') { trunkG = new THREE.CylinderGeometry(0.1, 0.12, 0.5, 6); crownG = new THREE.ConeGeometry(0.5, 1.5, 8); crownC = '#2f7d68'; }
     if (t.prop === 'cactus') { trunkG = new THREE.CylinderGeometry(0.2, 0.22, 0.9, 8); crownG = new THREE.SphereGeometry(0.2, 8, 6); crownC = '#4fa04a'; trunkC = '#4fa04a'; }
     if (t.prop === 'crystal') { trunkG = new THREE.OctahedronGeometry(0.35); crownG = new THREE.OctahedronGeometry(0.22); crownC = '#ff7ab8'; trunkC = '#b48cff'; }
+    // Vela de ofrenda: cirio color crema y su llamita.
+    if (t.prop === 'candle') { trunkG = new THREE.CylinderGeometry(0.16, 0.18, 0.8, 8); crownG = new THREE.SphereGeometry(0.16, 8, 6).scale(1, 1.6, 1); crownC = '#ffb13d'; trunkC = '#fff1d6'; }
+    if (t.crown) crownC = t.crown;
     trunkG.translate(0, t.prop === 'cactus' ? 0.45 : 0.4, 0);
-    crownG.translate(0, { palm: 1.4, pine: 1.2, cactus: 0.9, crystal: 0.75 }[t.prop] ?? 1.05, 0);
+    crownG.translate(0, { palm: 1.4, pine: 1.2, cactus: 0.9, crystal: 0.75, candle: 1.05 }[t.prop] ?? 1.05, 0);
     const C = new THREE.Color();
     const trunks = new THREE.InstancedMesh(trunkG, this.toon({ color: this.desat(C.set(trunkC), alive).clone() }), n);
     const crowns = new THREE.InstancedMesh(crownG, this.toon({ color: this.desat(C.set(crownC), alive).clone() }), n);
@@ -242,8 +251,9 @@ export class Galaxy {
 
   makePlanet(wd, spot, i) {
     const t = this.theme(wd), locked = t === LOCKED;
-    const seed = locked ? 5 + (wd.w % 9) * 3 : t.seed + wd.w * 13;
-    const alive = wd.state === 'current' ? Math.max(0.2, wd.done / 10) : 1;
+    // Los planetas del evento comparten semilla: es el mismo planeta con más o menos agua.
+    const seed = locked ? 5 + (wd.w % 9) * 3 : wd.theme ? t.seed : t.seed + wd.w * 13;
+    const alive = wd.theme ? 1 : wd.state === 'current' ? Math.max(0.2, wd.done / 10) : 1;
     const br = spot.s;
     const [bx, by] = this.at(spot.u, spot.c);
     const { g, land } = this.planetGeo(t, seed, locked ? 20 : 24);
@@ -299,8 +309,8 @@ export class Galaxy {
   levelsFor(o) {
     const lv = o.wd.levels.map((x) => ({ ...x }));
     const c = this.celebrate;
-    if (c && c.w === o.wd.w && !c.used && c.i < 10) {
-      if (c.kind === 'cur') { lv[c.i] = { kind: 'cur', stars: 0 }; if (c.i + 1 < 10) lv[c.i + 1] = { ...lv[c.i + 1], kind: 'lock' }; }
+    if (c && c.w === o.wd.w && !c.used && c.i < lv.length) {
+      if (c.kind === 'cur') { lv[c.i] = { kind: 'cur', stars: 0 }; if (c.i + 1 < lv.length) lv[c.i + 1] = { ...lv[c.i + 1], kind: 'lock' }; }
       else lv[c.i] = { kind: 'done', stars: c.stars };
     }
     return lv;
@@ -312,7 +322,8 @@ export class Galaxy {
     const curve = new THREE.CatmullRomCurve3(pts);
     path.add(new THREE.Mesh(new THREE.TubeGeometry(curve, 220, 0.016, 6), this.toon({ color: t.path || '#fff3d6' })),
       new THREE.Mesh(new THREE.TubeGeometry(curve, 220, 0.024, 6), new THREE.MeshBasicMaterial({ color: K, side: THREE.BackSide })));
-    this.castle(path, o, wd.levels[9].kind !== 'lock');
+    if (wd.gift) this.giftBox(path, o, wd.levels.at(-1).kind === 'done');
+    else this.castle(path, o, wd.levels[9].kind !== 'lock');
     o.sprites = []; o.badges = [];
     const lv = this.levelsFor(o);
     lv.forEach((l, i) => {
@@ -326,8 +337,8 @@ export class Galaxy {
     o.path = path;
   }
   badge(o, i, l) {
-    const d = NODE_DIRS[i], boss = i === 9, secret = i === 10;
-    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.badgeTex(i + 1, l, boss, secret), transparent: true }));
+    const d = this.dirOf(o, i), boss = i === this.lastOf(o), secret = i === 10;
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.badgeTex(i + 1, l, boss, secret, o.wd.gift && o.wd.badgeIco), transparent: true }));
     const s = (l.kind === 'cur' ? 0.25 : 0.2) * (boss || secret ? 1.1 : 1);
     sp.center.set(0.5, 0.42);
     sp.userData = { s: [s, s * 1.4], level: i, kind: l.kind };
@@ -338,16 +349,16 @@ export class Galaxy {
   retex(o, i, l) {
     const sp = o.badges[i];
     sp.material.map.dispose();
-    sp.material.map = this.badgeTex(i + 1, l, i === 9, i === 10);
+    sp.material.map = this.badgeTex(i + 1, l, i === this.lastOf(o), i === 10, o.wd.gift && o.wd.badgeIco);
     sp.material.needsUpdate = true;
-    const s = (l.kind === 'cur' ? 0.25 : 0.2) * (i >= 9 ? 1.1 : 1);
+    const s = (l.kind === 'cur' ? 0.25 : 0.2) * (i >= this.lastOf(o) ? 1.1 : 1);
     sp.userData.s = [s, s * 1.4]; sp.userData.kind = l.kind; sp.userData.pop = 1;
   }
   // El viajero del jugador flota sobre su nivel actual, siempre derecho y de tres cuartos hacia la cámara.
   addAvatar(o, path, i) {
     const t = makeTraveler(this.player.traveler, this.toon), av = new THREE.Group();
     av.add(t.obj);
-    av.userData = { s: 0.2, dir: NODE_DIRS[i].clone(), hop: 0, tick: t.tick };
+    av.userData = { s: 0.2, dir: this.dirOf(o, i).clone(), hop: 0, tick: t.tick };
     av.scale.setScalar(0.2);
     path.add(av); o.avatar = av;
     this.placeAvatar(o);
@@ -393,8 +404,22 @@ export class Galaxy {
     this.orient(g, d, this.rAt(o.t, o.seed, d) - 0.005);
     path.add(g);
   }
+  // Evento: en vez del castillo, la caja de regalo del planeta (gris y abierta cuando ya se cobró).
+  giftBox(path, o, got) {
+    const g = new THREE.Group(), box = this.toon({ color: got ? '#cfc8e2' : '#47c27a' }), rib = this.toon({ color: got ? '#e9e4f2' : '#ffc83d' });
+    const ol = new THREE.MeshBasicMaterial({ color: K, side: THREE.BackSide });
+    const add = (geo, mat, x, y, z = 0, rz = 0) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.rotation.z = rz; const s = new THREE.Mesh(geo, ol); s.position.copy(m.position); s.rotation.copy(m.rotation); s.scale.setScalar(1.12); g.add(m, s); };
+    add(new THREE.BoxGeometry(0.5, 0.4, 0.5), box, 0, 0.2);
+    add(new THREE.BoxGeometry(0.58, 0.14, 0.58), box, got ? 0.18 : 0, got ? 0.56 : 0.46, 0, got ? -0.5 : 0);
+    add(new THREE.BoxGeometry(0.12, 0.42, 0.52), rib, 0, 0.2);
+    if (!got) for (const s of [-1, 1]) add(new THREE.TorusGeometry(0.1, 0.04, 6, 12), rib, s * 0.1, 0.62, 0, s * 0.5);
+    g.scale.setScalar(0.14);
+    const d = NODE_DIRS[9].clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), 0.16);
+    this.orient(g, d, this.rAt(o.t, o.seed, d) - 0.005);
+    path.add(g);
+  }
   // Insignia de nivel: estrellas ARRIBA del círculo para que no se pierdan contra el planeta.
-  badgeTex(n, lv, boss, secret) {
+  badgeTex(n, lv, boss, secret, gift) {
     const c = document.createElement('canvas'); c.width = 128; c.height = 180;
     const g = c.getContext('2d'), cx = 64, cy = 110, R = 42;
     const col = { done: ['#4aa8de', '#2f86c0'], cur: ['#ff5f7e', '#d63d5f'], lock: ['#e9e4f2', '#c9c1dc'] }[lv.kind];
@@ -411,7 +436,9 @@ export class Galaxy {
       for (let k = 0; k < 10; k++) { const a = -Math.PI / 2 + (k * Math.PI) / 5, rr = k % 2 ? R1 * 0.46 : R1; g.lineTo(sx + rr * Math.cos(a), sy + rr * Math.sin(a)); }
       g.closePath(); g.fillStyle = on ? fillOn : '#ddd3c0'; g.fill(); g.lineWidth = 5; g.strokeStyle = K; g.stroke();
     };
-    if (lv.kind === 'done') for (let i = 0; i < 3; i++) star(cx - 30 + i * 30, 46 - (i === 1 ? 10 : 0), i === 1 ? 17 : 14, i < lv.stars);
+    // Evento: sin estrellas; el jefe lleva encima el ícono del evento (gift = imagen ya cargada; apagado si ya se ganó).
+    if (gift) { if (boss && gift.complete) { g.save(); if (lv.kind === 'done') g.globalAlpha = 0.55; g.drawImage(gift, cx - 31, cy - 104, 62, 62); g.restore(); } }
+    else if (lv.kind === 'done') for (let i = 0; i < 3; i++) star(cx - 30 + i * 30, 46 - (i === 1 ? 10 : 0), i === 1 ? 17 : 14, i < lv.stars);
     else if (boss) { // corona del jefe
       g.beginPath(); g.moveTo(cx - 24, cy - 34); g.lineTo(cx - 28, cy - 62); g.lineTo(cx - 12, cy - 46); g.lineTo(cx, cy - 68); g.lineTo(cx + 12, cy - 46); g.lineTo(cx + 28, cy - 62); g.lineTo(cx + 24, cy - 34); g.closePath();
       g.fillStyle = lv.kind === 'lock' ? '#d9d2ea' : '#ffc83d'; g.fill(); g.lineWidth = 6; g.stroke();
@@ -431,6 +458,7 @@ export class Galaxy {
     return [((v.x + 1) / 2) * r.width, ((1 - v.y) / 2) * r.height];
   }
   chipHTML(wd) {
+    if (wd.chip) return wd.chip;
     return { done: `<span class="chip info">${wd.secret?.stars ? icon('starSecret') : star(true)}${wd.stars + (wd.secret?.stars || 0)}/30</span>`, current: `<span class="chip info">${icon('flag')}${wd.done + 1}/10</span>`, gate: `<span class="chip info opening">${icon('gold')}${star(true)}${wd.need}</span>`, locked: `<span class="lk">${icon('lock')}</span>` }[wd.state];
   }
   drawLabels() {
@@ -478,7 +506,7 @@ export class Galaxy {
   }
 
   // ---------- zoom ----------
-  face(o) { return faceAt(Math.min(o.wd.done, 9)); }
+  face(o) { return this.faceOf(o, Math.min(o.wd.done, this.lastOf(o))); }
   snap() { return this.objs.map((o) => ({ x: o.holder.position.x, y: o.holder.position.y, s: o.holder.scale.x, ry: o.spin.rotation.y, rx: o.spin.rotation.x })); }
   zoomTo(o, instant) {
     if (this.anim) return;
@@ -487,7 +515,7 @@ export class Galaxy {
     o.body.geometry = o.outline.geometry = o.hi;
     this.buildPath(o);
     const cel = this.celebrate;
-    this.look = cel && cel.w === o.wd.w && !cel.used ? faceAt(cel.i) : this.face(o);
+    this.look = cel && cel.w === o.wd.w && !cel.used ? this.faceOf(o, cel.i) : this.face(o);
     const from = this.snap(), cx = this.camera.position.x, cy = this.camera.position.y;
     const to = this.objs.map((q) => {
       if (q === o) return { x: cx + this.zoom.x, y: cy + this.zoom.y, s: this.zoom.s, ry: Math.round(q.spin.rotation.y / TAU) * TAU + this.look, rx: 0 };
@@ -542,9 +570,9 @@ export class Galaxy {
     const real = [...o.wd.levels, { kind: 'done', stars: o.wd.secret?.stars || 0 }];
     await new Promise((ok) => setTimeout(ok, 250));
     this.retex(o, c.i, real[c.i]);
-    if (c.kind !== 'cur' || c.i >= 9 || !o.avatar) return;
+    if (c.kind !== 'cur' || c.i >= this.lastOf(o) || !o.avatar) return;
     await new Promise((ok) => setTimeout(ok, 450));
-    const a = NODE_DIRS[c.i].clone(), b = NODE_DIRS[c.i + 1].clone(), u = o.avatar.userData, l0 = this.look, l1 = faceAt(c.i + 1);
+    const a = this.dirOf(o, c.i).clone(), b = this.dirOf(o, c.i + 1).clone(), u = o.avatar.userData, l0 = this.look, l1 = this.faceOf(o, c.i + 1);
     await this.tween(900, (k) => {
       const e = ease(k);
       u.dir.copy(a).lerp(b, e).normalize();
@@ -635,8 +663,8 @@ export class Galaxy {
       d.lx = e.clientX; d.ly = e.clientY; d.t = performance.now();
       if (this.mode === 'planet') {
         // Giro libre por todo el camino (del nivel 1 al último visible).
-        const last = this.sel?.badges?.[10] && !this.sel.badges[10].userData.hidden ? 10 : 9;
-        this.look = clamp(this.look + (dx / el.clientWidth) * (this.port ? 5 : 3.2), faceAt(last) + 0.3, faceAt(0) + 0.05);
+        const last = this.sel?.badges?.[10] && !this.sel.badges[10].userData.hidden ? 10 : this.lastOf(this.sel);
+        this.look = clamp(this.look + (dx / el.clientWidth) * (this.port ? 5 : 3.2), this.faceOf(this.sel, last) + 0.3, faceAt(0) + 0.05);
         return;
       }
       const du = (this.port ? -dy : -dx) * perPx();

@@ -1,10 +1,11 @@
-// Eventos (Fase 6): la racha diaria y la colección semanal.
+// Eventos (Fase 6): la racha diaria, la colección semanal y el evento del mes.
 // Racha: cuenta victorias seguidas de niveles nuevos (cualquier estrella). Perder o abandonar uno nuevo la regresa a 0.
 // A medianoche (hora del teléfono) empieza otra. Siempre es la racha cohete (cambiar de temática cada día confundía,
 // porque la colección también tiene temáticas). Los premios se reclaman a mano;
 // los que se ganaron y no se reclamaron se guardan aunque la racha se reinicie.
 import { save, persist } from './storage.js';
 import { equip } from './shop.js';
+import { EVENT_LEVELS, EVENT_PER_PLANET, EVENT_PLANETS } from './levels.js';
 
 export const RACHA_GOALS = [
   { n: 3, coins: 40 },
@@ -158,3 +159,121 @@ export function colBuy(o) {
   persist();
   return o;
 }
+
+// ---------- Evento del mes ----------
+// Solo algunos meses (ene, feb, abr, jul, sep, oct, nov y dic), cada uno con su temática, que vuelve cada año.
+// 25 niveles difíciles en 5 planetas de 5 (ver eventLevel en levels.js): se juegan en orden y las estrellas no cuentan.
+// Boleto temático: 1 para entrar; ganar lo devuelve, perder o abandonar lo gasta y el siguiente llega a las 24 h.
+// No se compra. Al acabar el mes, el avance se pierde; los premios son tuyos para siempre.
+// El 5.º nivel de cada planeta da su exclusivo; si ya lo tienes (de otro año), da ayudas o monedas.
+// ready: la temática ya tiene sus dibujos (se hacen por tandas; un mes sin dibujos no tiene evento).
+export const EVENTOS = {
+  10: {
+    key: 'muertos', name: 'Día de Muertos', color: 'orange', ico: 'calavera', tk: 'tkMuertos', ready: true,
+    planets: ['Campo de Cempasúchil', 'Cerro del Papel Picado', 'Valle de las Velas', 'Isla de los Alebrijes', 'Mictlán'],
+    ex: [{ space: 'ofrenda' }, { frame: 'muertos' }, { ring: 'cempasuchil' }, { avatar: 'xolo', back: 'calaverita' }, { title: 'catrin', traveler: 'alebrije' }],
+  },
+  0: { key: 'anio', name: 'Año Nuevo', color: 'gold', ready: false },
+  1: { key: 'amor', name: 'Amor y Amistad', color: 'pink', ready: false },
+  3: { key: 'primavera', name: 'Primavera', color: 'green', ready: false },
+  6: { key: 'verano', name: 'Verano', color: 'blue', ready: false },
+  8: { key: 'patrias', name: 'Fiestas Patrias', color: 'green', ready: false },
+  9: { key: 'halloween', name: 'Halloween', color: 'violet', ready: false },
+  11: { key: 'navidad', name: 'Navidad', color: 'blue', ready: false },
+};
+// Monedas de los niveles 1-4 de cada planeta (pocas) y lo que da el 5.º si ya tienes su exclusivo.
+export const EV_COINS = [20, 25, 30, 35, 40];
+export const EV_REPEAT = [{ coins: 300 }, { undo: 3 }, { wild: 1 }, { wild: 2, coins: 300 }, { wild: 3, coins: 600 }];
+export const EV_TICKET_WAIT = DAY;
+
+// Fecha del teléfono (el modo dev la mueve con save.devDay).
+const now = () => new Date(Date.now() + (save.devDay || 0) * DAY);
+const eventOf = (d) => {
+  const e = EVENTOS[d.getMonth()];
+  return e?.ready ? { ...e, month: d.getMonth(), id: d.getFullYear() * 12 + d.getMonth() } : null;
+};
+// El evento activo (o null). Al cambiar de mes se empieza de cero.
+// world: hasta qué mundo llegabas al empezar (fija las mecánicas de sus niveles todo el mes).
+export function ev() {
+  const e = eventOf(now());
+  if (!e) return null;
+  if (save.ev?.id !== e.id) {
+    save.ev = { id: e.id, k: 0, world: save.open || 0, tk: 1, at: 0, run: null, tries: {} };
+    persist();
+  }
+  const s = save.ev;
+  // El boleto que se gastó vuelve a las 24 h.
+  if (!s.tk && s.at && Date.now() - s.at >= EV_TICKET_WAIT) {
+    s.tk = 1;
+    s.at = 0;
+    persist();
+  }
+  return { ...e, state: s, done: s.k >= EVENT_LEVELS };
+}
+// Cuánto falta para el siguiente boleto (0 = ya tienes).
+export const evTicketLeft = () => {
+  const e = ev();
+  return !e || e.state.tk ? 0 : Math.max(0, e.state.at + EV_TICKET_WAIT - Date.now());
+};
+// Cuánto falta para que termine el mes.
+export const evLeft = () => {
+  const d = now(), end = new Date(d.getFullYear(), d.getMonth() + 1, 1);
+  return end - d;
+};
+// Días para el siguiente mes con evento (modo dev: saltar a él).
+export function daysToNextEvent() {
+  const d = now();
+  for (let m = 1; m <= 12; m++) {
+    const t = new Date(d.getFullYear(), d.getMonth() + m, 1);
+    if (eventOf(t)) return Math.ceil((t - d) / DAY);
+  }
+  return 0;
+}
+// Premio del nivel k (0..24): monedas en los niveles 1-4; en el 5.º, los exclusivos del planeta
+// (o EV_REPEAT si ya los tienes todos). Devuelve { coins?, undo?, wild?, items: [{ sec, k }] }.
+export function evPrize(e, k) {
+  const p = Math.floor(k / EVENT_PER_PLANET);
+  if (k % EVENT_PER_PLANET !== EVENT_PER_PLANET - 1) return { coins: EV_COINS[p], items: [] };
+  const items = Object.entries(e.ex[p]).filter(([sec, it]) => !save.owned[`${sec}:${it}`]).map(([sec, it]) => ({ sec, k: it }));
+  return items.length ? { items } : { ...EV_REPEAT[p], items: [], repeat: true };
+}
+// Entrar a un nivel: gasta el boleto (si es partida nueva). Devuelve false si no hay boleto.
+export function evEnter() {
+  const e = ev();
+  if (!e || e.done) return false;
+  if (e.state.run) return true;
+  if (!e.state.tk) return false;
+  e.state.tk = 0;
+  e.state.run = { k: e.state.k, v: e.state.tries[e.state.k] || 0, state: null };
+  e.state.tries[e.state.k] = e.state.run.v + 1;
+  persist();
+  return true;
+}
+// Ganó el nivel: el boleto vuelve, se avanza y se entrega el premio (los exclusivos quedan puestos).
+export function evWin() {
+  const e = ev();
+  if (!e?.state.run) return null;
+  const k = e.state.run.k, prize = evPrize(e, k);
+  e.state.run = null;
+  e.state.tk = 1;
+  e.state.at = 0;
+  e.state.k = k + 1;
+  save.coins += prize.coins || 0;
+  save.undo += prize.undo || 0;
+  save.wild += prize.wild || 0;
+  for (const it of prize.items) {
+    save.owned[`${it.sec}:${it.k}`] = 1;
+    equip(it.sec, it.k);
+  }
+  persist();
+  return { ...prize, k, planet: Math.floor(k / EVENT_PER_PLANET), last: k === EVENT_LEVELS - 1 };
+}
+// Perdió, abandonó o pidió reintentar: el boleto ya se gastó; el siguiente llega en 24 h.
+export function evLose() {
+  const e = ev();
+  if (!e?.state.run) return;
+  e.state.run = null;
+  e.state.at = Date.now();
+  persist();
+}
+export { EVENT_PLANETS, EVENT_PER_PLANET, EVENT_LEVELS };

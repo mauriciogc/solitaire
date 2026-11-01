@@ -1,7 +1,7 @@
 // Modo dev: probar niveles rápido sin jugarlos a mano.
 // Se activa con ?dev en la URL (y se apaga con ?dev=0). Queda guardado en el navegador.
 import { save, prefs, persist, resetProfile, backupOnce, restoreBackup, setDev } from './storage.js';
-import { rachaWin, rachaLose, racha, RACHA_GOALS, col, daysToNextCol } from './events.js';
+import { rachaWin, rachaLose, racha, RACHA_GOALS, col, daysToNextCol, ev, daysToNextEvent, EVENT_PER_PLANET, EVENT_LEVELS } from './events.js';
 import { generateLevel, packGroups, worldInfo, TOTAL_LEVELS, LEVELS_PER_WORLD, MECH_NAMES, MECHANICS } from './levels.js';
 import { playCasual, solve, initState } from './engine.js';
 import { openModal, toast, updateCoins } from './ui.js';
@@ -260,66 +260,51 @@ function completeWorlds(from, to) {
 export function openDevMenu({ onGallery, onRefresh }) {
   const w = Math.min(Math.floor(save.next / LEVELS_PER_WORLD), save.open);
   const r = Math.floor(w / REGION);
-  const toggle = (k, label) => ({
-    label: `${label}: ${prefs[k] ? 'sí' : 'no'}`,
-    cls: 'ghost',
-    onClick: () => {
-      prefs[k] = !prefs[k];
-      persist();
-      toast(`${label}: ${prefs[k] ? 'sí' : 'no'}`);
-    },
-  });
-  openModal({
+  const evNow = ev(), colNow = col();
+  const evSet = (patch) => { Object.assign(ev().state, { run: null, tk: 1, at: 0, ...patch }); persist(); onRefresh(); };
+  // Secciones con título; cada botón dice en corto lo que hace (la explicación larga va en su title).
+  const S = [
+    { t: 'General', items: [
+      { l: 'Galería de niveles', cls: 'gold', fn: onGallery },
+      { l: `Boosters infinitos: ${prefs.devInfinite ? 'sí' : 'no'}`, fn: () => { prefs.devInfinite = !prefs.devInfinite; persist(); toast(`Boosters infinitos: ${prefs.devInfinite ? 'sí' : 'no'}`); } },
+      { l: '+1000 monedas', fn: () => ((save.coins += 1000), persist(), updateCoins()) },
+      { l: 'Explicar mecánicas', title: 'Las explicaciones de cada mecánica salen otra vez', fn: () => ((save.seen = {}), persist(), toast('Las explicaciones saldrán otra vez')) },
+    ] },
+    { t: 'Avance', sub: `vas en el mundo ${w + 1}`, items: [
+      { l: `Abrir mundo ${w + 1}`, fn: () => (completeWorlds(w, w), onRefresh()) },
+      { l: `Abrir constelación ${r + 1}`, fn: () => (completeWorlds(w, Math.min(r * REGION + REGION - 1, TOTAL_LEVELS / LEVELS_PER_WORLD - 1)), onRefresh()) },
+      { l: 'Abrir todo', fn: () => { save.next = TOTAL_LEVELS - 1; save.open = Math.floor(save.next / LEVELS_PER_WORLD); save.run = null; persist(); onRefresh(); } },
+      { l: 'Reiniciar progreso', fn: () => (resetProfile(), onRefresh()) },
+    ] },
+    { t: 'Racha', sub: `va en ${racha().n}`, items: [
+      { l: '+1 victoria', fn: () => (rachaWin(), onRefresh()) },
+      { l: 'Al siguiente premio', fn: () => { const g = RACHA_GOALS.find((x) => x.n > racha().n); if (!g) return toast('Ya llegó al último premio'); while (racha().n < g.n) rachaWin(); onRefresh(); } },
+      { l: 'Perderla', fn: () => (rachaLose(), onRefresh()) },
+      { l: 'Pasar al otro día', fn: () => ((save.devDay = (save.devDay || 0) + 1), persist(), onRefresh()) },
+    ] },
+    { t: 'Colección', sub: colNow ? `${colNow.name} · ${colNow.state.n} fichas` : 'no hay esta semana', items: [
+      { l: colNow ? 'Siguiente colección' : 'Ir a la próxima', fn: () => ((save.devDay = (save.devDay || 0) + daysToNextCol()), persist(), onRefresh()) },
+      colNow && { l: '+30 fichas', fn: () => ((col().state.n += 30), persist(), onRefresh()) },
+    ] },
+    { t: 'Evento del mes', sub: evNow ? `${evNow.name} · nivel ${Math.min(evNow.state.k + 1, EVENT_LEVELS)} de ${EVENT_LEVELS} · ${evNow.state.tk ? 'con boleto' : 'sin boleto'}` : 'no hay este mes', items: [
+      { l: evNow ? 'Siguiente evento' : 'Ir al próximo', fn: () => ((save.devDay = (save.devDay || 0) + daysToNextEvent()), persist(), onRefresh()) },
+      evNow && { l: 'Boleto ya', title: 'Da el boleto sin esperar las 24 horas', fn: () => evSet({}) },
+      evNow && { l: 'Ir al jefe del planeta', fn: () => evSet({ k: Math.min(EVENT_LEVELS - 1, Math.floor(evNow.state.k / EVENT_PER_PLANET) * EVENT_PER_PLANET + EVENT_PER_PLANET - 1) }) },
+      evNow && { l: 'Siguiente planeta', fn: () => evSet({ k: Math.min(EVENT_LEVELS - 1, (Math.floor(evNow.state.k / EVENT_PER_PLANET) + 1) * EVENT_PER_PLANET) }) },
+      evNow && { l: 'Empezar de cero', fn: () => ((save.ev = null), persist(), onRefresh()) },
+    ] },
+  ].map((sec) => ({ ...sec, items: sec.items.filter(Boolean) }));
+  const all = S.flatMap((sec) => sec.items);
+  const m = openModal({
     title: 'Modo dev',
     cls: 'devmenu',
-    body: '<p class="note">Todo lo que hagas aquí es de prueba: al salir del modo dev vuelve tu partida.</p>',
+    wide: true,
+    body: `<p class="note">Todo lo que hagas aquí es de prueba: al salir del modo dev vuelve tu partida.</p>
+      ${S.map((sec) => `<section class="dsec"><h4>${sec.t}${sec.sub ? `<small>${sec.sub}</small>` : ''}</h4><div class="dbtns">${sec.items.map((it) => `<button class="btn ${it.cls || 'ghost'}" data-i="${all.indexOf(it)}"${it.title ? ` title="${it.title}"` : ''}>${it.l}</button>`).join('')}</div></section>`).join('')}`,
     buttons: [
-      { label: 'Galería de niveles', cls: 'gold', onClick: onGallery },
-      toggle('devInfinite', 'Boosters infinitos'),
-      { label: '+1000 monedas', cls: 'ghost', onClick: () => ((save.coins += 1000), persist(), updateCoins()) },
-      { label: 'Explicar mecánicas otra vez', cls: 'ghost', onClick: () => ((save.seen = {}), persist(), toast('Las explicaciones saldrán otra vez')) },
-      { label: `Desbloquear mundo ${w + 1}`, cls: 'ghost', onClick: () => (completeWorlds(w, w), onRefresh()) },
-      { label: `Desbloquear constelación ${r + 1}`, cls: 'ghost', onClick: () => (completeWorlds(w, Math.min(r * REGION + REGION - 1, TOTAL_LEVELS / LEVELS_PER_WORLD - 1)), onRefresh()) },
-      {
-        label: 'Desbloquear todo',
-        cls: 'ghost',
-        onClick: () => {
-          save.next = TOTAL_LEVELS - 1;
-          save.open = Math.floor(save.next / LEVELS_PER_WORLD);
-          save.run = null;
-          persist();
-          onRefresh();
-        },
-      },
-      { label: 'Reiniciar progreso', cls: 'ghost', onClick: () => (resetProfile(), onRefresh()) },
-      // Eventos
-      { label: `Racha +1 (va en ${racha().n})`, cls: 'ghost', onClick: () => (rachaWin(), onRefresh()) },
-      {
-        label: 'Racha: al siguiente premio',
-        cls: 'ghost',
-        onClick: () => {
-          const g = RACHA_GOALS.find((x) => x.n > racha().n);
-          if (!g) return toast('Ya llegó al último premio');
-          while (racha().n < g.n) rachaWin();
-          onRefresh();
-        },
-      },
-      { label: 'Racha: perder', cls: 'ghost', onClick: () => (rachaLose(), onRefresh()) },
-      { label: 'Racha: pasar al otro día', cls: 'ghost', onClick: () => ((save.devDay = (save.devDay || 0) + 1), persist(), onRefresh()) },
-      // Colección: saltar a la siguiente semana que tenga (o a la que sigue, si ya hay una) y regalar fichas.
-      { label: col() ? `Colección: pasar a la siguiente (${col().name})` : 'Colección: ir a la siguiente semana', cls: 'ghost', onClick: () => ((save.devDay = (save.devDay || 0) + daysToNextCol()), persist(), onRefresh()) },
-      ...(col() ? [{ label: `Colección: +30 fichas (lleva ${col().state.n})`, cls: 'ghost', onClick: () => ((col().state.n += 30), persist(), onRefresh()) }] : []),
-      {
-        label: 'Empezar de cero las pruebas',
-        cls: 'green',
-        onClick: () => {
-          restoreBackup();
-          backupOnce();
-          toast('Tu partida volvió a como estaba');
-          onRefresh();
-        },
-      },
+      { label: 'Empezar de cero las pruebas', cls: 'green', onClick: () => { restoreBackup(); backupOnce(); toast('Tu partida volvió a como estaba'); onRefresh(); } },
       { label: 'Salir del modo dev', cls: 'pink', onClick: () => (setDev(false), document.documentElement.classList.remove('dev-on'), toast('Tu partida volvió a como estaba'), onRefresh()) },
     ],
   });
+  m.el.querySelectorAll('.dsec [data-i]').forEach((b) => b.addEventListener('click', () => { m.close(); all[+b.dataset.i].fn(); }));
 }

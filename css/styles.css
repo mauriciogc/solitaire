@@ -88,6 +88,7 @@ button:disabled { cursor: default; }
 .space-cueva { --sky: radial-gradient(40% 40% at 18% 78%, #7fe0ff3a, transparent 70%), radial-gradient(35% 35% at 82% 30%, #ff7ab838, transparent 70%), radial-gradient(45% 45% at 60% 85%, #b36bff40, transparent 70%), linear-gradient(170deg, #1a0f33 0%, #2a1650 55%, #3a1d66 100%); }
 .space-bosque { --sky: radial-gradient(3px 3px at 20% 30%, #ffe58a, transparent), radial-gradient(3px 3px at 70% 60%, #ffe58a, transparent), radial-gradient(2.5px 2.5px at 40% 80%, #d8ff8a, transparent), radial-gradient(60% 60% at 50% 110%, #2f7a3a55, transparent 70%), radial-gradient(50% 50% at 80% 10%, #8fd46a22, transparent 70%), linear-gradient(175deg, #0d1f1a 0%, #133326 55%, #1b4430 100%); }
 .space-algodon { --sky: radial-gradient(45% 35% at 20% 25%, #ffd6e8aa, transparent 70%), radial-gradient(40% 30% at 78% 70%, #d9c6ffaa, transparent 70%), radial-gradient(35% 30% at 55% 8%, #bfe8ff88, transparent 70%), linear-gradient(170deg, #ff9cc8 0%, #c792ff 55%, #8a7cf0 100%); }
+.space-ofrenda { --sky: radial-gradient(2.5px 2.5px at 14% 22%, #ffd27a, transparent), radial-gradient(2px 2px at 64% 14%, #ffd27a, transparent), radial-gradient(2.5px 2.5px at 84% 40%, #ffb13d, transparent), radial-gradient(2px 2px at 34% 58%, #ffd27a, transparent), radial-gradient(55% 40% at 22% 105%, #ff8a1a66, transparent 70%), radial-gradient(50% 38% at 80% 105%, #ff5fa84d, transparent 70%), radial-gradient(45% 45% at 60% 10%, #b36bff33, transparent 70%), linear-gradient(180deg, #2a0f4a 0%, #3a1258 55%, #4a1a3a 100%); }
 .space::after { content: ''; position: absolute; inset: 0; opacity: .8; background-image:
   radial-gradient(1.4px 1.4px at 12% 18%, #fff, transparent), radial-gradient(1px 1px at 32% 72%, #fff, transparent), radial-gradient(1.6px 1.6px at 58% 34%, #fff, transparent),
   radial-gradient(1px 1px at 78% 12%, #fff, transparent), radial-gradient(1.2px 1.2px at 88% 64%, #fff, transparent), radial-gradient(1px 1px at 44% 90%, #fff, transparent),
@@ -931,6 +932,8 @@ html:not(.dev-on) .dev-pill { display: none; }
 .postcard.fr-bosque::before { content: ''; position: absolute; inset: -12px; pointer-events: none; z-index: 2; --s: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2032%2032%22%3E%3CclipPath%20id%3D%22ts3%22%3E%3Cpath%20d%3D%22M8%2014.5h16c0%208-3%2012.5-8%2013.5-5-1-8-5.5-8-13.5z%22%2F%3E%3C%2FclipPath%3E%3Cg%20clip-path%3D%22url(%23ts3)%22%3E%3Cpath%20d%3D%22M8%2014.5h16c0%208-3%2012.5-8%2013.5-5-1-8-5.5-8-13.5z%22%20fill%3D%22%23c9893a%22%2F%3E%3Cpath%20d%3D%22M8%2014.5h16c0%208-3%2012.5-8%2013.5-5-1-8-5.5-8-13.5z%22%20fill%3D%22%23e8a94a%22%20transform%3D%22translate(-1.4%20-2.2)%22%2F%3E%3Cpath%20d%3D%22M11%2018q1%205%204%207%22%20stroke%3D%22%23fff4c7%22%20stroke-width%3D%222%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%2F%3E%3C%2Fg%3E%3Cpath%20d%3D%22M8%2014.5h16c0%208-3%2012.5-8%2013.5-5-1-8-5.5-8-13.5z%22%20fill%3D%22none%22%20stroke%3D%22%232a1f5c%22%20stroke-width%3D%222%22%20stroke-linejoin%3D%22round%22%2F%3E%3CclipPath%20id%3D%22ts4%22%3E%3Cpath%20d%3D%22M5%2015q0-8%2011-8t11%208z%22%2F%3E%3C%2FclipPath%3E%3Cg%20clip-path%3D%22url(%23ts4)%22%3E%3Cpath%20d%3D%22M5%2015q0-8%2011-8t11%208z%22%20fill%3D%22%2383501a%22%2F%3E%3Cpath%20d%3D%22M5%2015q0-8%2011-8t11%208z%22%20fill%3D%22%23a86a22%22%20transform%3D%22translate(-1.4%20-2.2)%22%2F%3E%3Cpath%20d%3D%22M9%2011.5h3M14%2010h3M19%2011.5h3M11%2013.5h3M17%2013.5h3%22%20stroke%3D%22%2383501a%22%20stroke-width%3D%221.4%22%2F%3E%3C%2Fg%3E%3Cpath%20d%3D%22M5%2015q0-8%2011-8t11%208z%22%20fill%3D%22none%22%20stroke%3D%22%232a1f5c%22%20stroke-width%3D%222%22%20stroke-linejoin%3D%22round%22%2F%3E%3Cpath%20d%3D%22M16%207q0-3%203-4%22%20stroke%3D%22%232a1f5c%22%20stroke-width%3D%222.6%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%2F%3E%3C%2Fsvg%3E"); background: var(--s) left top / 30px no-repeat, var(--s) right bottom / 30px no-repeat, var(--s) right 50px top 2px / 20px no-repeat, var(--s) left 40% bottom 2px / 18px no-repeat; }
 .postcard.fr-dulces { padding: 16px 22px 16px 16px; box-shadow: inset 0 0 0 5px #ff9cc8, inset 0 0 0 8px #fff, inset 0 0 0 11px #f27aad, 0 4px 0 var(--ink); }
 .postcard.fr-dulces::before { content: ''; position: absolute; inset: -12px; pointer-events: none; z-index: 2; --s: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2032%2032%22%3E%3CclipPath%20id%3D%22ts5%22%3E%3Cpath%20d%3D%22M9.5%2016%202.5%209.5v13z%22%2F%3E%3C%2FclipPath%3E%3Cg%20clip-path%3D%22url(%23ts5)%22%3E%3Cpath%20d%3D%22M9.5%2016%202.5%209.5v13z%22%20fill%3D%22%23f27aad%22%2F%3E%3Cpath%20d%3D%22M9.5%2016%202.5%209.5v13z%22%20fill%3D%22%23ff9cc8%22%20transform%3D%22translate(-1.4%20-2.2)%22%2F%3E%3C%2Fg%3E%3Cpath%20d%3D%22M9.5%2016%202.5%209.5v13z%22%20fill%3D%22none%22%20stroke%3D%22%232a1f5c%22%20stroke-width%3D%221.8%22%20stroke-linejoin%3D%22round%22%2F%3E%3CclipPath%20id%3D%22ts6%22%3E%3Cpath%20d%3D%22M22.5%2016l7-6.5v13z%22%2F%3E%3C%2FclipPath%3E%3Cg%20clip-path%3D%22url(%23ts6)%22%3E%3Cpath%20d%3D%22M22.5%2016l7-6.5v13z%22%20fill%3D%22%23f27aad%22%2F%3E%3Cpath%20d%3D%22M22.5%2016l7-6.5v13z%22%20fill%3D%22%23ff9cc8%22%20transform%3D%22translate(-1.4%20-2.2)%22%2F%3E%3C%2Fg%3E%3Cpath%20d%3D%22M22.5%2016l7-6.5v13z%22%20fill%3D%22none%22%20stroke%3D%22%232a1f5c%22%20stroke-width%3D%221.8%22%20stroke-linejoin%3D%22round%22%2F%3E%3CclipPath%20id%3D%22ts7%22%3E%3Cpath%20d%3D%22M16%208a8%208%200%201%201%200%2016a8%208%200%201%201%200%20-16z%22%2F%3E%3C%2FclipPath%3E%3Cg%20clip-path%3D%22url(%23ts7)%22%3E%3Cpath%20d%3D%22M16%208a8%208%200%201%201%200%2016a8%208%200%201%201%200%20-16z%22%20fill%3D%22%23d63d5f%22%2F%3E%3Cpath%20d%3D%22M16%208a8%208%200%201%201%200%2016a8%208%200%201%201%200%20-16z%22%20fill%3D%22%23ff5f7e%22%20transform%3D%22translate(-1.4%20-2.2)%22%2F%3E%3Cpath%20d%3D%22M10%2011q6%203%203%2012M15%208.5q6%204%204%2014%22%20stroke%3D%22%23fff%22%20stroke-width%3D%222.2%22%20fill%3D%22none%22%20opacity%3D%22.85%22%2F%3E%3C%2Fg%3E%3Cpath%20d%3D%22M16%208a8%208%200%201%201%200%2016a8%208%200%201%201%200%20-16z%22%20fill%3D%22none%22%20stroke%3D%22%232a1f5c%22%20stroke-width%3D%222%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E"); background: var(--s) left top / 30px no-repeat, var(--s) right bottom / 30px no-repeat, var(--s) right 50px top 2px / 20px no-repeat, var(--s) left 40% bottom 2px / 18px no-repeat; }
+.postcard.fr-muertos { padding: 22px 22px 16px 16px; box-shadow: inset 0 0 0 5px #ff9c1a, inset 0 0 0 8px #fff3e0, inset 0 0 0 11px #b36bff, 0 4px 0 var(--ink); }
+.postcard.fr-muertos::before { content: ''; position: absolute; left: 6px; right: 6px; top: -6px; height: 24px; pointer-events: none; z-index: 2; background: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2068%2020%22%3E%3Cpath%20d%3D%22M1%203Q34%206%2067%203%22%20fill%3D%22none%22%20stroke%3D%22%232a1f5c%22%20stroke-width%3D%221.4%22/%3E%3Cpath%20d%3D%22M4%203h13v14l-6.5-4-6.5%204z%22%20fill%3D%22%23ff5fa8%22%20stroke%3D%22%232a1f5c%22%20stroke-width%3D%221.6%22%20stroke-linejoin%3D%22round%22/%3E%3Ccircle%20cx%3D%2210.5%22%20cy%3D%229%22%20r%3D%222%22%20fill%3D%22%23fff6e6%22/%3E%3Cpath%20d%3D%22M20%203h13v14l-6.5-4-6.5%204z%22%20fill%3D%22%23ffb13d%22%20stroke%3D%22%232a1f5c%22%20stroke-width%3D%221.6%22%20stroke-linejoin%3D%22round%22/%3E%3Ccircle%20cx%3D%2226.5%22%20cy%3D%229%22%20r%3D%222%22%20fill%3D%22%23fff6e6%22/%3E%3Cpath%20d%3D%22M36%203h13v14l-6.5-4-6.5%204z%22%20fill%3D%22%235fd1c5%22%20stroke%3D%22%232a1f5c%22%20stroke-width%3D%221.6%22%20stroke-linejoin%3D%22round%22/%3E%3Ccircle%20cx%3D%2242.5%22%20cy%3D%229%22%20r%3D%222%22%20fill%3D%22%23fff6e6%22/%3E%3Cpath%20d%3D%22M52%203h13v14l-6.5-4-6.5%204z%22%20fill%3D%22%23b36bff%22%20stroke%3D%22%232a1f5c%22%20stroke-width%3D%221.6%22%20stroke-linejoin%3D%22round%22/%3E%3Ccircle%20cx%3D%2258.5%22%20cy%3D%229%22%20r%3D%222%22%20fill%3D%22%23fff6e6%22/%3E%3C/svg%3E") left top / 68px 20px repeat-x; }
 
 /* Títulos: cada uno con su color, icono y estilo (los más caros, más vistosos). */
 .title-chip { --tb: #e3d8ff; --tc: #5a3d99; --td: #c9bbf2; position: relative; display: inline-flex; align-items: center; gap: 4px; padding: 2px 11px 3px 6px; border-radius: 99px; background: var(--tb); color: var(--tc); border: 2px solid var(--ink); box-shadow: inset 0 -3px 0 var(--td); font: 800 13px/1.2 'Baloo 2'; white-space: nowrap; }
@@ -1103,3 +1106,75 @@ html:not(.dev-on) .dev-pill { display: none; }
 .title-chip.t-cazagemas { --tc: #fff; --td: #47307d; background: linear-gradient(115deg, #8a5cf0 0 40%, #b99aff 50%, #8a5cf0 60% 100%) 0 0 / 300% 100%; font-family: 'Lilita One'; font-weight: 400; text-shadow: 0 1.5px 0 #47307d; animation: shimmer 3.2s linear infinite; }
 .title-chip.t-guardabosques { --tc: #fff; --td: #2f7a3a; background: #47a85a; border-radius: 9px; font-family: 'Lilita One'; font-weight: 400; text-shadow: 0 1.5px 0 #2a6a33; }
 .title-chip.t-golosito { --tc: #c22c6f; --td: #ffa8cc; background: repeating-linear-gradient(-45deg, #ffe0ee 0 7px, #fff 7px 14px); font-family: 'Lilita One'; font-weight: 400; }
+.title-chip.t-catrin { --tc: #fff; --td: #5e1f9a; background: linear-gradient(#ff9c1a, #e0700a); font-family: 'Lilita One'; font-weight: 400; text-shadow: 0 1.5px 0 #7b2fbf; box-shadow: inset 0 -3px 0 #b36bff; }
+
+/* Evento del mes (Fase 6, parte 4). */
+.go.wait { background: #8a82a8; box-shadow: inset 0 -7px 0 #6f6890, inset 0 3px 0 #b3aecb, 0 4px 0 var(--ink), 0 12px 22px #0b062a77; }
+.go.wait small { font-variant-numeric: tabular-nums; }
+.ev-tk span { font-variant-numeric: tabular-nums; }
+.ev-win { position: relative; z-index: 1; display: flex; justify-content: center; margin: 4px 0 12px; }
+.ev-win .ico { width: 96px; height: 96px; animation: starpop 560ms var(--spring) both 300ms; filter: drop-shadow(0 4px 0 #0b062a33); }
+.ev-prize .evbox { display: flex; justify-content: center; margin: 2px 0 8px; }
+.ev-prize.opened .gbox .lid { opacity: 0; }
+.ev-items { display: flex; justify-content: center; flex-wrap: wrap; gap: 14px 10px; padding: 12px 2px 4px; }
+.ev-items .coffer { width: 138px; cursor: default; }
+.ev-items .coffer .s-art { height: 86px; display: grid; place-items: center; }
+.ev-prize .gbox { animation: wobble 2.4s ease-in-out infinite; }
+.galaxy.event .res .pill.ev-tk { display: flex; }
+@media (max-height: 500px) {
+  .ev-prize .evbox { margin: 0; }
+  .ev-prize .gbox { width: 52px; height: 52px; }
+  .ev-items { padding-top: 10px; }
+  .ev-items .coffer .s-art { height: 70px; }
+  .ev-prize .note { margin: 4px 0 0; }
+}
+.ev-btn .ico { width: 88%; height: 88%; }
+.ev-btn .wait { position: absolute; top: -9px; left: 50%; translate: -50% 0; padding: 0 7px 1px; border-radius: 9px; background: var(--ink); border: 2px solid #fff; color: #fff; font: 400 13px 'Lilita One'; line-height: 1.35; white-space: nowrap; }
+.ev-btn.waiting .ico { filter: grayscale(.6); opacity: .75; }
+.ev-help { flex: none; width: calc(30px * var(--k)); height: calc(30px * var(--k)); margin-left: 4px; border-radius: 50%; display: grid; place-items: center; background: #fff; border: 2.5px solid var(--ink); box-shadow: inset 0 -3px 0 var(--cream-d), 0 2px 0 var(--ink); font: 400 calc(17px * var(--k)) 'Lilita One'; color: var(--ink); }
+@media (max-aspect-ratio: 1/1) { .galaxy.event .wtitle .ev-help { margin-left: auto; } }
+/* Bienvenida del evento: los 5 planetas en abanico con el ícono del evento al centro, y las reglas en renglones con ícono. */
+.ev-intro .lead { text-align: center; }
+.evi-hero { position: relative; height: 128px; display: grid; place-items: center; margin: -4px 0 4px; }
+.evi-hero .rays { z-index: 0; }
+.evi-pl { position: absolute; left: 50%; top: 50%; width: 52px; height: 52px; z-index: 1; translate: calc(-50% + var(--i) * 74px) calc(-50% + var(--i) * var(--i) * 7px - 6px); }
+.evi-pl .ico { width: 100%; height: 100%; filter: drop-shadow(0 3px 0 #0b062a33); }
+.evi-ico { position: relative; z-index: 2; }
+.evi-ico .ico { width: 92px; height: 92px; filter: drop-shadow(0 4px 0 #0b062a33); animation: wobble 2.4s ease-in-out infinite; }
+.evi-rules { list-style: none; display: grid; gap: 7px; margin: 6px 0 4px; padding: 0; }
+.evi-rules li { display: flex; align-items: center; gap: 10px; text-align: left; font-weight: 700; color: #4a3f73; line-height: 1.25; }
+.evi-rules li > .ico { flex: none; width: 30px; height: 30px; }
+@media (max-width: 420px) { .evi-pl { width: 40px; height: 40px; translate: calc(-50% + var(--i) * 58px) calc(-50% + var(--i) * var(--i) * 6px - 6px); } }
+@media (max-height: 500px) {
+  .evi-hero { height: 82px; }
+  .evi-pl { width: 38px; height: 38px; translate: calc(-50% + var(--i) * 110px) calc(-50% + var(--i) * var(--i) * 4px); }
+  .evi-ico .ico { width: 64px; height: 64px; }
+  .ev-intro .lead { font-size: 14px; margin: 2px 0; }
+  .evi-rules { grid-template-columns: 1fr 1fr; gap: 6px 14px; font-size: 12px; line-height: 1.2; }
+  .evi-rules li > .ico { width: 24px; height: 24px; }
+}
+/* Editor del jugador: fondo del universo y postal (como el viajero, en tarjetas que se eligen). */
+.space-pick, .frame-pick { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+.space-pick button, .frame-pick button { position: relative; display: flex; flex-direction: column; align-items: center; gap: 3px; width: 96px; padding: 5px 5px 4px; border-radius: 16px; background: #fff; border: 2.5px solid var(--ink); box-shadow: inset 0 -4px 0 var(--cream-d); transition: scale var(--press); }
+.space-pick button:active, .frame-pick button:active { scale: .94; }
+.space-pick button.on, .frame-pick button.on { background: #fff8dc; box-shadow: inset 0 -4px 0 #ffe39a, 0 0 0 3px var(--gold); }
+.space-pick small, .frame-pick small { font: 400 11px 'Lilita One'; color: #6d6394; line-height: 1.1; text-align: center; }
+.space-pick .space-prev { height: 46px; border-radius: 10px; }
+.frame-pick .frame-prev { zoom: .3; padding: 18px 12px 4px; pointer-events: none; }
+.space-pick .more, .frame-pick .more { justify-content: center; min-height: 70px; background: var(--cream); border-style: dashed; box-shadow: none; }
+.space-pick .more .ico, .frame-pick .more .ico { width: 32px; height: 32px; }
+/* Menú dev: secciones con título y botones que dicen todo (sin cortar el texto). */
+.devmenu .dsec { margin: 10px 0 0; padding: 8px 10px 10px; border-radius: 14px; background: #f3edff; border: 2px solid #d9cdf7; text-align: left; }
+.devmenu .dsec h4 { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 8px; margin: 0 0 7px; font: 400 16px 'Lilita One'; color: var(--ink); }
+.devmenu .dsec h4 small { font: 700 12px 'Baloo 2', sans-serif; color: #6d6394; }
+.devmenu .dbtns { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 6px; }
+.devmenu .dbtns .btn { min-height: 38px; padding: 4px 8px 6px; font-size: 14px; line-height: 1.15; border-radius: 12px; white-space: normal; }
+/* Los rayos van detrás del texto (en la bienvenida y en el show final). */
+.ev-intro .lead, .ev-done .lead, .ev-done .note { position: relative; z-index: 2; }
+.evi-hero, .ev-done .win-top { z-index: 0; }
+/* Botón "¡A jugar!" del evento, con los colores de su temática. */
+.btn.ev-go { display: flex; align-items: center; justify-content: center; gap: 10px; color: #fff; font-size: 22px; -webkit-text-stroke: 5px var(--ink); paint-order: stroke fill; }
+.btn.ev-go .ico { width: 30px; height: 30px; -webkit-text-stroke: 0; }
+.btn.ev-go .ico:first-child { rotate: -14deg; }
+.btn.ev-go .ico:last-child { rotate: 14deg; }
+.btn.ev-go-muertos { background: linear-gradient(#ffb13d, #ff8a1a); box-shadow: inset 0 -6px 0 #e0700a, inset 0 3px 0 #ffd27a, 0 4px 0 var(--ink); }

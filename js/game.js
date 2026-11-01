@@ -87,6 +87,7 @@ const marks = (c) =>
 
 // opts: onExit, onAbandon, onRetry, onWin(stars) → { coins, tickets, prev, gold, wild, chest }, onDone(res), onSave(state)?,
 //       resume (estado guardado), saved (la partida se guarda al salir), tutorial, dev
+//       event: { ico, table } = nivel del evento del mes (table = la mesa de su temática) (sin estrellas; perder gasta su boleto y no se reintenta)
 export class Game {
   constructor(root, level, opts) {
     this.level = level;
@@ -216,7 +217,7 @@ export class Game {
     el.style.setProperty('--hue', info.hue);
     this.back = cardBackURL();
     el.style.setProperty('--back', this.back);
-    el.innerHTML = `${tableHTML(level.world)}
+    el.innerHTML = `${tableHTML(level.world, this.opts.event?.table)}
       <header class="hud">
         <button class="tb hbtn" data-a="exit" aria-label="Pausa" title="Pausa">${icon('pause')}</button>
         <div class="hud-mid"><div class="combo info"></div></div>
@@ -1157,14 +1158,14 @@ export class Game {
       title: '¿Finalizar el nivel?',
       color: 'pink',
       // El cuadro grande es el botón de comprar +5: dice el precio y se toca para gastar (gris si no alcanza).
-      body: `<button class="offer buy press"${short ? ' disabled' : ''}><div class="fan">${fan}</div><div><b>Comprar +5 cartas</b><span>Quedan ${left} carta${left === 1 ? '' : 's'} en el tablero. Con +5 siempre te llevas al menos 1 estrella.</span>
+      body: `<button class="offer buy press"${short ? ' disabled' : ''}><div class="fan">${fan}</div><div><b>Comprar +5 cartas</b><span>Quedan ${left} carta${left === 1 ? '' : 's'} en el tablero. ${this.opts.event ? 'Te pueden salvar el nivel.' : 'Con +5 siempre te llevas al menos 1 estrella.'}</span>
           <em class="cost${short ? ' short' : ''}">${coin()} ${cost || 'gratis'}${short ? ' · te faltan monedas' : ''}</em></div></button>`,
       onClose: () => (this.modalOpen = false),
       buttons: [
-        { label: this.opts.free ? 'Reintentar' : 'Reintentar · nuevo boleto', cls: 'ghost wide', onClick: () => this.opts.onRetry() },
+        !this.opts.event && { label: this.opts.free ? 'Reintentar' : 'Reintentar · nuevo boleto', cls: 'ghost wide', onClick: () => this.opts.onRetry() },
         { label: 'Rendirse', cls: 'pink grow', onClick: () => this.opts.onAbandon() },
         { label: 'Seguir jugando', cls: 'ghost grow' },
-      ],
+      ].filter(Boolean),
     });
     m.el.querySelector('.offer.buy').addEventListener('click', () => {
       if (short) return;
@@ -1181,17 +1182,20 @@ export class Game {
     const stars = this.extras ? 1 : E.starsFor(this.level, left);
     const res = this.opts.onWin(stars);
     const { coins, tickets, prev, gold, wild, undo, col } = res;
-    const title = this.level.secret ? '¡Nivel secreto!' : this.level.boss ? '¡Jefe derrotado!' : '¡Nivel superado!';
+    const ev = this.opts.event;
+    const title = ev ? res.title : this.level.secret ? '¡Nivel secreto!' : this.level.boss ? '¡Jefe derrotado!' : '¡Nivel superado!';
     // Premios en fichas que saltan una tras otra (después de las estrellas).
     const chips = [
-      `<div class="reward">${coin()}${coins ? `+${coins}` : '—'}</div>`,
+      !(ev && !coins) && `<div class="reward">${coin()}${coins ? `+${coins}` : '—'}</div>`,
       tickets && `<div class="reward">${icon('ticket')}+${tickets}<small>primera vez</small></div>`,
       gold && `<div class="reward gold">${icon('gold')}+1<small>boleto dorado</small></div>`,
       wild && `<div class="reward">${icon('wild')}+${wild}<small>comodín</small></div>`,
       undo && `<div class="reward">${icon('undo')}+${undo}<small>deshacer</small></div>`,
       col && `<div class="reward">${icon(col.ico)}+${col.n}<small>colección</small></div>`,
+      ev && res.items?.length && `<div class="reward gold">${icon('gift')}+${res.items.length}<small>exclusivo${res.items.length > 1 ? 's' : ''}</small></div>`,
     ].filter(Boolean);
-    const note = !coins && prev >= 3
+    const note = ev ? (res.repeat ? '<p class="note">Ya tenías los exclusivos de este planeta: te tocan ayudas.</p>' : '')
+      : !coins && prev >= 3
       ? '<p class="note">Ya cobraste las 3 estrellas de este nivel.</p>'
       : this.level.secret && stars < 3 && prev < 3
         ? `<p class="note">Con 3 estrellas el nivel secreto da además ${icon('wild')} comodín y ${icon('undo')} deshacer.</p>`
@@ -1203,7 +1207,7 @@ export class Game {
         color: 'gold',
         closable: false,
         cls: 'win',
-        body: `<div class="win-top"><div class="rays"></div><div class="big-stars">${starsHTML(stars)}</div></div>
+        body: `<div class="win-top"><div class="rays"></div>${ev ? `<div class="ev-win">${icon(ev.ico, 0, 0, 'big')}</div>` : `<div class="big-stars">${starsHTML(stars)}</div>`}</div>
           <div class="rewards">${chips.join('')}</div>${note}`,
         buttons: [{ label: `Continuar ${icon('next')}`, cls: 'green wide', onClick: () => this.opts.onDone?.(res) }],
       });
@@ -1234,7 +1238,7 @@ export class Game {
         title: '¿Abandonar el nivel?',
         color: 'pink',
         onClose: free,
-        body: `<p class="lead">${this.opts.free ? 'Se pierde este intento.' : 'Pierdes los boletos y lo que gastaste en este intento.'}</p>`,
+        body: `<p class="lead">${this.opts.event ? 'Se gasta tu boleto del evento: el siguiente llega en 24 horas.' : this.opts.free ? 'Se pierde este intento.' : 'Pierdes los boletos y lo que gastaste en este intento.'}</p>`,
         buttons: [{ label: 'Seguir jugando', cls: 'ghost' }, { label: 'Abandonar', cls: 'pink', onClick: () => this.opts.onAbandon() }],
       });
     if (!this.opts.saved && !this.history.length && !this.opts.dev) return free(), this.opts.onAbandon();

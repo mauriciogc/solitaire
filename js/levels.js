@@ -283,16 +283,19 @@ function normalizeGroup(cards) {
 // Nivel secreto de cada mundo (se abre con 30/30 estrellas): id aparte, después de los 5,200 normales.
 // Se arma como un jefe del mismo mundo, un poco más difícil y con otro tablero.
 export const secretId = (w) => TOTAL_LEVELS + w;
-export const isSecret = (g) => g >= TOTAL_LEVELS;
+export const isSecret = (g) => g >= TOTAL_LEVELS && g < TOTAL_LEVELS + WORLD_COUNT;
 
-export function generateLevel(g) {
-  const secret = isSecret(g);
-  const base = secret ? (g - TOTAL_LEVELS) * LEVELS_PER_WORLD + LEVELS_PER_WORLD - 1 : g;
+// ev: nivel del evento del mes (ver eventLevel): trae su propia dificultad, semilla y mundo de mecánicas.
+export function generateLevel(g, ev = null) {
+  const secret = !ev && isSecret(g);
+  const base = ev ? ev.world * LEVELS_PER_WORLD + ev.index : secret ? (g - TOTAL_LEVELS) * LEVELS_PER_WORLD + LEVELS_PER_WORLD - 1 : g;
   const world = Math.floor(base / LEVELS_PER_WORLD);
   const index = base % LEVELS_PER_WORLD;
-  const r = mulberry32(hash(g));
-  const d = secret ? Math.min(1, difficulty(base) + 0.05) : difficulty(base);
-  const template = chooseTemplate(r, base, d);
+  const r = mulberry32(hash(ev ? ev.seed : g));
+  const d = ev ? ev.d : secret ? Math.min(1, difficulty(base) + 0.05) : difficulty(base);
+  // Evento: en cada planeta salen más seguido las formas que más cuestan (medido con el bot casual).
+  // Evento: en cada planeta salen más seguido las formas que más cuestan (medido con el bot casual).
+  const template = ev && (index === LEVELS_PER_WORLD - 1 || r() < 0.15 + ev.tight * 0.17) ? pick(r, ['peaks', 'peaks', 'scatter', 'invPyramid']) : chooseTemplate(r, ev ? Math.max(3, base) : base, d);
 
   const raw = template === 'clusters' ? clusters(r, d, index === LEVELS_PER_WORLD - 1) : [TEMPLATES[template](r, d)];
   const groups = raw.map(normalizeGroup);
@@ -316,7 +319,7 @@ export function generateLevel(g) {
 
   const boss = index === LEVELS_PER_WORLD - 1;
   // Mecánicas del nivel: cada una aparece a partir de su mundo y luego se combinan (máximo 2 tipos).
-  const mech = new Set(chooseMechanics(r, world, index, boss, n));
+  const mech = new Set(chooseMechanics(r, world, index, boss, n, ev));
 
   // Carta regalo: una carta especial (sin número) que se activa sola al quedar destapada del todo
   // y manda 2-5 cartas al final del mazo. Va tapada y en el primer 40% del orden de retirada.
@@ -336,7 +339,8 @@ export function generateLevel(g) {
   const np = play.length;
 
   const minC = d < 0.15 ? 4 : d < 0.35 ? 3 : 2;
-  const maxC = Math.max(minC + 1, Math.round(9 - d * 5.5) - (boss ? 2 : 0));
+  // Evento: cadenas más cortas en cada planeta (menos rachas largas = menos premios de racha).
+  const maxC = Math.max(minC + 1, Math.round(9 - d * 5.5) - (boss ? 2 : 0) - (ev ? ev.tight : 0));
   const ranks = new Array(n);
   const starts = [];
   for (let k = 0; k < np; ) {
@@ -362,6 +366,9 @@ export function generateLevel(g) {
   let spares = (d < 0.15 ? 2 : 1) + Math.round((1 - d) ** 1.5 * (3 + n * 0.25));
   // Jefes: menos margen, para que el comodín o el +5 se sientan valiosos (siguen siendo ganables).
   if (boss && d > 0.15) spares = Math.max(1, spares - 3);
+  // Evento: cada planeta deja menos cartas de sobra en el mazo (ev.tight = 0 en el primero … 4 en el último).
+  // Desde el tercero puede no sobrar ninguna: sigue siendo ganable, pero sin errores (o con ayudas).
+  if (ev) spares = Math.max(ev.tight >= 2 ? 0 : 1, spares - ev.tight);
   // En niveles fáciles las sobrantes suelen ser vecinas de alguna carta del tablero.
   const helpfulCard = (p) => card(r() < p ? (pick(r, known) + pick(r, [1, 12])) % 13 : randInt(r, 0, 12));
   for (let i = 0; i < spares; i++) stock.push(helpfulCard((1 - d) * 0.85));
@@ -526,7 +533,7 @@ export function generateLevel(g) {
   }
 
   const level = {
-    g, world, index, d, template, boss, secret,
+    g, world, index, d, template, boss, secret, event: !!ev,
     groups: groups.map(({ w, h }) => ({ w, h })),
     cards,
     keys,
@@ -548,6 +555,28 @@ export function generateLevel(g) {
   return level;
 }
 
+// ---------- Evento del mes ----------
+// 25 niveles en 5 planetas de 5 (el 5.º de cada planeta es su jefe). Más difíciles que el camino normal
+// y suben con cada planeta. key = edición (año × 12 + mes, un número) para que cada mes traiga otros tableros.
+// world = mundo hasta el que llegaba el jugador al empezar el evento: solo salen las mecánicas que ya conoce.
+export const EVENT_PLANETS = 5;
+export const EVENT_PER_PLANET = 5;
+export const EVENT_LEVELS = EVENT_PLANETS * EVENT_PER_PLANET;
+export const eventDifficulty = (k) => {
+  const p = Math.floor(k / EVENT_PER_PLANET), j = k % EVENT_PER_PLANET;
+  return Math.min(1, 0.42 + p * 0.1 + j * 0.02 + (j === EVENT_PER_PLANET - 1 ? 0.05 : 0));
+};
+export function eventLevel(key, k, world) {
+  const j = k % EVENT_PER_PLANET, boss = j === EVENT_PER_PLANET - 1;
+  const w = Math.max(0, Math.min(WORLD_COUNT - 1, world));
+  // Índice dentro del mundo: el jefe usa el 10 (tableros de jefe); los demás, del 2 al 8.
+  const L = generateLevel(EVENT_ID + k, { world: w, index: boss ? LEVELS_PER_WORLD - 1 : 1 + j * 2, d: eventDifficulty(k), tight: Math.floor(k / EVENT_PER_PLANET), seed: 7e6 + key * 64 + k });
+  return { ...L, k, planet: Math.floor(k / EVENT_PER_PLANET), boss };
+}
+// Id de los niveles del evento (después de los normales y los secretos): solo sirve para guardar intentos.
+export const EVENT_ID = TOTAL_LEVELS + WORLD_COUNT;
+export const isEvent = (g) => g >= EVENT_ID;
+
 // ---------- Mecánicas por mundo ----------
 export const MECHANICS = ['lock', 'pack', 'ice', 'double', 'arrow', 'curtain', 'bomb', 'live'];
 const MECH_FIELD = { lock: 'lock', pack: 'pack', ice: 'ice', double: 'alt', arrow: 'arrow', curtain: 'curtain', bomb: 'bomb', live: 'live' };
@@ -557,10 +586,17 @@ export const MECH_NAMES = {
   lock: 'Candado', pack: 'Carta regalo', ice: 'Hielo', double: 'Carta doble', arrow: 'Flecha', curtain: 'Cortina', bomb: 'Bomba', live: 'Carta viva',
 };
 
-function chooseMechanics(r, world, index, boss, n) {
+function chooseMechanics(r, world, index, boss, n, ev = null) {
   if (n < 8) return [];
   const avail = MECHANICS.filter((m) => world >= MECH_INTRO[m]);
   if (!avail.length) return [];
+  // Evento: siempre trae alguna de las que ya conoces (dos en los jefes). En los últimos planetas
+  // la carta viva y la bomba (las más duras) van primero si ya las conoces.
+  if (ev) {
+    const mix = shuffle(r, avail.slice());
+    const hard = mix.filter((m) => (m === 'live' || m === 'bomb') && r() < ev.tight * 0.2);
+    return [...new Set([...hard, ...mix])].slice(0, boss || r() < 0.45 ? 2 : 1);
+  }
   const newest = avail.find((m) => MECH_INTRO[m] === world);
   const others = avail.filter((m) => m !== newest);
   // Mundo de presentación: la nueva va sola en los primeros niveles y luego acompañada.

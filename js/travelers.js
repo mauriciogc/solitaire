@@ -258,6 +258,45 @@ const MODELS = {
     disc.position.y = 0.05; pop.add(disc); g.add(pop);
     return { obj: g, tick: (t) => { pop.rotation.y = t * 1.4; disc.rotation.z = -t * 2; pop.position.y = Math.sin(t * 2) * 0.05; pop.rotation.z = Math.sin(t * 1.3) * 0.12; } };
   },
+  // ---------- Exclusivos del evento del mes ----------
+  // Alebrije (Día de Muertos): jaguar-dragón de colores con manchas, alas de mariposa y cola enroscada.
+  alebrije(part) {
+    const g = new THREE.Group(), body = new THREE.Group();
+    body.add(part(new THREE.SphereGeometry(0.2, 20, 14).scale(1, 0.85, 1.35), '#ff5fa8', { ol: 0.07 }));
+    for (const [x, y, z, c] of [[0.12, 0.1, 0.05, '#ffc83d'], [-0.13, 0.08, -0.08, '#5fd1c5'], [0.02, 0.16, -0.14, '#ffc83d'], [-0.08, 0.13, 0.14, '#5fd1c5'], [0.15, 0.02, -0.15, '#b36bff']])
+      body.add(part(new THREE.SphereGeometry(0.045, 10, 8), c, { x, y, z, ol: 0.18 }));
+    const head = new THREE.Group();
+    head.add(part(new THREE.SphereGeometry(0.15, 18, 12), '#5fd1c5', { ol: 0.08 }));
+    head.add(part(new THREE.SphereGeometry(0.08, 12, 10).scale(1.1, 0.8, 1), '#ffc83d', { z: 0.12, y: -0.03, ol: 0.12 }));
+    for (const x of [-0.06, 0.06]) {
+      head.add(part(new THREE.SphereGeometry(0.035, 10, 8), '#fff6e6', { x, y: 0.05, z: 0.12, ol: 0.15 }));
+      head.add(part(new THREE.SphereGeometry(0.02, 8, 6), INK, { x: x * 1.05, y: 0.05, z: 0.15, ol: 0 }));
+      head.add(part(new THREE.ConeGeometry(0.04, 0.14, 8), '#b36bff', { x: x * 1.4, y: 0.15, z: -0.02, rz: -x * 4, ol: 0.15 }));
+    }
+    head.position.set(0, 0.12, 0.28); body.add(head);
+    const wings = [];
+    for (const side of [-1, 1]) {
+      const w = new THREE.Group();
+      w.add(part(new THREE.SphereGeometry(0.2, 16, 10).scale(1.2, 0.1, 0.8), '#ffb13d', { x: side * 0.2, z: 0.04, ol: 0.1 }));
+      w.add(part(new THREE.SphereGeometry(0.13, 14, 8).scale(1.1, 0.1, 0.8), '#b36bff', { x: side * 0.17, z: -0.16, ol: 0.12 }));
+      w.add(part(new THREE.SphereGeometry(0.06, 10, 6).scale(1, 0.25, 1), '#5fd1c5', { x: side * 0.24, y: 0.02, z: 0.06, ol: 0.15 }));
+      w.position.set(side * 0.06, 0.14, 0); body.add(w); wings.push([w, side]);
+    }
+    const tail = [];
+    let parent = body;
+    for (let k = 0; k < 4; k++) {
+      const seg = part(new THREE.SphereGeometry(0.06 - k * 0.01, 10, 8), k % 2 ? '#ffc83d' : '#ff5fa8', { ol: 0.15 });
+      seg.position.set(0, k ? 0.03 : 0.02, k ? -0.08 : -0.3);
+      parent.add(seg); tail.push(seg); parent = seg;
+    }
+    body.rotation.set(0.2, 0.5, 0);
+    g.add(body);
+    return { obj: g, tick: (t) => {
+      wings.forEach(([w, s]) => (w.rotation.z = s * (0.25 + Math.sin(t * 5) * 0.45)));
+      tail.forEach((sg, k) => (sg.rotation.x = Math.sin(t * 2.4 - k) * 0.5));
+      body.position.y = Math.sin(t * 2.5) * 0.06; head.rotation.y = Math.sin(t * 0.9) * 0.3;
+    } };
+  },
   // Mantarraya: aletas que aletean despacio y cola larga.
   mantarraya(part) {
     const g = new THREE.Group(), ray = new THREE.Group();

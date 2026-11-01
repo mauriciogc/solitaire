@@ -2,7 +2,7 @@
 // Primero sigue la solución con la que se generó cada nivel (robando cuando hace falta) con el motor
 // de reglas real, que aplica premios de racha, cartas regalo, bombas, etc. Si esa ruta no alcanza,
 // prueba con el solucionador. Uso: node tests/verify-levels.mjs
-import { generateLevel, TOTAL_LEVELS, WORLD_COUNT, overlaps, MECHANICS } from '../js/levels.js';
+import { generateLevel, eventLevel, EVENT_LEVELS, TOTAL_LEVELS, WORLD_COUNT, overlaps, MECHANICS } from '../js/levels.js';
 import { initState, playRank, play, draw, won, solve } from '../js/engine.js';
 
 let fails = 0;
@@ -22,10 +22,18 @@ function reference(L) {
   return won(s);
 }
 
-// Los 5,200 niveles normales y después los 520 secretos (uno por mundo).
+// Los 5,200 niveles normales, los 520 secretos (uno por mundo) y una muestra del evento del mes:
+// 3 años de ediciones (8 meses cada uno) × jugadores en distintos mundos × sus 25 niveles.
 const ALL = TOTAL_LEVELS + WORLD_COUNT;
-for (let g = 0; g < ALL; g++) {
-  const L = generateLevel(g);
+const EVENT_MONTHS = [0, 1, 3, 6, 8, 9, 10, 11];
+const EVENTS = [];
+for (let y = 2026; y < 2029; y++) for (const m of EVENT_MONTHS) for (const w of [0, 3, 12, 20, 30, 80, 250, 519]) EVENTS.push([y * 12 + m, w]);
+const N = ALL + EVENTS.length * EVENT_LEVELS;
+let evCount = 0;
+for (let g = 0; g < N; g++) {
+  const isEv = g >= ALL, e = isEv && EVENTS[Math.floor((g - ALL) / EVENT_LEVELS)];
+  const L = isEv ? eventLevel(e[0], (g - ALL) % EVENT_LEVELS, e[1]) : generateLevel(g);
+  if (isEv) evCount++;
   let ok = true;
 
   // Las capas deben ser coherentes: cartas que se solapan nunca comparten capa.
@@ -39,7 +47,7 @@ for (let g = 0; g < ALL; g++) {
   }
   if (!ok) {
     fails++;
-    if (fails < 10) console.log('FALLA nivel', L.secret ? `secreto del mundo ${L.world + 1}` : g + 1, L.template, L.meta.mechs.join(','));
+    if (fails < 10) console.log('FALLA nivel', isEv ? `evento ${e[0]} (mundo ${e[1] + 1}) nivel ${L.k + 1}` : L.secret ? `secreto del mundo ${L.world + 1}` : g + 1, L.template, L.meta.mechs.join(','));
   }
   stats.cards.push(L.cards.length);
   stats.stock.push(L.stock.length);
@@ -50,7 +58,7 @@ for (let g = 0; g < ALL; g++) {
 
 const sum = (a) => a.reduce((x, y) => x + y, 0);
 const fmt = (a) => `min ${Math.min(...a)} · media ${(sum(a) / a.length).toFixed(1)} · max ${Math.max(...a)}`;
-console.log(`Niveles: ${TOTAL_LEVELS} + ${WORLD_COUNT} secretos · fallidos: ${fails} · resueltos con el solucionador: ${bySolver}`);
+console.log(`Niveles: ${TOTAL_LEVELS} + ${WORLD_COUNT} secretos + ${evCount} del evento · fallidos: ${fails} · resueltos con el solucionador: ${bySolver}`);
 console.log('Cartas en tablero:', fmt(stats.cards));
 console.log('Cartas en mazo:   ', fmt(stats.stock));
 console.log('Plantillas:', stats.tpl);

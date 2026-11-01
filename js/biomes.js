@@ -1,7 +1,7 @@
 // Tipos de mundo: colores del planeta 3D, planetita 2D y la mesa donde se juega.
 // Cada lugar de levels.js (Bosque, Isla, Volcán…) usa uno de estos tipos.
 import { worldInfo } from './levels.js';
-import { INK, tshape, CIRCLE, starPath, planetInner, setPlaceColors } from './art.js';
+import { INK, tshape, CIRCLE, starPath, planetInner, setPlaceColors, marigold, icon } from './art.js';
 
 const K = INK;
 
@@ -31,6 +31,32 @@ export const BIOMES = {
     planet: { sea: 0.4, amp: 0.3, freq: 1.8, seed: 25, outline: 0x22263a, glow: 0xdfe8ff, prop: 'pine', dense: 0.6, path: '#fff3d6', bands: [[0, '#2f86c8'], [0.38, '#4fb6e0'], [0.41, '#86cf5c'], [0.55, '#8a8a9e'], [0.68, '#a9a9bc'], [0.76, '#ffffff']] } },
   cielo: { emblem: ['#ffe3f1', '#c9ebff', '#fff4c9'], table: 'cloud', tint: '#1a2a5a',
     planet: { sea: 0.5, amp: 0.1, freq: 1.4, seed: 51, outline: 0x3a4a8a, glow: 0xffd0f0, prop: null, clouds: 9, path: '#fff3d6', bands: [[0, '#9fd8ff'], [0.48, '#c9ebff'], [0.52, '#ffffff'], [0.62, '#ffe3f1'], [0.72, '#fff4c9']] } },
+};
+// Planetas del evento del mes: los 5 son el mismo planeta (misma forma, colores y lo que crece) y solo cambia
+// cuánta agua tiene (sea) y desde qué altura se pinta de naranja (orange): así se ven hermanos pero distintos.
+const sameLook = (base, vary) => vary.map(([sea, orange, dense]) => {
+  const [c] = base.colors;
+  const bands = [[0, c[0]], [sea - 0.02, c[1]], [sea + 0.01, c[2]], [sea + 0.04, c[3]], [orange, c[4]], [orange + 0.14, c[5]]];
+  return { emblem: base.emblem, planet: { ...base.planet, sea, dense, bands } };
+});
+export const EVENT_BIOMES = {
+  muertos: sameLook(
+    { emblem: ['#ff9c1a', '#7cc04f', '#4fc2c0'], colors: [['#2f8f9a', '#4fc2c0', '#ffe2a0', '#7cc04f', '#ff9c1a', '#ffb13d']],
+      planet: { amp: 0.13, freq: 1.7, seed: 61, outline: 0x4a2a10, glow: 0xffb13d, prop: 'round', crown: '#ff8a1a', path: '#fff3d6' } },
+    // [agua, naranja desde, cuántas flores]
+    [[0.4, 0.56, 1.2], [0.32, 0.55, 1.4], [0.48, 0.53, 0.9], [0.38, 0.48, 1.3], [0.35, 0.45, 1.6]],
+  ),
+};
+// Planetas guardados para los mundos normales (aún sin lugar asignado): papel picado, velas, alebrijes y Mictlán.
+export const SPARE_BIOMES = {
+  papelpicado: { emblem: ['#ff5fa8', '#e8438f', '#7b2fbf'],
+    planet: { sea: 0.45, amp: 0.13, freq: 1.8, seed: 65, outline: 0x3a0f4a, glow: 0xff7ab8, prop: 'round', crown: '#5fd1c5', dense: 0.8, path: '#fff3d6', bands: [[0, '#7b2fbf'], [0.43, '#9a4ad8'], [0.46, '#ffd6ec'], [0.5, '#ff5fa8'], [0.62, '#e8438f'], [0.74, '#ffc83d']] } },
+  velas: { emblem: ['#a8744a', '#6e4a3a', '#ffd27a'],
+    planet: { sea: 0.42, amp: 0.14, freq: 1.9, seed: 69, outline: 0x2a1030, glow: 0xffb13d, prop: 'candle', path: '#ffe0b0', bands: [[0, '#3a1a5a'], [0.4, '#5a2a80'], [0.44, '#6e4a3a'], [0.52, '#8a5a3a'], [0.66, '#a8744a'], [0.78, '#ffd27a']] } },
+  alebrijes: { emblem: ['#ff5fa8', '#b36bff', '#5fd1c5'],
+    planet: { sea: 0.4, amp: 0.15, freq: 2.0, seed: 73, outline: 0x2a1f5c, glow: 0x5fd1c5, prop: 'crystal', path: '#fff3d6', bands: [[0, '#1fa6c9'], [0.38, '#5fd1c5'], [0.41, '#ffc83d'], [0.48, '#ff5fa8'], [0.58, '#b36bff'], [0.68, '#5fd1c5'], [0.78, '#ffc83d']] } },
+  mictlan: { emblem: ['#3e2366', '#1a0f2e', '#ff8a1a'],
+    planet: { sea: -1, amp: 0.13, freq: 2.2, seed: 77, outline: 0x0a0414, glow: 0xff8a1a, prop: 'candle', path: '#ffb13d', bands: [[0, '#1a0f2e'], [0.45, '#2a1848'], [0.58, '#3e2366'], [0.7, '#ff8a1a']] } },
 };
 // Planeta gris de los mundos bloqueados (todos iguales).
 export const LOCKED = { sea: -1, amp: 0.1, freq: 2.6, seed: 5, outline: 0x2a1f5c, glow: null, prop: null, bands: [[0, '#6f6c80'], [0.4, '#8a879a'], [0.55, '#a3a0b2'], [0.7, '#b9b6c6']] };
@@ -92,6 +118,18 @@ function cloudTile() {
   for (let i = 0; i < 7; i++) { const x = r() * W, y = r() * H, w = 50 + r() * 60; s += `<g opacity=".55"><ellipse cx="${x}" cy="${y}" rx="${w}" ry="${w * 0.32}" fill="#d9e2ff"/><ellipse cx="${x + w * 0.3}" cy="${y - w * 0.15}" rx="${w * 0.5}" ry="${w * 0.3}" fill="#d9e2ff"/></g>`; }
   return { url: enc(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">${s}</svg>`), w: W, h: H };
 }
+// Mantel de ofrenda (evento de Día de Muertos): morado oscuro con bordado de florecitas y pétalos de cempasúchil sueltos.
+function mantelTile() {
+  const W = 360, H = 360, r = rng(11);
+  let s = `<rect width="${W}" height="${H}" fill="#3e1650"/>`;
+  for (let y = 0; y < H; y += 60) s += `<path d="M0 ${y + 30}h${W}" stroke="#4d1d62" stroke-width="18"/>`;
+  for (let y = 0; y < H; y += 60) for (let x = (y / 60) % 2 ? 30 : 0; x < W; x += 60) {
+    const c = ['#ff5fa8', '#ffb13d', '#5fd1c5'][((x + y) / 30) % 3];
+    s += `<g transform="translate(${x} ${y})" opacity=".55">${[0, 90, 180, 270].map((a) => `<ellipse cx="0" cy="-6" rx="3.2" ry="5.5" fill="${c}" transform="rotate(${a})"/>`).join('')}<circle r="2.4" fill="#fff3d6"/></g>`;
+  }
+  for (let i = 0; i < 14; i++) s += `<ellipse cx="${(r() * W).toFixed(1)}" cy="${(r() * H).toFixed(1)}" rx="4" ry="2.6" fill="#ff9c1a" opacity=".7" transform="rotate(${(r() * 180).toFixed(0)} ${(r() * W).toFixed(1)} ${(r() * H).toFixed(1)})"/>`;
+  return { url: enc(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">${s}</svg>`), w: W, h: H };
+}
 const TILE_CACHE = {};
 function tableTile(key) {
   if (TILE_CACHE[key]) return TILE_CACHE[key];
@@ -129,6 +167,10 @@ const P = {
   candle: () => `<circle r="70" fill="#ffb347" opacity=".14"/>${drop(circ(18))}${tt(circ(17), '#f3e6cf', '#d8c6a6')}<circle r="4" fill="#3d2a1d"/><circle r="9" fill="#ffd36b" opacity=".9"/><circle r="4.6" fill="#fffbe8"/>`,
   flowers: () => [[-16, -10, '#ff6f8e'], [14, -16, '#ffc83d'], [6, 16, '#b48cff']].map(([x, y, c]) => `<g ${T(x, y)}>${[0, 72, 144, 216, 288].map((a) => `<g transform="rotate(${a})">${tt('M0 -4c5-2 9-10 0-14-9 4-5 12 0 14z', c, '#00000022', '', 2)}</g>`).join('')}${tt(circ(4.5), '#fff4c7', '#ffd27a', '', 2)}</g>`).join(''),
   lily: () => `${drop(circ(34))}${tt('M0 0 30 -14A34 34 0 1 1 30 14z', '#5aa94e', '#3f8a3a', '<path d="M0 0-24 -14M0 0-26 10M0 0-6 28" stroke="#3f8a3a" stroke-width="2"/>')}<g ${T(-6, -4)}>${[0, 60, 120, 180, 240, 300].map((a) => `<g transform="rotate(${a})">${tt('M0 -3c4-2 6-8 0-12-6 4-4 10 0 12z', '#ffd0e6', '#f2a9bc', '', 1.8)}</g>`).join('')}</g>`,
+  // Ofrenda (evento de Día de Muertos): ramo de cempasúchil, calaverita de azúcar y pan de muerto.
+  marigolds: () => [[-20, -10, 17], [16, -18, 14], [8, 18, 16], [-14, 22, 11]].map(([x, y, r]) => `<g ${T(x, y)}>${drop(circ(r), 4, 6)}</g>${marigold(x, y, r)}`).join(''),
+  sugarskull: () => `<g ${T(0, 0, -12)}>${drop(circ(34))}<g transform="translate(-48 -50) scale(3)">${icon('calavera').replace(/^<svg[^>]*>|<\/svg>$/g, '')}</g></g>`,
+  pan: () => `${drop(circ(38))}${tt(circ(38), '#e0a25c', '#c4833d', `${[0, 60, 120].map((a) => `<path d="M-30 0h60" stroke="#c4833d" stroke-width="9" stroke-linecap="round" transform="rotate(${a})"/>`).join('')}${tt(circ(9), '#e8b070', '#c4833d', '', 2)}${[[-18, -20], [20, -14], [-22, 16], [16, 22], [2, -28], [28, 4]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="2.2" fill="#fff6e6"/>`).join('')}`)}`,
   plane: () => `<g ${T(0, 0, -20)}>${drop('M-36 0 36 -20 10 20z')}${tt('M-36 0 36 -20 4 4z', '#fffaf0', '#e8e0d0')}${tt('M4 4 36 -20 10 20z', '#ece4d4', '#d8cfbd')}</g>`,
 };
 // Objetos por tipo de mundo: [arriba-izquierda, arriba-derecha, abajo-izquierda]; abajo-derecha siempre es la canica con el planeta.
@@ -149,8 +191,19 @@ const PROPS = {
 const propSVG = (inner, size) => `<svg viewBox="${-size / 2} ${-size / 2} ${size} ${size}" width="${size}" height="${size}" aria-hidden="true"><defs><filter id="pb" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="6"/></filter></defs>${inner}</svg>`;
 const call = (p) => (Array.isArray(p) ? P[p[0]](p[1]) : P[p]());
 
-// HTML del fondo de la mesa para el mundo w.
-export function tableHTML(w) {
+// Mesas de los eventos del mes: mantel, tinte y objetos [arriba-izq, arriba-der, abajo-izq, abajo-der].
+const EVENT_TABLES = {
+  muertos: { tile: mantelTile, tint: '#1a0614', props: ['marigolds', 'sugarskull', 'candle', 'pan'] },
+};
+// HTML del fondo de la mesa para el mundo w (o la del evento del mes: theme = su clave).
+export function tableHTML(w, theme) {
+  const ev = EVENT_TABLES[theme];
+  if (ev) {
+    const t = (TILE_CACHE[`ev-${theme}`] ||= ev.tile()), [tl, tr, bl, br] = ev.props;
+    return `<div class="table t-ev t-${theme}" style="--tile:${t.url};--tw:${t.w}px;--th:${t.h}px;--tint:${ev.tint}">
+    <div class="prop tl">${propSVG(call(tl), 150)}</div><div class="prop tr">${propSVG(call(tr), 120)}</div>
+    <div class="prop bl">${propSVG(call(bl), 120)}</div><div class="prop br">${propSVG(call(br), 120)}</div></div>`;
+  }
   const key = biomeKey(worldInfo(w).place), b = BIOMES[key], t = tableTile(key);
   const [tl, tr, bl] = PROPS[key] || PROPS.bosque;
   const frost = b.frost ? ['tl', 'tr', 'br'].map((c) => `<svg class="frost ${c}" viewBox="0 0 150 110" aria-hidden="true"><path d="M0 0h140c-8 14-30 12-36 26s-26 6-34 22-24 10-30 30-26 18-40 18z" fill="#eaf7ff" stroke="#8cc4e6" stroke-width="2.6" stroke-linejoin="round"/></svg>`).join('') : '';
