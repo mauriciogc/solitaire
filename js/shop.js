@@ -51,6 +51,11 @@ export const ITEMS = {
     { k: 'vampiro', name: 'Vladi', text: 'Vampiro', price: 1400, need: 60 },
     { k: 'dragoncito', name: 'Chispa', text: 'Dragoncito', price: 1800, need: 80 },
     { k: 'unicornio', name: 'Brisa', text: 'Unicornio', price: 2200, need: 100 },
+    // Exclusivos de la colección (ev).
+    { k: 'cangrejo', name: 'Pinzas', text: 'Cangrejo', ev: 'mar' },
+    { k: 'topo', name: 'Topacio', text: 'Topo minero', ev: 'gemas' },
+    { k: 'ardilla', name: 'Avellana', text: 'Ardilla', ev: 'bosque' },
+    { k: 'osito', name: 'Gomi', text: 'Osito de gomita', ev: 'dulces' },
   ],
   ring: [
     { k: 'sencillo', name: 'Sencillo', price: 0 },
@@ -59,6 +64,10 @@ export const ITEMS = {
     { k: 'estrellas', name: 'Estrellas', price: 600, need: 5 },
     { k: 'orbita', name: 'Órbita', price: 1000, need: 10 },
     { k: 'arcoiris', name: 'Arcoíris', price: 1500, need: 20 },
+    { k: 'burbujas', name: 'Burbujas', ev: 'mar' },
+    { k: 'gemas', name: 'Gemas', ev: 'gemas' },
+    { k: 'hojas', name: 'Hojas', ev: 'bosque' },
+    { k: 'caramelos', name: 'Caramelos', ev: 'dulces' },
   ],
   title: [
     { k: 'novato', name: 'Novato', price: 0 },
@@ -68,6 +77,10 @@ export const ITEMS = {
     { k: 'viajero', name: 'Viajero estelar', price: 900, need: 10 },
     { k: 'bombas', name: 'Domador de bombas', price: 1200, need: 20 },
     { k: 'leyenda', name: 'Leyenda del cosmos', price: 3000, need: 40 },
+    { k: 'buscaconchas', name: 'Buscador de conchas', ev: 'mar' },
+    { k: 'cazagemas', name: 'Cazador de gemas', ev: 'gemas' },
+    { k: 'guardabosques', name: 'Guardián del bosque', ev: 'bosque' },
+    { k: 'golosito', name: 'Amo de los dulces', ev: 'dulces' },
   ],
   back: [
     { k: 'clasico', name: 'Clásico', price: 0 },
@@ -85,6 +98,11 @@ export const ITEMS = {
     { k: 'galaxia', name: 'Galaxia', price: 1400, need: 35 },
     { k: 'eclipse', name: 'Eclipse', price: 1600, need: 45 },
     { k: 'fuegos', name: 'Fuegos artificiales', price: 1800, need: 55 },
+    // Exclusivos de la colección (ev): solo se consiguen con fichas en su tienda temporal.
+    { k: 'arrecife', name: 'Arrecife', ev: 'mar' },
+    { k: 'cristales', name: 'Cristales', ev: 'gemas' },
+    { k: 'hojas', name: 'Hojas', ev: 'bosque' },
+    { k: 'caramelos', name: 'Caramelos', ev: 'dulces' },
   ],
   face: [
     { k: 'clasica', name: 'Clásica', price: 0 },
@@ -115,6 +133,10 @@ export const ITEMS = {
     { k: 'barco', name: 'Barco pirata', price: 2400, need: 50, text: 'Navega entre planetas' },
     { k: 'ballena', name: 'Ballena', price: 2500, need: 60, text: 'Sopla polvo de estrellas' },
     { k: 'dragon', name: 'Dragón chino', price: 3000, need: 80, text: 'Ondula su cuerpo de fuego' },
+    { k: 'tortuga', name: 'Tortuga marina', text: 'Nada con sus aletas', ev: 'mar' },
+    { k: 'cristal', name: 'Cristal', text: 'Gira con sus gemas', ev: 'gemas' },
+    { k: 'hoja', name: 'Hoja viajera', text: 'Se mece con su mariquita', ev: 'bosque' },
+    { k: 'paleta', name: 'Paleta', text: 'Da vueltas de colores', ev: 'dulces' },
   ],
   space: [
     { k: 'nebulosa', name: 'Nebulosa', price: 0 },
@@ -122,6 +144,10 @@ export const ITEMS = {
     { k: 'atardecer', name: 'Atardecer', price: 600 },
     { k: 'oceano', name: 'Océano', price: 900, need: 5 },
     { k: 'rosa', name: 'Cosmos rosa', price: 1200, need: 10 },
+    { k: 'marino', name: 'Fondo marino', ev: 'mar' },
+    { k: 'cueva', name: 'Cueva de cristal', ev: 'gemas' },
+    { k: 'bosque', name: 'Bosque nocturno', ev: 'bosque' },
+    { k: 'algodon', name: 'Algodón de azúcar', ev: 'dulces' },
   ],
   frame: [
     { k: 'simple', name: 'Sencillo', price: 0 },
@@ -129,11 +155,17 @@ export const ITEMS = {
     { k: 'estampilla', name: 'Estampilla', price: 400 },
     { k: 'estrellas', name: 'Estrellas', price: 600, need: 5 },
     { k: 'arcoiris', name: 'Arcoíris', price: 900, need: 10 },
+    { k: 'mar', name: 'Mar', ev: 'mar' },
+    { k: 'gemas', name: 'Gemas', ev: 'gemas' },
+    { k: 'bosque', name: 'Bosque', ev: 'bosque' },
+    { k: 'dulces', name: 'Dulces', ev: 'dulces' },
   ],
 };
 
 export const item = (sec, k) => ITEMS[sec].find((x) => x.k === k);
 export const owns = (sec, k) => !!item(sec, k) && (item(sec, k).price === 0 || !!save.owned[`${sec}:${k}`]);
+// Lo que se ve en la tienda normal: los exclusivos de colección solo si ya son tuyos (para usarlos).
+export const shopItems = (sec) => ITEMS[sec].filter((it) => !it.ev || owns(sec, it.k));
 // ¿Todavía no se puede comprar? Devuelve el número de mundo que falta abrir (o 0 si ya se puede).
 export const lockedUntil = (sec, k) => {
   const it = item(sec, k);
@@ -152,7 +184,7 @@ export function equip(sec, k) {
 // Compra y lo deja puesto. Devuelve false si no alcanza o aún no se abre.
 export function buy(sec, k) {
   const it = item(sec, k);
-  if (!it || owns(sec, k) || lockedUntil(sec, k) || save.coins < it.price) return false;
+  if (!it || it.ev || owns(sec, k) || lockedUntil(sec, k) || save.coins < it.price) return false;
   save.coins -= it.price;
   save.owned[`${sec}:${k}`] = 1;
   equip(sec, k);
@@ -160,7 +192,7 @@ export function buy(sec, k) {
 }
 
 // Cada título se ve distinto: color, icono y forma (los más caros, más vistosos).
-const TITLE_ICO = { novato: 'star', explorador: 'flag', cazacometas: 'rocket', maestro: 'trophy', viajero: 'planet', bombas: 'bomb', leyenda: 'crown' };
+const TITLE_ICO = { novato: 'star', explorador: 'flag', cazacometas: 'rocket', maestro: 'trophy', viajero: 'planet', bombas: 'bomb', leyenda: 'crown', buscaconchas: 'concha', cazagemas: 'gema', guardabosques: 'bellota', golosito: 'caramelo' };
 export const titleName = (k = equipped('title')) => item('title', k).name;
 export const titleHTML = (k = equipped('title'), cls = '', tag = 'span', attrs = '') =>
   `<${tag} class="title-chip t-${k} ${cls}" ${attrs}>${icon(TITLE_ICO[k] || 'star')}<span>${titleName(k)}</span></${tag}>`;

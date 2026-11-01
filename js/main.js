@@ -1,11 +1,11 @@
 import { save, prefs, persist, resetProfile, renameProfile, exportCode, readCode, loadProfile, setDev } from './storage.js';
-import { RACHA_GOALS, racha, rachaTheme, rachaReady, rachaHot, rachaWin, rachaLose, rachaClaim, msToMidnight } from './events.js';
+import { RACHA_GOALS, racha, rachaTheme, rachaReady, rachaHot, rachaWin, rachaLose, rachaClaim, msToMidnight, col, colLeft, colWin, colOffers, colBuy } from './events.js';
 import { WORLD_COUNT, LEVELS_PER_WORLD, TOTAL_LEVELS, worldInfo, generateLevel, variantLevel, MECH_INTRO, MECH_NAMES, secretId, isSecret } from './levels.js';
 import { Game, faceHTML, backHTML } from './game.js';
 import { DAILY_PATH, dailyState, starsNeeded, TICKET_PRICE, ticketCost, ticketRefund, coinsFor, bossChest, openSurprise, SECRET_MULT, SECRET_PRIZE } from './economy.js';
-import { openModal, toast, updateCoins, money, esc, reduced, wait, flyToWallet, spendFromWallet, sparkle, confetti, starsHTML, warp } from './ui.js';
+import { openModal, toast, updateCoins, money, esc, reduced, wait, flyToWallet, spendFromWallet, sparkle, confetti, starsHTML, warp, buzz } from './ui.js';
 import { icon, star, coin, miniPlanet, avatarHTML, AVATAR_COLORS, cardBackURL, setDeck, lockIcon, chestBody, chestLid, boxBody, boxLid } from './art.js';
-import { GROUPS, SECTIONS, ITEMS, groupOf, owns, equipped, equip, buy, item, lockedUntil, titleHTML } from './shop.js';
+import { GROUPS, SECTIONS, ITEMS, shopItems, groupOf, owns, equipped, equip, buy, item, lockedUntil, titleHTML } from './shop.js';
 import { BIOMES, biomeKey } from './biomes.js';
 import { dev, gallery, initDevFromUrl, attachDevBar, galleryScreen, openDevMenu } from './dev.js';
 
@@ -186,7 +186,7 @@ function showMap({ region, start = null, anim, after = null, unlock = null } = {
       <button class="dev-pill" data-a="dev">DEV</button>
     </div>
     <div class="side l">${sideButtons()}</div>
-    <div class="side r" ${after ? 'style="opacity:0"' : ''}>${eventButtons(after?.res.racha ? after.res.racha - 1 : null)}</div>
+    <div class="side r" ${after ? 'style="opacity:0"' : ''}>${eventButtons(after?.res)}</div>
     <div class="p-only phud"></div>
     <div class="res">${wallet()}</div>
     <div class="cta"></div>
@@ -308,6 +308,7 @@ async function celebrateWin(galaxy, a, cta, paint, slide) {
     if (!reduced()) await side.animate([{ scale: 0.4, opacity: 0 }, { scale: 1.08, opacity: 1, offset: 0.6 }, { scale: 1 }], { duration: 420, easing: 'ease-out' }).finished;
   }
   if (a.res.racha) bumpRacha();
+  if (a.res.col && col()) bumpCol(a.res.col.n);
   if (worldData(a.w).secret.fresh) await revealSecret(galaxy, a.w);
   galaxy.busy = false;
   paint();
@@ -485,10 +486,18 @@ const rachaBtn = (prev = null) => {
   const ready = !old && rachaReady(), hot = !old && !ready && rachaHot();
   return `<button class="iconbtn tb press racha-btn ${ready ? 'ready' : ''} ${hot ? 'hot' : ''}" data-a="racha" aria-label="${t.name}" title="${t.name}">${hot ? `<span class="fire">${icon('flame')}</span>` : ''}${icon(t.ico)}<small class="rn">${old ? prev : r.n}</small>${ready ? '<span class="dot"></span>' : ''}</button>`;
 };
-const eventButtons = (prev) => rachaBtn(prev);
+// Colección: la ficha de su temática con cuántas llevas; se mueve con punto rojo si ya alcanza para algo.
+const colBtn = (prev = null) => {
+  const c = col();
+  if (!c) return '';
+  const old = prev != null, ready = !old && colOffers(ticketGift()).some((o) => colAvail(o) && c.state.n >= o.price);
+  return `<button class="iconbtn tb press col-btn ${ready ? 'ready' : ''}" data-a="col" aria-label="${c.name}" title="${c.name}">${icon(c.token)}<small class="rn">${old ? prev : c.state.n}</small>${ready ? '<span class="dot"></span>' : ''}</button>`;
+};
+// res: lo que dejó la victoria (se pinta el número de antes y luego sube).
+const eventButtons = (res) => rachaBtn(res?.racha ? res.racha - 1 : null) + colBtn(res?.col && col() ? col().state.n - res.col.n : null);
 const sideButtons = () => `${ibtn('gift', 'Regalo diario', 'daily', !dailyState(save.daily).claimed)}${ticketBtn()}${ibtn('bag', 'Tienda', 'shop')}${ibtn('album', 'Álbum de postales', 'album')}${ibtn('gear', 'Ajustes', 'settings')}`;
 function sideAction(a) {
-  const act = { me: () => !tourStep() && openProfile(), shop: () => openShop(), daily: openDaily, dticket: openDailyTicket, racha: openRacha, album: openAlbum, settings: openSettings, dev: () => openDevMenu({ onGallery: () => showGallery(save.next), onRefresh: boot }) }[a];
+  const act = { me: () => !tourStep() && openProfile(), shop: () => openShop(), daily: openDaily, dticket: openDailyTicket, racha: openRacha, col: openCol, album: openAlbum, settings: openSettings, dev: () => openDevMenu({ onGallery: () => showGallery(save.next), onRefresh: boot }) }[a];
   act?.();
   return !!act;
 }
@@ -713,6 +722,7 @@ function startLevel(g, { resume = false, free = false, anim = 'up' } = {}) {
         const coins = coinsFor(w * LEVELS_PER_WORLD + LEVELS_PER_WORLD - 1, stars, prev) * SECRET_MULT;
         const bonus = stars >= 3 && prev < 3 ? SECRET_PRIZE : {};
         const wild = bonus.wild || 0, undo = bonus.undo || 0;
+        const fichas = colWin(stars, prev);
         save.secret[w] = Math.max(prev, stars);
         save.coins += coins;
         save.wild += wild;
@@ -720,7 +730,7 @@ function startLevel(g, { resume = false, free = false, anim = 'up' } = {}) {
         persist();
         updateCoins();
         // Primera vez con 3 estrellas: la postal del mundo gana el sello secreto (se celebra al continuar).
-        return { coins, tickets: 0, prev, wild, undo, counted: true, first: !prev, seal: stars >= 3 && prev < 3 };
+        return { coins, tickets: 0, prev, wild, undo, counted: true, first: !prev, seal: stars >= 3 && prev < 3, col: fichas ? { n: fichas, ico: col().token } : null };
       }
       // En modo dev se puede saltar a cualquier nivel: solo cuenta si ya estaba desbloqueado.
       if (g > save.next) return { coins: 0, tickets: 0, prev: 0 };
@@ -730,6 +740,7 @@ function startLevel(g, { resume = false, free = false, anim = 'up' } = {}) {
       const tickets = prev ? 0 : ticketRefund(g);
       // El jefe da el boleto dorado para abrir el mundo siguiente (solo la primera vez).
       const gold = !prev && level.boss && w + 1 < WORLD_COUNT ? 1 : 0;
+      const fichas = colWin(stars, prev);
       save.stars[g] = Math.max(prev, stars);
       save.coins += coins;
       save.tickets += tickets;
@@ -747,7 +758,7 @@ function startLevel(g, { resume = false, free = false, anim = 'up' } = {}) {
       const racha = counts && !prev ? rachaWin() : null;
       persist();
       updateCoins();
-      return { coins, tickets, prev, gold, chest, worldStars: worldStars(w), counted: true, first: !prev, racha };
+      return { coins, tickets, prev, gold, chest, worldStars: worldStars(w), counted: true, first: !prev, racha, col: fichas ? { n: fichas, ico: col().token } : null };
     },
   });
   // El tablero sube y la pantalla anterior se queda atrás.
@@ -840,7 +851,7 @@ function openShop(tab = 'avatar') {
     closeShelf();
     grid.className = `sgrid sg-${sec}`;
     m.el.querySelector('.mbody').scrollTop = 0;
-    grid.innerHTML = ITEMS[sec].map((it) => card(sec, it)).join('');
+    grid.innerHTML = shopItems(sec).map((it) => card(sec, it)).join('');
     if (anim && !reduced()) [...grid.children].forEach((el, i) => el.animate([{ opacity: 0, translate: '0 16px', scale: 0.9 }, { opacity: 1, translate: '0 0', scale: 1 }], { duration: 360, delay: i * 45, easing: 'cubic-bezier(0.34, 1.45, 0.64, 1)', fill: 'backwards' }));
     if (sec === 'traveler') travShelf(grid).then(() => tab !== 'traveler' && closeShelf());
   };
@@ -1022,16 +1033,96 @@ const refreshRacha = () => document.querySelectorAll('[data-a="racha"]').forEach
 // Al volver de ganar: el número sube con un +1 que sale del botón.
 function bumpRacha() {
   refreshRacha();
-  const b = document.querySelector('[data-a="racha"]');
+  bumpBtn('racha', '+1', rachaReady());
+}
+const refreshCol = () => document.querySelectorAll('[data-a="col"]').forEach((b) => (b.outerHTML = colBtn()));
+function bumpCol(n) {
+  refreshCol();
+  bumpBtn('col', `+${n}`, document.querySelector('[data-a="col"]')?.classList.contains('ready'));
+}
+// El botón de un evento salta y suelta un "+n" que sube y se desvanece.
+function bumpBtn(a, text, shine) {
+  const b = document.querySelector(`[data-a="${a}"]`);
   if (!b || reduced()) return;
   b.animate([{ scale: 1 }, { scale: 1.3 }, { scale: 1 }], { duration: 480, easing: 'cubic-bezier(0.34, 1.45, 0.64, 1)' });
   const r = b.getBoundingClientRect(), plus = document.createElement('b');
   plus.className = 'racha-plus outl';
-  plus.textContent = '+1';
+  plus.textContent = text;
   plus.style.cssText = `left:${r.left + r.width / 2}px;top:${r.top}px`;
   document.body.append(plus);
   plus.animate([{ opacity: 0, translate: '-50% 0' }, { opacity: 1, translate: '-50% -26px', offset: 0.3 }, { opacity: 0, translate: '-50% -50px' }], { duration: 1100, easing: 'ease-out' }).finished.then(() => plus.remove());
-  if (rachaReady()) sparkle({ x: r.left + r.width / 2, y: r.top + r.height / 2 }, 16);
+  if (shine) sparkle({ x: r.left + r.width / 2, y: r.top + r.height / 2 }, 16);
+}
+
+// ---------- Colección: tienda temporal ----------
+// ¿Todavía se puede cambiar? Lo exclusivo, si no es tuyo; las ayudas, siempre.
+const colAvail = (o) => !o.sec || !owns(o.sec, o.item);
+const daysLeft = (ms) => (ms > 864e5 ? `${Math.floor(ms / 864e5)} d ${clock(ms % 864e5).replace(/:\d\d$/, '')}` : clock(ms));
+const COL_KIND = { title: 'Título', frame: 'Postal', space: 'Espacio', ring: 'Marco', avatar: 'Avatar', back: 'Reverso', traveler: 'Viajero' };
+const COL_HELP = { wild: 'Comodín', undo: 'Deshacer', tickets: 'Boletos' };
+function openCol() {
+  const c = col();
+  if (!c) return;
+  const tier = ticketGift();
+  const was = equipped('traveler');
+  // Como en la tienda: cada tarjeta dice qué es (la cinta morada = exclusivo de la temática) y cómo se llama.
+  const offerHTML = (o) => {
+    const mine = o.sec && owns(o.sec, o.item), short = c.state.n < o.price;
+    const art = o.sec === 'title' ? titleHTML(o.item) : o.sec ? shopPreview(o.sec, o.item) : `<div class="c-prize">${prizeIcons(o.prize).join('')}</div>`;
+    const foot = mine ? `<span class="s-on">${icon('check')}Tuyo</span>` : `<span class="s-price ${short ? 'short' : ''}">${icon(c.token)}${o.price}</span>`;
+    const name = o.sec === 'title' ? '' : o.sec ? item(o.sec, o.item).name : COL_HELP[o.k];
+    return `<button class="coffer sg-${o.sec || 'help'} ${mine ? 'own' : ''}" data-k="${o.k}">${o.sec ? `<em class="c-ex">${icon('star')}${COL_KIND[o.sec]}</em>` : ''}<div class="s-art">${art}</div>${name ? `<b>${name}</b>` : ''}${foot}</button>`;
+  };
+  const m = openModal({
+    title: c.name,
+    ico: c.token,
+    color: c.color,
+    wide: true,
+    cls: 'col-modal',
+    body: `<div class="ctop"><div class="cbank"><span class="cb-ico">${icon(c.token)}</span><b data-col-n>${c.state.n}</b></div>
+      <div class="rclock-chip">Termina en <b class="cclock">${daysLeft(colLeft())}</b></div></div>
+      <div class="cgrid"></div>`,
+    onClose: () => {
+      closeShelf();
+      // El viajero vive en la escena 3D: al cambiarlo se vuelve a armar el mapa.
+      if (equipped('traveler') !== was) current?.();
+    },
+  });
+  const grid = m.el.querySelector('.cgrid'), bank = m.el.querySelector('[data-col-n]');
+  const paint = () => {
+    grid.innerHTML = colOffers(tier).map(offerHTML).join('');
+    travShelf(grid);
+  };
+  paint();
+  if (!reduced()) [...grid.children].forEach((el, i) => el.animate([{ opacity: 0, translate: '0 16px', scale: 0.9 }, { opacity: 1, translate: '0 0', scale: 1 }], { duration: 360, delay: 120 + i * 50, easing: 'cubic-bezier(0.34, 1.45, 0.64, 1)', fill: 'backwards' }));
+  helpTip(m, `Cada estrella nueva que ganas en un nivel te da 1 ${c.token}. Cámbialas aquí antes de que acabe el domingo: las que sobren se pierden. Lo exclusivo es tuyo para siempre.`);
+  grid.addEventListener('click', async (e) => {
+    const el = e.target.closest('.coffer');
+    if (!el) return;
+    const o = colOffers(tier).find((x) => x.k === el.dataset.k);
+    if (!colAvail(o)) return;
+    if (c.state.n < o.price) {
+      el.animate([{ translate: '0 0' }, { translate: '-6px 0' }, { translate: '6px 0' }, { translate: '-4px 0' }, { translate: '0 0' }], { duration: 300 });
+      buzz(30);
+      return toast(`Te faltan ${o.price - c.state.n} ${c.tokens}`);
+    }
+    colBuy(o);
+    const r = el.getBoundingClientRect(), at = { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+    bank.textContent = c.state.n;
+    if (!reduced()) bank.parentElement.animate([{ scale: 1 }, { scale: 0.85 }, { scale: 1 }], { duration: 300, easing: 'cubic-bezier(0.34, 1.45, 0.64, 1)' });
+    sparkle(at, 16);
+    buzz(15);
+    paint();
+    const fresh = grid.querySelector(`[data-k="${o.k}"]`);
+    if (!reduced()) fresh.animate([{ scale: 0.9 }, { scale: 1.08 }, { scale: 1 }], { duration: 420, easing: 'cubic-bezier(0.34, 1.45, 0.64, 1)' });
+    refreshCol();
+    if (o.sec) {
+      applyLook();
+      toast(`${icon('check')} ¡Nuevo! Ya lo traes puesto`);
+    } else grantPrize(o.prize, at);
+  });
+  const clk = m.el.querySelector('.cclock');
+  const tick = setInterval(() => (clk.isConnected ? (clk.textContent = daysLeft(colLeft())) : clearInterval(tick)), 1000);
 }
 // Si se perdió una racha, al llegar al mapa el botón tiembla y lo dice.
 function rachaLost() {
@@ -1143,9 +1234,26 @@ function openBossReward(w, res) {
     stamp.animate([{ scale: 2.6, rotate: '-30deg', opacity: 0 }, { scale: 0.92, rotate: '12deg', opacity: 1, offset: 0.7 }, { scale: 1, rotate: '8deg' }], { duration: 420, delay: 750, easing: 'cubic-bezier(0.5, 0, 0.75, 0)', fill: 'backwards' });
     setTimeout(async () => {
       await chest.animate([{ rotate: '0deg' }, { rotate: '-8deg' }, { rotate: '7deg' }, { rotate: '-5deg' }, { rotate: '0deg' }], { duration: 520, iterations: 2 }).finished;
-      m.el.querySelector('.chest-row').classList.add('open');
-      const r = chest.getBoundingClientRect();
-      sparkle({ x: r.left + r.width / 2, y: r.top + r.height / 3 }, 20);
+      const row = m.el.querySelector('.chest-row');
+      row.classList.add('open');
+      const r = chest.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 3;
+      sparkle({ x: cx, y: cy }, 20);
+      // Cada premio sale del cofre, sube en arco y cae en su lugar con un brillo (uno tras otro).
+      const items = [...row.querySelectorAll('.loot-it')];
+      await Promise.all(items.map((el, i) => {
+        const b = el.getBoundingClientRect(), dx = cx - (b.left + b.width / 2), dy = cy - (b.top + b.height / 2);
+        return el.animate([
+          { translate: `${dx}px ${dy}px`, scale: 0.3, rotate: '-20deg', opacity: 0 },
+          { translate: `${dx * 0.5}px ${dy - 70}px`, scale: 1.15, rotate: '8deg', opacity: 1, offset: 0.55 },
+          { translate: '0 6px', scale: 0.95, rotate: '0deg', offset: 0.85 },
+          { translate: '0 0', scale: 1, rotate: '0deg', opacity: 1 },
+        ], { duration: 640, delay: 120 + i * 240, easing: 'cubic-bezier(0.3, 0.7, 0.4, 1)', fill: 'backwards' }).finished.then(() => {
+          const e = el.getBoundingClientRect();
+          sparkle({ x: e.left + e.width / 2, y: e.top + e.height / 3 }, 10);
+          buzz(12);
+        });
+      }));
+      row.classList.add('done');
     }, 1300);
   });
 }
@@ -1380,7 +1488,13 @@ function openWorldGate(w, onCancel) {
 // Se abre tocando tu avatar (arriba a la derecha) o desde Ajustes. Dentro del tablero el avatar solo se ve.
 function openProfile() {
   const worlds = Math.min(currentWorld(), worldOf(save.next));
-  openModal({
+  // Postales = jefes vencidos; secretos = niveles secretos ganados; tesoros = todo lo demás que tienes de la tienda y la colección.
+  let cards = 0;
+  for (let w = 0; w < WORLD_COUNT; w++) cards += hasCard(w) ? 1 : 0;
+  const secrets = Object.values(save.secret).filter(Boolean).length;
+  const mine = (sec) => ITEMS[sec].filter((it) => owns(sec, it.k)).length;
+  const things = SECTIONS.reduce((a, s) => a + (s.k === 'avatar' ? 0 : mine(s.k)), 0);
+  const pm = openModal({
     title: 'Perfil',
     color: 'blue',
     wide: true,
@@ -1395,6 +1509,10 @@ function openProfile() {
         <div class="stat">${icon('planet')}<div><b>${worlds}</b><span>mundos</span></div></div>
         <div class="stat">${icon('flag')}<div><b>${Math.min(save.next, TOTAL_LEVELS)}</b><span>niveles</span></div></div>
         <div class="stat">${coin()}<div><b>${fmt(save.coins)}</b><span>monedas</span></div></div>
+        <div class="stat">${icon('album')}<div><b>${cards}</b><span>postales</span></div></div>
+        <div class="stat">${icon('starSecret')}<div><b>${secrets}</b><span>secretos</span></div></div>
+        <div class="stat">${icon('user')}<div><b>${mine('avatar')}</b><span>avatares</span></div></div>
+        <div class="stat">${icon('bag')}<div><b>${things}</b><span>tesoros</span></div></div>
       </div></div>`,
     buttons: [
       {
@@ -1417,6 +1535,8 @@ function openProfile() {
     document.getElementById('modal-root').replaceChildren();
     editProfile();
   }));
+  // Las fichas de datos entran en cascada.
+  if (!reduced()) pm.el.querySelectorAll('.stat').forEach((el, i) => el.animate([{ opacity: 0, translate: '0 12px', scale: 0.9 }, { opacity: 1, translate: '0 0', scale: 1 }], { duration: 360, delay: 260 + i * 50, easing: 'cubic-bezier(0.34, 1.45, 0.64, 1)', fill: 'backwards' }));
 }
 
 // Formulario de jugador (crear o editar): nombre, avatar (inicial o personaje), color, marco, título y viajero.

@@ -191,6 +191,73 @@ const MODELS = {
       body.position.y = 0.08 + Math.sin(t * 1.5) * 0.06; body.rotation.y = t * 0.3;
     } };
   },
+  // ---------- Exclusivos de la colección ----------
+  // Tortuga marina: caparazón con placas, cabeza y aletas que reman.
+  tortuga(part) {
+    const g = new THREE.Group(), body = new THREE.Group();
+    body.add(part(new THREE.SphereGeometry(0.3, 24, 14, 0, TAU, 0, Math.PI / 2).scale(1, 0.7, 1.15), '#4fae6a', { ol: 0.06 }));
+    for (const [x, z, r] of [[0, 0, 0.1], [0.14, 0.12, 0.07], [-0.14, 0.12, 0.07], [0.14, -0.13, 0.07], [-0.14, -0.13, 0.07]])
+      body.add(part(new THREE.SphereGeometry(r, 12, 8).scale(1, 0.35, 1), '#8fd46a', { x, z, y: Math.sqrt(Math.max(0, 0.06 - x * x * 0.5 - z * z * 0.4)) + 0.04, ol: 0.15 }));
+    body.add(part(new THREE.CylinderGeometry(0.31, 0.33, 0.06, 24).scale(1, 1, 1.15), '#f0d79a', { y: -0.01, ol: 0.08 }));
+    const head = part(new THREE.SphereGeometry(0.12, 16, 12), '#9be08a', { z: 0.38, y: 0.04, ol: 0.1 });
+    for (const x of [-0.05, 0.05]) head.add(part(new THREE.SphereGeometry(0.022, 8, 6), INK, { x, y: 0.04, z: 0.1, ol: 0 }));
+    body.add(head);
+    const fins = [];
+    for (const [x, z] of [[1, 1], [-1, 1], [1, -1], [-1, -1]]) {
+      const f = new THREE.Group();
+      f.add(part(new THREE.SphereGeometry(0.12, 12, 8).scale(1.4, 0.25, 0.6), '#9be08a', { x: x * 0.12, ol: 0.12 }));
+      f.position.set(x * 0.28, -0.02, z * 0.2); body.add(f); fins.push([f, x, z]);
+    }
+    body.rotation.x = 0.35; g.add(body);
+    return { obj: g, tick: (t) => {
+      fins.forEach(([f, x, z]) => (f.rotation.z = x * Math.sin(t * 3 + (z > 0 ? 0 : 1.2)) * 0.45));
+      head.position.y = 0.04 + Math.sin(t * 1.5) * 0.02;
+      body.position.y = Math.sin(t * 1.4) * 0.06; body.rotation.y = Math.sin(t * 0.6) * 0.5;
+    } };
+  },
+  // Cristal: una gema grande que gira y tres chiquitas en órbita.
+  cristal(part) {
+    const g = new THREE.Group(), gem = new THREE.Group();
+    gem.add(part(new THREE.OctahedronGeometry(0.3, 0).scale(1, 1.35, 1), '#7fe0ff', { ol: 0.07, mat: new THREE.MeshToonMaterial({ color: '#7fe0ff', flatShading: true }) }));
+    gem.add(part(new THREE.OctahedronGeometry(0.1, 0).scale(1, 1.3, 1), '#ffffff', { x: -0.08, y: 0.12, z: 0.12, ol: 0 }));
+    g.add(gem);
+    const orb = new THREE.Group(), cols = ['#ff7ab8', '#b36bff', '#ffc83d'];
+    cols.forEach((c, k) => {
+      const a = (k / 3) * TAU;
+      orb.add(part(new THREE.OctahedronGeometry(0.07, 0), c, { x: Math.cos(a) * 0.45, z: Math.sin(a) * 0.45, ol: 0.15, mat: new THREE.MeshToonMaterial({ color: c, flatShading: true }) }));
+    });
+    orb.rotation.x = 0.35; g.add(orb);
+    return { obj: g, tick: (t) => { gem.rotation.y = t * 1.2; gem.position.y = Math.sin(t * 2) * 0.05; orb.rotation.y = -t * 1.6; } };
+  },
+  // Hoja viajera: una hoja grande que se mece como al caer, con una mariquita encima.
+  hoja(part) {
+    const g = new THREE.Group(), leaf = new THREE.Group();
+    const shape = new THREE.Shape();
+    shape.moveTo(0, -0.45); shape.quadraticCurveTo(0.42, -0.05, 0, 0.45); shape.quadraticCurveTo(-0.42, -0.05, 0, -0.45);
+    const geo = new THREE.ExtrudeGeometry(shape, { depth: 0.03, bevelEnabled: false }).rotateX(-Math.PI / 2);
+    leaf.add(part(geo, '#8fd46a', { ol: 0.05 }));
+    leaf.add(part(new THREE.CylinderGeometry(0.012, 0.012, 0.85, 6).rotateX(Math.PI / 2), '#4f9a3a', { y: 0.035, ol: 0 }));
+    const bug = new THREE.Group();
+    bug.add(part(new THREE.SphereGeometry(0.1, 16, 10, 0, TAU, 0, Math.PI / 2), '#ff5f7e', { ol: 0.12 }));
+    for (const [x, z] of [[0.05, 0.02], [-0.05, 0.02], [0.03, -0.05], [-0.03, -0.05]]) bug.add(part(new THREE.SphereGeometry(0.018, 8, 6), INK, { x, y: 0.075, z, ol: 0 }));
+    bug.add(part(new THREE.SphereGeometry(0.05, 12, 8), INK, { z: 0.1, y: 0.02, ol: 0 }));
+    bug.position.set(0, 0.04, 0.05); leaf.add(bug);
+    leaf.rotation.x = 1.05; g.add(leaf);
+    return { obj: g, tick: (t) => { leaf.rotation.z = Math.sin(t * 1.6) * 0.35; leaf.position.x = Math.sin(t * 1.6) * 0.08; leaf.position.y = Math.sin(t * 3.2) * 0.04; leaf.rotation.y = t * 0.3; bug.rotation.y = Math.sin(t * 2) * 0.4; } };
+  },
+  // Paleta: disco de anillos de colores que da vueltas sobre su palito.
+  paleta(part) {
+    const g = new THREE.Group(), pop = new THREE.Group();
+    pop.add(part(new THREE.CylinderGeometry(0.025, 0.025, 0.5, 8), '#fff6e6', { y: -0.4, ol: 0.2 }));
+    const disc = new THREE.Group();
+    ['#ff5f7e', '#fff6e6', '#ff9cc8', '#fff6e6', '#ff5f7e'].forEach((c, k) => {
+      const r = 0.32 - k * 0.065;
+      disc.add(part(new THREE.CylinderGeometry(r, r, 0.08 + k * 0.004, 28).rotateX(Math.PI / 2), c, { ol: k ? 0 : 0.05 }));
+    });
+    disc.add(part(new THREE.SphereGeometry(0.05, 10, 8), '#ffffff', { x: -0.14, y: 0.14, z: 0.05, ol: 0 }));
+    disc.position.y = 0.05; pop.add(disc); g.add(pop);
+    return { obj: g, tick: (t) => { pop.rotation.y = t * 1.4; disc.rotation.z = -t * 2; pop.position.y = Math.sin(t * 2) * 0.05; pop.rotation.z = Math.sin(t * 1.3) * 0.12; } };
+  },
   // Mantarraya: aletas que aletean despacio y cola larga.
   mantarraya(part) {
     const g = new THREE.Group(), ray = new THREE.Group();

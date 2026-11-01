@@ -1,7 +1,7 @@
 // Modo dev: probar niveles rápido sin jugarlos a mano.
 // Se activa con ?dev en la URL (y se apaga con ?dev=0). Queda guardado en el navegador.
 import { save, prefs, persist, resetProfile, backupOnce, restoreBackup, setDev } from './storage.js';
-import { rachaWin, rachaLose, racha, RACHA_GOALS } from './events.js';
+import { rachaWin, rachaLose, racha, RACHA_GOALS, col, daysToNextCol } from './events.js';
 import { generateLevel, packGroups, worldInfo, TOTAL_LEVELS, LEVELS_PER_WORLD, MECH_NAMES, MECHANICS } from './levels.js';
 import { playCasual, solve, initState } from './engine.js';
 import { openModal, toast, updateCoins } from './ui.js';
@@ -306,6 +306,9 @@ export function openDevMenu({ onGallery, onRefresh }) {
       },
       { label: 'Racha: perder', cls: 'ghost', onClick: () => (rachaLose(), onRefresh()) },
       { label: 'Racha: pasar al otro día', cls: 'ghost', onClick: () => ((save.devDay = (save.devDay || 0) + 1), persist(), onRefresh()) },
+      // Colección: saltar a la siguiente semana que tenga (o a la que sigue, si ya hay una) y regalar fichas.
+      { label: col() ? `Colección: pasar a la siguiente (${col().name})` : 'Colección: ir a la siguiente semana', cls: 'ghost', onClick: () => ((save.devDay = (save.devDay || 0) + daysToNextCol()), persist(), onRefresh()) },
+      ...(col() ? [{ label: `Colección: +30 fichas (lleva ${col().state.n})`, cls: 'ghost', onClick: () => ((col().state.n += 30), persist(), onRefresh()) }] : []),
       {
         label: 'Empezar de cero las pruebas',
         cls: 'green',

@@ -45,6 +45,15 @@ export const miniPlanet = (colors, cls = '') => svg(planetInner(...colors), cls)
 const ICONS = {
   coin: () => tshape(CIRCLE(16, 16, 12.5), '#ffc83d', '#ec9a17', `<circle cx="14.6" cy="13.8" r="8" fill="none" stroke="#ec9a17" stroke-width="2"/><path d="${starPath(14.6, 14.2, 4.8, 2.2)}" fill="#fff4c7"/>`),
   star: () => tshape(starPath(16, 17, 14, 6.6), '#ffc83d', '#ec9a17', `<path d="M10.5 13.5l2.2-3.6" stroke="#fff4c7" stroke-width="2.2" stroke-linecap="round"/>`),
+  // Fichas de la colección (una por temática).
+  concha: () => tshape('M16 27.5 4.5 14.5C5 7.5 10 4 16 4s11 3.5 11.5 10.5z', '#ffb3c7', '#f28aa5', ['M16 27V6', 'M16 27 9.5 7.5', 'M16 27 22.5 7.5', 'M16 27 5.5 12', 'M16 27 26.5 12'].map((d) => `<path d="${d}" stroke="#e0607f" stroke-width="1.6" fill="none"/>`).join(''))
+    + tshape('M11 26.5h10l-1.5 3h-7z', '#ffb3c7', '#f28aa5', '', 1.8),
+  gema: () => tshape('M9.5 5h13l5.5 8L16 28 4 13z', '#7fe0ff', '#3fb6e0', `<path d="M4 13h24M12 5l-2.5 8L16 28l6.5-15L20 5" fill="none" stroke="#2f9ccc" stroke-width="1.5"/><path d="M9 8.5l2-2.2" stroke="#fff" stroke-width="2" stroke-linecap="round"/>`),
+  bellota: () => tshape('M8 14.5h16c0 8-3 12.5-8 13.5-5-1-8-5.5-8-13.5z', '#e8a94a', '#c9893a', '<path d="M11 18q1 5 4 7" stroke="#fff4c7" stroke-width="2" fill="none" stroke-linecap="round"/>')
+    + tshape('M5 15q0-8 11-8t11 8z', '#a86a22', '#83501a', '<path d="M9 11.5h3M14 10h3M19 11.5h3M11 13.5h3M17 13.5h3" stroke="#83501a" stroke-width="1.4"/>')
+    + `<path d="M16 7q0-3 3-4" stroke="${K}" stroke-width="2.6" fill="none" stroke-linecap="round"/>`,
+  caramelo: () => tshape('M9.5 16 2.5 9.5v13z', '#ff9cc8', '#f27aad', '', 1.8) + tshape('M22.5 16l7-6.5v13z', '#ff9cc8', '#f27aad', '', 1.8)
+    + tshape(CIRCLE(16, 16, 8), '#ff5f7e', '#d63d5f', '<path d="M10 11q6 3 3 12M15 8.5q6 4 4 14" stroke="#fff" stroke-width="2.2" fill="none" opacity=".85"/>'),
   // Estrella morada del nivel secreto (mismo dibujo que la dorada).
   starSecret: () => tshape(starPath(16, 17, 14, 6.6), '#b36bff', '#8a3fe0', `<path d="M10.5 13.5l2.2-3.6" stroke="#ecdcff" stroke-width="2.2" stroke-linecap="round"/>`),
   starOff: () => tshape(starPath(16, 17, 14, 6.6), '#ddd3c0', '#c7baa2'),
@@ -130,6 +139,11 @@ export const BACKS = {
   flores: { a: '#ff9cc8', b: '#f27aad', dots: '#fff6fb', art: () => { const f = (x, y, r, c) => `${Array.from({ length: 5 }, (_, i) => { const a = (i * 2 * Math.PI) / 5 - Math.PI / 2; return `<circle cx="${(x + Math.cos(a) * r).toFixed(1)}" cy="${(y + Math.sin(a) * r).toFixed(1)}" r="${r * 0.75}" fill="${c}" stroke="${K}" stroke-width="2.6"/>`; }).join('')}<circle cx="${x}" cy="${y}" r="${r * 0.6}" fill="#ffc83d" stroke="${K}" stroke-width="2.6"/>`; return f(50, 70, 13, '#fff6fb') + f(26, 34, 6, '#c9a6ff') + f(76, 108, 6, '#c9a6ff'); } },
   fuegos: { a: '#1d2060', b: '#151850', dots: '#c9bff0', art: () => [[50, 62, 24, '#ffc83d'], [28, 100, 13, '#ff7aa2'], [74, 34, 12, '#5ff0ff']].map(([x, y, r, c]) => Array.from({ length: 10 }, (_, i) => { const a = (i * Math.PI) / 5; return `<path d="M${(x + Math.cos(a) * r * 0.35).toFixed(1)} ${(y + Math.sin(a) * r * 0.35).toFixed(1)}L${(x + Math.cos(a) * r).toFixed(1)} ${(y + Math.sin(a) * r).toFixed(1)}" stroke="${c}" stroke-width="3.4" stroke-linecap="round"/><circle cx="${(x + Math.cos(a) * r * 1.15).toFixed(1)}" cy="${(y + Math.sin(a) * r * 1.15).toFixed(1)}" r="1.6" fill="${c}"/>`; }).join('') + `<circle cx="${x}" cy="${y}" r="${r * 0.18}" fill="#fff"/>`).join('') },
   papel: { a: '#c23a8f', b: '#a82a78', flat: true, dots: '#ffd6ec', bg: () => [[18, '#ffc83d'], [56, '#5fd1c5'], [94, '#ff9c5b']].map(([y, c]) => `<path d="M8 ${y}Q50 ${y + 6} 92 ${y}" fill="none" stroke="${K}" stroke-width="1.6"/>${Array.from({ length: 5 }, (_, i) => { const x = 12 + i * 16; return `<path d="M${x} ${y + 1}h13v18l-6.5-4-6.5 4z" fill="${c}" stroke="${K}" stroke-width="1.8" stroke-linejoin="round"/><circle cx="${x + 6.5}" cy="${y + 8}" r="2.4" fill="${'#c23a8f'}"/>`; }).join('')}`).join('') },
+  // Exclusivos de la colección: la ficha de la temática en grande, con adornos.
+  arrecife: { a: '#2f86c8', b: '#226aa8', dots: '#d8f0ff', art: () => `<g transform="translate(19 37) scale(1.95)">${ICONS.concha()}</g>${[[24, 36, 5], [32, 22, 3.4], [78, 104, 4.5], [70, 118, 3]].map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r}" fill="#d8f0ff" opacity=".9" stroke="${K}" stroke-width="2"/><circle cx="${x - r * 0.35}" cy="${y - r * 0.35}" r="${r * 0.3}" fill="#fff"/>`).join('')}` },
+  cristales: { a: '#5a3d99', b: '#47307d', dots: '#e3d8ff', art: () => `<g transform="translate(14 22) scale(1.1)">${ICONS.gema()}</g><g transform="translate(52 84) scale(1)">${ICONS.gema()}</g><g transform="translate(22 42) scale(1.75)">${ICONS.gema()}</g>` },
+  hojas: { a: '#3f9a4a', b: '#2f7a3a', dots: '#d9f5c8', art: () => `${[[22, 30, -30], [78, 110, 150], [80, 34, 40]].map(([x, y, r]) => `<g transform="translate(${x} ${y}) rotate(${r})">${tshape('M0 -12Q10 0 0 12Q-10 0 0 -12z', '#8fd46a', '#5fb04a', '<path d="M0 -10V10" stroke="#3f8a3a" stroke-width="1.6"/>', 2)}</g>`).join('')}<g transform="translate(19 39) scale(1.95)">${ICONS.bellota()}</g>` },
+  caramelos: { a: '#ffd6e8', b: '#ffbcd9', dots: '#ff7aa2', art: () => `<g transform="translate(12 18) rotate(-20 16 16) scale(.9)">${ICONS.caramelo()}</g><g transform="translate(58 96) rotate(25 16 16) scale(.8)">${ICONS.caramelo()}</g><g transform="translate(19 39) scale(1.95)">${ICONS.caramelo()}</g>` },
   regalo: { a: '#7b4ee6', b: '#6438c8', star: ['#fff6e6', '#e3d3ff'] },
   comodin: { a: '#ffc83d', b: '#eca21f', star: ['#ff9c2b', '#e8761a'], dots: '#fff4c7' },
 };
@@ -278,6 +292,30 @@ export const AVATARS = {
   estrella: () => P(starPath(50, 56, 46, 23), '#ffd23d', '#ecab17')
     + eyes(54, 9, 4.2) + smile(63, 5) + blush(61, 16)
     + P(starPath(84, 16, 7, 3), '#fff3b8', '#ffd77a', '', 2) + P(starPath(14, 22, 5, 2.2), '#fff3b8', '#ffd77a', '', 2),
+  // Exclusivos de la colección.
+  cangrejo: () => mirror(`<path d="M26 54 18 40" stroke="${K}" stroke-width="7" stroke-linecap="round"/><path d="M26 54 18 40" stroke="#ff6f61" stroke-width="3.4" stroke-linecap="round"/>`
+      + P('M16 42Q4 30 12 16Q19 21 17 28Q25 23 27 32Q27 42 16 42z', '#ff6f61', '#e0524a'))
+    + P(ELL(50, 72, 36, 26), '#ff6f61', '#e0524a', '<path d="M30 64q20 -8 40 0" stroke="#ff9c8f" stroke-width="3" fill="none" stroke-linecap="round"/>')
+    + mirror(`<path d="M40 56V40" stroke="${K}" stroke-width="7" stroke-linecap="round"/><path d="M40 56V40" stroke="#ff6f61" stroke-width="3.4" stroke-linecap="round"/>`
+      + P(CIRCLE(40, 36, 8), '#fff', '#e3d8ff', `<circle cx="41" cy="37" r="4" fill="${K}"/><circle cx="39.6" cy="35.4" r="1.5" fill="#fff"/>`))
+    + smile(76, 7) + blush(74, 20),
+  topo: () => shoulders('#8a6a5a', '#6a4e40')
+    + P(ELL(50, 58, 30, 30), '#9a7a6a', '#7a5a4a')
+    + P(ELL(50, 69, 15, 11), '#f0d2b8', '#dcb898') + eyes(55, 12, 3.6)
+    + P(CIRCLE(50, 64, 5.5), '#ff8fb0', '#e8648a') + smile(73, 5) + blush(66, 21)
+    + P('M18 44Q18 16 50 16Q82 16 82 44z', '#ffc83d', '#ec9a17') + P('M12 42h76v7H12z', '#ffc83d', '#ec9a17')
+    + P(CIRCLE(50, 28, 7.5), '#fff3b8', '#ffd27a', '<path d="M47 25l3-2" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/>'),
+  ardilla: () => P('M66 104Q100 86 92 52Q88 28 70 32Q84 50 74 70Q64 86 66 104z', '#c9692a', '#a8521c', '<path d="M80 44q8 14 0 32" stroke="#e8853e" stroke-width="5" fill="none" stroke-linecap="round"/>')
+    + shoulders('#ffb066', '#e8853e')
+    + mirror(P('M27 36 28 14 42 28z', '#e8853e', '#c9692a', '<path d="M31 30 31 21 37 28z" fill="#ffd2a8"/>'))
+    + P(ELL(50, 52, 27, 25), '#ffb066', '#e8853e')
+    + P(ELL(50, 63, 13, 9), '#fff1d6', '#f0d8b4') + eyes(50, 11, 4.8)
+    + `<path d="M47 59h6l-3 3z" fill="${K}" stroke="${K}" stroke-width="2" stroke-linejoin="round"/>` + smile(64, 5) + blush(60, 20),
+  osito: () => shoulders('#ff6f8e', '#e0496b')
+    + mirror(P(CIRCLE(27, 30, 10), '#ff6f8e', '#e0496b'))
+    + P(ELL(50, 54, 29, 26), '#ff7a95', '#e8566f', '<ellipse cx="38" cy="40" rx="7" ry="4" fill="#fff" opacity=".45" transform="rotate(-25 38 40)"/>')
+    + P(ELL(50, 64, 11, 8), '#ffb0c0', '#ff94a8') + eyes(51, 12, 4.4)
+    + `<ellipse cx="50" cy="61" rx="3.6" ry="2.6" fill="${K}"/>` + smile(66, 5),
   sirena: () => P('M20 50Q12 82 20 104H80Q88 82 80 50Q78 24 50 22Q22 24 20 50z', '#ff6f61', '#e0524a')
     + kid('#5fd1c5', '#2fae9e')
     + mirror(P('M34 96Q38 84 46 88Q44 98 34 96z', '#ff9cc8', '#e870a8'))
@@ -309,6 +347,12 @@ export const RINGS = {
   estrellas: () => `<g class="r-spin">${band(55, '#b9a6ff', 4)}${[0, 60, 120, 180, 240, 300].map((d, i) => tshape(starPath(...at(d, 57), i % 2 ? 7 : 10, i % 2 ? 3.2 : 4.4), '#ffc83d', '#ec9a17', '', 2.2)).join('')}</g>`,
   orbita: () => `<g transform="rotate(-18 70 70)"><path d="M3 70A67 22 0 0 0 137 70" fill="none" stroke="${K}" stroke-width="10" stroke-linecap="round"/><path d="M3 70A67 22 0 0 0 137 70" fill="none" stroke="#ffb13d" stroke-width="5" stroke-linecap="round"/></g>`
     + `<g class="r-moon">${tshape(CIRCLE(70, 8, 9), '#9ad9ff', '#5fb0e0', '<circle cx="67" cy="6" r="2.4" fill="#fff" opacity=".8"/>', 2.4)}</g>`,
+  // Exclusivos de la colección.
+  burbujas: () => band(55, '#5fc7e8', 5) + [[-100, 9], [-60, 6], [-20, 8], [40, 5], [110, 7], [160, 9], [210, 6]].map(([d, r]) => { const [x, y] = at(d, 57); return `<circle cx="${x}" cy="${y}" r="${r}" fill="#d8f0ff" stroke="${K}" stroke-width="2.4"/><circle cx="${x - r * 0.35}" cy="${y - r * 0.35}" r="${r * 0.3}" fill="#fff"/>`; }).join(''),
+  gemas: () => band(55, '#b36bff', 5) + [-90, -18, 54, 126, 198].map((d) => { const [x, y] = at(d, 56); return tshape(`M${x - 7} ${y - 2}l3-5h8l3 5-7 9z`, '#7fe0ff', '#3fb6e0', '', 2.2); }).join(''),
+  hojas: () => band(55, '#5fb04a', 5) + [-100, -30, 40, 110, 180, 250].map((d) => { const [x, y] = at(d, 56); return `<g transform="translate(${x} ${y}) rotate(${d + 45})">${tshape('M0 -10Q8 0 0 10Q-8 0 0 -10z', '#8fd46a', '#5fb04a', '<path d="M0 -8V8" stroke="#3f8a3a" stroke-width="1.4"/>', 2.2)}</g>`; }).join(''),
+  caramelos: () => band(55, '#ff9cc8', 6) + `<circle cx="70" cy="70" r="55" fill="none" stroke="#fff" stroke-width="3" stroke-dasharray="6 8"/>`
+    + [-90, 30, 150].map((d) => { const [x, y] = at(d, 56); return `<g transform="translate(${x - 9} ${y - 9}) rotate(${d + 90} 9 9) scale(.56)">${ICONS.caramelo()}</g>`; }).join(''),
   arcoiris: () => `<circle cx="70" cy="70" r="56" fill="none" stroke="${K}" stroke-width="13"/><g class="r-spin">${['#ff5f7e', '#ff9c5b', '#ffc83d', '#6fd36a', '#4aa8de', '#8a5cf0'].map((c, i) => `<circle cx="70" cy="70" r="56" fill="none" stroke="${c}" stroke-width="8" pathLength="6" stroke-dasharray="1 5" stroke-dashoffset="${-i}"/>`).join('')}</g>`,
 };
 const ringOf = (p) => (RINGS[p.ring] ? p.ring : RINGS[p.equip?.ring] ? p.equip.ring : 'sencillo');

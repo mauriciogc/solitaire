@@ -1180,7 +1180,7 @@ export class Game {
     const left = this.stock.length;
     const stars = this.extras ? 1 : E.starsFor(this.level, left);
     const res = this.opts.onWin(stars);
-    const { coins, tickets, prev, gold, wild, undo } = res;
+    const { coins, tickets, prev, gold, wild, undo, col } = res;
     const title = this.level.secret ? '¡Nivel secreto!' : this.level.boss ? '¡Jefe derrotado!' : '¡Nivel superado!';
     // Premios en fichas que saltan una tras otra (después de las estrellas).
     const chips = [
@@ -1189,6 +1189,7 @@ export class Game {
       gold && `<div class="reward gold">${icon('gold')}+1<small>boleto dorado</small></div>`,
       wild && `<div class="reward">${icon('wild')}+${wild}<small>comodín</small></div>`,
       undo && `<div class="reward">${icon('undo')}+${undo}<small>deshacer</small></div>`,
+      col && `<div class="reward">${icon(col.ico)}+${col.n}<small>colección</small></div>`,
     ].filter(Boolean);
     const note = !coins && prev >= 3
       ? '<p class="note">Ya cobraste las 3 estrellas de este nivel.</p>'

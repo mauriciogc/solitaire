@@ -84,6 +84,10 @@ button:disabled { cursor: default; }
 .space-atardecer { --sky: radial-gradient(60% 80% at 22% 30%, #ff9c5b45, transparent 70%), radial-gradient(50% 70% at 80% 75%, #ff5f7e3a, transparent 70%), radial-gradient(40% 50% at 55% 8%, #ffc83d26, transparent 70%), linear-gradient(170deg, #2a1340 0%, #552252 55%, #86384f 100%); }
 .space-oceano { --sky: radial-gradient(60% 80% at 22% 30%, #4aa8de45, transparent 70%), radial-gradient(50% 70% at 80% 75%, #5ff0ff2a, transparent 70%), radial-gradient(40% 50% at 55% 8%, #8a5cf02a, transparent 70%), linear-gradient(170deg, #06183a 0%, #0e2d66 55%, #15488a 100%); }
 .space-rosa { --sky: radial-gradient(60% 80% at 22% 30%, #ff7ab855, transparent 70%), radial-gradient(50% 70% at 80% 75%, #b36bff45, transparent 70%), radial-gradient(40% 50% at 55% 8%, #ffc2dc26, transparent 70%), linear-gradient(170deg, #281040 0%, #4a1c5e 55%, #6d2a72 100%); }
+.space-marino { --sky: radial-gradient(30% 120% at 30% -10%, #9ff3ff2e, transparent 70%), radial-gradient(25% 110% at 62% -10%, #9ff3ff22, transparent 70%), radial-gradient(60% 50% at 50% 110%, #2fd1c540, transparent 70%), linear-gradient(180deg, #0b4a6e 0%, #0a3358 50%, #061f3d 100%); }
+.space-cueva { --sky: radial-gradient(40% 40% at 18% 78%, #7fe0ff3a, transparent 70%), radial-gradient(35% 35% at 82% 30%, #ff7ab838, transparent 70%), radial-gradient(45% 45% at 60% 85%, #b36bff40, transparent 70%), linear-gradient(170deg, #1a0f33 0%, #2a1650 55%, #3a1d66 100%); }
+.space-bosque { --sky: radial-gradient(3px 3px at 20% 30%, #ffe58a, transparent), radial-gradient(3px 3px at 70% 60%, #ffe58a, transparent), radial-gradient(2.5px 2.5px at 40% 80%, #d8ff8a, transparent), radial-gradient(60% 60% at 50% 110%, #2f7a3a55, transparent 70%), radial-gradient(50% 50% at 80% 10%, #8fd46a22, transparent 70%), linear-gradient(175deg, #0d1f1a 0%, #133326 55%, #1b4430 100%); }
+.space-algodon { --sky: radial-gradient(45% 35% at 20% 25%, #ffd6e8aa, transparent 70%), radial-gradient(40% 30% at 78% 70%, #d9c6ffaa, transparent 70%), radial-gradient(35% 30% at 55% 8%, #bfe8ff88, transparent 70%), linear-gradient(170deg, #ff9cc8 0%, #c792ff 55%, #8a7cf0 100%); }
 .space::after { content: ''; position: absolute; inset: 0; opacity: .8; background-image:
   radial-gradient(1.4px 1.4px at 12% 18%, #fff, transparent), radial-gradient(1px 1px at 32% 72%, #fff, transparent), radial-gradient(1.6px 1.6px at 58% 34%, #fff, transparent),
   radial-gradient(1px 1px at 78% 12%, #fff, transparent), radial-gradient(1.2px 1.2px at 88% 64%, #fff, transparent), radial-gradient(1px 1px at 44% 90%, #fff, transparent),
@@ -601,7 +605,8 @@ button.rg:active > i { scale: .92; }
 .pv-info .seal-secret { right: 70px; bottom: auto; top: 4px; }
 .pv-info:has(.seal-secret) { padding-right: 130px; }
 .pv-info .seal-secret small { display: block; color: #fff; font-size: 7.5px; }
-.chest-row { display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 6px; min-height: 104px; }
+/* Cofre del jefe: el cofre al centro y, al abrirse, sus premios salen volando y caen en fila debajo. */
+.chest-row { display: flex; flex-direction: column; align-items: center; gap: 8px; margin-top: 18px; }
 .chest { position: relative; width: 100px; height: 100px; flex: none; }
 .chest::before { content: ''; position: absolute; inset: -40px; border-radius: 50%; opacity: 0; scale: 0.4; transition: opacity 300ms, scale 500ms var(--spring);
   background: repeating-conic-gradient(#ffd75a 0 10deg, transparent 10deg 24deg); mask: radial-gradient(circle, #000 20%, transparent 66%); animation: spin 8s linear infinite; }
@@ -610,9 +615,16 @@ button.rg:active > i { scale: .92; }
 .chest .ico { width: 100%; height: 100%; }
 .chest .lid { transform-origin: 85% 48%; transition: rotate 420ms var(--spring), translate 420ms var(--spring); }
 .chest-row.open .lid { rotate: 28deg; translate: 8px -14px; }
-.chest-row .loot { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+.chest-row .loot { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 14px; min-height: 76px; }
+.chest-row .loot-it { position: relative; z-index: 2; flex-direction: column; gap: 3px; padding: 0; background: none; border: 0; animation: none; }
+.chest-row .loot-it .ico { width: 54px; height: 54px; padding: 8px; border-radius: 50%; background: radial-gradient(circle at 40% 35%, #fff, #fff3c4 70%); border: 2.5px solid var(--ink); box-shadow: inset 0 -4px 0 #f1c75a, 0 3px 0 var(--ink), 0 0 16px #ffc83d88; }
+.chest-row .loot-it b { padding: 0 9px 2px; border-radius: 99px; background: var(--ink); color: #ffd75a; font: 400 16px/1.25 'Lilita One'; }
+.chest-row.done .loot-it { animation: loot-bob 2.4s ease-in-out infinite; }
+.chest-row.done .loot-it:nth-child(2) { animation-delay: -.8s; } .chest-row.done .loot-it:nth-child(3) { animation-delay: -1.6s; }
+@keyframes loot-bob { 50% { translate: 0 -5px; } }
 .chest-row:not(.open) .loot { visibility: hidden; }
 .chest-row:not(.open) .loot-it { animation: none; }
+@media (prefers-reduced-motion: reduce) { .chest-row.done .loot-it { animation: none; } }
 .album { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px 8px; margin-top: 6px; }
 .pc-btn { display: block; text-align: left; transition: scale var(--press); }
 .pc-btn:active { scale: .96; }
@@ -910,6 +922,15 @@ html:not(.dev-on) .dev-pill { display: none; }
   --s: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 1.5l3 7 7.5.6-5.7 5 1.8 7.4L12 17.6l-6.6 3.9 1.8-7.4-5.7-5 7.5-.6z' fill='%23ffc83d' stroke='%232a1f5c' stroke-width='2' stroke-linejoin='round'/%3E%3C/svg%3E");
   background: var(--s) left top / 24px no-repeat, var(--s) right 60px top / 18px no-repeat, var(--s) left bottom / 18px no-repeat, var(--s) right bottom / 24px no-repeat, var(--s) left 42% bottom 2px / 14px no-repeat; }
 .postcard.fr-arcoiris { padding: 16px 22px 16px 16px; box-shadow: inset 0 0 0 4px #ff5f7e, inset 0 0 0 8px #ffc83d, inset 0 0 0 12px #5ad68c, inset 0 0 0 16px #4aa8de, 0 4px 0 var(--ink); }
+/* Marcos de postal exclusivos de la colección: borde de su color y su ficha en las esquinas. */
+.postcard.fr-mar { padding: 16px 22px 16px 16px; box-shadow: inset 0 0 0 5px #4aa8de, inset 0 0 0 8px #d8f0ff, inset 0 0 0 11px #2f86c8, 0 4px 0 var(--ink); }
+.postcard.fr-mar::before { content: ''; position: absolute; inset: -12px; pointer-events: none; z-index: 2; --s: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2032%2032%22%3E%3CclipPath%20id%3D%22ts0%22%3E%3Cpath%20d%3D%22M16%2027.5%204.5%2014.5C5%207.5%2010%204%2016%204s11%203.5%2011.5%2010.5z%22%2F%3E%3C%2FclipPath%3E%3Cg%20clip-path%3D%22url(%23ts0)%22%3E%3Cpath%20d%3D%22M16%2027.5%204.5%2014.5C5%207.5%2010%204%2016%204s11%203.5%2011.5%2010.5z%22%20fill%3D%22%23f28aa5%22%2F%3E%3Cpath%20d%3D%22M16%2027.5%204.5%2014.5C5%207.5%2010%204%2016%204s11%203.5%2011.5%2010.5z%22%20fill%3D%22%23ffb3c7%22%20transform%3D%22translate(-1.4%20-2.2)%22%2F%3E%3Cpath%20d%3D%22M16%2027V6%22%20stroke%3D%22%23e0607f%22%20stroke-width%3D%221.6%22%20fill%3D%22none%22%2F%3E%3Cpath%20d%3D%22M16%2027%209.5%207.5%22%20stroke%3D%22%23e0607f%22%20stroke-width%3D%221.6%22%20fill%3D%22none%22%2F%3E%3Cpath%20d%3D%22M16%2027%2022.5%207.5%22%20stroke%3D%22%23e0607f%22%20stroke-width%3D%221.6%22%20fill%3D%22none%22%2F%3E%3Cpath%20d%3D%22M16%2027%205.5%2012%22%20stroke%3D%22%23e0607f%22%20stroke-width%3D%221.6%22%20fill%3D%22none%22%2F%3E%3Cpath%20d%3D%22M16%2027%2026.5%2012%22%20stroke%3D%22%23e0607f%22%20stroke-width%3D%221.6%22%20fill%3D%22none%22%2F%3E%3C%2Fg%3E%3Cpath%20d%3D%22M16%2027.5%204.5%2014.5C5%207.5%2010%204%2016%204s11%203.5%2011.5%2010.5z%22%20fill%3D%22none%22%20stroke%3D%22%232a1f5c%22%20stroke-width%3D%222%22%20stroke-linejoin%3D%22round%22%2F%3E%3CclipPath%20id%3D%22ts1%22%3E%3Cpath%20d%3D%22M11%2026.5h10l-1.5%203h-7z%22%2F%3E%3C%2FclipPath%3E%3Cg%20clip-path%3D%22url(%23ts1)%22%3E%3Cpath%20d%3D%22M11%2026.5h10l-1.5%203h-7z%22%20fill%3D%22%23f28aa5%22%2F%3E%3Cpath%20d%3D%22M11%2026.5h10l-1.5%203h-7z%22%20fill%3D%22%23ffb3c7%22%20transform%3D%22translate(-1.4%20-2.2)%22%2F%3E%3C%2Fg%3E%3Cpath%20d%3D%22M11%2026.5h10l-1.5%203h-7z%22%20fill%3D%22none%22%20stroke%3D%22%232a1f5c%22%20stroke-width%3D%221.8%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E"); background: var(--s) left top / 30px no-repeat, var(--s) right bottom / 30px no-repeat, var(--s) right 50px top 2px / 20px no-repeat, var(--s) left 40% bottom 2px / 18px no-repeat; }
+.postcard.fr-gemas { padding: 16px 22px 16px 16px; box-shadow: inset 0 0 0 5px #b36bff, inset 0 0 0 8px #ecdcff, inset 0 0 0 11px #8a5cf0, 0 4px 0 var(--ink); }
+.postcard.fr-gemas::before { content: ''; position: absolute; inset: -12px; pointer-events: none; z-index: 2; --s: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2032%2032%22%3E%3CclipPath%20id%3D%22ts2%22%3E%3Cpath%20d%3D%22M9.5%205h13l5.5%208L16%2028%204%2013z%22%2F%3E%3C%2FclipPath%3E%3Cg%20clip-path%3D%22url(%23ts2)%22%3E%3Cpath%20d%3D%22M9.5%205h13l5.5%208L16%2028%204%2013z%22%20fill%3D%22%233fb6e0%22%2F%3E%3Cpath%20d%3D%22M9.5%205h13l5.5%208L16%2028%204%2013z%22%20fill%3D%22%237fe0ff%22%20transform%3D%22translate(-1.4%20-2.2)%22%2F%3E%3Cpath%20d%3D%22M4%2013h24M12%205l-2.5%208L16%2028l6.5-15L20%205%22%20fill%3D%22none%22%20stroke%3D%22%232f9ccc%22%20stroke-width%3D%221.5%22%2F%3E%3Cpath%20d%3D%22M9%208.5l2-2.2%22%20stroke%3D%22%23fff%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%2F%3E%3C%2Fg%3E%3Cpath%20d%3D%22M9.5%205h13l5.5%208L16%2028%204%2013z%22%20fill%3D%22none%22%20stroke%3D%22%232a1f5c%22%20stroke-width%3D%222%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E"); background: var(--s) left top / 30px no-repeat, var(--s) right bottom / 30px no-repeat, var(--s) right 50px top 2px / 20px no-repeat, var(--s) left 40% bottom 2px / 18px no-repeat; }
+.postcard.fr-bosque { padding: 16px 22px 16px 16px; box-shadow: inset 0 0 0 5px #5fb04a, inset 0 0 0 8px #e3f5d4, inset 0 0 0 11px #3f8a3a, 0 4px 0 var(--ink); }
+.postcard.fr-bosque::before { content: ''; position: absolute; inset: -12px; pointer-events: none; z-index: 2; --s: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2032%2032%22%3E%3CclipPath%20id%3D%22ts3%22%3E%3Cpath%20d%3D%22M8%2014.5h16c0%208-3%2012.5-8%2013.5-5-1-8-5.5-8-13.5z%22%2F%3E%3C%2FclipPath%3E%3Cg%20clip-path%3D%22url(%23ts3)%22%3E%3Cpath%20d%3D%22M8%2014.5h16c0%208-3%2012.5-8%2013.5-5-1-8-5.5-8-13.5z%22%20fill%3D%22%23c9893a%22%2F%3E%3Cpath%20d%3D%22M8%2014.5h16c0%208-3%2012.5-8%2013.5-5-1-8-5.5-8-13.5z%22%20fill%3D%22%23e8a94a%22%20transform%3D%22translate(-1.4%20-2.2)%22%2F%3E%3Cpath%20d%3D%22M11%2018q1%205%204%207%22%20stroke%3D%22%23fff4c7%22%20stroke-width%3D%222%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%2F%3E%3C%2Fg%3E%3Cpath%20d%3D%22M8%2014.5h16c0%208-3%2012.5-8%2013.5-5-1-8-5.5-8-13.5z%22%20fill%3D%22none%22%20stroke%3D%22%232a1f5c%22%20stroke-width%3D%222%22%20stroke-linejoin%3D%22round%22%2F%3E%3CclipPath%20id%3D%22ts4%22%3E%3Cpath%20d%3D%22M5%2015q0-8%2011-8t11%208z%22%2F%3E%3C%2FclipPath%3E%3Cg%20clip-path%3D%22url(%23ts4)%22%3E%3Cpath%20d%3D%22M5%2015q0-8%2011-8t11%208z%22%20fill%3D%22%2383501a%22%2F%3E%3Cpath%20d%3D%22M5%2015q0-8%2011-8t11%208z%22%20fill%3D%22%23a86a22%22%20transform%3D%22translate(-1.4%20-2.2)%22%2F%3E%3Cpath%20d%3D%22M9%2011.5h3M14%2010h3M19%2011.5h3M11%2013.5h3M17%2013.5h3%22%20stroke%3D%22%2383501a%22%20stroke-width%3D%221.4%22%2F%3E%3C%2Fg%3E%3Cpath%20d%3D%22M5%2015q0-8%2011-8t11%208z%22%20fill%3D%22none%22%20stroke%3D%22%232a1f5c%22%20stroke-width%3D%222%22%20stroke-linejoin%3D%22round%22%2F%3E%3Cpath%20d%3D%22M16%207q0-3%203-4%22%20stroke%3D%22%232a1f5c%22%20stroke-width%3D%222.6%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%2F%3E%3C%2Fsvg%3E"); background: var(--s) left top / 30px no-repeat, var(--s) right bottom / 30px no-repeat, var(--s) right 50px top 2px / 20px no-repeat, var(--s) left 40% bottom 2px / 18px no-repeat; }
+.postcard.fr-dulces { padding: 16px 22px 16px 16px; box-shadow: inset 0 0 0 5px #ff9cc8, inset 0 0 0 8px #fff, inset 0 0 0 11px #f27aad, 0 4px 0 var(--ink); }
+.postcard.fr-dulces::before { content: ''; position: absolute; inset: -12px; pointer-events: none; z-index: 2; --s: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2032%2032%22%3E%3CclipPath%20id%3D%22ts5%22%3E%3Cpath%20d%3D%22M9.5%2016%202.5%209.5v13z%22%2F%3E%3C%2FclipPath%3E%3Cg%20clip-path%3D%22url(%23ts5)%22%3E%3Cpath%20d%3D%22M9.5%2016%202.5%209.5v13z%22%20fill%3D%22%23f27aad%22%2F%3E%3Cpath%20d%3D%22M9.5%2016%202.5%209.5v13z%22%20fill%3D%22%23ff9cc8%22%20transform%3D%22translate(-1.4%20-2.2)%22%2F%3E%3C%2Fg%3E%3Cpath%20d%3D%22M9.5%2016%202.5%209.5v13z%22%20fill%3D%22none%22%20stroke%3D%22%232a1f5c%22%20stroke-width%3D%221.8%22%20stroke-linejoin%3D%22round%22%2F%3E%3CclipPath%20id%3D%22ts6%22%3E%3Cpath%20d%3D%22M22.5%2016l7-6.5v13z%22%2F%3E%3C%2FclipPath%3E%3Cg%20clip-path%3D%22url(%23ts6)%22%3E%3Cpath%20d%3D%22M22.5%2016l7-6.5v13z%22%20fill%3D%22%23f27aad%22%2F%3E%3Cpath%20d%3D%22M22.5%2016l7-6.5v13z%22%20fill%3D%22%23ff9cc8%22%20transform%3D%22translate(-1.4%20-2.2)%22%2F%3E%3C%2Fg%3E%3Cpath%20d%3D%22M22.5%2016l7-6.5v13z%22%20fill%3D%22none%22%20stroke%3D%22%232a1f5c%22%20stroke-width%3D%221.8%22%20stroke-linejoin%3D%22round%22%2F%3E%3CclipPath%20id%3D%22ts7%22%3E%3Cpath%20d%3D%22M16%208a8%208%200%201%201%200%2016a8%208%200%201%201%200%20-16z%22%2F%3E%3C%2FclipPath%3E%3Cg%20clip-path%3D%22url(%23ts7)%22%3E%3Cpath%20d%3D%22M16%208a8%208%200%201%201%200%2016a8%208%200%201%201%200%20-16z%22%20fill%3D%22%23d63d5f%22%2F%3E%3Cpath%20d%3D%22M16%208a8%208%200%201%201%200%2016a8%208%200%201%201%200%20-16z%22%20fill%3D%22%23ff5f7e%22%20transform%3D%22translate(-1.4%20-2.2)%22%2F%3E%3Cpath%20d%3D%22M10%2011q6%203%203%2012M15%208.5q6%204%204%2014%22%20stroke%3D%22%23fff%22%20stroke-width%3D%222.2%22%20fill%3D%22none%22%20opacity%3D%22.85%22%2F%3E%3C%2Fg%3E%3Cpath%20d%3D%22M16%208a8%208%200%201%201%200%2016a8%208%200%201%201%200%20-16z%22%20fill%3D%22none%22%20stroke%3D%22%232a1f5c%22%20stroke-width%3D%222%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E"); background: var(--s) left top / 30px no-repeat, var(--s) right bottom / 30px no-repeat, var(--s) right 50px top 2px / 20px no-repeat, var(--s) left 40% bottom 2px / 18px no-repeat; }
 
 /* Títulos: cada uno con su color, icono y estilo (los más caros, más vistosos). */
 .title-chip { --tb: #e3d8ff; --tc: #5a3d99; --td: #c9bbf2; position: relative; display: inline-flex; align-items: center; gap: 4px; padding: 2px 11px 3px 6px; border-radius: 99px; background: var(--tb); color: var(--tc); border: 2px solid var(--ink); box-shadow: inset 0 -3px 0 var(--td); font: 800 13px/1.2 'Baloo 2'; white-space: nowrap; }
@@ -1039,3 +1060,46 @@ html:not(.dev-on) .dev-pill { display: none; }
   .stabs { margin-top: 10px; }
   .stab { height: 34px; }
 }
+
+/* ---------- Colección (tienda temporal) ---------- */
+.col-btn .rn { position: absolute; bottom: -7px; left: 50%; translate: -50% 0; min-width: 22px; padding: 0 6px 1px; border-radius: 9px; background: #8a5cf0; border: 2px solid var(--ink); color: #fff; font: 400 13px 'Lilita One'; line-height: 1.3; text-align: center; }
+/* Arriba: tus fichas en grande y el reloj de cuándo termina. */
+.ctop { display: flex; flex-direction: column; align-items: center; gap: 8px; margin-bottom: 4px; }
+.cbank { position: relative; display: flex; align-items: center; justify-content: center; height: 86px; }
+.cb-ico .ico { width: 80px; height: 80px; animation: hero-float 2.6s ease-in-out infinite; }
+.cbank b { position: absolute; left: calc(50% + 26px); bottom: 0; font: 400 40px 'Lilita One'; color: #fff; -webkit-text-stroke: 7px var(--ink); paint-order: stroke fill; font-variant-numeric: tabular-nums; }
+/* Ofertas: primero los 7 exclusivos (del más barato al más caro), luego las ayudas. */
+.cgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 14px 8px; padding: 12px 2px 6px; }
+.coffer { position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 12px 5px 8px; border-radius: 18px; background: #fff; border: 2.5px solid var(--ink); box-shadow: inset 0 -5px 0 var(--cream-d), 0 3px 0 var(--ink); transition: translate var(--press); }
+.coffer:active { translate: 0 3px; }
+.coffer:has(.c-ex) { background: linear-gradient(#fff, #f6efff); }
+.coffer .trav-prev { width: 72px; height: 72px; }
+.coffer .s-art { overflow: hidden; }
+.coffer .frame-prev { zoom: .36; padding: 18px 12px 4px; }
+.coffer > b { font: 400 14px/1.1 'Lilita One'; text-align: center; }
+.coffer > small { font-size: 11.5px; font-weight: 700; color: #8a80ad; }
+.coffer .s-art { height: 66px; }
+/* Vistas previas más chicas que en la tienda. */
+.coffer .avatar.huge { zoom: .6; }
+.coffer .card-prev { zoom: .72; }
+.coffer .space-prev { height: 62px; }
+.coffer .space-prev .ico { width: 36px; height: 36px; }
+.coffer .s-price, .coffer .s-on { font-size: 14px; padding: 1px 10px 3px 4px; }
+.coffer .s-price .ico { width: 19px; height: 19px; }
+.coffer.sg-help .s-art { height: 48px; }
+.c-ex { position: absolute; top: -10px; left: 50%; translate: -50% 0; z-index: 1; display: flex; align-items: center; gap: 2px; padding: 1px 9px 2px 4px; border-radius: 99px; background: #8a5cf0; border: 2px solid var(--ink); color: #fff; font: 400 12px 'Lilita One'; font-style: normal; letter-spacing: .03em; white-space: nowrap; }
+.c-prize { display: flex; align-items: center; gap: 2px; font: 400 18px 'Lilita One'; }
+.c-prize .ico { width: 30px; height: 30px; }
+.c-ex .ico { width: 13px; height: 13px; }
+.coffer .title-chip { max-width: 100%; white-space: normal; text-align: left; line-height: 1.1; font-size: 11.5px; padding: 3px 8px 4px 4px; }
+.coffer .title-chip .ico { width: 15px; height: 15px; }
+/* Teléfono parado: tres columnas. */
+@media (max-width: 520px) { .cgrid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.coffer.own { background: #eef7ff; }
+@media (max-height: 500px) { .ctop { flex-direction: row; justify-content: center; gap: 18px; } .cbank { height: 60px; } .cb-ico .ico { width: 56px; height: 56px; } .cbank b { font-size: 30px; left: calc(50% + 16px); } .cgrid { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
+@media (prefers-reduced-motion: reduce) { .cb-ico .ico { animation: none; } }
+/* Títulos exclusivos de la colección. */
+.title-chip.t-buscaconchas { --tc: #fff; --td: #226aa8; background: linear-gradient(#4aa8de, #2f86c8); font-family: 'Lilita One'; font-weight: 400; text-shadow: 0 1.5px 0 #1d5f96; }
+.title-chip.t-cazagemas { --tc: #fff; --td: #47307d; background: linear-gradient(115deg, #8a5cf0 0 40%, #b99aff 50%, #8a5cf0 60% 100%) 0 0 / 300% 100%; font-family: 'Lilita One'; font-weight: 400; text-shadow: 0 1.5px 0 #47307d; animation: shimmer 3.2s linear infinite; }
+.title-chip.t-guardabosques { --tc: #fff; --td: #2f7a3a; background: #47a85a; border-radius: 9px; font-family: 'Lilita One'; font-weight: 400; text-shadow: 0 1.5px 0 #2a6a33; }
+.title-chip.t-golosito { --tc: #c22c6f; --td: #ffa8cc; background: repeating-linear-gradient(-45deg, #ffe0ee 0 7px, #fff 7px 14px); font-family: 'Lilita One'; font-weight: 400; }
