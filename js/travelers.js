@@ -349,6 +349,43 @@ const MODELS = {
       steam.forEach((m, k) => { const p = (t * 0.45 + k / 4) % 1; m.position.set(Math.sin(p * 6 + k) * 0.08, 0.42 + p * 0.45, Math.cos(k * 2) * 0.06); m.scale.setScalar(0.6 + p * 1.2); m.material.opacity = 0.8 * (1 - p); });
     } };
   },
+  // Trompo al pastor (Día del Taco): carne en capas que gira en su varilla, con la piña arriba.
+  trompo(part) {
+    const g = new THREE.Group(), tr = new THREE.Group();
+    tr.add(part(new THREE.CylinderGeometry(0.018, 0.018, 1.15, 8), '#9aa7cf', { ol: 0.2 }));
+    tr.add(part(new THREE.CylinderGeometry(0.14, 0.14, 0.025, 20), '#9aa7cf', { y: -0.42, ol: 0.1 }));
+    const layers = 7;
+    for (let k = 0; k < layers; k++) {
+      const r0 = 0.11 + Math.sin(((k + 0.5) / layers) * Math.PI) * 0.1, r1 = 0.11 + Math.sin(((k + 1.5) / layers) * Math.PI) * 0.1;
+      tr.add(part(new THREE.CylinderGeometry(r1, r0, 0.115, 16), k % 2 ? '#d9542a' : '#e8743a', { y: -0.36 + k * 0.11, ol: 0.04, mat: new THREE.MeshToonMaterial({ color: k % 2 ? '#d9542a' : '#e8743a', flatShading: true }) }));
+    }
+    const pina = new THREE.Group();
+    pina.add(part(new THREE.SphereGeometry(0.1, 12, 10).scale(1, 1.25, 1), '#ffd23d', { ol: 0.1 }));
+    for (let k = 0; k < 5; k++) { const a = (k / 5) * Math.PI * 2; pina.add(part(new THREE.ConeGeometry(0.03, 0.16, 6), '#4fa84a', { x: Math.cos(a) * 0.035, y: 0.17, z: Math.sin(a) * 0.035, rx: Math.sin(a) * 0.4, rz: -Math.cos(a) * 0.4, ol: 0.15 })); }
+    pina.position.y = 0.46; tr.add(pina);
+    tr.rotation.x = 0.25;
+    g.add(tr);
+    return { obj: g, tick: (t) => { tr.rotation.y = t * 1.6; tr.position.y = Math.sin(t * 2) * 0.05; tr.rotation.z = Math.sin(t * 1.3) * 0.08; pina.rotation.y = -t * 0.6; } };
+  },
+  // Regadera (Día de la Tierra): regadera verde con su asa que vuela inclinada y echa gotitas por la flor.
+  regadera(part) {
+    const g = new THREE.Group(), can = new THREE.Group();
+    can.add(part(new THREE.CylinderGeometry(0.22, 0.25, 0.4, 24), '#47c27a', { ol: 0.05 }));
+    can.add(part(new THREE.TorusGeometry(0.225, 0.02, 8, 28).rotateX(Math.PI / 2), '#2f9e5c', { y: 0.2, ol: 0 }));
+    can.add(part(new THREE.TorusGeometry(0.16, 0.035, 8, 20, Math.PI), '#2f9e5c', { x: -0.08, y: 0.22, ry: Math.PI / 2, ol: 0.12 }));
+    can.add(part(new THREE.CylinderGeometry(0.035, 0.05, 0.42, 10).rotateZ(-0.9), '#47c27a', { x: 0.33, y: 0.12, ol: 0.12 }));
+    can.add(part(new THREE.CylinderGeometry(0.08, 0.045, 0.06, 14).rotateZ(-0.9), '#ffc83d', { x: 0.5, y: 0.25, ol: 0.15 }));
+    can.add(part(new THREE.SphereGeometry(0.05, 10, 8), '#ff9cc8', { x: -0.12, y: 0.02, z: 0.24, ol: 0.15 }));
+    can.add(part(new THREE.SphereGeometry(0.025, 8, 6), '#ffc83d', { x: -0.12, y: 0.02, z: 0.28, ol: 0 }));
+    const drops = [];
+    for (let k = 0; k < 6; k++) { const m = new THREE.Mesh(new THREE.SphereGeometry(0.025, 8, 6).scale(1, 1.4, 1), glow('#7fd6ff', 1)); can.add(m); drops.push(m); }
+    can.rotation.set(0.3, -0.5, 0.25);
+    g.add(can);
+    return { obj: g, tick: (t) => {
+      can.position.y = Math.sin(t * 2) * 0.05; can.rotation.z = 0.25 + Math.sin(t * 1.4) * 0.12;
+      drops.forEach((m, k) => { const p = (t * 0.9 + k / 6) % 1; m.position.set(0.56 + p * 0.2, 0.24 - p * 0.55, (k % 3 - 1) * 0.05); m.scale.setScalar(Math.sin(p * Math.PI) + 0.01); });
+    } };
+  },
   // ---------- Exclusivos del evento del mes ----------
   // Alebrije (Día de Muertos): jaguar-dragón de colores con manchas, alas de mariposa y cola enroscada.
   alebrije(part) {

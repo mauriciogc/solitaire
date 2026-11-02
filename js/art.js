@@ -105,6 +105,18 @@ const ICONS = {
     + `<path d="M24.6 14.6h1.8a4 4 0 0 1 0 8h-2" fill="none" stroke="${K}" stroke-width="4.4" stroke-linecap="round"/><path d="M24.6 14.6h1.8a4 4 0 0 1 0 8h-2" fill="none" stroke="#d9783f" stroke-width="2" stroke-linecap="round"/>`
     + tshape('M6.4 11h19.2l-1.6 13.2a4 4 0 0 1-4 3.6h-8a4 4 0 0 1-4-3.6z', '#d9783f', '#b85a28', '<path d="M7.4 17.6h17.2" stroke="#fff1d6" stroke-width="1.6" stroke-dasharray="2.4 1.8"/>', 2.2)
     + `<ellipse cx="16" cy="11.2" rx="9.6" ry="2.2" fill="#a8623a" stroke="${K}" stroke-width="1.8"/>`,
+  // Festividad: Día del Taco (taco = ícono, rodaja de limón = adorno).
+  taco: () => `<g transform="rotate(-10 16 16)">${tshape('M3.6 14.6q1.8-4.6 5-2.6 1.8-4.2 5.2-1.4 3-4 6 .2 3-3.2 5.4.8 3-1.2 3.2 3z', '#6fc25a', '#4fa84a', '', 1.8)}`
+    + `${[[9, 13.4], [15.6, 12.2], [22, 13.2]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="2.3" fill="#e8434f" stroke="${K}" stroke-width="1.4"/>`).join('')}${[[12.4, 14], [19, 13.6]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="1.4" fill="#fff6ee" stroke="${K}" stroke-width="1"/>`).join('')}`
+    + `${tshape('M3 15h26a13 12 0 0 1-26 0z', '#ffd27a', '#e8b04a', `<path d="M5.6 16.4a10.4 9 0 0 0 20.8 0" fill="none" stroke="#f2c060" stroke-width="1.4"/>${[[10, 21], [16, 24], [22, 20], [13, 18.6]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r=".9" fill="#c98a3a"/>`).join('')}`, 2.2)}</g>`,
+  limon: () => tshape(CIRCLE(16, 16, 12.5), '#7cc04f', '#5fa83a', `<circle cx="16" cy="16" r="9.6" fill="#e8f7b0"/>${[0, 45, 90, 135, 180, 225, 270, 315].map((a) => `<path d="M16 16 ${(16 + Math.cos((a * Math.PI) / 180) * 9).toFixed(1)} ${(16 + Math.sin((a * Math.PI) / 180) * 9).toFixed(1)}" stroke="#bfe080" stroke-width="1.4"/>`).join('')}<circle cx="16" cy="16" r="1.6" fill="#fff"/><path d="M8.4 9.6q2.4-2.6 5.6-3.2" stroke="#fff" stroke-width="1.8" fill="none" stroke-linecap="round" opacity=".8"/>`, 2.2),
+  // Festividad: Día de la Tierra (la Tierra con un brote = ícono, brote = adorno).
+  tierra: () => `<g transform="translate(16 17.6) scale(.88) translate(-16 -16)">${tshape(CIRCLE(16, 18, 11.5), '#4aa8de', '#2f86c0', '<path d="M7 14c3-2 5 1 7 0s1-5 5-4c2 .5 2 3 4 3l2 1c-1 3-4 3-5 6s-3 4-5 2-1-4-4-3-4 0-5-2z" fill="#6fc25a"/><path d="M15 25c2-1 4 0 5 2l-3 1z" fill="#6fc25a"/><ellipse cx="11" cy="12.6" rx="2.6" ry="1.4" fill="#fff" opacity=".55" transform="rotate(-35 11 12.6)"/>', 2.2)}`
+    + `<path d="M16 7V2.6" stroke="${K}" stroke-width="3.6" stroke-linecap="round"/><path d="M16 7V2.6" stroke="#4fa84a" stroke-width="1.6" stroke-linecap="round"/>`
+    + tshape('M16 4.4Q14 -.6 8.6 .4Q9.8 5.2 16 4.4z', '#6fc25a', '#4fa84a', '', 1.6) + tshape('M16 3.6Q18.4 -.8 23.4 .8Q21.8 5 16 3.6z', '#8fd46a', '#6fc25a', '', 1.6) + '</g>',
+  brote: () => tshape('M5 25.6Q16 19.6 27 25.6Q27 30 16 30T5 25.6z', '#a86a3a', '#83501a', '', 2)
+    + `<path d="M16 25V13" stroke="${K}" stroke-width="4.4" stroke-linecap="round"/><path d="M16 25V13" stroke="#4fa84a" stroke-width="2" stroke-linecap="round"/>`
+    + tshape('M16 15Q12 6 3.6 7.6Q5.6 16 16 15z', '#6fc25a', '#4fa84a', '<path d="M15 14Q10 10 6.6 9.6" stroke="#4fa84a" stroke-width="1.2" fill="none"/>', 2) + tshape('M16 13Q19 4 28.4 4.4Q27 13.6 16 13z', '#8fd46a', '#6fc25a', '<path d="M17 12.4Q22 8 25.6 6.8" stroke="#6fc25a" stroke-width="1.2" fill="none"/>', 2),
   // Fichas de la colección (una por temática).
   concha: () => tshape('M16 27.5 4.5 14.5C5 7.5 10 4 16 4s11 3.5 11.5 10.5z', '#ffb3c7', '#f28aa5', ['M16 27V6', 'M16 27 9.5 7.5', 'M16 27 22.5 7.5', 'M16 27 5.5 12', 'M16 27 26.5 12'].map((d) => `<path d="${d}" stroke="#e0607f" stroke-width="1.6" fill="none"/>`).join(''))
     + tshape('M11 26.5h10l-1.5 3h-7z', '#ffb3c7', '#f28aa5', '', 1.8),
@@ -217,6 +229,10 @@ export const BACKS = {
     art: () => `<g transform="translate(14 34) scale(2.25)">${ICONS.tuerca()}</g>` },
   // Exclusivo de la festividad: Día de la Candelaria.
   tamales: { a: '#5a8f3a', b: '#4a7a2f', dots: '#f2e2a0', art: () => `${[[20, 26, 0.42], [80, 114, 0.46], [80, 26, 0.34], [22, 114, 0.34]].map(([x, y, k]) => `<g transform="translate(${x - 16 * k} ${y - 16 * k}) scale(${k})">${ICONS.atole()}</g>`).join('')}<g transform="translate(14 34) scale(2.25)">${ICONS.tamal()}</g>` },
+  // Exclusivo de la festividad: Día del Taco.
+  tacos: { a: '#e8853e', b: '#c9692a', dots: '#ffe0b8', art: () => `${[[20, 26, 0.44], [80, 114, 0.48], [80, 26, 0.36], [22, 114, 0.36]].map(([x, y, k]) => `<g transform="translate(${x - 16 * k} ${y - 16 * k}) scale(${k})">${ICONS.limon()}</g>`).join('')}<g transform="translate(14 34) scale(2.25)">${ICONS.taco()}</g>` },
+  // Exclusivo de la festividad: Día de la Tierra.
+  planetaverde: { a: '#3f9a4a', b: '#2f7a3a', dots: '#d9f5c8', art: () => `${[[20, 26, 0.44], [80, 114, 0.48], [80, 26, 0.36], [22, 114, 0.36]].map(([x, y, k]) => `<g transform="translate(${x - 16 * k} ${y - 16 * k}) scale(${k})">${ICONS.brote()}</g>`).join('')}<g transform="translate(14 36) scale(2.25)">${ICONS.tierra()}</g>` },
   // Exclusivos del evento del mes.
   calaverita: { a: '#7b2fbf', b: '#5e1f9a', dots: '#ffd27a', art: () => `${[[20, 26, 7], [80, 112, 8], [78, 28, 5], [24, 110, 5]].map(([x, y, r]) => marigold(x, y, r)).join('')}<g transform="translate(18 38) scale(2)">${ICONS.calavera()}</g>` },
   esferas: { a: '#c22c3c', b: '#a51f30', dots: '#ffd6d6', art: () => `${[[20, 26, 7], [80, 112, 8], [80, 26, 5.5], [22, 112, 5.5]].map(([x, y, r]) => flake(x, y, r, '#fff6e6', 1.6)).join('')}<path d="M8 30Q50 46 92 30" fill="none" stroke="#3f9a5a" stroke-width="5" stroke-linecap="round"/><g transform="translate(18 38) scale(2)">${ICONS.esfera()}</g>` },
@@ -423,6 +439,18 @@ export const AVATARS = {
     + eyes(56, 10, 4.4) + smile(66, 5) + blush(64, 17)
     + `<path d="M14 88Q50 100 86 88" fill="none" stroke="${K}" stroke-width="11" stroke-linecap="round"/><path d="M14 88Q50 100 86 88" fill="none" stroke="#e8c070" stroke-width="5.4" stroke-linecap="round"/>`
     + P('M50 94 36 84 38 100z', '#e8434f', '#c22c3c', '', 3) + P('M50 94 64 84 62 100z', '#e8434f', '#c22c3c', '', 3) + P(CIRCLE(50, 94, 4.6), '#ff6f7a', '#e8434f', '', 3),
+  // Taquito (Día del Taco): tortilla dorada con cara, y de pelo la lechuga, el jitomate y la cebolla.
+  taquito: () => P('M8 52q4-14 14-8 4-12 14-5 6-12 16-1 8-11 16 1 10-8 16 5 8-3 8 8z', '#6fc25a', '#4fa84a')
+    + [[26, 44], [44, 40], [62, 42], [78, 47]].map(([x, y]) => P(CIRCLE(x, y, 6), '#e8434f', '#c22c3c', '<circle cx="-2" cy="-2" r="1.6" fill="#fff" opacity=".6"/>', 3)).join('')
+    + [[35, 47], [70, 48]].map(([x, y]) => P(CIRCLE(x, y, 4), '#fff6ee', '#e8dfd2', '', 2.6)).join('')
+    + P('M4 52h92a46 44 0 0 1-92 0z', '#ffd27a', '#e8b04a', `<path d="M12 56a38 36 0 0 0 76 0" fill="none" stroke="#f2c060" stroke-width="3"/>${[[24, 80], [70, 84], [80, 66], [20, 64]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="2.2" fill="#c98a3a"/>`).join('')}`)
+    + eyes(66, 13, 4.6) + smile(77, 6) + blush(74, 23),
+  // Arbolito (Día de la Tierra): copa verde esponjada con cara, tronco de camisa y una florecita.
+  arbolito: () => shoulders('#a86a3a', '#83501a')
+    + P('M40 70h20v14H40z', '#a86a3a', '#83501a')
+    + P('M18 54C8 52 8 34 20 32 18 18 34 12 42 20 46 8 64 10 66 22 80 18 90 30 84 42 94 50 88 66 76 64 72 76 56 78 50 72 42 80 26 76 26 66 16 68 12 58 18 54z', '#6fc25a', '#4fa84a', '<path d="M26 30q6-6 14-4M62 22q8 0 12 6" stroke="#8fd46a" stroke-width="4" fill="none" stroke-linecap="round"/>')
+    + eyes(50, 12, 4.6) + smile(60, 6) + blush(58, 21)
+    + [0, 72, 144, 216, 288].map((a) => `<ellipse cx="74" cy="${30 - 4.6}" rx="3" ry="4.6" fill="#ff9cc8" stroke="${K}" stroke-width="1.6" transform="rotate(${a} 74 30)"/>`).join('') + `<circle cx="74" cy="30" r="3" fill="#ffc83d" stroke="${K}" stroke-width="1.6"/>`,
   // Exclusivo del evento: Día de Muertos.
   xolo: () => mirror(P('M26 46 16 10 42 30z', '#4a4560', '#36324a', '<path d="M25 37 21 18 35 30z" fill="#ff9cb0"/>'))
     + shoulders('#4a4560', '#36324a')
@@ -534,6 +562,14 @@ export const RINGS = {
   tamalitos: () => band(55, '#c8d86a', 7) + `<circle cx="70" cy="70" r="55" fill="none" stroke="#98ac3e" stroke-width="1.6" stroke-dasharray="10 6"/>`
     + [-25, 35, 95, 155, 215].map((d, i) => { const [x, y] = at(d, 56), k = i % 2 ? 0.55 : 0.68; return `<g transform="translate(${x - 16 * k} ${y - 16 * k}) rotate(${d + 90} ${16 * k} ${16 * k}) scale(${k})">${ICONS.tamal()}</g>`; }).join('')
     + (() => { const [x, y] = at(-90, 56), k = 0.85; return `<g transform="translate(${x - 16 * k} ${y - 18 * k}) scale(${k})">${ICONS.atole()}</g>`; })(),
+  // Salsas (Día del Taco): banda roja de salsa con taquitos, limones y un taco más grande arriba.
+  salsas: () => band(55, '#e8434f', 7) + `<circle cx="70" cy="70" r="55" fill="none" stroke="#6fc25a" stroke-width="2" stroke-dasharray="2 9" stroke-linecap="round"/>`
+    + [[-25, 'taco', 0.56], [35, 'limon', 0.52], [95, 'taco', 0.56], [155, 'limon', 0.52], [215, 'taco', 0.56]].map(([d, k, z]) => { const [x, y] = at(d, 56); return `<g transform="translate(${x - 16 * z} ${y - 16 * z}) rotate(${d + 90} ${16 * z} ${16 * z}) scale(${z})">${ICONS[k]()}</g>`; }).join('')
+    + (() => { const [x, y] = at(-90, 56), k = 0.95; return `<g transform="translate(${x - 16 * k} ${y - 18 * k}) scale(${k})">${ICONS.taco()}</g>`; })(),
+  // Brotes (Día de la Tierra): banda verde con brotecitos alrededor y la Tierra arriba.
+  brotes: () => band(55, '#6fc25a', 7) + `<circle cx="70" cy="70" r="55" fill="none" stroke="#a86a3a" stroke-width="2" stroke-dasharray="2 9" stroke-linecap="round"/>`
+    + [-25, 35, 95, 155, 215].map((d, i) => { const [x, y] = at(d, 56), k = i % 2 ? 0.5 : 0.6; return `<g transform="translate(${x - 16 * k} ${y - 16 * k}) rotate(${d + 90} ${16 * k} ${16 * k}) scale(${k})">${ICONS.brote()}</g>`; }).join('')
+    + (() => { const [x, y] = at(-90, 56), k = 0.95; return `<g transform="translate(${x - 16 * k} ${y - 18 * k}) scale(${k})">${ICONS.tierra()}</g>`; })(),
   // Exclusivo del evento: Día de Muertos.
   cempasuchil: () => band(55, '#ff9c1a', 6) + `<circle cx="70" cy="70" r="55" fill="none" stroke="#b36bff" stroke-width="2.4" stroke-dasharray="3 9" stroke-linecap="round"/>`
     + [-90, -30, 30, 90, 150, 210].map((d, i) => marigold(...at(d, 56), i % 2 ? 8 : 10.5)).join(''),
