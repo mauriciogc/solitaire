@@ -30,12 +30,13 @@ const HEADS = {
 // Ventana con cabecera de color, botón de cerrar y botones abajo.
 // Cada botón cierra la ventana antes de ejecutar su acción. closable: false = sin "×" (decisión obligada).
 // buttons: { label, cls ('', 'ghost', 'danger', 'pink', 'green', 'sq'), onClick, disabled, title, keep }
-export function openModal({ title, body = '', buttons = [], onClose, color = 'violet', ico, closable = true, wide = false, cls = '' }) {
+// En la cabecera solo van el título, cerrar y la ayuda: sin icono (ya está en el botón que la abre).
+export function openModal({ title, body = '', buttons = [], onClose, color = 'violet', closable = true, wide = false, cls = '' }) {
   const [hc, hd] = HEADS[color] || HEADS.violet;
   const back = document.createElement('div');
   back.className = 'modal-back';
   back.innerHTML = `<section class="modal ${wide ? 'wide' : ''} ${cls}" role="dialog" aria-modal="true" aria-label="${title ? title.replace(/<[^>]+>/g, '') : 'Ventana'}">
-    <header class="mhead" style="--hc:${hc};--hd:${hd}">${ico ? icon(ico) : ''}<h2 class="outl">${title || ''}</h2>${closable ? `<button class="x" aria-label="Cerrar">${icon('close')}</button>` : ''}</header>
+    <header class="mhead" style="--hc:${hc};--hd:${hd}"><h2 class="outl">${title || ''}</h2>${closable ? `<button class="x" aria-label="Cerrar">${icon('close')}</button>` : ''}</header>
     <div class="mbody">${body}</div><div class="mbtns"></div></section>`;
   const box = back.querySelector('.mbtns');
   let closed = false;

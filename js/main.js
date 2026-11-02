@@ -1889,7 +1889,6 @@ function openAlbum() {
   const setHead = (title, back) => {
     h2.textContent = title;
     head.querySelector('.hback')?.remove();
-    head.querySelector('.ico')?.classList.toggle('hidden', back);
     if (back) {
       head.insertAdjacentHTML('afterbegin', `<button class="hback" aria-label="Volver a las constelaciones">${icon('prev')}</button>`);
       head.querySelector('.hback').addEventListener('click', regions);
