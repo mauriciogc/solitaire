@@ -1,8 +1,8 @@
 // Eventos (Fase 6): la racha diaria, la colección semanal y el evento del mes.
-// Racha: cuenta victorias seguidas de niveles nuevos (cualquier estrella). Perder o abandonar uno nuevo la regresa a 0.
-// A medianoche (hora del teléfono) empieza otra. Siempre es la racha cohete (cambiar de temática cada día confundía,
-// porque la colección también tiene temáticas). Los premios se reclaman a mano;
-// los que se ganaron y no se reclamaron se guardan aunque la racha se reinicie.
+// Racha: cuenta victorias seguidas de niveles nuevos (cualquier estrella). Perder o abandonar uno nuevo, o rendirse
+// en uno repetido, la regresa a 0. A medianoche (hora del teléfono) empieza otra. Siempre es la racha cohete (cambiar
+// de temática cada día confundía, porque la colección también tiene temáticas). Los premios se reclaman a mano:
+// los reclamados son tuyos; los que no, se pierden si la racha se reinicia o si pasa la medianoche.
 import { save, persist } from './storage.js';
 import { equip } from './shop.js';
 import { EVENT_LEVELS, EVENT_PER_PLANET, EVENT_PLANETS } from './levels.js';
@@ -31,7 +31,8 @@ const today = () => {
 export function racha() {
   const day = today();
   if (save.racha?.day !== day) {
-    save.racha = { day, n: 0, got: [], pend: save.racha?.pend || [] };
+    // Lo que no se reclamó ayer se pierde (como el regalo diario): se avisa al llegar al mapa.
+    save.racha = { day, n: 0, got: [], pend: [], ...(save.racha?.pend?.length ? { expired: true } : {}) };
     persist();
   }
   return save.racha;
@@ -63,7 +64,8 @@ export function rachaWin() {
   persist();
   return r.n;
 }
-// Perdió o abandonó un nivel nuevo: vuelve a 0 (y se avisa al volver al mapa).
+// Perdió o abandonó un nivel nuevo (o se rindió en uno repetido): vuelve a 0 y los premios sin reclamar se pierden
+// (se avisa al volver al mapa).
 export function rachaLose() {
   if (!isOn('racha')) return;
   const r = racha();
@@ -71,6 +73,7 @@ export function rachaLose() {
   r.lost = r.n;
   r.n = 0;
   r.got = [];
+  r.pend = [];
   persist();
 }
 // Junta los premios pendientes y los quita de la lista.
@@ -223,6 +226,7 @@ export function ev() {
   const e = eventOf(now());
   if (!e) return null;
   if (save.ev?.id !== e.id) {
+    evRecord();
     save.ev = { id: e.id, k: 0, world: save.open || 0, tk: 1, at: 0, run: null, tries: {} };
     persist();
   }
@@ -292,6 +296,7 @@ export function evWin() {
   e.state.tk = 1;
   e.state.at = 0;
   e.state.k = k + 1;
+  evRecord();
   save.coins += prize.coins || 0;
   save.undo += prize.undo || 0;
   save.wild += prize.wild || 0;
@@ -301,6 +306,20 @@ export function evWin() {
   }
   persist();
   return { ...prize, k, planet: Math.floor(k / EVENT_PER_PLANET), last: k === EVENT_LEVELS - 1 };
+}
+// Álbum: ganar el evento completo (los 25 niveles) deja su postal para siempre, con el año en el sello
+// (save.evAlbum: id del evento = año·12 + mes → 1).
+function evRecord() {
+  const s = save.ev;
+  if (s?.id && s.k >= EVENT_LEVELS) save.evAlbum[s.id] = 1;
+}
+// Las postales de eventos, de la más nueva a la más vieja: [{ id, year, e }].
+export function evAlbum() {
+  evRecord(); // eventos ganados antes de que existiera el álbum
+  return Object.keys(save.evAlbum)
+    .map((id) => ({ id: +id, year: Math.floor(id / 12), e: EVENTOS[id % 12] }))
+    .filter((x) => x.e?.ready)
+    .sort((a, b) => b.id - a.id);
 }
 // Perdió, abandonó o pidió reintentar: el boleto ya se gastó; el siguiente llega en 24 h.
 export function evLose() {

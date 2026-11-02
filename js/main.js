@@ -1,9 +1,9 @@
 import { save, prefs, persist, resetProfile, renameProfile, exportCode, readCode, loadProfile, setDev } from './storage.js';
-import { UNLOCK, isOn, nextEvent, daysToNextCol, RACHA_GOALS, racha, rachaTheme, rachaReady, rachaHot, rachaWin, rachaLose, rachaClaim, msToMidnight, col, colLeft, colWin, colOffers, colBuy, ev, evLeft, evTicketLeft, evPrize, evEnter, evWin, evLose, EVENT_PLANETS, EVENT_PER_PLANET, EVENT_LEVELS } from './events.js';
+import { UNLOCK, EVENTOS, isOn, nextEvent, daysToNextCol, RACHA_GOALS, racha, rachaTheme, rachaReady, rachaHot, rachaWin, rachaLose, rachaClaim, msToMidnight, col, colLeft, colWin, colOffers, colBuy, ev, evLeft, evTicketLeft, evPrize, evEnter, evWin, evLose, evAlbum, EVENT_PLANETS, EVENT_PER_PLANET, EVENT_LEVELS } from './events.js';
 import { WORLD_COUNT, LEVELS_PER_WORLD, TOTAL_LEVELS, worldInfo, generateLevel, variantLevel, MECH_INTRO, MECH_NAMES, secretId, isSecret, eventLevel } from './levels.js';
 import { Game, faceHTML, backHTML } from './game.js';
 import { DAILY_PATH, dailyState, starsNeeded, TICKET_PRICE, ticketCost, ticketRefund, coinsFor, bossChest, openSurprise, SECRET_MULT, SECRET_PRIZE } from './economy.js';
-import { openModal, toast, updateCoins, money, esc, reduced, wait, flyToWallet, spendFromWallet, sparkle, confetti, starsHTML, warp, buzz } from './ui.js';
+import { openModal, toast, updateCoins, money, esc, reduced, wait, flyToWallet, spendFromWallet, sparkle, confetti, starsHTML, warp, buzz, balloons, popBalloon } from './ui.js';
 import { icon, star, coin, miniPlanet, avatarHTML, AVATAR_COLORS, cardBackURL, setDeck, lockIcon, chestBody, chestLid, boxBody, boxLid } from './art.js';
 import { GROUPS, SECTIONS, ITEMS, shopItems, groupOf, owns, equipped, equip, buy, item, lockedUntil, titleHTML } from './shop.js';
 import { BIOMES, biomeKey, EVENT_BIOMES } from './biomes.js';
@@ -213,9 +213,10 @@ function showMap({ region, start = null, anim, after = null, unlock = null } = {
     else if (save.next >= first && save.next < first + LEVELS_PER_WORLD) go = goBtn('Jugar', `Nivel ${save.next + 1}`, 'play-next');
     else go = '<div class="hint-chip">Toca un nivel para repetirlo</div>';
     // Mecánica nueva: botón con su carta junto a Jugar; al tocarlo se despliega el aviso y al tocarlo otra vez se recoge.
+    // Brinca hasta que lo lee (o hasta que vio el "Nuevo: …" del tablero).
     cta.classList.remove('mech-open');
     cta.innerHTML = mech ? `<div class="newmech info"><div><b>Aquí aparece: ${MECH_NAMES[mech].toLowerCase()}</b><span>${MECH_TEXT[mech]}</span></div></div>
-      <button class="mech-tog tb press" data-a="mech" aria-expanded="false" aria-label="Qué hay de nuevo en este mundo" title="Nuevo en este mundo">${mechCard(mech)}<i>?</i></button>${go}` : go;
+      <button class="mech-tog tb press${save.seen[mech] ? ' seen' : ''}" data-a="mech" aria-expanded="false" aria-label="Qué hay de nuevo en este mundo" title="Nuevo en este mundo">${mechCard(mech)}<i>?</i></button>${go}` : go;
   };
   const paint = () => (galaxy?.mode === 'planet' && galaxy.sel ? paintPlanet(galaxy.sel.wd.w) : paintGalaxyCTA());
   paintGalaxyCTA();
@@ -226,8 +227,15 @@ function showMap({ region, start = null, anim, after = null, unlock = null } = {
     if (sideAction(a)) return;
     if (a === 'out') return galaxy?.zoomOut();
     if (a === 'mech') {
-      const open = cta.classList.toggle('mech-open');
-      cta.querySelector('.mech-tog').setAttribute('aria-expanded', open);
+      const open = cta.classList.toggle('mech-open'), tog = cta.querySelector('.mech-tog');
+      tog.setAttribute('aria-expanded', open);
+      // Ya lo leyó: deja de brincar y en el tablero ya no sale el "Nuevo: …" (misma bandera, save.seen).
+      const mech = galaxy?.sel && Object.entries(MECH_INTRO).find(([, iw]) => iw === galaxy.sel.wd.w)?.[0];
+      if (open && mech && !save.seen[mech]) {
+        save.seen[mech] = true;
+        persist();
+        tog.classList.add('seen');
+      }
       return;
     }
     if (a === 'gate') return openWorldGate(pendingWorld());
@@ -615,6 +623,13 @@ function spendTickets(cost, sel = '[data-tickets]', ico = 'ticket', before = sav
   return Promise.all(runs).then(() => wait(80));
 }
 
+// La partida a medias es de un nivel nuevo del camino (cuenta para la racha) y lo que se pierde si se abandona.
+const runCounts = (g) => !save.stars[g] && !isSecret(g) && g <= save.next;
+const runRacha = (g) => {
+  const r = racha();
+  if (!runCounts(g) || !isOn('racha') || !r.n) return '';
+  return `<p class="note racha-warn">${icon('flame')} Si lo abandonas, tu racha de <b>${r.n}</b> vuelve a 0${r.pend.length ? ' y pierdes los premios sin reclamar' : ''}.</p>`;
+};
 function enterLevel(g) {
   if (worldOf(g) > save.open && !dev.infinite) return openWorldGate(worldOf(g));
   const run = save.run;
@@ -623,12 +638,13 @@ function enterLevel(g) {
     return openModal({
       title: 'Nivel a medias',
       color: 'orange',
-      body: `<p class="lead"><b>${levelName(run.g)}</b> sigue en juego. Termínalo, o abandónalo y pierdes su boleto.</p>`,
+      body: `<p class="lead"><b>${levelName(run.g)}</b> sigue en juego. Termínalo, o abandónalo y pierdes su boleto.</p>${runRacha(run.g)}`,
       buttons: [
         {
           label: 'Abandonar y jugar este',
           cls: 'ghost',
           onClick: () => {
+            if (runCounts(run.g)) rachaLose(); // abandonar un nivel nuevo reinicia la racha
             save.run = null;
             persist();
             enterLevel(g);
@@ -693,6 +709,8 @@ function startLevel(g, { resume = false, free = false, anim = 'up' } = {}) {
   const level = variantLevel(generateLevel(g), v);
   // Cuenta para la racha: nivel nuevo del camino normal (no repetir, no secreto, no la galería dev).
   const counts = !free && !save.stars[g] && !isSecret(g) && g <= save.next;
+  // Repetir un nivel ganado del camino: no suma a la racha, pero rendirse o abandonar la reinicia.
+  const replay = !free && !!save.stars[g] && !isSecret(g);
   const back = () => (dev.on && gallery.active ? showGallery() : showWorld(worldOf(g), 'down'));
   const clearRun = () => {
     if (save.run?.g === g) save.run = null;
@@ -712,8 +730,11 @@ function startLevel(g, { resume = false, free = false, anim = 'up' } = {}) {
         }
       : null,
     onExit: back,
-    onAbandon: () => {
-      if (counts) rachaLose();
+    // Si la racha está abierta y va en algo, las ventanas de rendirse/abandonar lo dicen.
+    rachaRisk: () => ((counts || replay) && isOn('racha') && racha().n ? { n: racha().n, pend: racha().pend.length, isNew: counts } : null),
+    // gaveUp: se rindió o abandonó (no solo salió de un nivel repetido sin jugar).
+    onAbandon: (gaveUp) => {
+      if (counts || (replay && gaveUp)) rachaLose();
       clearRun();
       back();
     },
@@ -722,6 +743,8 @@ function startLevel(g, { resume = false, free = false, anim = 'up' } = {}) {
       clearRun();
       enterLevel(g);
     },
+    // Sin las 3 estrellas: lo vuelve a jugar ya (gratis, porque ya lo ganó).
+    onReplay: () => startLevel(g),
     // Tras la ventana de victoria: de vuelta al planeta, con el avance animado (o a la galería en dev).
     onDone: (res) => {
       if (dev.on && gallery.active) return showGallery();
@@ -749,10 +772,10 @@ function startLevel(g, { resume = false, free = false, anim = 'up' } = {}) {
         persist();
         updateCoins();
         // Primera vez con 3 estrellas: la postal del mundo gana el sello secreto (se celebra al continuar).
-        return { coins, tickets: 0, prev, wild, undo, counted: true, first: !prev, seal: stars >= 3 && prev < 3, col: fichas ? { n: fichas, ico: col().token } : null };
+        return { coins, tickets: 0, prev, wild, undo, counted: true, first: !prev, replay: !free, seal: stars >= 3 && prev < 3, col: fichas ? { n: fichas, ico: col().token } : null };
       }
       // En modo dev se puede saltar a cualquier nivel: solo cuenta si ya estaba desbloqueado.
-      if (g > save.next) return { coins: 0, tickets: 0, prev: 0 };
+      if (g > save.next) return { coins: 0, tickets: 0, prev: 0, replay: !free };
       const prev = save.stars[g] || 0;
       const coins = coinsFor(g, stars, prev);
       // La primera victoria devuelve los boletos que cuesta el nivel.
@@ -778,7 +801,8 @@ function startLevel(g, { resume = false, free = false, anim = 'up' } = {}) {
       const racha = counts && !prev && rachaOn ? rachaWin() : null;
       persist();
       updateCoins();
-      return { coins, tickets, prev, gold, chest, worldStars: worldStars(w), counted: true, first: !prev, racha, col: fichas ? { n: fichas, ico: col().token } : null };
+      // Repetir desde la victoria salta el festejo del mapa: no se ofrece si toca abrir el mundo siguiente.
+      return { coins, tickets, prev, gold, chest, worldStars: worldStars(w), counted: true, first: !prev, racha, replay: !free && !chest, col: fichas ? { n: fichas, ico: col().token } : null };
     },
   });
   // El tablero sube y la pantalla anterior se queda atrás.
@@ -1043,12 +1067,12 @@ function openRacha() {
       <p class="lead rsub">${next ? `Gana <b>${next.n - r.n}</b> más para el siguiente premio` : '¡Llegaste al premio más grande!'}</p>
       ${ready ? `<button class="btn gold rclaim">${icon('gift')} Reclamar</button>` : ''}</div>
       <div class="rpath" style="--fill:${fill}"><div class="rbar"><i></i></div><div class="rg start"><i>${icon(t.ico)}</i><div class="rps"></div></div>${nodes}</div>
-      <div class="rclock-chip">Nueva racha en <b class="rclock">${clock(msToMidnight())}</b></div>`,
+      <div class="rclock-chip${ready ? ' urgent' : ''}">${ready ? 'Reclama antes de' : 'Nueva racha en'} <b class="rclock">${clock(msToMidnight())}</b></div>`,
     // Solo sirve para ver y canjear: sin botón de jugar.
     buttons: ready ? [{ label: `${icon('gift')} Reclamar`, cls: 'gold', keep: true, onClick: claim }] : [],
   });
   m.el.querySelectorAll('.rclaim, .rg.ready').forEach((b) => b.addEventListener('click', claim));
-  helpTip(m, 'Gana niveles nuevos seguidos, con las estrellas que sea. Repetir niveles no cuenta. Si pierdes o abandonas uno, vuelves a 0.');
+  helpTip(m, 'Gana niveles nuevos seguidos, con las estrellas que sea. Repetir niveles no suma. Si pierdes o abandonas uno nuevo, o te rindes en uno repetido, vuelves a 0 y se pierden los premios sin reclamar. A medianoche empieza otra: lo que no reclames antes, se pierde.');
   const c = m.el.querySelector('.rclock');
   const tick = setInterval(() => (c.isConnected ? (c.textContent = clock(msToMidnight())) : clearInterval(tick)), 1000);
 }
@@ -1352,6 +1376,7 @@ function openEvIntro(e, go = false) {
 }
 // Evento terminado: el show (confeti, rayos, el ícono del evento) y Finalizar, que regresa al mapa.
 function openEvDone(e) {
+  const pcHere = e.state ? evAlbum().find((x) => x.id === e.state.id) : null; // la postal del álbum, con el año
   confetti(120);
   buzz(30);
   const m = openModal({
@@ -1362,11 +1387,17 @@ function openEvDone(e) {
     cls: 'win ev-done',
     body: `<div class="win-top"><div class="rays"></div><div class="ev-win">${icon(e.ico, 0, 0, 'big')}</div></div>
       <p class="lead">Recorriste los ${EVENT_PLANETS} planetas y ganaste los ${EVENT_LEVELS} niveles. Todos los premios ya son tuyos.</p>
-      <p class="note">El próximo evento trae una temática nueva. ¡Te esperamos!</p>`,
+      ${pcHere ? `${evPostcardHTML(pcHere, 'mini ev-done-pc')}<p class="note">Su postal ya está en tu álbum, en <b>Eventos</b>.</p>` : '<p class="note">El próximo evento trae una temática nueva. ¡Te esperamos!</p>'}`,
     // Un solo botón: se sale del evento y vuelves a tu mapa, donde ibas.
     buttons: [{ label: 'Finalizar', cls: `wide ev-go ev-go-${e.key || 'muertos'}`, onClick: () => showMap({ anim: 'down' }) }],
   });
   if (!reduced()) setTimeout(() => { const r = m.el.querySelector('.ev-win')?.getBoundingClientRect(); if (r) sparkle({ x: r.left + r.width / 2, y: r.top + r.height / 2 }, 26); }, 700);
+  // La postal llega girando y el sello del año cae encima.
+  const pc = m.el.querySelector('.ev-done-pc');
+  if (pc && !reduced()) {
+    pc.animate([{ rotate: '-8deg', scale: 0.7, opacity: 0 }, { rotate: '3deg', scale: 1.04, opacity: 1, offset: 0.7 }, { rotate: '-1.5deg', scale: 1 }], { duration: 620, delay: 900, easing: 'ease-out', fill: 'backwards' });
+    pc.querySelector('.stamp').animate([{ scale: 2.6, rotate: '-30deg', opacity: 0 }, { scale: 0.92, rotate: '12deg', opacity: 1, offset: 0.7 }, { scale: 1, rotate: '8deg' }], { duration: 420, delay: 1500, easing: 'cubic-bezier(0.5, 0, 0.75, 0)', fill: 'backwards' });
+  }
 }
 // Jugar el nivel que sigue: retoma la partida guardada o gasta el boleto (se rompe con su animación).
 function evPlay() {
@@ -1411,7 +1442,7 @@ function startEvent() {
     dev,
     resume: run.state,
     saved: true,
-    event: { ico: e.ico, table: e.key },
+    event: { ico: e.ico, table: e.key, boss: run.k % EVENT_PER_PLANET === EVENT_PER_PLANET - 1 },
     onSave: (state) => {
       const r = ev()?.state.run;
       if (r) (r.state = state), persist();
@@ -1527,10 +1558,10 @@ const UNLOCK_INFO = {
       title: `¡Nueva: ${t.name}!`, ico: t.ico, color: t.color, hero: icon(t.ico, 0, 0, 'big'),
       lead: `Ganaste <b>${UNLOCK.racha} niveles</b>: ¡se abrió la racha! Gana niveles seguidos y llévate premios cada día.`,
       rules: [
-        ['flag', 'Cuenta cada nivel <b>nuevo</b> que ganes, con las estrellas que sea. Repetir no cuenta.'],
+        ['flag', 'Cuenta cada nivel <b>nuevo</b> que ganes, con las estrellas que sea. Repetir no suma.'],
         ['gift', `Premios a los <b>${RACHA_GOALS.map((g) => g.n).join(', ')}</b> seguidos: monedas y <b>comodines</b>.`],
-        ['flame', 'Si pierdes o abandonas un nivel nuevo, la racha <b>vuelve a 0</b>.'],
-        ['rocket', 'A medianoche empieza otra. La encuentras a la <b>derecha</b>.'],
+        ['flame', 'Si pierdes o abandonas un nivel nuevo, o te rindes en uno repetido, la racha <b>vuelve a 0</b> y se pierden los premios sin reclamar.'],
+        ['rocket', 'A medianoche empieza otra: <b>reclama tus premios</b> antes o se pierden. La encuentras a la <b>derecha</b>.'],
       ],
     };
   },
@@ -1550,7 +1581,8 @@ const UNLOCK_INFO = {
   mes: () => {
     const e = ev(), nx = !e && nextEvent();
     return {
-      title: '¡Nuevo: Evento del mes!', ico: e?.ico || nx?.ico || 'calavera', color: e?.color || 'orange', hero: icon(e?.ico || nx?.ico || 'calavera', 0, 0, 'big'),
+      // Arriba, los iconos de todos los eventos del año; el de este mes (o el próximo) va al centro y más grande.
+      title: '¡Nuevo: Evento del mes!', ico: e?.ico || nx?.ico || 'calavera', color: e?.color || 'orange', hero: evHeroIcons(e?.ico || nx?.ico),
       lead: 'Algunos meses llega un <b>evento de temporada</b>: 5 planetas, 25 niveles y premios que <b>solo salen ese mes</b>.',
       rules: [
         ['flame', 'Son los niveles <b>más difíciles</b>: muchos piden <b>comodines</b> o <b>+5 cartas</b>. ¡Guárdalos!'],
@@ -1561,6 +1593,11 @@ const UNLOCK_INFO = {
     };
   },
 };
+function evHeroIcons(main) {
+  const all = Object.values(EVENTOS).filter((x) => x.ready).map((x) => x.ico), rest = all.filter((x) => x !== main);
+  const mid = Math.floor(rest.length / 2), list = main ? [...rest.slice(0, mid), main, ...rest.slice(mid)] : all;
+  return list.map((x) => icon(x, 0, 0, x === main ? 'main' : '')).join('');
+}
 async function openUnlock(k) {
   const sel = `.side.r [data-a="${{ racha: 'racha', col: 'col', mes: 'evento' }[k]}"]`;
   const btn = document.querySelector(sel);
@@ -1635,15 +1672,18 @@ function openColIntro(c) {
 }
 
 // Si se perdió una racha, al llegar al mapa el botón tiembla y lo dice.
+// También si pasó la medianoche con premios sin reclamar: esos se perdieron.
 function rachaLost() {
   const r = racha();
-  if (!r.lost) return;
+  if (!r.lost && !r.expired) return;
+  const msg = r.lost ? 'Tu racha volvió a 0' : 'No reclamaste los premios de tu racha: se perdieron';
   delete r.lost;
+  delete r.expired;
   persist();
   wait(700).then(() => {
     const b = document.querySelector('[data-a="racha"]');
     b?.animate([{ rotate: '0deg' }, { rotate: '-12deg' }, { rotate: '10deg' }, { rotate: '-6deg' }, { rotate: '0deg' }], { duration: 500 });
-    toast(`${icon(rachaTheme().ico)} Tu racha volvió a 0`);
+    toast(`${icon(rachaTheme().ico)} ${msg}`);
   });
 }
 
@@ -1725,6 +1765,16 @@ function postcardHTML(w, stars, cls = '', frame = equipped('frame')) {
     <div class="stamp"><b>${pct}%</b><small>${TIER[tier]}</small></div>${sealHTML(w)}
   </div>`;
 }
+// Postal de un evento del mes ganado completo: su último planeta y el año en el sello (para distinguir ediciones).
+const EV_HUE = { orange: 30, red: 355, violet: 268, pink: 330, green: 120, blue: 205, gold: 45 };
+const evPcPlanet = (x) => EVENT_BIOMES[x.e.key][EVENT_PLANETS - 1];
+function evPostcardHTML(x, cls = '', frame = equipped('frame')) {
+  return `<div class="postcard tier-oro ev-pc fr-${frame} ${cls}" style="--h:${EV_HUE[x.e.color] ?? 45}">
+    <div class="pc-art">${miniPlanet(evPcPlanet(x).emblem, 'pc-planet')}</div>
+    <div class="pc-txt"><small>Postal de</small><b>${esc(x.e.name)}</b><span>${icon(x.e.ico)}¡Evento ganado!</span></div>
+    <div class="stamp"><b>${x.year}</b><small>Evento</small></div>
+  </div>`;
+}
 function openBossReward(w, res) {
   return new Promise((done) => {
     const ch = res.chest;
@@ -1735,10 +1785,40 @@ function openBossReward(w, res) {
       closable: false,
       cls: 'boss-win',
       body: `${postcardHTML(w, res.worldStars)}
-        <div class="chest-row"><div class="chest"><span class="lid">${chestLid()}</span><span class="body">${chestBody()}</span></div><div class="loot">${lootHTML(ch)}</div></div>`,
+        <div class="chest-row"><div class="chest"><span class="lid">${chestLid()}</span><span class="body">${chestBody()}</span></div></div>`,
       buttons: [{ label: 'Continuar', cls: 'green wide', onClick: done }],
     });
-    if (reduced()) return m.el.querySelector('.chest-row').classList.add('open');
+    balloons(m);
+    // Los premios son burbujas: salen del cofre y suben despacio (más lento que los globos) por encima de la ventana.
+    const layer = document.createElement('div');
+    layer.className = 'bubbles';
+    m.el.append(layer);
+    const bubbles = prizeIcons(ch).map((x) => {
+      const b = document.createElement('button');
+      b.className = 'loot-bub';
+      b.setAttribute('aria-label', 'Tronar burbuja');
+      b.innerHTML = `<span class="lb-wob">${x}</span>`;
+      b.addEventListener('pointerdown', (e) => {
+        e.stopPropagation();
+        b.getAnimations({ subtree: true }).forEach((a) => a.pause());
+        if (popBalloon(b, ['#fff3c4', '#ffc83d'])) sparkle(center(b), 12);
+      });
+      return b;
+    });
+    const center = (el) => { const r = el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; };
+    const place = () => {
+      const r = m.el.querySelector('.chest').getBoundingClientRect(), n = bubbles.length;
+      bubbles.forEach((b, i) => {
+        b.style.left = `${r.left + r.width / 2 + (i - (n - 1) / 2) * 78}px`;
+        b.style.top = `${r.top - 30 - (i % 2) * 18}px`;
+        layer.append(b);
+      });
+      return r;
+    };
+    if (reduced()) {
+      m.el.querySelector('.chest-row').classList.add('open', 'done');
+      return place();
+    }
     const pc = m.el.querySelector('.postcard'), stamp = m.el.querySelector('.stamp'), chest = m.el.querySelector('.chest');
     pc.animate([{ rotate: '-8deg', scale: 0.7, opacity: 0 }, { rotate: '3deg', scale: 1.04, opacity: 1, offset: 0.7 }, { rotate: '-1.5deg', scale: 1 }], { duration: 620, delay: 150, easing: 'ease-out', fill: 'backwards' });
     stamp.animate([{ scale: 2.6, rotate: '-30deg', opacity: 0 }, { scale: 0.92, rotate: '12deg', opacity: 1, offset: 0.7 }, { scale: 1, rotate: '8deg' }], { duration: 420, delay: 750, easing: 'cubic-bezier(0.5, 0, 0.75, 0)', fill: 'backwards' });
@@ -1746,21 +1826,22 @@ function openBossReward(w, res) {
       await chest.animate([{ rotate: '0deg' }, { rotate: '-8deg' }, { rotate: '7deg' }, { rotate: '-5deg' }, { rotate: '0deg' }], { duration: 520, iterations: 2 }).finished;
       const row = m.el.querySelector('.chest-row');
       row.classList.add('open');
-      const r = chest.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 3;
+      const r = place(), cx = r.left + r.width / 2, cy = r.top + r.height / 3;
       sparkle({ x: cx, y: cy }, 20);
-      // Cada premio sale del cofre, sube en arco y cae en su lugar con un brillo (uno tras otro).
-      const items = [...row.querySelectorAll('.loot-it')];
-      await Promise.all(items.map((el, i) => {
-        const b = el.getBoundingClientRect(), dx = cx - (b.left + b.width / 2), dy = cy - (b.top + b.height / 2);
+      // Cada premio sale del cofre con un salto, se mece como burbuja y luego sube despacio hasta salir de la pantalla.
+      await Promise.all(bubbles.map((el, i) => {
+        const b = center(el), dx = cx - b.x, dy = cy - b.y;
+        el.querySelector('.lb-wob').animate([{ translate: '-5px 2px', rotate: '-5deg' }, { translate: '5px -3px', rotate: '5deg' }], { duration: 1600 + i * 300, direction: 'alternate', iterations: Infinity, easing: 'ease-in-out' });
         return el.animate([
-          { translate: `${dx}px ${dy}px`, scale: 0.3, rotate: '-20deg', opacity: 0 },
-          { translate: `${dx * 0.5}px ${dy - 70}px`, scale: 1.15, rotate: '8deg', opacity: 1, offset: 0.55 },
-          { translate: '0 6px', scale: 0.95, rotate: '0deg', offset: 0.85 },
-          { translate: '0 0', scale: 1, rotate: '0deg', opacity: 1 },
+          { translate: `${dx}px ${dy}px`, scale: 0.3, opacity: 0 },
+          { translate: `${dx * 0.4}px -40px`, scale: 1.15, opacity: 1, offset: 0.6 },
+          { translate: '0 0', scale: 1, opacity: 1 },
         ], { duration: 640, delay: 120 + i * 240, easing: 'cubic-bezier(0.3, 0.7, 0.4, 1)', fill: 'backwards' }).finished.then(() => {
-          const e = el.getBoundingClientRect();
-          sparkle({ x: e.left + e.width / 2, y: e.top + e.height / 3 }, 10);
+          sparkle(center(el), 10);
           buzz(12);
+          if (el.popped) return;
+          const drift = (Math.random() - 0.5) * 90, top = el.getBoundingClientRect().top;
+          el.animate([{ translate: '0 0' }, { translate: `${drift}px ${-(top + 160)}px` }], { duration: 16000 + i * 2500, delay: 900, easing: 'cubic-bezier(0.4, 0, 0.8, 1)', fill: 'forwards' }).finished.then(() => el.remove(), () => {});
         });
       }));
       row.classList.add('done');
@@ -1828,6 +1909,14 @@ function openAlbum() {
       <b class="ae-title">Tu álbum está vacío</b>
       <p class="note">Vence al jefe de un mundo para ganar tu primera postal.<br>Entre más estrellas tenga el mundo, mejor sello.</p>
     </div>`;
+  // Pestañas Mundos / Eventos: la de eventos sale cuando ya ganó al menos un evento del mes completo.
+  const evs = evAlbum();
+  const tabs = (t) => (evs.length ? `<div class="tabs" role="tablist"><button role="tab" data-tab="mundos" aria-selected="${t === 'mundos'}">${icon('album')}Mundos</button><button role="tab" data-tab="eventos" aria-selected="${t === 'eventos'}">${icon('trophy')}Eventos</button></div>` : '');
+  const events = () => {
+    setHead('Álbum de postales', false);
+    show(`${tabs('eventos')}<p class="note">Una postal por cada evento que ganaste completo. El sello dice el año.</p>
+      <div class="album">${evs.map((x, i) => `<button class="pc-btn" data-ev="${i}">${evPostcardHTML(x, 'mini')}</button>`).join('')}</div>`);
+  };
   function regions() {
     const last = regionOf(currentWorld());
     const vols = [];
@@ -1844,7 +1933,7 @@ function openAlbum() {
       </button>`);
     }
     setHead('Álbum de postales', false);
-    show(`<p class="note">Tienes ${total} postal${total === 1 ? '' : 'es'}. Toca una constelación para verlas.</p><div class="vols">${vols.join('')}</div>`);
+    show(`${tabs('mundos')}<p class="note">Tienes ${total} postal${total === 1 ? '' : 'es'}. Toca una constelación para verlas.</p><div class="vols">${vols.join('')}</div>`);
   };
   const region = (r) => {
     const w0 = r * REGION_SIZE;
@@ -1855,41 +1944,66 @@ function openAlbum() {
     show(`<div class="album">${cards.join('')}</div>`);
   };
   body.addEventListener('click', (e) => {
-    const t = e.target.closest('[data-r], [data-w]');
+    const t = e.target.closest('[data-r], [data-w], [data-ev], [data-tab]');
     if (!t) return;
+    if (t.dataset.tab) return t.getAttribute('aria-selected') === 'true' ? null : t.dataset.tab === 'eventos' ? events() : regions();
     if (t.dataset.r != null) return region(+t.dataset.r);
+    if (t.dataset.ev != null) return openEvPostcard(evs[+t.dataset.ev]);
     openPostcard(+t.dataset.w);
   });
-  if (!total) show(empty());
+  if (!total && !evs.length) show(empty());
+  else if (!total) events();
   else regions();
 }
 
 // Postal en grande: el planeta en 3D para girarlo, su nombre, estrellas y sello. Se guarda como foto.
-async function openPostcard(w) {
-  const info = worldInfo(w), stars = worldStars(w), tier = bossChest(stars).tier, pct = Math.round((stars / 30) * 100), frame = equipped('frame');
+function openPostcard(w) {
+  const info = worldInfo(w), stars = worldStars(w), tier = bossChest(stars).tier, pct = Math.round((stars / 30) * 100);
+  return showPostcard({
+    name: info.name, hue: info.hue, tier, wd: { w, place: info.place },
+    sub: `Mundo ${w + 1} · ${regionName(regionOf(w))}`,
+    line: `<span class="pv-stars">${starsHTML(Math.round((stars / 30) * 3))}<em>${stars}/30</em></span>`,
+    stamp: [`${pct}%`, TIER[tier]], seal: sealHTML(w),
+    photo: { kicker: `POSTAL DE · MUNDO ${w + 1}`, sub: regionName(regionOf(w)), stars, secret: (save.secret[w] || 0) >= 3, file: `postal-mundo-${w + 1}` },
+  });
+}
+// Postal de un evento ganado: su último planeta en 3D y el año en el sello.
+function openEvPostcard(x) {
+  const B = evPcPlanet(x);
+  return showPostcard({
+    name: x.e.name, hue: EV_HUE[x.e.color] ?? 45, tier: 'oro', wd: { w: EV_W + EVENT_PLANETS - 1, theme: B.planet },
+    sub: `Evento del mes · ${x.year}`,
+    line: `<span class="pv-stars">${icon(x.e.ico)}<em>¡Evento ganado!</em></span>`,
+    stamp: [x.year, 'Evento'], seal: '',
+    photo: { kicker: `POSTAL DE · EVENTO ${x.year}`, sub: x.e.planets[EVENT_PLANETS - 1], stars: null, secret: false, file: `postal-${x.e.key}-${x.year}` },
+  });
+}
+// pc: { name, hue, tier, wd (para PlanetView), sub, line (estrellas o lo que va debajo), stamp: [grande, chico], seal, photo }
+async function showPostcard(pc) {
+  const frame = equipped('frame');
   let view = null;
   const m = openModal({
-    title: esc(info.name),
+    title: esc(pc.name),
     color: 'gold',
     wide: true,
     cls: 'pc-modal',
     onClose: () => view?.dispose(),
-    body: `<div class="pc-view tier-${tier} ${frame === 'simple' ? '' : 'framed'}" style="--h:${info.hue}">
-        <div class="postcard pv-deco tier-${tier} fr-${frame}" aria-hidden="true"></div>
+    body: `<div class="pc-view tier-${pc.tier} ${frame === 'simple' ? '' : 'framed'}" style="--h:${pc.hue}">
+        <div class="postcard pv-deco tier-${pc.tier} fr-${frame}" aria-hidden="true"></div>
         <div class="pv-3d"></div>
         <div class="pv-info">
-          <small>Mundo ${w + 1} · ${regionName(regionOf(w))}</small>
-          <b>${esc(info.name)}</b>
-          <span class="pv-stars">${starsHTML(Math.round((stars / 30) * 3))}<em>${stars}/30</em></span>
-          <div class="stamp"><b>${pct}%</b><small>${TIER[tier]}</small></div>${sealHTML(w)}
+          <small>${esc(pc.sub)}</small>
+          <b>${esc(pc.name)}</b>
+          ${pc.line}
+          <div class="stamp"><b>${pc.stamp[0]}</b><small>${esc(pc.stamp[1])}</small></div>${pc.seal}
         </div>
       </div>`,
-    buttons: [{ label: `${icon('album')} Guardar foto`, cls: 'gold wide', keep: true, onClick: (btn) => view && savePostcard(view, w, btn) }],
+    buttons: [{ label: `${icon('album')} Guardar foto`, cls: 'gold wide', keep: true, onClick: (btn) => view && savePostcard(view, pc, btn) }],
   });
   if (!Galaxy) await loadGalaxy();
   const host = m.el.querySelector('.pv-3d');
   if (!host.isConnected) return;
-  view = new PlanetView(host, { w, place: info.place });
+  view = new PlanetView(host, pc.wd);
   const st = m.el.querySelector('.pc-view .stamp');
   if (!reduced()) {
     host.animate([{ scale: 0.4, opacity: 0, rotate: '-20deg' }, { scale: 1.06, opacity: 1, rotate: '3deg', offset: 0.7 }, { scale: 1, rotate: '0deg' }], { duration: 700, easing: 'ease-out' });
@@ -1899,8 +2013,8 @@ async function openPostcard(w) {
 }
 
 // La foto de la postal: un lienzo con el marco, el planeta tal como lo dejaste girado, nombre, estrellas y sello.
-async function savePostcard(view, w, btn) {
-  const info = worldInfo(w), stars = worldStars(w), tier = bossChest(stars).tier, pct = Math.round((stars / 30) * 100);
+async function savePostcard(view, pc, btn) {
+  const { stars, kicker, sub, secret, file: fname } = pc.photo, tier = pc.tier;
   const TC = { oro: ['#fff6d6', '#ffc83d', '#e89a17'], plata: ['#f4f6ff', '#c3cbe8', '#6e7ab0'], bronce: ['#fff1e6', '#f0b48a', '#c06a35'], sello: ['#fffaf0', '#e3d3b5', '#7a6f9d'] }[tier];
   await document.fonts?.ready;
   const W = 1080, H = 1350, c = document.createElement('canvas');
@@ -1916,7 +2030,7 @@ async function savePostcard(view, w, btn) {
   const sx = 90, sy = 90, sw = W - 180, sh = 820;
   rr(sx, sy, sw, sh, 36);
   const sky = g.createRadialGradient(W / 2, sy + sh / 2, 60, W / 2, sy + sh / 2, sh * 0.75);
-  sky.addColorStop(0, `hsl(${info.hue} 55% 38%)`); sky.addColorStop(1, '#140c3a');
+  sky.addColorStop(0, `hsl(${pc.hue} 55% 38%)`); sky.addColorStop(1, '#140c3a');
   g.fillStyle = sky; g.fill(); g.lineWidth = 8; g.strokeStyle = '#2a1f5c'; g.stroke();
   g.save(); rr(sx, sy, sw, sh, 36); g.clip();
   for (let i = 0; i < 70; i++) { const r = (Math.sin(i * 91.7) + 1) / 2, q = (Math.cos(i * 37.3) + 1) / 2; g.fillStyle = `rgba(255,255,255,${0.25 + r * 0.6})`; g.beginPath(); g.arc(sx + r * sw, sy + q * sh, 1.5 + (i % 3), 0, Math.PI * 2); g.fill(); }
@@ -1925,29 +2039,34 @@ async function savePostcard(view, w, btn) {
   g.restore();
   // Textos.
   g.fillStyle = '#8a80ad'; g.font = '800 34px "Baloo 2"'; g.textAlign = 'left';
-  g.fillText(`POSTAL DE · MUNDO ${w + 1}`, 100, 990);
+  g.fillText(kicker, 100, 990);
   g.fillStyle = '#2a1f5c'; g.font = '84px "Lilita One"';
-  g.fillText(info.name, 100, 1075, 640);
+  g.fillText(pc.name, 100, 1075, 640);
   g.font = '800 34px "Baloo 2"'; g.fillStyle = '#6d6394';
-  g.fillText(regionName(regionOf(w)), 100, 1130, 640);
+  g.fillText(sub, 100, 1130, 640);
   // Estrellas.
   const starAt = (x, y, R, on) => {
     g.beginPath();
     for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + (i * Math.PI) / 5, r = i % 2 ? R * 0.46 : R; g.lineTo(x + Math.cos(a) * r, y + Math.sin(a) * r); }
     g.closePath(); g.fillStyle = on ? '#ffc83d' : '#ddd3bd'; g.fill(); g.lineWidth = 7; g.lineJoin = 'round'; g.strokeStyle = '#2a1f5c'; g.stroke();
   };
-  const n = Math.round((stars / 30) * 3);
-  for (let i = 0; i < 3; i++) starAt(130 + i * 82, 1215, 36, i < n);
-  g.fillStyle = '#2a1f5c'; g.font = '56px "Lilita One"'; g.fillText(`${stars}/30`, 380, 1236);
+  if (stars != null) {
+    const n = Math.round((stars / 30) * 3);
+    for (let i = 0; i < 3; i++) starAt(130 + i * 82, 1215, 36, i < n);
+    g.fillStyle = '#2a1f5c'; g.font = '56px "Lilita One"'; g.fillText(`${stars}/30`, 380, 1236);
+  } else {
+    starAt(130, 1215, 36, true);
+    g.fillStyle = '#2a1f5c'; g.font = '56px "Lilita One"'; g.fillText('¡Evento ganado!', 190, 1236, 420);
+  }
   // Sello.
   g.save(); g.translate(870, 1120); g.rotate(0.14);
   g.beginPath(); g.arc(0, 0, 118, 0, Math.PI * 2); g.fillStyle = '#fff'; g.fill(); g.lineWidth = 9; g.strokeStyle = TC[2]; g.setLineDash([16, 10]); g.stroke(); g.setLineDash([]);
   g.beginPath(); g.arc(0, 0, 96, 0, Math.PI * 2); g.lineWidth = 5; g.stroke();
-  g.fillStyle = TC[2]; g.textAlign = 'center'; g.font = '64px "Lilita One"'; g.fillText(`${pct}%`, 0, 14);
-  g.font = '900 24px "Baloo 2"'; g.fillText(TIER[tier].toUpperCase(), 0, 54);
+  g.fillStyle = TC[2]; g.textAlign = 'center'; g.font = '64px "Lilita One"'; g.fillText(String(pc.stamp[0]), 0, 14, 190);
+  g.font = '900 24px "Baloo 2"'; g.fillText(String(pc.stamp[1]).toUpperCase(), 0, 54, 190);
   g.restore();
   // Sello secreto: el nivel secreto con 3 estrellas.
-  if ((save.secret[w] || 0) >= 3) {
+  if (secret) {
     g.save(); g.translate(690, 1230); g.rotate(-0.17);
     g.beginPath(); g.arc(0, 0, 74, 0, Math.PI * 2); g.fillStyle = '#8a5cf0'; g.fill(); g.lineWidth = 8; g.strokeStyle = '#2a1f5c'; g.stroke();
     g.beginPath(); g.arc(0, 0, 60, 0, Math.PI * 2); g.lineWidth = 4; g.strokeStyle = '#fff'; g.setLineDash([12, 8]); g.stroke(); g.setLineDash([]);
@@ -1958,12 +2077,12 @@ async function savePostcard(view, w, btn) {
   deco();
   g.fillStyle = '#b3a9cf'; g.font = '800 26px "Baloo 2"'; g.textAlign = 'center'; g.fillText('Solitaire', W / 2, H - 56);
   const blob = await new Promise((ok) => c.toBlob(ok, 'image/png'));
-  const name = `postal-mundo-${w + 1}.png`;
+  const name = `${fname}.png`;
   const file = new File([blob], name, { type: 'image/png' });
   btn.animate([{ scale: 1 }, { scale: 0.94 }, { scale: 1.04 }, { scale: 1 }], { duration: 320, easing: 'ease-out' });
   // En el teléfono se comparte (guardar en fotos, mandar); en la compu se descarga.
   if (navigator.canShare?.({ files: [file] }) && matchMedia('(pointer: coarse)').matches) {
-    try { await navigator.share({ files: [file], title: info.name }); return; } catch { /* canceló: no pasa nada */ return; }
+    try { await navigator.share({ files: [file], title: pc.name }); return; } catch { /* canceló: no pasa nada */ return; }
   }
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);

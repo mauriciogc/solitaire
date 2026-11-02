@@ -1,5 +1,5 @@
 import { save, persist } from './storage.js';
-import { openModal, toast, confetti, updateCoins, money, starsHTML, reduced, buzz, sparkle, wait, spendFromWallet } from './ui.js';
+import { openModal, toast, confetti, updateCoins, money, starsHTML, reduced, buzz, sparkle, wait, spendFromWallet, balloons } from './ui.js';
 import { worldInfo, packGroups, MECH_NAMES, LEVELS_PER_WORLD } from './levels.js';
 import * as E from './engine.js';
 import { price } from './economy.js';
@@ -85,7 +85,7 @@ const marks = (c) =>
   (c.key != null ? `<span class="key-mark">${keyIcon(LOCK_HUES[c.key])}</span>` : '') +
   (c.lock != null ? `<span class="lock-ov">${lockIcon(LOCK_HUES[c.lock])}</span>` : '');
 
-// opts: onExit, onAbandon, onRetry, onWin(stars) → { coins, tickets, prev, gold, wild, chest }, onDone(res), onSave(state)?,
+// opts: onExit, onAbandon(gaveUp), onRetry, onReplay, rachaRisk() → { n, pend } | null, onWin(stars) → { coins, tickets, prev, gold, wild, chest }, onDone(res), onSave(state)?,
 //       resume (estado guardado), saved (la partida se guarda al salir), tutorial, dev
 //       event: { ico, table } = nivel del evento del mes (table = la mesa de su temática) (sin estrellas; perder gasta su boleto y no se reintenta)
 export class Game {
@@ -1201,11 +1201,11 @@ export class Game {
       color: 'pink',
       // El cuadro grande es el botón de comprar +5: dice el precio y se toca para gastar (gris si no alcanza).
       body: `<button class="offer buy press"${short ? ' disabled' : ''}><div class="fan">${fan}</div><div><b>Comprar +5 cartas</b><span>Quedan ${left} carta${left === 1 ? '' : 's'} en el tablero. ${this.opts.event ? 'Te pueden salvar el nivel.' : 'Con +5 siempre te llevas al menos 1 estrella.'}</span>
-          <em class="cost${short ? ' short' : ''}">${coin()} ${cost || 'gratis'}${short ? ' · te faltan monedas' : ''}</em></div></button>`,
+          <em class="cost${short ? ' short' : ''}">${coin()} ${cost || 'gratis'}${short ? ' · te faltan monedas' : ''}</em></div></button>${this.rachaWarn(true)}`,
       onClose: () => (this.modalOpen = false),
       buttons: [
         !this.opts.event && { label: this.opts.free ? 'Reintentar' : 'Reintentar · nuevo boleto', cls: 'ghost wide', onClick: () => this.opts.onRetry() },
-        { label: 'Rendirse', cls: 'pink grow', onClick: () => this.opts.onAbandon() },
+        { label: 'Rendirse', cls: 'pink grow', onClick: () => this.opts.onAbandon(true) },
         { label: 'Seguir jugando', cls: 'ghost grow' },
       ].filter(Boolean),
     });
@@ -1216,6 +1216,14 @@ export class Game {
     });
   }
 
+
+  // Rendirse o abandonar (nivel nuevo o repetido) reinicia la racha: se avisa solo si hay algo que perder.
+  rachaWarn(end) {
+    const r = this.opts.rachaRisk?.();
+    if (!r) return '';
+    const when = !end ? 'Si abandonas' : r.isNew ? 'Si reintentas o te rindes' : 'Si te rindes';
+    return `<p class="note racha-warn">${icon('flame')} ${when}, tu racha de <b>${r.n}</b> vuelve a 0${r.pend ? ' y pierdes los premios sin reclamar' : ''}.</p>`;
+  }
 
   win() {
     this.done = true;
@@ -1229,7 +1237,7 @@ export class Game {
     // Premios en fichas que saltan una tras otra (después de las estrellas).
     const chips = [
       !(ev && !coins) && `<div class="reward">${coin()}${coins ? `+${coins}` : '—'}</div>`,
-      tickets && `<div class="reward">${icon('ticket')}+${tickets}<small>primera vez</small></div>`,
+      tickets && `<div class="reward">${icon('ticket')}+${tickets}</div>`,
       gold && `<div class="reward gold">${icon('gold')}+1<small>boleto dorado</small></div>`,
       wild && `<div class="reward">${icon('wild')}+${wild}<small>comodín</small></div>`,
       undo && `<div class="reward">${icon('undo')}+${undo}<small>deshacer</small></div>`,
@@ -1239,6 +1247,8 @@ export class Game {
     const note = ev ? (res.repeat ? '<p class="note">Ya tenías los exclusivos de este planeta: te tocan ayudas.</p>' : '')
       : !coins && prev >= 3
       ? '<p class="note">Ya cobraste las 3 estrellas de este nivel.</p>'
+      : prev && stars <= prev
+        ? `<p class="note">Tu récord aquí es de ${prev} estrella${prev > 1 ? 's' : ''}: solo se pagan las nuevas.</p>`
       : this.level.secret && stars < 3 && prev < 3
         ? `<p class="note">Con 3 estrellas el nivel secreto da además ${icon('wild')} comodín y ${icon('undo')} deshacer.</p>`
         : stars > prev && prev ? '<p class="note">¡Nuevo récord de estrellas!</p>' : '';
@@ -1251,8 +1261,14 @@ export class Game {
         cls: 'win',
         body: `<div class="win-top"><div class="rays"></div>${ev ? `<div class="ev-win">${icon(ev.ico, 0, 0, 'big')}</div>` : `<div class="big-stars">${starsHTML(stars)}</div>`}</div>
           <div class="rewards">${chips.join('')}</div>${note}`,
-        buttons: [{ label: `Continuar ${icon('next')}`, cls: 'green wide', onClick: () => this.opts.onDone?.(res) }],
+        // Sin las 3 estrellas puede repetirlo ahí mismo (gratis: ya lo ganó). Se queda su mejor resultado.
+        buttons: [
+          res.replay && stars < 3 && { label: `${icon('undo')} Repetir`, cls: 'ghost', onClick: () => this.opts.onReplay() },
+          { label: `Continuar ${icon('next')}`, cls: 'green wide', onClick: () => this.opts.onDone?.(res) },
+        ].filter(Boolean),
       });
+      // Jefe sin cofre (el del evento o uno ya ganado): los globos salen aquí. Si hay cofre, salen en su ventana.
+      if (((this.level.boss && !this.level.secret) || ev?.boss) && !res.chest) balloons(m);
       if (reduced()) return;
       // Cada estrella cae con su golpe; luego saltan los premios.
       m.el.querySelectorAll('.big-stars .star').forEach((el, i) => {
@@ -1279,8 +1295,8 @@ export class Game {
         title: '¿Abandonar el nivel?',
         color: 'pink',
         onClose: free,
-        body: `<p class="lead">${this.opts.event ? 'Se gasta tu boleto del evento: el siguiente llega en 24 horas.' : this.opts.free ? 'Se pierde este intento.' : 'Pierdes los boletos y lo que gastaste en este intento.'}</p>`,
-        buttons: [{ label: 'Seguir jugando', cls: 'ghost' }, { label: 'Abandonar', cls: 'pink', onClick: () => this.opts.onAbandon() }],
+        body: `<p class="lead">${this.opts.event ? 'Se gasta tu boleto del evento: el siguiente llega en 24 horas.' : this.opts.free ? 'Se pierde este intento.' : 'Pierdes los boletos y lo que gastaste en este intento.'}</p>${this.rachaWarn()}`,
+        buttons: [{ label: 'Seguir jugando', cls: 'ghost' }, { label: 'Abandonar', cls: 'pink', onClick: () => this.opts.onAbandon(true) }],
       });
     return [
       { label: `${icon('play')} Continuar`, cls: 'green wide' },

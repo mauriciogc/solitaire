@@ -291,6 +291,32 @@ export function openDevMenu({ onGallery, onRefresh }) {
       { l: `Abrir mundo ${w + 1}`, fn: () => (completeWorlds(w, w), onRefresh()) },
       { l: `Abrir constelación ${r + 1}`, fn: () => (completeWorlds(w, Math.min(r * REGION + REGION - 1, TOTAL_LEVELS / LEVELS_PER_WORLD - 1)), onRefresh()) },
       { l: 'Abrir todo', fn: () => { save.next = TOTAL_LEVELS - 1; save.open = Math.floor(save.next / LEVELS_PER_WORLD); save.run = null; persist(); onRefresh(); } },
+      // Volver a jugar como nuevo el último nivel ganado (cobra boleto, cuenta para la racha, festejo completo).
+      save.next > 0 && { l: `Reiniciar nivel ${save.next}`, title: 'El último nivel normal ganado vuelve a estar sin ganar', fn: () => {
+        const g = save.next - 1, wg = Math.floor(g / LEVELS_PER_WORLD);
+        delete save.stars[g];
+        save.next = g;
+        // Si era el jefe: el mundo siguiente se vuelve a cerrar (o se quita el boleto dorado que dio y no se gastó),
+        // así al ganarlo otra vez salen el cofre y la apertura del mundo como la primera vez.
+        if (g % LEVELS_PER_WORLD === LEVELS_PER_WORLD - 1) {
+          if (save.open > wg) save.open = wg;
+          else if (save.gold > 0) save.gold--;
+        }
+        if (save.run?.g === g) save.run = null;
+        persist();
+        toast(`Nivel ${g + 1} otra vez sin ganar`);
+        onRefresh();
+      } },
+      { l: `Ir al jefe del mundo ${w + 1}`, title: 'Gana con 3★ los niveles que faltan antes del jefe del planeta', fn: () => {
+        const boss = w * LEVELS_PER_WORLD + LEVELS_PER_WORLD - 1;
+        if (save.next >= boss) return toast('Ya estás en el jefe');
+        for (let g = save.next; g < boss; g++) save.stars[g] = 3;
+        save.next = boss;
+        save.run = null;
+        persist();
+        toast(`Siguiente: el jefe del mundo ${w + 1}`);
+        onRefresh();
+      } },
       { l: 'Reiniciar progreso', fn: () => (resetProfile(), onRefresh()) },
     ] },
     { t: 'Racha', sub: `va en ${racha().n}`, items: [
@@ -308,6 +334,7 @@ export function openDevMenu({ onGallery, onRefresh }) {
       evNow && { l: 'Boleto ya', title: 'Da el boleto sin esperar las 24 horas', fn: () => evSet({}) },
       evNow && { l: 'Ir al jefe del planeta', fn: () => evSet({ k: Math.min(EVENT_LEVELS - 1, Math.floor(evNow.state.k / EVENT_PER_PLANET) * EVENT_PER_PLANET + EVENT_PER_PLANET - 1) }) },
       evNow && { l: 'Siguiente planeta', fn: () => evSet({ k: Math.min(EVENT_LEVELS - 1, (Math.floor(evNow.state.k / EVENT_PER_PLANET) + 1) * EVENT_PER_PLANET) }) },
+      evNow && { l: 'Al último nivel', title: 'Ganarlo da la postal del evento (álbum → Eventos)', fn: () => evSet({ k: EVENT_LEVELS - 1 }) },
       evNow && { l: 'Empezar de cero', fn: () => ((save.ev = null), persist(), onRefresh()) },
     ] },
   ].map((sec) => ({ ...sec, items: sec.items.filter(Boolean) }));

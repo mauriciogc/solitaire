@@ -307,3 +307,71 @@ export function warp(swap, { out = false } = {}) {
     requestAnimationFrame(step);
   });
 }
+
+// ---------- Globos del jefe ----------
+// Suben por encima de la ventana meciéndose como burbujas; al tocarlos se truenan (pedacitos, "¡Pop!" y vibración).
+// Siguen saliendo mientras la ventana esté abierta (máximo unos cuantos a la vez).
+export const BALLOONS = [['#ff5f7e', '#d63d5f'], ['#ffc83d', '#e89a17'], ['#4aa8de', '#2f86c0'], ['#47c27a', '#2f9e5c'], ['#8a5cf0', '#6c3fd4'], ['#ff9c5b', '#e2753a']];
+export const balloonSVG = (c, d) => `<svg class="bl-svg" viewBox="0 0 60 100" aria-hidden="true">
+  <path d="M30 69c-5 6 5 10 0 16s4 8 0 13" fill="none" stroke="#2a1f5c" stroke-width="2" stroke-linecap="round"/>
+  <path d="M26 63h8l-1.5 6h-5z" fill="${d}" stroke="#2a1f5c" stroke-width="2.4" stroke-linejoin="round"/>
+  <path d="M30 4C14 4 6 17 6 30c0 17 13 29 24 34 11-5 24-17 24-34C54 17 46 4 30 4z" fill="${c}"/>
+  <path d="M41 9c8 5 11 13 11 21 0 14-10 25-20 31 8-8 13-18 13-30 0-9-2-16-4-22z" fill="${d}"/>
+  <path d="M30 4C14 4 6 17 6 30c0 17 13 29 24 34 11-5 24-17 24-34C54 17 46 4 30 4z" fill="none" stroke="#2a1f5c" stroke-width="3"/>
+  <ellipse cx="19" cy="20" rx="4.5" ry="8" fill="#fff" opacity=".75" transform="rotate(25 19 20)"/>
+</svg>`;
+// Tronar un globo: se infla y desaparece, salen pedacitos de hule y un "¡Pop!" (todo encima de las ventanas).
+export function popBalloon(b, [c, d], { remove = true } = {}) {
+  if (b.popped) return false;
+  b.popped = true;
+  buzz(18);
+  const svg = b.querySelector('.bl-svg') || b, r = svg.getBoundingClientRect();
+  const x = r.left + r.width / 2, y = r.top + r.width / 2;
+  svg.animate([{ scale: 1, opacity: 1 }, { scale: 1.3, opacity: 0 }], { duration: 130, easing: 'ease-out', fill: 'forwards' }).finished.then(() => remove && b.remove());
+  if (reduced()) return true;
+  for (let i = 0; i < 9; i++) {
+    const s = document.createElement('i');
+    s.className = 'shred';
+    s.style.cssText = `left:${x}px;top:${y}px;background:${i % 3 ? c : d}`;
+    document.body.append(s);
+    const a = (i / 9) * Math.PI * 2 + Math.random() * 0.5, dist = 34 + Math.random() * 40;
+    s.animate([{ translate: '0 0', rotate: '0deg', scale: 1, opacity: 1 }, { translate: `${Math.cos(a) * dist}px ${Math.sin(a) * dist + 30}px`, rotate: `${(Math.random() - 0.5) * 540}deg`, scale: 0.5, opacity: 0 }], { duration: 560 + Math.random() * 200, easing: 'cubic-bezier(0.2, 0.8, 0.4, 1)' }).finished.then(() => s.remove());
+  }
+  const t = document.createElement('b');
+  t.className = 'pop-txt outl';
+  t.textContent = '¡Pop!';
+  t.style.cssText = `left:${x}px;top:${y}px;color:${c}`;
+  document.body.append(t);
+  t.animate([{ scale: 0.3, opacity: 0, translate: '-50% -50%' }, { scale: 1.15, opacity: 1, translate: '-50% -50%', offset: 0.35 }, { scale: 1, opacity: 0, translate: '-50% -110%' }], { duration: 620, easing: 'ease-out' }).finished.then(() => t.remove());
+  return true;
+}
+export function balloons(m, { max = 7 } = {}) {
+  if (reduced()) return;
+  const layer = document.createElement('div');
+  layer.className = 'balloons';
+  m.el.append(layer);
+  let k = 0;
+  const spawn = () => {
+    if (!layer.isConnected) return;
+    if (layer.querySelectorAll('.balloon').length < max) {
+      const col = BALLOONS[k++ % BALLOONS.length], s = 52 + Math.random() * 26;
+      const b = document.createElement('button');
+      b.className = 'balloon';
+      b.setAttribute('aria-label', 'Tronar globo');
+      b.style.cssText = `left:${2 + Math.random() * 84}%;--s:${s}px`;
+      b.innerHTML = balloonSVG(...col);
+      layer.append(b);
+      // Sube lento con un poco de deriva; el dibujo se mece de lado a lado (como burbuja).
+      const drift = (Math.random() - 0.5) * 140;
+      b.animate([{ translate: '0 0' }, { translate: `${drift}px calc(-100dvh - ${s * 2}px)` }], { duration: 7500 + Math.random() * 4500, easing: 'cubic-bezier(0.3, 0, 0.7, 1)' }).finished.then(() => b.remove(), () => {});
+      b.firstElementChild.animate([{ rotate: '-7deg', translate: '-7px 0' }, { rotate: '7deg', translate: '7px 0' }], { duration: 1300 + Math.random() * 900, direction: 'alternate', iterations: Infinity, easing: 'ease-in-out' });
+      b.addEventListener('pointerdown', (e) => {
+        e.stopPropagation();
+        b.getAnimations({ subtree: true }).forEach((a) => a.pause());
+        popBalloon(b, col);
+      });
+    }
+    setTimeout(spawn, 500 + Math.random() * 800);
+  };
+  setTimeout(spawn, 500);
+}
