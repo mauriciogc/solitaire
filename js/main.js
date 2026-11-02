@@ -1410,7 +1410,7 @@ function openEvIntro(e, go = false) {
       <ul class="evi-rules">
         ${rule(e.tk, `Entras con <b>1 boleto</b>. Si ganas, lo conservas; si pierdes, el siguiente llega en <b>24 horas</b>.`)}
         ${rule('gift', `Gana el <b>nivel 5</b> de cada planeta y abre su <b>regalo sorpresa</b>. Es tuyo para siempre.`)}
-        ${rule('flame', `${EVENT_LEVELS} niveles <b>difíciles</b>. Aquí no cuentan las estrellas: solo ganar. Usa tus comodines y deshacer.`)}
+        ${rule('flame', `${EVENT_LEVELS} niveles <b>difíciles</b>. Aquí no cuentan las estrellas: solo ganar.`)}
         ${rule('flag', `Tienes <b>${evDays()}</b> para llegar al último planeta. ¡Entra cada día y no dejes pasar tu boleto!`)}
       </ul>`}`,
     // Botón del mes: con los colores y la flor de la temática (sin el triángulo de Jugar).
@@ -1659,7 +1659,7 @@ const UNLOCK_INFO = {
       lead: 'Los días de fiesta llega un <b>evento especial de 24 horas</b>: 3 planetas, 9 niveles y premios <b>exclusivos</b>.',
       rules: [
         ['ticket', '<b>Sin boletos</b>: entra y reintenta las veces que quieras.'],
-        ['flame', 'Niveles <b>difíciles</b> donde no cuentan las estrellas: solo ganar.'],
+        ['flame', 'Niveles <b>difíciles</b>. Aquí no cuentan las estrellas: solo ganar.'],
         ['flag', 'Un día antes aparece su botón junto a <b>Jugar</b>, con la cuenta regresiva.'],
         ['gift', f ? (f.soon ? `Mañana es <b>${f.name}</b>. ¡No te lo pierdas!` : `¡Hoy es <b>${f.name}</b>! Búscalo junto a <b>Jugar</b>.`) : nx ? `La próxima, <b>${nx.name}</b>, llega en <b>${nx.days} ${nx.days === 1 ? 'día' : 'días'}</b>.` : 'Pronto llega la primera.'],
       ],
@@ -1672,7 +1672,7 @@ const UNLOCK_INFO = {
       title: '¡Nuevo: Evento del mes!', ico: e?.ico || nx?.ico || 'calavera', color: e?.color || 'orange', hero: evHeroIcons(e?.ico || nx?.ico),
       lead: 'Algunos meses llega un <b>evento de temporada</b>: 5 planetas, 25 niveles y premios que <b>solo salen ese mes</b>.',
       rules: [
-        ['flame', 'Son los niveles <b>más difíciles</b>. Aquí no cuentan las estrellas: solo ganar.'],
+        ['flame', 'Niveles <b>difíciles</b>. Aquí no cuentan las estrellas: solo ganar.'],
         ['gift', 'Gana el <b>nivel 5</b> de cada planeta y abre su <b>regalo sorpresa</b>.'],
         ['flag', 'Dura todo el mes. Si lo empiezas tarde, juega lo que alcances.'],
         ['ticket', e ? `¡Este mes hay uno: <b>${e.name}</b>! Búscalo a la <b>derecha</b>.` : nx ? `El próximo, <b>${nx.name}</b>, llega en <b>${nx.days} ${nx.days === 1 ? 'día' : 'días'}</b>.` : 'Pronto llega el primero.'],

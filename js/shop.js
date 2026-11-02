@@ -61,6 +61,8 @@ export const ITEMS = {
     { k: 'tamalito', name: 'Tamalito', text: 'Envuelto en su hoja de maíz', ev: 'candelaria', mes: 1 },
     { k: 'taquito', name: 'Taquito', text: 'Con todo y cilantro', ev: 'taco', mes: 1 },
     { k: 'arbolito', name: 'Arbolito', text: 'Con su florecita', ev: 'tierra', mes: 1 },
+    { k: 'pinatita', name: 'Piñatita', text: 'Llena de dulces', ev: 'nino', mes: 1 },
+    { k: 'clavelito', name: 'Clavelito', text: 'Para mamá', ev: 'madres', mes: 1 },
     // Exclusivos del evento del mes (mes: la temática que lo da).
     { k: 'xolo', name: 'Xólotl', text: 'Xoloitzcuintle', ev: 'muertos', mes: 1 },
     { k: 'reno', name: 'Reno', text: 'Con su nariz roja', ev: 'navidad', mes: 1 },
@@ -88,6 +90,8 @@ export const ITEMS = {
     { k: 'tamalitos', name: 'Tamalitos', ev: 'candelaria', mes: 1 },
     { k: 'salsas', name: 'Salsas', ev: 'taco', mes: 1 },
     { k: 'brotes', name: 'Brotes', ev: 'tierra', mes: 1 },
+    { k: 'globitos', name: 'Globitos', ev: 'nino', mes: 1 },
+    { k: 'claveles', name: 'Claveles', ev: 'madres', mes: 1 },
     { k: 'cempasuchil', name: 'Cempasúchil', ev: 'muertos', mes: 1 },
     { k: 'acebo', name: 'Acebo', ev: 'navidad', mes: 1 },
     { k: 'corona', name: 'Corona real', ev: 'reyes', mes: 1 },
@@ -114,6 +118,8 @@ export const ITEMS = {
     { k: 'tamalero', name: 'Tamalero', ev: 'candelaria', mes: 1 },
     { k: 'taquero', name: 'Taquero', ev: 'taco', mes: 1 },
     { k: 'heroeverde', name: 'Héroe verde', ev: 'tierra', mes: 1 },
+    { k: 'jugueton', name: 'Juguetón', ev: 'nino', mes: 1 },
+    { k: 'consentido', name: 'Consentido', ev: 'madres', mes: 1 },
     { k: 'catrin', name: 'Catrín del Mictlán', ev: 'muertos', mes: 1 },
     { k: 'duende', name: 'Duende del Polo Norte', ev: 'navidad', mes: 1 },
     { k: 'buscador', name: 'Buscador de la Estrella', ev: 'reyes', mes: 1 },
@@ -149,6 +155,8 @@ export const ITEMS = {
     { k: 'tamales', name: 'Tamales', ev: 'candelaria', mes: 1 },
     { k: 'tacos', name: 'Tacos', ev: 'taco', mes: 1 },
     { k: 'planetaverde', name: 'Planeta verde', ev: 'tierra', mes: 1 },
+    { k: 'pinata', name: 'Piñata', ev: 'nino', mes: 1 },
+    { k: 'regalos', name: 'Regalos', ev: 'madres', mes: 1 },
     { k: 'calaverita', name: 'Calaverita', ev: 'muertos', mes: 1 },
     { k: 'esferas', name: 'Esferas', ev: 'navidad', mes: 1 },
     { k: 'rosca', name: 'Rosca de Reyes', ev: 'reyes', mes: 1 },
@@ -196,6 +204,8 @@ export const ITEMS = {
     { k: 'olla', name: 'Olla tamalera', text: 'Echa vapor al volar', ev: 'candelaria', mes: 1 },
     { k: 'trompo', name: 'Trompo al pastor', text: 'Gira con su piña arriba', ev: 'taco', mes: 1 },
     { k: 'regadera', name: 'Regadera', text: 'Riega gotitas al volar', ev: 'tierra', mes: 1 },
+    { k: 'papalote', name: 'Papalote', text: 'Mece su cola de moñitos', ev: 'nino', mes: 1 },
+    { k: 'regalito', name: 'Regalito', text: 'Se abre y suelta corazones', ev: 'madres', mes: 1 },
     { k: 'alebrije', name: 'Alebrije', text: 'Vuela con sus alas de colores', ev: 'muertos', mes: 1 },
     { k: 'trineo', name: 'Trineo', text: 'Lleva su costal de regalos', ev: 'navidad', mes: 1 },
     { k: 'camello', name: 'Camello', text: 'Carga los regalos de los Reyes', ev: 'reyes', mes: 1 },
@@ -220,6 +230,8 @@ export const ITEMS = {
     { k: 'candelaria', name: 'Noche de la Candelaria', ev: 'candelaria', mes: 1 },
     { k: 'taquera', name: 'Noche taquera', ev: 'taco', mes: 1 },
     { k: 'tierra', name: 'Noche de la Tierra', ev: 'tierra', mes: 1 },
+    { k: 'juguetes', name: 'Noche de juguetes', ev: 'nino', mes: 1 },
+    { k: 'jardinmama', name: 'Jardín de mamá', ev: 'madres', mes: 1 },
     { k: 'ofrenda', name: 'Noche de ofrenda', ev: 'muertos', mes: 1 },
     { k: 'nevada', name: 'Noche nevada', ev: 'navidad', mes: 1 },
     { k: 'oriente', name: 'Estrella de Oriente', ev: 'reyes', mes: 1 },
@@ -244,6 +256,8 @@ export const ITEMS = {
     { k: 'candelaria', name: 'Hoja de maíz', ev: 'candelaria', mes: 1 },
     { k: 'taco', name: 'Taquería', ev: 'taco', mes: 1 },
     { k: 'tierra', name: 'Hojas verdes', ev: 'tierra', mes: 1 },
+    { k: 'confeti', name: 'Confeti', ev: 'nino', mes: 1 },
+    { k: 'mama', name: 'Para mamá', ev: 'madres', mes: 1 },
     { k: 'muertos', name: 'Papel picado', ev: 'muertos', mes: 1 },
     { k: 'navidad', name: 'Bastón de caramelo', ev: 'navidad', mes: 1 },
     { k: 'reyes', name: 'Tesoro real', ev: 'reyes', mes: 1 },
@@ -285,7 +299,7 @@ export function buy(sec, k) {
 }
 
 // Cada título se ve distinto: color, icono y forma (los más caros, más vistosos).
-const TITLE_ICO = { novato: 'star', explorador: 'flag', cazacometas: 'rocket', maestro: 'trophy', viajero: 'planet', bombas: 'bomb', leyenda: 'crown', buscaconchas: 'concha', cazagemas: 'gema', guardabosques: 'bellota', golosito: 'caramelo', paleontologo: 'fosil', inventor: 'tuerca', tamalero: 'tamal', taquero: 'taco', heroeverde: 'tierra', catrin: 'calavera', duende: 'esfera', buscador: 'rosca', flechazo: 'corazon', jardinero: 'tulipan', olas: 'sol', mariachi: 'sombrero', hechicero: 'calabaza' };
+const TITLE_ICO = { novato: 'star', explorador: 'flag', cazacometas: 'rocket', maestro: 'trophy', viajero: 'planet', bombas: 'bomb', leyenda: 'crown', buscaconchas: 'concha', cazagemas: 'gema', guardabosques: 'bellota', golosito: 'caramelo', paleontologo: 'fosil', inventor: 'tuerca', tamalero: 'tamal', taquero: 'taco', heroeverde: 'tierra', jugueton: 'pinata', consentido: 'clavel', catrin: 'calavera', duende: 'esfera', buscador: 'rosca', flechazo: 'corazon', jardinero: 'tulipan', olas: 'sol', mariachi: 'sombrero', hechicero: 'calabaza' };
 export const titleName = (k = equipped('title')) => item('title', k).name;
 export const titleHTML = (k = equipped('title'), cls = '', tag = 'span', attrs = '') =>
   `<${tag} class="title-chip t-${k} ${cls}" ${attrs}>${icon(TITLE_ICO[k] || 'star')}<span>${titleName(k)}</span></${tag}>`;

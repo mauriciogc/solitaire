@@ -386,6 +386,55 @@ const MODELS = {
       drops.forEach((m, k) => { const p = (t * 0.9 + k / 6) % 1; m.position.set(0.56 + p * 0.2, 0.24 - p * 0.55, (k % 3 - 1) * 0.05); m.scale.setScalar(Math.sin(p * Math.PI) + 0.01); });
     } };
   },
+  // Papalote (Día del Niño): rombo de cuatro colores con su cola de moñitos que se mece.
+  papalote(part) {
+    const g = new THREE.Group(), kite = new THREE.Group();
+    const T4 = [[[0, 0.42], [0.3, 0.06]], [[0.3, 0.06], [0, -0.5]], [[0, -0.5], [-0.3, 0.06]], [[-0.3, 0.06], [0, 0.42]]];
+    ['#ff5f7e', '#ffc83d', '#4aa8de', '#47c27a'].forEach((c, i) => {
+      const sh = new THREE.Shape(); sh.moveTo(0, 0); sh.lineTo(...T4[i][0]); sh.lineTo(...T4[i][1]); sh.lineTo(0, 0);
+      kite.add(part(new THREE.ExtrudeGeometry(sh, { depth: 0.02, bevelEnabled: false }), c, { ol: 0.03 }));
+    });
+    kite.add(part(new THREE.CylinderGeometry(0.008, 0.008, 0.92, 6), '#7a4a2a', { y: -0.04, z: 0.025, ol: 0 }));
+    kite.add(part(new THREE.CylinderGeometry(0.008, 0.008, 0.6, 6).rotateZ(Math.PI / 2), '#7a4a2a', { y: 0.06, z: 0.025, ol: 0 }));
+    const tail = [];
+    for (let k = 0; k < 5; k++) {
+      const b = new THREE.Group();
+      for (const s of [-1, 1]) b.add(part(new THREE.ConeGeometry(0.04, 0.08, 6).rotateZ(s * Math.PI / 2), ['#ff5f7e', '#b36bff', '#ffc83d', '#47c27a', '#4aa8de'][k], { x: s * 0.04, ol: 0.15 }));
+      kite.add(b); tail.push(b);
+    }
+    kite.rotation.set(-0.35, -0.4, 0.3);
+    g.add(kite);
+    return { obj: g, tick: (t) => {
+      kite.position.y = Math.sin(t * 1.8) * 0.06; kite.rotation.z = 0.3 + Math.sin(t * 1.3) * 0.15;
+      tail.forEach((b, k) => { b.position.set(Math.sin(t * 3 - k * 0.8) * 0.06 * (k + 1) * 0.5, -0.56 - k * 0.11, 0.02); b.rotation.z = Math.sin(t * 3 - k * 0.8) * 0.4; });
+    } };
+  },
+  // Regalito (Día de las Madres): caja rosa con listón dorado; la tapa con su moño se levanta y salen corazoncitos.
+  regalito(part) {
+    const g = new THREE.Group(), box = new THREE.Group(), lid = new THREE.Group();
+    box.add(part(new THREE.BoxGeometry(0.5, 0.4, 0.5), '#ff7ab8', { ol: 0.05 }));
+    box.add(part(new THREE.BoxGeometry(0.1, 0.405, 0.505), '#ffc83d', { ol: 0 }));
+    box.add(part(new THREE.BoxGeometry(0.505, 0.405, 0.1), '#ffc83d', { ol: 0 }));
+    lid.add(part(new THREE.BoxGeometry(0.58, 0.12, 0.58), '#ff9cc8', { ol: 0.05 }));
+    lid.add(part(new THREE.BoxGeometry(0.1, 0.125, 0.585), '#ffc83d', { ol: 0 }));
+    lid.add(part(new THREE.BoxGeometry(0.585, 0.125, 0.1), '#ffc83d', { ol: 0 }));
+    for (const s of [-1, 1]) lid.add(part(new THREE.TorusGeometry(0.08, 0.035, 8, 16), '#ffc83d', { x: s * 0.08, y: 0.12, rz: s * 0.5, ol: 0.12 }));
+    lid.add(part(new THREE.SphereGeometry(0.045, 10, 8), '#ec9a17', { y: 0.1, ol: 0.15 }));
+    lid.position.y = 0.26; box.add(lid);
+    const sh = new THREE.Shape();
+    sh.moveTo(0, -0.28); sh.bezierCurveTo(-0.34, -0.06, -0.34, 0.2, -0.17, 0.24); sh.bezierCurveTo(-0.07, 0.26, 0, 0.18, 0, 0.12);
+    sh.bezierCurveTo(0, 0.18, 0.07, 0.26, 0.17, 0.24); sh.bezierCurveTo(0.34, 0.2, 0.34, -0.06, 0, -0.28);
+    const hg = new THREE.ExtrudeGeometry(sh, { depth: 0.08, bevelEnabled: false, curveSegments: 12 }).center().scale(0.45, 0.45, 0.45);
+    const hearts = [];
+    for (let k = 0; k < 3; k++) { const h = part(hg, ['#ff4f6e', '#ff7aa6', '#ff4f6e'][k], { ol: 0.08 }); box.add(h); hearts.push(h); }
+    box.rotation.set(0.25, -0.6, 0);
+    g.add(box);
+    return { obj: g, tick: (t) => {
+      box.position.y = Math.sin(t * 2) * 0.05; box.rotation.z = Math.sin(t * 1.3) * 0.08;
+      const o = Math.max(0, Math.sin(t * 1.2)); lid.position.y = 0.26 + o * 0.16; lid.rotation.x = -o * 0.35;
+      hearts.forEach((h, k) => { const p = (t * 0.6 + k / 3) % 1; h.position.set((k - 1) * 0.16, 0.25 + p * 0.7, 0); h.rotation.y = 0.6 + Math.sin(t * 2 + k) * 0.4; h.scale.setScalar(o * Math.sin(p * Math.PI) + 0.001); });
+    } };
+  },
   // ---------- Exclusivos del evento del mes ----------
   // Alebrije (Día de Muertos): jaguar-dragón de colores con manchas, alas de mariposa y cola enroscada.
   alebrije(part) {

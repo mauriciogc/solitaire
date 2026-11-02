@@ -117,6 +117,23 @@ const ICONS = {
   brote: () => tshape('M5 25.6Q16 19.6 27 25.6Q27 30 16 30T5 25.6z', '#a86a3a', '#83501a', '', 2)
     + `<path d="M16 25V13" stroke="${K}" stroke-width="4.4" stroke-linecap="round"/><path d="M16 25V13" stroke="#4fa84a" stroke-width="2" stroke-linecap="round"/>`
     + tshape('M16 15Q12 6 3.6 7.6Q5.6 16 16 15z', '#6fc25a', '#4fa84a', '<path d="M15 14Q10 10 6.6 9.6" stroke="#4fa84a" stroke-width="1.2" fill="none"/>', 2) + tshape('M16 13Q19 4 28.4 4.4Q27 13.6 16 13z', '#8fd46a', '#6fc25a', '<path d="M17 12.4Q22 8 25.6 6.8" stroke="#6fc25a" stroke-width="1.2" fill="none"/>', 2),
+  // Festividad: Día del Niño (piñata de estrella = ícono, globito = adorno).
+  pinata: () => [-90, -18, 54, 126, 198].map((d, i) => {
+      const a = (d * Math.PI) / 180, b = 0.62, c = ['#ffc83d', '#47c27a', '#4aa8de', '#ff9c5b', '#b36bff'][i], sh = ['#ec9a17', '#2f9e5c', '#2f86c0', '#e2753a', '#8a4ad8'][i];
+      const P2 = (r, aa) => `${(16 + Math.cos(aa) * r).toFixed(1)} ${(17 + Math.sin(aa) * r).toFixed(1)}`;
+      return tshape(`M${P2(6.6, a - b)}L${P2(14.4, a)}L${P2(6.6, a + b)}z`, c, sh, '', 1.8) + `<path d="M${P2(14.4, a)}l${(Math.cos(a + 0.5) * 2.6).toFixed(1)} ${(Math.sin(a + 0.5) * 2.6).toFixed(1)}M${P2(14.4, a)}l${(Math.cos(a - 0.5) * 2.6).toFixed(1)} ${(Math.sin(a - 0.5) * 2.6).toFixed(1)}" stroke="#ff5f7e" stroke-width="1.6" stroke-linecap="round"/>`;
+    }).join('')
+    + tshape(CIRCLE(16, 17, 7.4), '#ff7ab8', '#e8559a', '<path d="M8.6 15h14.8M8.8 19h14.4" stroke="#fff0f6" stroke-width="1.4"/><ellipse cx="13" cy="13.6" rx="1.8" ry="1" fill="#fff" opacity=".6"/>', 2.2),
+  globito: () => `<path d="M16 23.6Q14 27 16.6 29.6" fill="none" stroke="${K}" stroke-width="1.4" stroke-linecap="round"/>`
+    + tshape('M16 3.4C22.4 3.4 25.4 8.4 25.4 12.6 25.4 18.4 20.4 22.6 16 23.6 11.6 22.6 6.6 18.4 6.6 12.6 6.6 8.4 9.6 3.4 16 3.4z', '#ff5f7e', '#d63d5f', '<ellipse cx="12" cy="9.4" rx="2" ry="3" fill="#fff" opacity=".6" transform="rotate(25 12 9.4)"/>', 2.2)
+    + tshape('M14.4 23.4h3.2l.8 2.2h-4.8z', '#ff5f7e', '#d63d5f', '', 1.6),
+  // Festividad: Día de las Madres (clavel = ícono, regalito = adorno).
+  clavel: () => `<path d="M16 29.6V17" stroke="${K}" stroke-width="4.4" stroke-linecap="round"/><path d="M16 29.6V17" stroke="#4fa84a" stroke-width="2" stroke-linecap="round"/>`
+    + tshape('M16 26Q10.4 26.4 8 21.2Q13.6 20.4 16 24.4z', '#6fc25a', '#4fa84a', '', 1.6)
+    + tshape('M16 24Q21.2 23.6 24 18.6Q18.4 18.4 16 22.4z', '#8fd46a', '#6fc25a', '', 1.6)
+    + tshape('M12.2 15.4h7.6l-1.6 4.8h-4.4z', '#6fc25a', '#4fa84a', '', 1.6)
+    + tshape('M5.4 14Q4.2 8.4 8.4 7Q9.2 3.2 12.8 4.4Q16 1.4 19.2 4.4Q22.8 3.2 23.6 7Q27.8 8.4 26.6 14Q16 19.6 5.4 14z', '#ff5f8f', '#e0406f', '<path d="M8.4 11.8q1.9-2 3.8 0t3.8 0 3.8 0 3.8 0M11.2 8.2q1.6-1.8 3.4 0t3.4 0" stroke="#b8285a" stroke-width="1.3" fill="none" stroke-linecap="round"/><ellipse cx="10.6" cy="7.8" rx="1.8" ry="1" fill="#fff" opacity=".55"/>', 2.2),
+  regalito: () => ICONS.gift().replace(/#47c27a/g, '#ff7ab8').replace(/#2f9e5c/g, '#e8559a').replace(/#5ad68c/g, '#ff9cc8').replace(/#3fb873/g, '#ff7ab8'),
   // Fichas de la colección (una por temática).
   concha: () => tshape('M16 27.5 4.5 14.5C5 7.5 10 4 16 4s11 3.5 11.5 10.5z', '#ffb3c7', '#f28aa5', ['M16 27V6', 'M16 27 9.5 7.5', 'M16 27 22.5 7.5', 'M16 27 5.5 12', 'M16 27 26.5 12'].map((d) => `<path d="${d}" stroke="#e0607f" stroke-width="1.6" fill="none"/>`).join(''))
     + tshape('M11 26.5h10l-1.5 3h-7z', '#ffb3c7', '#f28aa5', '', 1.8),
@@ -233,6 +250,10 @@ export const BACKS = {
   tacos: { a: '#e8853e', b: '#c9692a', dots: '#ffe0b8', art: () => `${[[20, 26, 0.44], [80, 114, 0.48], [80, 26, 0.36], [22, 114, 0.36]].map(([x, y, k]) => `<g transform="translate(${x - 16 * k} ${y - 16 * k}) scale(${k})">${ICONS.limon()}</g>`).join('')}<g transform="translate(14 34) scale(2.25)">${ICONS.taco()}</g>` },
   // Exclusivo de la festividad: Día de la Tierra.
   planetaverde: { a: '#3f9a4a', b: '#2f7a3a', dots: '#d9f5c8', art: () => `${[[20, 26, 0.44], [80, 114, 0.48], [80, 26, 0.36], [22, 114, 0.36]].map(([x, y, k]) => `<g transform="translate(${x - 16 * k} ${y - 16 * k}) scale(${k})">${ICONS.brote()}</g>`).join('')}<g transform="translate(14 36) scale(2.25)">${ICONS.tierra()}</g>` },
+  // Exclusivo de la festividad: Día del Niño.
+  pinata: { a: '#ff7ab8', b: '#e8559a', dots: '#fff0f6', art: () => `${[[20, 26, 0.5, '#4aa8de'], [80, 114, 0.54, '#ffc83d'], [80, 24, 0.42, '#47c27a'], [22, 114, 0.42, '#b36bff']].map(([x, y, k, c]) => `<g transform="translate(${x - 16 * k} ${y - 16 * k}) scale(${k})">${ICONS.globito().replace(/#ff5f7e/g, c).replace(/#d63d5f/g, '#00000033')}</g>`).join('')}<g transform="translate(14 34) scale(2.25)">${ICONS.pinata()}</g>` },
+  // Exclusivo de la festividad: Día de las Madres.
+  regalos: { a: '#c22c5c', b: '#a51f4a', dots: '#ffd6e4', art: () => `${[[20, 26, 0.5], [80, 114, 0.54], [80, 26, 0.4], [22, 114, 0.4]].map(([x, y, k]) => `<g transform="translate(${x - 16 * k} ${y - 16 * k}) scale(${k})">${ICONS.regalito()}</g>`).join('')}<g transform="translate(14 34) scale(2.25)">${ICONS.clavel()}</g>` },
   // Exclusivos del evento del mes.
   calaverita: { a: '#7b2fbf', b: '#5e1f9a', dots: '#ffd27a', art: () => `${[[20, 26, 7], [80, 112, 8], [78, 28, 5], [24, 110, 5]].map(([x, y, r]) => marigold(x, y, r)).join('')}<g transform="translate(18 38) scale(2)">${ICONS.calavera()}</g>` },
   esferas: { a: '#c22c3c', b: '#a51f30', dots: '#ffd6d6', art: () => `${[[20, 26, 7], [80, 112, 8], [80, 26, 5.5], [22, 112, 5.5]].map(([x, y, r]) => flake(x, y, r, '#fff6e6', 1.6)).join('')}<path d="M8 30Q50 46 92 30" fill="none" stroke="#3f9a5a" stroke-width="5" stroke-linecap="round"/><g transform="translate(18 38) scale(2)">${ICONS.esfera()}</g>` },
@@ -451,6 +472,20 @@ export const AVATARS = {
     + P('M18 54C8 52 8 34 20 32 18 18 34 12 42 20 46 8 64 10 66 22 80 18 90 30 84 42 94 50 88 66 76 64 72 76 56 78 50 72 42 80 26 76 26 66 16 68 12 58 18 54z', '#6fc25a', '#4fa84a', '<path d="M26 30q6-6 14-4M62 22q8 0 12 6" stroke="#8fd46a" stroke-width="4" fill="none" stroke-linecap="round"/>')
     + eyes(50, 12, 4.6) + smile(60, 6) + blush(58, 21)
     + [0, 72, 144, 216, 288].map((a) => `<ellipse cx="74" cy="${30 - 4.6}" rx="3" ry="4.6" fill="#ff9cc8" stroke="${K}" stroke-width="1.6" transform="rotate(${a} 74 30)"/>`).join('') + `<circle cx="74" cy="30" r="3" fill="#ffc83d" stroke="${K}" stroke-width="1.6"/>`,
+  // Piñatita (Día del Niño): piñata de estrella con cara y sus picos de colores con flecos.
+  pinatita: () => [-90, -18, 54, 126, 198].map((d, i) => {
+      const a = (d * Math.PI) / 180, b = 0.6, c = ['#ffc83d', '#47c27a', '#4aa8de', '#ff9c5b', '#b36bff'][i], sh = ['#ec9a17', '#2f9e5c', '#2f86c0', '#e2753a', '#8a4ad8'][i];
+      const Q = (r, aa) => `${(50 + Math.cos(aa) * r).toFixed(1)} ${(58 + Math.sin(aa) * r).toFixed(1)}`;
+      return P(`M${Q(23, a - b)}L${Q(48, a)}L${Q(23, a + b)}z`, c, sh) + `<path d="M${Q(48, a)}l${(Math.cos(a + 0.5) * 8).toFixed(1)} ${(Math.sin(a + 0.5) * 8).toFixed(1)}M${Q(48, a)}l${(Math.cos(a - 0.5) * 8).toFixed(1)} ${(Math.sin(a - 0.5) * 8).toFixed(1)}" stroke="#ff5f7e" stroke-width="4" stroke-linecap="round"/>`;
+    }).join('')
+    + P(CIRCLE(50, 58, 25), '#ff7ab8', '#e8559a', '<path d="M25 50h50M25 68h50" stroke="#fff0f6" stroke-width="4"/>')
+    + eyes(56, 10, 4.6) + smile(66, 6) + blush(64, 17),
+  // Clavelito (Día de las Madres): clavel con cara, sus pétalos de holán y dos hojas como hombros.
+  clavelito: () => P('M42 104Q42 86 50 82Q58 86 58 104z', '#4fa84a', '#2f8a42')
+    + P('M50 96Q28 100 14 84Q34 76 50 90z', '#6fc25a', '#4fa84a') + P('M50 96Q72 100 86 84Q66 76 50 90z', '#8fd46a', '#6fc25a')
+    + Array.from({ length: 12 }, (_, i) => { const a = (i * 30 * Math.PI) / 180; return P(CIRCLE(+(50 + Math.cos(a) * 31).toFixed(1), +(46 + Math.sin(a) * 29).toFixed(1), 11), i % 2 ? '#ff5f8f' : '#ff7aa6', '#e0406f'); }).join('')
+    + P(ELL(50, 46, 31, 28), '#ffb3cb', '#ff8fb0', '<path d="M26 34q6-8 14-8" stroke="#ffd6e4" stroke-width="4" fill="none" stroke-linecap="round"/>')
+    + eyes(46, 11, 4.6) + smile(56, 6) + blush(54, 20),
   // Exclusivo del evento: Día de Muertos.
   xolo: () => mirror(P('M26 46 16 10 42 30z', '#4a4560', '#36324a', '<path d="M25 37 21 18 35 30z" fill="#ff9cb0"/>'))
     + shoulders('#4a4560', '#36324a')
@@ -570,6 +605,14 @@ export const RINGS = {
   brotes: () => band(55, '#6fc25a', 7) + `<circle cx="70" cy="70" r="55" fill="none" stroke="#a86a3a" stroke-width="2" stroke-dasharray="2 9" stroke-linecap="round"/>`
     + [-25, 35, 95, 155, 215].map((d, i) => { const [x, y] = at(d, 56), k = i % 2 ? 0.5 : 0.6; return `<g transform="translate(${x - 16 * k} ${y - 16 * k}) rotate(${d + 90} ${16 * k} ${16 * k}) scale(${k})">${ICONS.brote()}</g>`; }).join('')
     + (() => { const [x, y] = at(-90, 56), k = 0.95; return `<g transform="translate(${x - 16 * k} ${y - 18 * k}) scale(${k})">${ICONS.tierra()}</g>`; })(),
+  // Globitos (Día del Niño): banda azul con confeti, globos de colores y la piñata arriba.
+  globitos: () => band(55, '#7fd6ff', 7) + `<circle cx="70" cy="70" r="55" fill="none" stroke="#ff7ab8" stroke-width="2.4" stroke-dasharray="2 8" stroke-linecap="round"/>`
+    + [[-25, '#ffc83d'], [35, '#47c27a'], [95, '#ff5f7e'], [155, '#b36bff'], [215, '#ff9c5b']].map(([d, c], i) => { const [x, y] = at(d, 56), k = i % 2 ? 0.5 : 0.6; return `<g transform="translate(${x - 16 * k} ${y - 16 * k}) rotate(${d + 90} ${16 * k} ${16 * k}) scale(${k})">${ICONS.globito().replace(/#ff5f7e/g, c).replace(/#d63d5f/g, '#00000033')}</g>`; }).join('')
+    + (() => { const [x, y] = at(-90, 56), k = 0.95; return `<g transform="translate(${x - 16 * k} ${y - 18 * k}) scale(${k})">${ICONS.pinata()}</g>`; })(),
+  // Claveles (Día de las Madres): banda rosa con claveles alrededor y un regalito arriba.
+  claveles: () => band(55, '#ff9cc8', 7) + `<circle cx="70" cy="70" r="55" fill="none" stroke="#fff" stroke-width="2.4" stroke-dasharray="2 8" stroke-linecap="round"/>`
+    + [-25, 35, 95, 155, 215].map((d, i) => { const [x, y] = at(d, 56), k = i % 2 ? 0.64 : 0.76; return `<g transform="translate(${x - 16 * k} ${y - 16 * k}) rotate(${d + 90} ${16 * k} ${16 * k}) scale(${k})">${ICONS.clavel()}</g>`; }).join('')
+    + (() => { const [x, y] = at(-90, 56), k = 0.9; return `<g transform="translate(${x - 16 * k} ${y - 18 * k}) scale(${k})">${ICONS.regalito()}</g>`; })(),
   // Exclusivo del evento: Día de Muertos.
   cempasuchil: () => band(55, '#ff9c1a', 6) + `<circle cx="70" cy="70" r="55" fill="none" stroke="#b36bff" stroke-width="2.4" stroke-dasharray="3 9" stroke-linecap="round"/>`
     + [-90, -30, 30, 90, 150, 210].map((d, i) => marigold(...at(d, 56), i % 2 ? 8 : 10.5)).join(''),

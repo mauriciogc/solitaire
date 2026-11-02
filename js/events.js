@@ -383,8 +383,14 @@ export const FIESTAS = [
     ico: 'tierra', deco: 'brote', color: 'green',
     planets: ['Bosque Vivo', 'Océano Limpio', 'Planeta Verde'],
     ex: [{ space: 'tierra', frame: 'tierra' }, { ring: 'brotes', back: 'planetaverde' }, { avatar: 'arbolito', title: 'heroeverde', traveler: 'regadera' }] },
-  { key: 'nino', name: 'Día del Niño', date: (y) => new Date(y, 3, 30) },
-  { key: 'madres', name: 'Día de las Madres', date: (y) => new Date(y, 4, 10) },
+  { key: 'nino', name: 'Día del Niño', date: (y) => new Date(y, 3, 30), ready: true,
+    ico: 'pinata', deco: 'globito', color: 'pink',
+    planets: ['Isla de los Juguetes', 'Valle de los Globos', 'Planeta Piñata'],
+    ex: [{ space: 'juguetes', frame: 'confeti' }, { ring: 'globitos', back: 'pinata' }, { avatar: 'pinatita', title: 'jugueton', traveler: 'papalote' }] },
+  { key: 'madres', name: 'Día de las Madres', date: (y) => new Date(y, 4, 10), ready: true,
+    ico: 'clavel', deco: 'regalito', color: 'red',
+    planets: ['Jardín de Claveles', 'Valle de los Abrazos', 'Planeta Mamá'],
+    ex: [{ space: 'jardinmama', frame: 'mama' }, { ring: 'claveles', back: 'regalos' }, { avatar: 'clavelito', title: 'consentido', traveler: 'regalito' }] },
   { key: 'padre', name: 'Día del Padre', date: (y) => nthSunday(y, 5, 3) },
   { key: 'gato', name: 'Día del Gato', date: (y) => new Date(y, 7, 8) },
   { key: 'perro', name: 'Día del Perro', date: (y) => new Date(y, 7, 26) },
@@ -435,9 +441,10 @@ export function daysToNextFiesta() {
   return next ? next.day - day : 0;
 }
 // La siguiente festividad lista (para decir cuándo llega): { name, ico, days } o null.
-export function nextFiesta() {
+// skip: días que se saltan (modo dev: con 1, si mañana hay fiesta, da la que sigue).
+export function nextFiesta(skip = 0) {
   const day = today(), y = new Date(day * DAY).getUTCFullYear();
-  const next = [...fiestaDays(y), ...fiestaDays(y + 1)].find((x) => x.day > day);
+  const next = [...fiestaDays(y), ...fiestaDays(y + 1)].find((x) => x.day > day + skip);
   return next ? { ...next.f, days: next.day - day } : null;
 }
 export function fiPrize(f, k) {

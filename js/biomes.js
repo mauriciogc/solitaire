@@ -109,6 +109,20 @@ export const EVENT_BIOMES = {
     // [agua, bosque desde, cuántos árboles]
     [[0.5, 0.64, 1.2], [0.56, 0.66, 1], [0.44, 0.58, 1.5]],
   ),
+  // Festividad: Día del Niño (3 planetas). Colores de feria: árboles de algodón de azúcar y cerros amarillos que suben en cada planeta.
+  nino: sameLook(
+    { emblem: ['#ff9cc8', '#7fd6ff', '#ffc83d'], colors: [['#3fa0e0', '#7fd6ff', '#fff1c9', '#8fd46a', '#ffc83d', '#ffe08a']],
+      planet: { amp: 0.14, freq: 1.8, seed: 181, outline: 0x3a1a4a, glow: 0xff9cc8, prop: 'round', crown: '#ff9cc8', path: '#fff6ee' } },
+    // [agua, amarillo desde, cuántos árboles]
+    [[0.42, 0.64, 1.1], [0.36, 0.58, 1.3], [0.32, 0.52, 1.5]],
+  ),
+  // Festividad: Día de las Madres (3 planetas). Jardines de árboles en flor rosa y cerros fucsia que suben en cada planeta.
+  madres: sameLook(
+    { emblem: ['#ff7aa6', '#ffb3cb', '#8fd46a'], colors: [['#3f8ad8', '#7fc4f0', '#fff1e6', '#8fd46a', '#ff7aa6', '#ffb3cb']],
+      planet: { amp: 0.13, freq: 1.7, seed: 191, outline: 0x4a1030, glow: 0xffb3cb, prop: 'round', crown: '#ff7aa6', path: '#fff6f0' } },
+    // [agua, fucsia desde, cuántos árboles]
+    [[0.4, 0.62, 1.2], [0.34, 0.56, 1.4], [0.3, 0.5, 1.6]],
+  ),
   // Halloween: mares morados, huertos de calabaza naranjas y árboles otoñales; el naranja sube en cada planeta.
   halloween: sameLook(
     { emblem: ['#5a2f9a', '#3a1a6a', '#ff8a1a'], colors: [['#3a1a6a', '#6a3fb0', '#c9b0e8', '#4a6a3a', '#ff8a1a', '#ffb13d']],
@@ -300,6 +314,26 @@ function mantelTierraTile() {
   s += `<rect width="${W}" height="${H}" fill="#06200a" opacity=".42"/>`;
   return { url: enc(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">${s}</svg>`), w: W, h: H };
 }
+// Mantel del Día del Niño: azul clarito de fiesta con confeti de colores y serpentinas.
+function mantelNinoTile() {
+  const W = 120, H = 120, C = ['#ff5f7e', '#ffc83d', '#47c27a', '#b36bff', '#ff9c5b', '#4aa8de'];
+  let s = `<rect width="${W}" height="${H}" fill="#9fdcf5"/>`;
+  [[12, 18, 20], [44, 8, -30], [80, 22, 45], [104, 6, 10], [24, 50, -15], [62, 44, 60], [96, 58, -40], [10, 86, 30], [48, 80, -60], [84, 92, 15], [30, 110, 50], [70, 112, -20], [110, 100, 70]].forEach(([x, y, a], i) => (s += `<rect x="${x - 3}" y="${y - 1.6}" width="6" height="3.2" rx="1" fill="${C[i % C.length]}" transform="rotate(${a} ${x} ${y})"/>`));
+  s += `<path d="M0 66q15-10 30 0t30 0 30 0 30 0" fill="none" stroke="#ff7ab8" stroke-width="2.4" opacity=".7"/>`;
+  s += `<rect width="${W}" height="${H}" fill="#0a1030" opacity=".45"/>`;
+  return { url: enc(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">${s}</svg>`), w: W, h: H };
+}
+// Mantel del Día de las Madres: rosa clarito con florecitas y su orilla de encaje.
+function mantelMadresTile() {
+  const W = 120, H = 120;
+  let s = `<rect width="${W}" height="${H}" fill="#ffc2d6"/>`;
+  s += `<path d="M0 60h120M60 0v120" stroke="#fff0f6" stroke-width="2" stroke-dasharray="3 5"/>`;
+  const flor = (x, y, c) => `${[0, 72, 144, 216, 288].map((a) => `<ellipse cx="${x}" cy="${y - 4}" rx="2.6" ry="4" fill="${c}" transform="rotate(${a} ${x} ${y})"/>`).join('')}<circle cx="${x}" cy="${y}" r="2.1" fill="#ffc83d"/>`;
+  [[30, 30, '#ff5f8f'], [90, 90, '#ff5f8f'], [90, 30, '#fff6ee'], [30, 90, '#fff6ee']].forEach(([x, y, c]) => (s += flor(x, y, c)));
+  [[60, 60], [0, 0], [120, 0], [0, 120], [120, 120]].forEach(([x, y]) => (s += `<circle cx="${x}" cy="${y}" r="6" fill="none" stroke="#fff0f6" stroke-width="1.6"/><circle cx="${x}" cy="${y}" r="2" fill="#fff0f6"/>`));
+  s += `<rect width="${W}" height="${H}" fill="#2a0618" opacity=".5"/>`;
+  return { url: enc(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">${s}</svg>`), w: W, h: H };
+}
 const TILE_CACHE = {};
 function tableTile(key) {
   if (TILE_CACHE[key]) return TILE_CACHE[key];
@@ -381,6 +415,12 @@ const P = {
   // Día de la Tierra: maceta con su brote y la Tierra como canica.
   maceta: () => `${drop(circ(40))}<g transform="translate(-48 -52) scale(3)">${icon('brote').replace(/^<svg[^>]*>|<\/svg>$/g, '')}</g>`,
   tierraMarble: () => `${drop(circ(36))}<g transform="translate(-44 -50) scale(2.75)">${icon('tierra').replace(/^<svg[^>]*>|<\/svg>$/g, '')}</g>`,
+  // Día del Niño: la piñata, un ramo de globos y estrellas doradas.
+  pinataProp: () => `${drop(circ(44))}<g transform="translate(-56 -60) scale(3.5)">${icon('pinata').replace(/^<svg[^>]*>|<\/svg>$/g, '')}</g>`,
+  globos: () => [[-16, -10, -15, '#ff5f7e'], [14, -16, 12, '#ffc83d'], [2, 10, 0, '#4aa8de']].map(([x, y, a, c]) => `<g ${T(x, y, a)}><g transform="translate(-30 -30) scale(1.9)">${icon('globito').replace(/^<svg[^>]*>|<\/svg>$/g, '').replace(/#ff5f7e/g, c).replace(/#d63d5f/g, '#00000033')}</g></g>`).join(''),
+  // Día de las Madres: ramo de claveles y dos regalitos.
+  ramo: () => `${drop(circ(42))}${tt('M-22 6 0 44 22 6z', '#fff6ee', '#f0dce6', '<path d="M-10 22h20" stroke="#ff7aa6" stroke-width="5" stroke-linecap="round"/>', 2.4)}${[[-18, -14, -25], [18, -16, 25], [0, -26, 0]].map(([x, y, a]) => `<g ${T(x, y, a)}><g transform="translate(-34 -32) scale(2.1)">${icon('clavel').replace(/^<svg[^>]*>|<\/svg>$/g, '')}</g></g>`).join('')}`,
+  regalitos: () => [[-14, -6, -14, 2.2], [18, 16, 18, 1.7]].map(([x, y, a, k]) => `<g ${T(x, y, a)}>${drop(circ(15 * k * 0.8), 3, 4)}<g transform="translate(${-16 * k} ${-16 * k}) scale(${k})">${icon('regalito').replace(/^<svg[^>]*>|<\/svg>$/g, '')}</g></g>`).join(''),
   // Halloween: calabaza tallada, murciélagos y un caldero con poción.
   pumpkin: () => `${drop(ELLd(0, 2, 48, 38))}<g transform="translate(-54 -62) scale(3.4)">${icon('calabaza').replace(/^<svg[^>]*>|<\/svg>$/g, '')}</g>`,
   bats: () => [[-14, -10, -15, 2.2], [20, 18, 20, 1.6]].map(([x, y, a, k]) => `<g ${T(x, y, a)}><g transform="translate(${-16 * k} ${-16 * k}) scale(${k})">${icon('murcielago').replace(/#5a4a8a/g, '#a890d8').replace(/#3f3270/g, '#7a62b8').replace(/^<svg[^>]*>|<\/svg>$/g, '')}</g></g>`).join(''),
@@ -416,6 +456,8 @@ const EVENT_TABLES = {
   candelaria: { tile: mantelCandelariaTile, tint: '#1a0e04', props: ['tamalesPlate', 'elotes', ['mug', ['#d9783f', '#b85a28', '#f0a070']], 'jarro'] },
   taco: { tile: mantelTacoTile, tint: '#1a0604', props: ['tacosPlate', 'limones', ['mug', ['#ff9c5b', '#e2753a', '#ffc794']], 'molcajete'] },
   tierra: { tile: mantelTierraTile, tint: '#04140a', props: ['maceta', 'flowers', ['mug', ['#47c27a', '#2f9e5c', '#a8e8b8']], 'tierraMarble'] },
+  nino: { tile: mantelNinoTile, tint: '#0a0a24', props: ['pinataProp', 'globos', ['mug', ['#ff7ab8', '#e8559a', '#ffc2dc']], 'goldstars'] },
+  madres: { tile: mantelMadresTile, tint: '#1a0410', props: ['ramo', 'regalitos', ['mug', ['#ff7aa6', '#e0406f', '#ffc2d6']], 'letter'] },
   halloween: { tile: mantelHalloweenTile, tint: '#0e0618', props: ['pumpkin', 'bats', ['mug', ['#6fd36a', '#3fae4a', '#b8f0a0']], 'cauldron'] },
 };
 // HTML del fondo de la mesa para el mundo w (o la del evento del mes: theme = su clave).
