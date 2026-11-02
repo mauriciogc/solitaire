@@ -204,9 +204,21 @@ export const EVENTOS = {
     planets: ['Prado de Tulipanes', 'Jardín de Mariposas', 'Valle del Arcoíris', 'Bosque en Flor', 'Planeta Primavera'],
     ex: [{ space: 'petalos' }, { frame: 'primavera' }, { ring: 'mariposas' }, { avatar: 'catarina', back: 'tulipanes' }, { title: 'jardinero', traveler: 'mariposa' }],
   },
-  6: { key: 'verano', name: 'Verano', color: 'blue', ready: false },
-  8: { key: 'patrias', name: 'Fiestas Patrias', color: 'green', ready: false },
-  9: { key: 'halloween', name: 'Halloween', color: 'violet', ready: false },
+  6: {
+    key: 'verano', name: 'Verano', color: 'blue', ico: 'sandia', deco: 'sol', tk: 'tkVerano', ready: true,
+    planets: ['Playa Dorada', 'Isla de las Palmeras', 'Bahía de las Olas', 'Costa de las Sandías', 'Planeta Verano'],
+    ex: [{ space: 'playa' }, { frame: 'verano' }, { ring: 'salvavidas' }, { avatar: 'foca', back: 'sandias' }, { title: 'olas', traveler: 'patito' }],
+  },
+  8: {
+    key: 'patrias', name: 'Fiestas Patrias', color: 'green', ico: 'sombrero', deco: 'chile', tk: 'tkPatrias', ready: true,
+    planets: ['Valle del Maíz', 'Pueblo de las Banderas', 'Cerro de los Chiles', 'Plaza del Grito', 'Planeta Tricolor'],
+    ex: [{ space: 'grito' }, { frame: 'patrias' }, { ring: 'tricolor' }, { avatar: 'chihuahua', back: 'vivamexico' }, { title: 'mariachi', traveler: 'sombrero' }],
+  },
+  9: {
+    key: 'halloween', name: 'Halloween', color: 'violet', ico: 'calabaza', deco: 'murcielago', tk: 'tkHalloween', ready: true,
+    planets: ['Huerto de Calabazas', 'Bosque Embrujado', 'Pantano de las Brujas', 'Castillo de los Murciélagos', 'Planeta Espantoso'],
+    ex: [{ space: 'embrujada' }, { frame: 'halloween' }, { ring: 'telarana' }, { avatar: 'gatobruja', back: 'calabazas' }, { title: 'hechicero', traveler: 'escoba' }],
+  },
 };
 // Monedas de los niveles 1-4 de cada planeta (pocas) y lo que da el 5.º si ya tienes su exclusivo.
 export const EV_COINS = [20, 25, 30, 35, 40];

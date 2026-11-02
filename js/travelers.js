@@ -389,6 +389,64 @@ const MODELS = {
       fly.position.y = Math.sin(t * 2.2) * 0.08 + Math.sin(t * 9) * 0.015; fly.rotation.y = 0.25 + Math.sin(t * 0.8) * 0.3;
     } };
   },
+  // Patito inflable (Verano): flotador amarillo con cabeza de pato, pico naranja y franja; se mece como en las olas.
+  patito(part) {
+    const g = new THREE.Group(), duck = new THREE.Group();
+    duck.add(part(new THREE.TorusGeometry(0.27, 0.12, 14, 32).rotateX(Math.PI / 2), '#ffd23d', { ol: 0.08 }));
+    duck.add(part(new THREE.TorusGeometry(0.27, 0.123, 8, 32, Math.PI * 0.5).rotateX(Math.PI / 2), '#ff7a6a', { ry: Math.PI * 0.75, ol: 0 }));
+    const head = new THREE.Group();
+    head.add(part(new THREE.CapsuleGeometry(0.08, 0.14, 6, 12), '#ffd23d', { y: 0.06, ol: 0.12 }));
+    head.add(part(new THREE.SphereGeometry(0.15, 18, 14), '#ffd23d', { y: 0.24, ol: 0.08 }));
+    head.add(part(new THREE.SphereGeometry(0.09, 14, 10).scale(1, 0.45, 1.25), '#ff9c2b', { y: 0.2, z: 0.15, ol: 0.15 }));
+    for (const x of [-0.065, 0.065]) {
+      head.add(part(new THREE.SphereGeometry(0.03, 10, 8), INK, { x, y: 0.29, z: 0.12, ol: 0 }));
+      head.add(part(new THREE.SphereGeometry(0.01, 6, 4), '#ffffff', { x: x - 0.008, y: 0.3, z: 0.148, ol: 0 }));
+    }
+    head.position.set(0, 0.05, 0.27);
+    duck.add(head);
+    duck.add(part(new THREE.ConeGeometry(0.07, 0.14, 10).rotateX(-Math.PI / 2 - 0.6), '#ffd23d', { y: 0.1, z: -0.33, ol: 0.15 }));
+    duck.rotation.set(0.45, -0.5, 0);
+    g.add(duck);
+    return { obj: g, tick: (t) => { duck.position.y = Math.sin(t * 2) * 0.05; duck.rotation.z = Math.sin(t * 2 + 0.6) * 0.12; duck.rotation.x = 0.45 + Math.sin(t * 1.7) * 0.06; head.rotation.y = Math.sin(t * 0.9) * 0.35; } };
+  },
+  // Sombrero de charro (Fiestas Patrias): ala ancha que se levanta en la orilla, copa alta con listón rojo
+  // y verde y botoncitos dorados; vuela girando despacio como platillo y se ladea.
+  sombrero(part) {
+    const g = new THREE.Group(), hat = new THREE.Group();
+    const brim = [[0, 0], [0.2, 0], [0.34, 0.01], [0.44, 0.04], [0.5, 0.09], [0.52, 0.13], [0.5, 0.135], [0.43, 0.075], [0.33, 0.04], [0.2, 0.03], [0, 0.03]].map(([x, y]) => new THREE.Vector2(x, y - 0.1));
+    hat.add(part(new THREE.LatheGeometry(brim, 40), '#f2d38a', { ol: 0.04 }));
+    hat.add(part(new THREE.TorusGeometry(0.5, 0.018, 8, 48).rotateX(Math.PI / 2), '#e8434f', { y: 0.03, ol: 0 }));
+    hat.add(part(new THREE.TorusGeometry(0.38, 0.012, 6, 48).rotateX(Math.PI / 2), '#2f9e5c', { y: -0.055, ol: 0 }));
+    const crown = [[0, 0], [0.17, 0], [0.165, 0.12], [0.145, 0.24], [0.11, 0.31], [0.06, 0.34], [0, 0.345]].map(([x, y]) => new THREE.Vector2(x, y - 0.08));
+    hat.add(part(new THREE.LatheGeometry(crown, 32), '#f2d38a', { ol: 0.06 }));
+    hat.add(part(new THREE.CylinderGeometry(0.172, 0.174, 0.07, 32, 1, true), '#e8434f', { y: -0.03, ol: 0 }));
+    hat.add(part(new THREE.CylinderGeometry(0.168, 0.17, 0.025, 32, 1, true), '#2f9e5c', { y: 0.02, ol: 0 }));
+    for (let k = 0; k < 8; k++) {
+      const a = (k / 8) * TAU;
+      hat.add(part(new THREE.SphereGeometry(0.02, 8, 6), '#ffc83d', { x: Math.cos(a) * 0.176, y: -0.03, z: Math.sin(a) * 0.176, ol: 0.3 }));
+    }
+    hat.rotation.x = 0.35;
+    hat.scale.setScalar(1.15);
+    g.add(hat);
+    return { obj: g, tick: (t) => { hat.rotation.y = t * 0.9; hat.rotation.z = Math.sin(t * 1.6) * 0.12; hat.position.y = Math.sin(t * 2.1) * 0.05; } };
+  },
+  // Escoba voladora (Halloween): palo de madera, paja dorada amarrada con listón morado y chispitas verdes detrás.
+  escoba(part) {
+    const g = new THREE.Group(), broom = new THREE.Group();
+    broom.add(part(new THREE.CylinderGeometry(0.03, 0.035, 0.9, 10).rotateZ(Math.PI / 2), '#9a5a32', { x: -0.12, ol: 0.15 }));
+    broom.add(part(new THREE.ConeGeometry(0.16, 0.36, 16).rotateZ(Math.PI / 2), '#e8b84a', { x: 0.42, ol: 0.08 }));
+    broom.add(part(new THREE.CylinderGeometry(0.075, 0.075, 0.06, 14).rotateZ(Math.PI / 2), '#8a5cf0', { x: 0.27, ol: 0.15 }));
+    for (let k = 0; k < 6; k++) { const a = (k / 6) * TAU; broom.add(part(new THREE.CylinderGeometry(0.006, 0.006, 0.3, 4).rotateZ(Math.PI / 2), '#c9893a', { x: 0.44, y: Math.cos(a) * 0.08, z: Math.sin(a) * 0.08, ol: 0 })); }
+    broom.add(part(new THREE.SphereGeometry(0.04, 10, 8), '#9a5a32', { x: -0.57, ol: 0.15 }));
+    const sparks = [];
+    for (let k = 0; k < 5; k++) { const m = new THREE.Mesh(new THREE.OctahedronGeometry(0.03), glow(k % 2 ? '#b8f0a0' : '#ffd23d', 1)); broom.add(m); sparks.push(m); }
+    broom.rotation.set(0.25, -0.5, 0.2);
+    g.add(broom);
+    return { obj: g, tick: (t) => {
+      broom.position.y = Math.sin(t * 2.2) * 0.06; broom.rotation.z = 0.2 + Math.sin(t * 2.2 + 1) * 0.1;
+      sparks.forEach((m, k) => { const p = (t * 0.7 + k / 5) % 1; m.position.set(0.6 + p * 0.35, Math.sin(p * 9 + k) * 0.06, Math.cos(k * 2) * 0.06); m.scale.setScalar(Math.sin(p * Math.PI) * 1.3 + 0.01); m.rotation.y = t * 4; });
+    } };
+  },
   // Mantarraya: aletas que aletean despacio y cola larga.
   mantarraya(part) {
     const g = new THREE.Group(), ray = new THREE.Group();

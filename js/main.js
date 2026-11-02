@@ -191,8 +191,8 @@ function showMap({ region, start = null, anim, after = null, unlock = null } = {
     <div class="g-only">
       <button class="hbtn tb press out-btn" data-a="up" aria-label="Ver todas las constelaciones" title="Constelaciones">${icon('prev')}</button>
       <div class="wtitle info">${constIcon()}<div><b>${locked ? icon('lock') : ''}${regionName(region)}</b><small>Constelación ${region + 1} de ${REGION_COUNT} · ${star(true)}${regionStars(region)}/${REGION_SIZE * 30}</small></div></div>
-      <button class="dev-pill" data-a="dev">DEV</button>
     </div>
+    <button class="dev-pill" data-a="dev">DEV</button>
     <div class="side l">${sideButtons()}</div>
     <div class="side r" ${after ? 'style="opacity:0"' : ''}>${eventButtons(after?.res)}</div>
     <div class="p-only phud"></div>
@@ -1241,6 +1241,7 @@ function showEvent({ anim, after = null, start = null } = {}) {
     <div class="res">${evTicketPill(e)}<div class="pill info" aria-label="Monedas">${coin()}<span data-coins>${money(save.coins - (after?.coins || 0))}</span></div>
       <button class="me press" data-a="me" aria-label="Tu perfil" title="Tu perfil">${avatarHTML(save)}</button></div>
     <div class="cta"></div>
+    <button class="dev-pill" data-a="dev">DEV</button>
   </div>`);
   let galaxy = null;
   const cta = el.querySelector('.cta'), phud = el.querySelector('.phud');
@@ -1271,6 +1272,7 @@ function showEvent({ anim, after = null, start = null } = {}) {
     if (a === 'ev-wait') return openEvWait();
     if (a === 'ev-help') return openEvIntro(ev() || e);
     if (a === 'me') return openProfile();
+    if (a === 'dev') return sideAction(a);
   });
   mount(el, anim);
   paint();
@@ -1389,7 +1391,7 @@ function openEvDone(e) {
       <p class="lead">Recorriste los ${EVENT_PLANETS} planetas y ganaste los ${EVENT_LEVELS} niveles. Todos los premios ya son tuyos.</p>
       ${pcHere ? `${evPostcardHTML(pcHere, 'mini ev-done-pc')}<p class="note">Su postal ya está en tu álbum, en <b>Eventos</b>.</p>` : '<p class="note">El próximo evento trae una temática nueva. ¡Te esperamos!</p>'}`,
     // Un solo botón: se sale del evento y vuelves a tu mapa, donde ibas.
-    buttons: [{ label: 'Finalizar', cls: `wide ev-go ev-go-${e.key || 'muertos'}`, onClick: () => showMap({ anim: 'down' }) }],
+    buttons: [{ label: 'Finalizar', cls: `wide ev-go ev-go-${e.key || 'muertos'}`, onClick: () => warp(() => showMap(), { out: true }) }],
   });
   if (!reduced()) setTimeout(() => { const r = m.el.querySelector('.ev-win')?.getBoundingClientRect(); if (r) sparkle({ x: r.left + r.width / 2, y: r.top + r.height / 2 }, 26); }, 700);
   // La postal llega girando y el sello del año cae encima.

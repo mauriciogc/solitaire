@@ -62,6 +62,9 @@ export const ITEMS = {
     { k: 'reymago', name: 'Rey Mago', text: 'Con su corona y su capa', ev: 'reyes', mes: 1 },
     { k: 'cupido', name: 'Cupido', text: 'Con sus alitas', ev: 'amor', mes: 1 },
     { k: 'catarina', name: 'Catarina', text: 'Con sus puntitos', ev: 'primavera', mes: 1 },
+    { k: 'foca', name: 'Foca playera', text: 'Con sus lentes de sol', ev: 'verano', mes: 1 },
+    { k: 'chihuahua', name: 'Chihuahua charro', text: 'Con su sombrero y su sarape', ev: 'patrias', mes: 1 },
+    { k: 'gatobruja', name: 'Gato brujo', text: 'Con su sombrero de bruja', ev: 'halloween', mes: 1 },
   ],
   ring: [
     { k: 'sencillo', name: 'Sencillo', price: 0 },
@@ -80,6 +83,9 @@ export const ITEMS = {
     { k: 'corona', name: 'Corona real', ev: 'reyes', mes: 1 },
     { k: 'cupido', name: 'Flecha de Cupido', ev: 'amor', mes: 1 },
     { k: 'mariposas', name: 'Mariposas', ev: 'primavera', mes: 1 },
+    { k: 'salvavidas', name: 'Salvavidas', ev: 'verano', mes: 1 },
+    { k: 'tricolor', name: 'Listón tricolor', ev: 'patrias', mes: 1 },
+    { k: 'telarana', name: 'Telaraña', ev: 'halloween', mes: 1 },
   ],
   title: [
     { k: 'novato', name: 'Novato', price: 0 },
@@ -98,6 +104,9 @@ export const ITEMS = {
     { k: 'buscador', name: 'Buscador de la Estrella', ev: 'reyes', mes: 1 },
     { k: 'flechazo', name: 'Cupido', ev: 'amor', mes: 1 },
     { k: 'jardinero', name: 'Jardinero de primavera', ev: 'primavera', mes: 1 },
+    { k: 'olas', name: 'Rey de las olas', ev: 'verano', mes: 1 },
+    { k: 'mariachi', name: 'Mariachi', ev: 'patrias', mes: 1 },
+    { k: 'hechicero', name: 'Hechicero', ev: 'halloween', mes: 1 },
   ],
   back: [
     { k: 'clasico', name: 'Clásico', price: 0 },
@@ -125,6 +134,9 @@ export const ITEMS = {
     { k: 'rosca', name: 'Rosca de Reyes', ev: 'reyes', mes: 1 },
     { k: 'cartas', name: 'Carta de amor', ev: 'amor', mes: 1 },
     { k: 'tulipanes', name: 'Tulipanes', ev: 'primavera', mes: 1 },
+    { k: 'sandias', name: 'Sandía de playa', ev: 'verano', mes: 1 },
+    { k: 'vivamexico', name: '¡Viva México!', ev: 'patrias', mes: 1 },
+    { k: 'calabazas', name: 'Calabazas', ev: 'halloween', mes: 1 },
   ],
   face: [
     { k: 'clasica', name: 'Clásica', price: 0 },
@@ -164,6 +176,9 @@ export const ITEMS = {
     { k: 'camello', name: 'Camello', text: 'Carga los regalos de los Reyes', ev: 'reyes', mes: 1 },
     { k: 'alado', name: 'Corazón', text: 'Flota y late', ev: 'amor', mes: 1 },
     { k: 'mariposa', name: 'Mariposa', text: 'Revolotea con sus alas', ev: 'primavera', mes: 1 },
+    { k: 'patito', name: 'Patito inflable', text: 'Flota meciéndose en las olas', ev: 'verano', mes: 1 },
+    { k: 'sombrero', name: 'Sombrero de charro', text: 'Vuela girando como platillo', ev: 'patrias', mes: 1 },
+    { k: 'escoba', name: 'Escoba voladora', text: 'Deja chispitas al volar', ev: 'halloween', mes: 1 },
   ],
   space: [
     { k: 'nebulosa', name: 'Nebulosa', price: 0 },
@@ -180,6 +195,9 @@ export const ITEMS = {
     { k: 'oriente', name: 'Estrella de Oriente', ev: 'reyes', mes: 1 },
     { k: 'corazones', name: 'Cielo de corazones', ev: 'amor', mes: 1 },
     { k: 'petalos', name: 'Lluvia de pétalos', ev: 'primavera', mes: 1 },
+    { k: 'playa', name: 'Atardecer en la playa', ev: 'verano', mes: 1 },
+    { k: 'grito', name: 'Noche del Grito', ev: 'patrias', mes: 1 },
+    { k: 'embrujada', name: 'Noche embrujada', ev: 'halloween', mes: 1 },
   ],
   frame: [
     { k: 'simple', name: 'Sencillo', price: 0 },
@@ -196,6 +214,9 @@ export const ITEMS = {
     { k: 'reyes', name: 'Tesoro real', ev: 'reyes', mes: 1 },
     { k: 'amor', name: 'Encaje de corazones', ev: 'amor', mes: 1 },
     { k: 'primavera', name: 'Enredadera', ev: 'primavera', mes: 1 },
+    { k: 'verano', name: 'Toalla de playa', ev: 'verano', mes: 1 },
+    { k: 'patrias', name: 'Sarape', ev: 'patrias', mes: 1 },
+    { k: 'halloween', name: 'Dulce o truco', ev: 'halloween', mes: 1 },
   ],
 };
 
@@ -229,7 +250,7 @@ export function buy(sec, k) {
 }
 
 // Cada título se ve distinto: color, icono y forma (los más caros, más vistosos).
-const TITLE_ICO = { novato: 'star', explorador: 'flag', cazacometas: 'rocket', maestro: 'trophy', viajero: 'planet', bombas: 'bomb', leyenda: 'crown', buscaconchas: 'concha', cazagemas: 'gema', guardabosques: 'bellota', golosito: 'caramelo', catrin: 'calavera', duende: 'esfera', buscador: 'rosca', flechazo: 'corazon', jardinero: 'tulipan' };
+const TITLE_ICO = { novato: 'star', explorador: 'flag', cazacometas: 'rocket', maestro: 'trophy', viajero: 'planet', bombas: 'bomb', leyenda: 'crown', buscaconchas: 'concha', cazagemas: 'gema', guardabosques: 'bellota', golosito: 'caramelo', catrin: 'calavera', duende: 'esfera', buscador: 'rosca', flechazo: 'corazon', jardinero: 'tulipan', olas: 'sol', mariachi: 'sombrero', hechicero: 'calabaza' };
 export const titleName = (k = equipped('title')) => item('title', k).name;
 export const titleHTML = (k = equipped('title'), cls = '', tag = 'span', attrs = '') =>
   `<${tag} class="title-chip t-${k} ${cls}" ${attrs}>${icon(TITLE_ICO[k] || 'star')}<span>${titleName(k)}</span></${tag}>`;

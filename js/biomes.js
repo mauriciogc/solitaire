@@ -74,6 +74,27 @@ export const EVENT_BIOMES = {
     // [agua, dorado desde, cuántas palmeras]
     [[0.42, 0.62, 0.9], [0.36, 0.57, 1.1], [0.32, 0.53, 0.8], [0.38, 0.5, 1.2], [0.28, 0.46, 1]],
   ),
+  // Verano: islas de playa con palmeras y mar turquesa; el verde de la selva sube en cada planeta.
+  verano: sameLook(
+    { emblem: ['#38c2dd', '#1f8fc8', '#f6d98e'], colors: [['#1f8fc8', '#38c2dd', '#fff1c9', '#f6d98e', '#6fc25a', '#4fa84a']],
+      planet: { amp: 0.13, freq: 1.6, seed: 113, outline: 0x14365a, glow: 0x8fe8ff, prop: 'palm', path: '#fff3d6' } },
+    // [agua, verde desde, cuántas palmeras]
+    [[0.46, 0.62, 0.9], [0.4, 0.58, 1.1], [0.5, 0.6, 0.8], [0.42, 0.54, 1.2], [0.36, 0.5, 1.1]],
+  ),
+  // Fiestas Patrias: campos verdes con nopales, montañas rojas y cumbres blancas (los tres colores); el rojo sube en cada planeta.
+  patrias: sameLook(
+    { emblem: ['#47c27a', '#2f9e5c', '#e8434f'], colors: [['#2f86c8', '#4fb6e0', '#fff1c9', '#4fae4a', '#e8434f', '#fff6ee']],
+      planet: { amp: 0.15, freq: 1.8, seed: 127, outline: 0x1f3a1a, glow: 0xb8f0a0, prop: 'cactus', path: '#fff3d6' } },
+    // [agua, rojo desde, cuántos nopales]
+    [[0.46, 0.64, 0.7], [0.42, 0.62, 0.9], [0.5, 0.64, 0.6], [0.44, 0.58, 1], [0.4, 0.55, 0.9]],
+  ),
+  // Halloween: mares morados, huertos de calabaza naranjas y árboles otoñales; el naranja sube en cada planeta.
+  halloween: sameLook(
+    { emblem: ['#5a2f9a', '#3a1a6a', '#ff8a1a'], colors: [['#3a1a6a', '#6a3fb0', '#c9b0e8', '#4a6a3a', '#ff8a1a', '#ffb13d']],
+      planet: { amp: 0.14, freq: 1.8, seed: 139, outline: 0x1a0a2a, glow: 0xb36bff, prop: 'round', crown: '#ff6a1a', path: '#f0e0ff' } },
+    // [agua, naranja desde, cuántos árboles]
+    [[0.44, 0.6, 1], [0.38, 0.56, 1.2], [0.48, 0.6, 0.9], [0.42, 0.52, 1.3], [0.36, 0.48, 1.4]],
+  ),
 };
 // Planetas guardados para los mundos normales (aún sin lugar asignado): papel picado, velas, alebrijes y Mictlán.
 export const SPARE_BIOMES = {
@@ -196,6 +217,38 @@ function mantelPrimaveraTile() {
   for (const [x, y, c] of [[30, 30, '#ff7ab8'], [150, 110, '#ffc83d'], [90, 190, '#b36bff'], [210, 30, '#fff']]) s += `<g opacity=".8">${[0, 72, 144, 216, 288].map((a) => `<ellipse cx="${x}" cy="${y - 5}" rx="3.4" ry="5" fill="${c}" transform="rotate(${a} ${x} ${y})"/>`).join('')}<circle cx="${x}" cy="${y}" r="2.6" fill="#ff9c1a"/></g>`;
   return { url: enc(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">${s}</svg>`), w: W, h: H };
 }
+// Mantel de Verano: toalla de playa a rayas turquesa, blanco, amarillo y coral.
+function mantelVeranoTile() {
+  const W = 240, H = 240, cols = ['#1f9fc8', '#fff6e6', '#ffc83d', '#fff6e6', '#ff7a6a', '#fff6e6'];
+  let s = '';
+  for (let i = 0; i < 6; i++) s += `<rect x="${i * 40}" width="40" height="${H}" fill="${cols[i]}" opacity="${i % 2 ? 0.9 : 1}"/>`;
+  s += `<rect width="${W}" height="${H}" fill="#0a3a5a" opacity=".35"/>`;
+  for (let i = 0; i < 6; i++) s += `<path d="M${i * 40 + 20} 0v${H}" stroke="#fff" stroke-width="2" stroke-dasharray="3 9" opacity=".25"/>`;
+  return { url: enc(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">${s}</svg>`), w: W, h: H };
+}
+// Mantel de Fiestas Patrias: sarape de rayas de colores con líneas finas y una franja de rombos.
+function mantelPatriasTile() {
+  const W = 120, H = 240, bands = [['#e8438f', 34], ['#ff9c1a', 16], ['#ffc83d', 10], ['#2f9e5c', 30], ['#fff6e6', 6], ['#1fa6c9', 22], ['#7b2fbf', 14], ['#e8434f', 40], ['#ffc83d', 8], ['#2f9e5c', 18], ['#fff6e6', 6], ['#ff9c1a', 46]];
+  let s = '', y = 0;
+  for (const [c, h] of bands) (s += `<rect y="${y}" width="${W}" height="${h}" fill="${c}"/><rect y="${y + h - 1.5}" width="${W}" height="1.5" fill="#2a1f5c" opacity=".35"/>`), (y += h);
+  for (let x = 0; x < W; x += 20) s += `<path d="M${x} 109l10-8 10 8-10 8z" fill="#fff6e6" opacity=".7"/>`;
+  s += `<rect width="${W}" height="${H}" fill="#1a0a20" opacity=".35"/>`;
+  return { url: enc(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">${s}</svg>`), w: W, h: H };
+}
+// Mantel de Halloween: morado oscuro con telarañas en las esquinas y estrellitas naranjas.
+function mantelHalloweenTile() {
+  const W = 240, H = 240;
+  let s = `<rect width="${W}" height="${H}" fill="#2a1640"/>`;
+  const web = (x, y, a0) => {
+    let d = '';
+    for (let i = 0; i <= 4; i++) { const a = ((a0 + i * 22.5) * Math.PI) / 180; d += `M${x} ${y}L${(x + Math.cos(a) * 70).toFixed(1)} ${(y + Math.sin(a) * 70).toFixed(1)}`; }
+    for (const r of [22, 40, 58]) for (let i = 0; i < 4; i++) { const a = ((a0 + i * 22.5) * Math.PI) / 180, b = ((a0 + (i + 1) * 22.5) * Math.PI) / 180, m = (a + b) / 2; d += `M${(x + Math.cos(a) * r).toFixed(1)} ${(y + Math.sin(a) * r).toFixed(1)}Q${(x + Math.cos(m) * r * 0.86).toFixed(1)} ${(y + Math.sin(m) * r * 0.86).toFixed(1)} ${(x + Math.cos(b) * r).toFixed(1)} ${(y + Math.sin(b) * r).toFixed(1)}`; }
+    return `<path d="${d}" fill="none" stroke="#7a5aaa" stroke-width="1.6" opacity=".55"/>`;
+  };
+  s += web(0, 0, 0) + web(240, 240, 180) + web(240, 0, 90);
+  for (const [x, y] of [[60, 150], [150, 70], [190, 180], [100, 220], [30, 90]]) s += `<path d="${starPath(x, y, 4, 1.8)}" fill="#ff8a1a" opacity=".5"/>`;
+  return { url: enc(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">${s}</svg>`), w: W, h: H };
+}
 const TILE_CACHE = {};
 function tableTile(key) {
   if (TILE_CACHE[key]) return TILE_CACHE[key];
@@ -253,6 +306,23 @@ const P = {
   crown: () => `<g ${T(0, 0, -10)}>${drop(circ(30))}<g transform="translate(-40 -44) scale(2.5)">${icon('crown').replace(/^<svg[^>]*>|<\/svg>$/g, '')}</g></g>`,
   goldstars: () => [[-16, -14, 20], [18, 8, 14], [-6, 24, 10]].map(([x, y, r]) => `<g ${T(x, y, x)}>${drop(starPath(0, 0, r, r * 0.45), 3, 4)}${tt(starPath(0, 0, r, r * 0.45), '#ffc83d', '#ec9a17', '', 2.2)}</g>`).join(''),
   plane: () => `<g ${T(0, 0, -20)}>${drop('M-36 0 36 -20 10 20z')}${tt('M-36 0 36 -20 4 4z', '#fffaf0', '#e8e0d0')}${tt('M4 4 36 -20 10 20z', '#ece4d4', '#d8cfbd')}</g>`,
+  // Verano: pelota de playa, lentes de sol y rebanadas de sandía.
+  beachball: () => `${drop(circ(40))}${tt(circ(40), '#fff6ee', '#e3d8c4', ['#e8434f', '#3fa0e0', '#ffc83d'].map((c, i) => { const a = (i * 120 * Math.PI) / 180, b = a + Math.PI / 3; return `<path d="M0 0L${(Math.cos(a) * 44).toFixed(1)} ${(Math.sin(a) * 44).toFixed(1)}A44 44 0 0 1 ${(Math.cos(b) * 44).toFixed(1)} ${(Math.sin(b) * 44).toFixed(1)}z" fill="${c}"/>`; }).join('') + `<circle r="7" fill="#fff6ee" stroke="${K}" stroke-width="2.2"/><ellipse cx="-16" cy="-20" rx="8" ry="4" fill="#fff" opacity=".6" transform="rotate(-35 -16 -20)"/>`)}`,
+  sunglasses: () => {
+    const lens = (x) => `M${x} -12h34a4 4 0 0 1 4 4v6a14 14 0 0 1-14 14h-14a14 14 0 0 1-14-14v-6a4 4 0 0 1 4-4z`;
+    return `<g ${T(0, 0, -14)}>${drop('M-48 -14h96v32h-96z')}<path d="M-46 -8-58 -16M46 -8 58 -16" stroke="${K}" stroke-width="8" stroke-linecap="round"/><path d="M-46 -8-58 -16M46 -8 58 -16" stroke="#ff5f7e" stroke-width="3.6" stroke-linecap="round"/>`
+      + `<path d="M-6 -6q6-7 12 0" fill="none" stroke="${K}" stroke-width="8" stroke-linecap="round"/><path d="M-6 -6q6-7 12 0" fill="none" stroke="#ff5f7e" stroke-width="3.6" stroke-linecap="round"/>`
+      + [-42, 8].map((x) => `<path d="${lens(x)}" fill="none" stroke="${K}" stroke-width="12"/><path d="${lens(x)}" fill="none" stroke="#ff5f7e" stroke-width="6"/>${tt(lens(x), '#3a3550', '#2a2540', `<path d="M${x + 6} -6l10 10" stroke="#7fe0ff" stroke-width="4" stroke-linecap="round" opacity=".8"/>`, 2)}`).join('') + '</g>';
+  },
+  watermelons: () => [[-14, -6, -20, 2.3], [18, 18, 24, 1.8]].map(([x, y, a, k]) => `<g ${T(x, y, a)}><g transform="translate(${-16 * k} ${-16 * k}) scale(${k})">${icon('sandia').replace(/^<svg[^>]*>|<\/svg>$/g, '')}</g></g>`).join(''),
+  // Fiestas Patrias: sombrero de charro (visto desde arriba), chiles y maracas.
+  charro: () => `${drop(circ(60))}${tt(circ(60), '#f2d38a', '#d9b060', `<circle r="53" fill="none" stroke="#e8434f" stroke-width="4"/><circle r="47" fill="none" stroke="#2f9e5c" stroke-width="2.4" stroke-dasharray="5 5"/>`)}${tt(circ(28), '#f2d38a', '#d9b060', `<circle r="28" fill="none" stroke="#e8434f" stroke-width="7"/>${[0, 72, 144, 216, 288].map((a) => `<circle cx="${(Math.cos((a * Math.PI) / 180) * 28).toFixed(1)}" cy="${(Math.sin((a * Math.PI) / 180) * 28).toFixed(1)}" r="2.4" fill="#ffd27a"/>`).join('')}<ellipse cx="-8" cy="-10" rx="7" ry="4" fill="#fff" opacity=".35" transform="rotate(-30 -8 -10)"/>`)}`,
+  chiles: () => [[-12, -8, -30, 2.3, false], [16, 14, 40, 2, true]].map(([x, y, a, k, green]) => `<g ${T(x, y, a)}><g transform="translate(${-16 * k} ${-16 * k}) scale(${k})">${(green ? icon('chile').replace(/#e8434f/g, '#5fbf5a').replace(/#c22c3c/g, '#3f9a46').replace(/#ff9aa2/g, '#b8f0a0') : icon('chile')).replace(/^<svg[^>]*>|<\/svg>$/g, '')}</g></g>`).join(''),
+  maracas: () => [[-14, -4, -30, '#e8434f', '#c22c3c'], [16, 8, 30, '#2f9e5c', '#1f7a42']].map(([x, y, a, c, d]) => `<g ${T(x, y, a)}>${drop('M-5 10h10v34h-10zM0 -24a18 18 0 1 1 0 36a18 18 0 1 1 0-36z', 4, 6)}${tt('M-4.5 10h9v32a4.5 4.5 0 0 1-9 0z', '#c9893a', '#a86a22', '', 2.2)}${tt(CIRCLE(0, -6, 18), c, d, `<path d="M-17 -10q17 8 34 0" stroke="#ffc83d" stroke-width="4" fill="none"/><path d="M-16 0q16 7 32 0" stroke="#fff6e6" stroke-width="3" fill="none"/><ellipse cx="-7" cy="-15" rx="5" ry="3" fill="#fff" opacity=".45" transform="rotate(-30 -7 -15)"/>`)}</g>`).join(''),
+  // Halloween: calabaza tallada, murciélagos y un caldero con poción.
+  pumpkin: () => `${drop(ELLd(0, 2, 48, 38))}<g transform="translate(-54 -62) scale(3.4)">${icon('calabaza').replace(/^<svg[^>]*>|<\/svg>$/g, '')}</g>`,
+  bats: () => [[-14, -10, -15, 2.2], [20, 18, 20, 1.6]].map(([x, y, a, k]) => `<g ${T(x, y, a)}><g transform="translate(${-16 * k} ${-16 * k}) scale(${k})">${icon('murcielago').replace(/#5a4a8a/g, '#a890d8').replace(/#3f3270/g, '#7a62b8').replace(/^<svg[^>]*>|<\/svg>$/g, '')}</g></g>`).join(''),
+  cauldron: () => `${drop(circ(40))}${tt(circ(40), '#3a3550', '#2a2540', `<path d="M-30 -26h60" stroke="#4a4466" stroke-width="3"/>`)}${tt(circ(29), '#6fd36a', '#3fae4a', [[-10, -8, 6], [8, 4, 8], [-4, 14, 4], [14, -12, 3.6]].map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r}" fill="#b8f0a0" stroke="${K}" stroke-width="1.8"/><circle cx="${x - r * 0.35}" cy="${y - r * 0.35}" r="${r * 0.3}" fill="#fff"/>`).join(''), 2.4)}`,
 };
 // Objetos por tipo de mundo: [arriba-izquierda, arriba-derecha, abajo-izquierda]; abajo-derecha siempre es la canica con el planeta.
 const PROPS = {
@@ -279,6 +349,9 @@ const EVENT_TABLES = {
   amor: { tile: mantelAmorTile, tint: '#1a0410', props: ['roses', 'letter', ['mug', ['#ff7ab8', '#e8559a', '#ffc2dc']], 'chocobox'] },
   reyes: { tile: mantelReyesTile, tint: '#0e0620', props: ['rosca', 'crown', ['mug', ['#8a5cf0', '#6c3fd4', '#b9a6ff']], 'goldstars'] },
   navidad: { tile: mantelNavidadTile, tint: '#1a0408', props: ['ornaments', 'candycanes', ['mug', ['#e8434f', '#c22c3c', '#ff8a94']], 'cookies'] },
+  verano: { tile: mantelVeranoTile, tint: '#04202e', props: ['beachball', 'sunglasses', ['mug', ['#38c2dd', '#1f8fc8', '#8fe8ff']], 'watermelons'] },
+  patrias: { tile: mantelPatriasTile, tint: '#140814', props: ['charro', 'chiles', ['mug', ['#e8434f', '#c22c3c', '#ff9aa2']], 'maracas'] },
+  halloween: { tile: mantelHalloweenTile, tint: '#0e0618', props: ['pumpkin', 'bats', ['mug', ['#6fd36a', '#3fae4a', '#b8f0a0']], 'cauldron'] },
 };
 // HTML del fondo de la mesa para el mundo w (o la del evento del mes: theme = su clave).
 export function tableHTML(w, theme) {
