@@ -56,6 +56,8 @@ export const ITEMS = {
     { k: 'topo', name: 'Topacio', text: 'Topo minero', ev: 'gemas' },
     { k: 'ardilla', name: 'Avellana', text: 'Ardilla', ev: 'bosque' },
     { k: 'osito', name: 'Gomi', text: 'Osito de gomita', ev: 'dulces' },
+    { k: 'triceratops', name: 'Trici', text: 'Triceratops', ev: 'dinos' },
+    { k: 'robodog', name: 'Rufo', text: 'Perro robot', ev: 'robots' },
     // Exclusivos del evento del mes (mes: la temática que lo da).
     { k: 'xolo', name: 'Xólotl', text: 'Xoloitzcuintle', ev: 'muertos', mes: 1 },
     { k: 'reno', name: 'Reno', text: 'Con su nariz roja', ev: 'navidad', mes: 1 },
@@ -78,6 +80,8 @@ export const ITEMS = {
     { k: 'gemas', name: 'Gemas', ev: 'gemas' },
     { k: 'hojas', name: 'Hojas', ev: 'bosque' },
     { k: 'caramelos', name: 'Caramelos', ev: 'dulces' },
+    { k: 'huesitos', name: 'Huesitos', ev: 'dinos' },
+    { k: 'tuercas', name: 'Tuercas', ev: 'robots' },
     { k: 'cempasuchil', name: 'Cempasúchil', ev: 'muertos', mes: 1 },
     { k: 'acebo', name: 'Acebo', ev: 'navidad', mes: 1 },
     { k: 'corona', name: 'Corona real', ev: 'reyes', mes: 1 },
@@ -99,6 +103,8 @@ export const ITEMS = {
     { k: 'cazagemas', name: 'Cazador de gemas', ev: 'gemas' },
     { k: 'guardabosques', name: 'Guardián del bosque', ev: 'bosque' },
     { k: 'golosito', name: 'Amo de los dulces', ev: 'dulces' },
+    { k: 'paleontologo', name: 'Paleontólogo', ev: 'dinos' },
+    { k: 'inventor', name: 'Inventor', ev: 'robots' },
     { k: 'catrin', name: 'Catrín del Mictlán', ev: 'muertos', mes: 1 },
     { k: 'duende', name: 'Duende del Polo Norte', ev: 'navidad', mes: 1 },
     { k: 'buscador', name: 'Buscador de la Estrella', ev: 'reyes', mes: 1 },
@@ -129,6 +135,8 @@ export const ITEMS = {
     { k: 'cristales', name: 'Cristales', ev: 'gemas' },
     { k: 'hojas', name: 'Hojas', ev: 'bosque' },
     { k: 'caramelos', name: 'Caramelos', ev: 'dulces' },
+    { k: 'huellas', name: 'Huellas de dino', ev: 'dinos' },
+    { k: 'circuitos', name: 'Circuitos', ev: 'robots' },
     { k: 'calaverita', name: 'Calaverita', ev: 'muertos', mes: 1 },
     { k: 'esferas', name: 'Esferas', ev: 'navidad', mes: 1 },
     { k: 'rosca', name: 'Rosca de Reyes', ev: 'reyes', mes: 1 },
@@ -171,6 +179,8 @@ export const ITEMS = {
     { k: 'cristal', name: 'Cristal', text: 'Gira con sus gemas', ev: 'gemas' },
     { k: 'hoja', name: 'Hoja viajera', text: 'Se mece con su mariquita', ev: 'bosque' },
     { k: 'paleta', name: 'Paleta', text: 'Da vueltas de colores', ev: 'dulces' },
+    { k: 'ptero', name: 'Pterodáctilo', text: 'Aletea con sus alas de piel', ev: 'dinos' },
+    { k: 'robotin', name: 'Robot volador', text: 'Vuela con su hélice y saluda', ev: 'robots' },
     { k: 'alebrije', name: 'Alebrije', text: 'Vuela con sus alas de colores', ev: 'muertos', mes: 1 },
     { k: 'trineo', name: 'Trineo', text: 'Lleva su costal de regalos', ev: 'navidad', mes: 1 },
     { k: 'camello', name: 'Camello', text: 'Carga los regalos de los Reyes', ev: 'reyes', mes: 1 },
@@ -190,6 +200,8 @@ export const ITEMS = {
     { k: 'cueva', name: 'Cueva de cristal', ev: 'gemas' },
     { k: 'bosque', name: 'Bosque nocturno', ev: 'bosque' },
     { k: 'algodon', name: 'Algodón de azúcar', ev: 'dulces' },
+    { k: 'volcan', name: 'Noche de volcanes', ev: 'dinos' },
+    { k: 'taller', name: 'Taller de chispas', ev: 'robots' },
     { k: 'ofrenda', name: 'Noche de ofrenda', ev: 'muertos', mes: 1 },
     { k: 'nevada', name: 'Noche nevada', ev: 'navidad', mes: 1 },
     { k: 'oriente', name: 'Estrella de Oriente', ev: 'reyes', mes: 1 },
@@ -209,6 +221,8 @@ export const ITEMS = {
     { k: 'gemas', name: 'Gemas', ev: 'gemas' },
     { k: 'bosque', name: 'Bosque', ev: 'bosque' },
     { k: 'dulces', name: 'Dulces', ev: 'dulces' },
+    { k: 'dinos', name: 'Dinosaurios', ev: 'dinos' },
+    { k: 'robots', name: 'Taller', ev: 'robots' },
     { k: 'muertos', name: 'Papel picado', ev: 'muertos', mes: 1 },
     { k: 'navidad', name: 'Bastón de caramelo', ev: 'navidad', mes: 1 },
     { k: 'reyes', name: 'Tesoro real', ev: 'reyes', mes: 1 },
@@ -250,7 +264,7 @@ export function buy(sec, k) {
 }
 
 // Cada título se ve distinto: color, icono y forma (los más caros, más vistosos).
-const TITLE_ICO = { novato: 'star', explorador: 'flag', cazacometas: 'rocket', maestro: 'trophy', viajero: 'planet', bombas: 'bomb', leyenda: 'crown', buscaconchas: 'concha', cazagemas: 'gema', guardabosques: 'bellota', golosito: 'caramelo', catrin: 'calavera', duende: 'esfera', buscador: 'rosca', flechazo: 'corazon', jardinero: 'tulipan', olas: 'sol', mariachi: 'sombrero', hechicero: 'calabaza' };
+const TITLE_ICO = { novato: 'star', explorador: 'flag', cazacometas: 'rocket', maestro: 'trophy', viajero: 'planet', bombas: 'bomb', leyenda: 'crown', buscaconchas: 'concha', cazagemas: 'gema', guardabosques: 'bellota', golosito: 'caramelo', paleontologo: 'fosil', inventor: 'tuerca', catrin: 'calavera', duende: 'esfera', buscador: 'rosca', flechazo: 'corazon', jardinero: 'tulipan', olas: 'sol', mariachi: 'sombrero', hechicero: 'calabaza' };
 export const titleName = (k = equipped('title')) => item('title', k).name;
 export const titleHTML = (k = equipped('title'), cls = '', tag = 'span', attrs = '') =>
   `<${tag} class="title-chip t-${k} ${cls}" ${attrs}>${icon(TITLE_ICO[k] || 'star')}<span>${titleName(k)}</span></${tag}>`;

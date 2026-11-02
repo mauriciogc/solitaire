@@ -258,6 +258,73 @@ const MODELS = {
     disc.position.y = 0.05; pop.add(disc); g.add(pop);
     return { obj: g, tick: (t) => { pop.rotation.y = t * 1.4; disc.rotation.z = -t * 2; pop.position.y = Math.sin(t * 2) * 0.05; pop.rotation.z = Math.sin(t * 1.3) * 0.12; } };
   },
+  // Pterodáctilo (Valle de los dinosaurios): cuerpo naranja, pico largo, cresta roja y alas de piel que aletean.
+  ptero(part) {
+    const g = new THREE.Group(), bird = new THREE.Group();
+    bird.add(part(new THREE.CapsuleGeometry(0.1, 0.26, 6, 12).rotateX(Math.PI / 2), '#ff9c5b', { ol: 0.08 }));
+    bird.add(part(new THREE.SphereGeometry(0.08, 12, 8).scale(1, 0.8, 1.6), '#ffd2a8', { y: -0.05, z: 0.04, ol: 0 }));
+    bird.add(part(new THREE.ConeGeometry(0.05, 0.3, 8).rotateX(-Math.PI / 2), '#ff9c5b', { z: -0.3, ol: 0.12 }));
+    const head = new THREE.Group();
+    head.add(part(new THREE.SphereGeometry(0.11, 16, 12), '#ff9c5b', { ol: 0.1 }));
+    head.add(part(new THREE.ConeGeometry(0.05, 0.3, 10).rotateX(Math.PI / 2), '#ffd23d', { z: 0.2, y: -0.02, ol: 0.12 }));
+    head.add(part(new THREE.ConeGeometry(0.045, 0.24, 8).rotateX(-1.05), '#e8434f', { y: 0.1, z: -0.1, ol: 0.12 }));
+    for (const x of [-0.065, 0.065]) {
+      head.add(part(new THREE.SphereGeometry(0.026, 10, 8), INK, { x, y: 0.035, z: 0.075, ol: 0 }));
+      head.add(part(new THREE.SphereGeometry(0.009, 6, 4), '#ffffff', { x: x - 0.006, y: 0.045, z: 0.1, ol: 0 }));
+    }
+    head.position.set(0, 0.08, 0.27);
+    bird.add(head);
+    const wings = [];
+    for (const sx of [-1, 1]) {
+      const sh = new THREE.Shape();
+      sh.moveTo(0, -0.1); sh.lineTo(sx * 0.62, 0.02); sh.quadraticCurveTo(sx * 0.3, 0.06, sx * 0.18, 0.2); sh.quadraticCurveTo(sx * 0.08, 0.1, 0, 0.14);
+      const geo = new THREE.ExtrudeGeometry(sh, { depth: 0.02, bevelEnabled: false }).rotateX(-Math.PI / 2);
+      const w = new THREE.Group();
+      w.add(part(geo, '#ffc08a', { ol: 0.04 }));
+      w.position.set(sx * 0.07, 0.02, 0.02); bird.add(w); wings.push([w, sx]);
+    }
+    bird.rotation.set(0.45, -0.5, 0);
+    g.add(bird);
+    return { obj: g, tick: (t) => {
+      const f = Math.sin(t * 5);
+      wings.forEach(([w, sx]) => (w.rotation.z = sx * f * 0.5));
+      bird.position.y = Math.sin(t * 2.5) * 0.05 - f * 0.03;
+      head.rotation.y = Math.sin(t * 1.1) * 0.3;
+    } };
+  },
+  // Robot volador (Taller de robots): cuerpo de metal, pantalla con ojos de luz, hélice en la cabeza y bracitos que saludan.
+  robotin(part) {
+    const g = new THREE.Group(), bot = new THREE.Group();
+    bot.add(part(new THREE.BoxGeometry(0.42, 0.36, 0.34), '#c9d2ea', { ol: 0.06 }));
+    bot.add(part(new THREE.BoxGeometry(0.32, 0.2, 0.02), '#24305e', { z: 0.175, y: 0.02, ol: 0 }));
+    const eyes = [];
+    for (const x of [-0.07, 0.07]) { const m = new THREE.Mesh(new THREE.SphereGeometry(0.035, 10, 8), glow('#5ff0ff', 1)); m.position.set(x, 0.03, 0.19); bot.add(m); eyes.push(m); }
+    bot.add(part(new THREE.CylinderGeometry(0.06, 0.06, 0.03, 12).rotateX(Math.PI / 2), '#ff9c5b', { y: -0.12, z: 0.175, ol: 0.15 }));
+    bot.add(part(new THREE.CylinderGeometry(0.02, 0.02, 0.12, 8), '#7f8ab8', { y: 0.24, ol: 0.2 }));
+    const prop = new THREE.Group();
+    for (const a of [0, Math.PI]) prop.add(part(new THREE.BoxGeometry(0.36, 0.015, 0.07), '#ff5f7e', { x: Math.cos(a) * 0.18, ry: a, ol: 0.12 }));
+    prop.add(part(new THREE.SphereGeometry(0.035, 10, 8), '#ffc83d', { ol: 0.15 }));
+    prop.position.y = 0.31; bot.add(prop);
+    const arms = [];
+    for (const sx of [-1, 1]) {
+      const arm = new THREE.Group();
+      arm.add(part(new THREE.CylinderGeometry(0.025, 0.025, 0.2, 8), '#7f8ab8', { y: -0.1, ol: 0.15 }));
+      arm.add(part(new THREE.SphereGeometry(0.05, 10, 8), '#ff9c5b', { y: -0.21, ol: 0.12 }));
+      arm.position.set(sx * 0.23, 0.06, 0); bot.add(arm); arms.push([arm, sx]);
+    }
+    bot.add(part(new THREE.ConeGeometry(0.1, 0.14, 12).rotateX(Math.PI), '#9aa7cf', { y: -0.24, ol: 0.1 }));
+    const flame = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.16, 10).rotateX(Math.PI), glow('#ffc83d', 0.9));
+    flame.position.y = -0.38; bot.add(flame);
+    bot.rotation.set(0.25, -0.45, 0);
+    g.add(bot);
+    return { obj: g, tick: (t) => {
+      prop.rotation.y = t * 14;
+      arms.forEach(([a, sx]) => (a.rotation.z = sx * (0.35 + (sx > 0 ? Math.max(0, Math.sin(t * 3)) * 1.6 : 0.15))));
+      bot.position.y = Math.sin(t * 2.2) * 0.05; bot.rotation.z = Math.sin(t * 1.6) * 0.08;
+      flame.scale.y = 0.8 + Math.sin(t * 20) * 0.25;
+      const blink = (t % 3.2) < 0.12 ? 0.15 : 1; eyes.forEach((e) => (e.scale.y = blink));
+    } };
+  },
   // ---------- Exclusivos del evento del mes ----------
   // Alebrije (Día de Muertos): jaguar-dragón de colores con manchas, alas de mariposa y cola enroscada.
   alebrije(part) {

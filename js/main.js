@@ -1,5 +1,5 @@
 import { save, prefs, persist, resetProfile, renameProfile, exportCode, readCode, loadProfile, setDev } from './storage.js';
-import { UNLOCK, EVENTOS, isOn, nextEvent, daysToNextCol, RACHA_GOALS, racha, rachaTheme, rachaReady, rachaHot, rachaWin, rachaLose, rachaClaim, msToMidnight, col, colLeft, colWin, colOffers, colBuy, ev, evLeft, evTicketLeft, evPrize, evEnter, evWin, evLose, evAlbum, EVENT_PLANETS, EVENT_PER_PLANET, EVENT_LEVELS } from './events.js';
+import { UNLOCK, EVENTOS, isOn, nextEvent, daysToNextCol, plusCols, RACHA_GOALS, racha, rachaTheme, rachaReady, rachaHot, rachaWin, rachaLose, rachaClaim, msToMidnight, col, colLeft, colWin, colOffers, colBuy, ev, evLeft, evTicketLeft, evPrize, evEnter, evWin, evLose, evAlbum, EVENT_PLANETS, EVENT_PER_PLANET, EVENT_LEVELS } from './events.js';
 import { WORLD_COUNT, LEVELS_PER_WORLD, TOTAL_LEVELS, worldInfo, generateLevel, variantLevel, MECH_INTRO, MECH_NAMES, secretId, isSecret, eventLevel } from './levels.js';
 import { Game, faceHTML, backHTML } from './game.js';
 import { DAILY_PATH, dailyState, starsNeeded, TICKET_PRICE, ticketCost, ticketRefund, coinsFor, bossChest, openSurprise, SECRET_MULT, SECRET_PRIZE } from './economy.js';
@@ -1143,7 +1143,7 @@ function openCol() {
   };
   paint();
   if (!reduced()) [...grid.children].forEach((el, i) => el.animate([{ opacity: 0, translate: '0 16px', scale: 0.9 }, { opacity: 1, translate: '0 0', scale: 1 }], { duration: 360, delay: 120 + i * 50, easing: 'cubic-bezier(0.34, 1.45, 0.64, 1)', fill: 'backwards' }));
-  helpTip(m, `Cada estrella nueva que ganas en un nivel te da 1 ${c.token}. Cámbialas aquí antes de que acabe el domingo: las que sobren se pierden. Lo exclusivo es tuyo para siempre.`);
+  helpTip(m, `Cada estrella nueva que ganas en un nivel te da 1 ${c.one || c.token}. Cámbia${c.m ? 'los' : 'las'} aquí antes de que acabe el domingo: las que sobren se pierden. Lo exclusivo es tuyo para siempre.`);
   grid.addEventListener('click', async (e) => {
     const el = e.target.closest('.coffer');
     if (!el) return;
@@ -1533,7 +1533,7 @@ async function calm(gen) {
 async function notices() {
   const gen = ++noticeGen;
   if (tourStep() || save.onboard !== 'done') return;
-  for (const k of ['racha', 'col', 'mes']) {
+  for (const k of ['racha', 'col', 'mes', 'col2']) {
     if (!isOn(k) || save.intro?.[k]) continue;
     if (!(await calm(gen))) return;
     await openUnlock(k);
@@ -1580,6 +1580,19 @@ const UNLOCK_INFO = {
       ],
     };
   },
+  // Nivel 100: se suman las colecciones nuevas y hay colección 3 semanas al mes.
+  col2: () => {
+    const c = col(), days = daysToNextCol(), nuevas = plusCols(), n = nuevas.length;
+    return {
+      title: n === 1 ? '¡Una colección nueva!' : `¡${n} colecciones nuevas!`, ico: nuevas[0].token, color: nuevas[0].color, hero: nuevas.map((x) => icon(x.token)).join(''),
+      lead: `Llegaste al <b>nivel ${UNLOCK.col2}</b>: ${n === 1 ? 'se suma una colección nueva' : `se suman ${n} colecciones nuevas`} y ahora hay colección <b>3 semanas al mes</b>.`,
+      rules: [
+        ...nuevas.map((x) => [x.token, `<b>${x.name}</b>: junta <b>${x.tokens}</b> y gana sus exclusivos.`]),
+        ['star', 'Se turnan con las de siempre: <b>conchas, gemas, bellotas y caramelos</b>.'],
+        ['gift', c ? 'Hay una ahora mismo: búscala a la <b>derecha</b>.' : `La próxima llega en <b>${days} ${days === 1 ? 'día' : 'días'}</b>.`],
+      ],
+    };
+  },
   mes: () => {
     const e = ev(), nx = !e && nextEvent();
     return {
@@ -1595,13 +1608,14 @@ const UNLOCK_INFO = {
     };
   },
 };
+// Solo 3: el evento anterior, el de este mes (o el próximo) al centro y más grande, y el siguiente (en orden del año).
 function evHeroIcons(main) {
-  const all = Object.values(EVENTOS).filter((x) => x.ready).map((x) => x.ico), rest = all.filter((x) => x !== main);
-  const mid = Math.floor(rest.length / 2), list = main ? [...rest.slice(0, mid), main, ...rest.slice(mid)] : all;
-  return list.map((x) => icon(x, 0, 0, x === main ? 'main' : '')).join('');
+  const all = Object.keys(EVENTOS).map(Number).sort((a, b) => a - b).map((m) => EVENTOS[m]).filter((x) => x.ready).map((x) => x.ico);
+  const i = Math.max(0, all.indexOf(main)), at = (k) => all[(i + k + all.length) % all.length];
+  return [at(-1), at(0), at(1)].map((x, k) => icon(x, 0, 0, k === 1 ? 'main' : '')).join('');
 }
 async function openUnlock(k) {
-  const sel = `.side.r [data-a="${{ racha: 'racha', col: 'col', mes: 'evento' }[k]}"]`;
+  const sel = `.side.r [data-a="${{ racha: 'racha', col: 'col', mes: 'evento', col2: 'col' }[k]}"]`;
   const btn = document.querySelector(sel);
   revealed.add(k);
   if (btn) {
@@ -1654,11 +1668,11 @@ function openColIntro(c) {
       wide: true,
       cls: 'ev-intro col-intro',
       body: `<div class="evi-hero"><div class="rays"></div>${show.map((sec, i) => `<span class="ci-ex" style="--i:${i < 2 ? i - 2 : i - 1}">${shopPreview(sec, c.ex[sec])}</span>`).join('')}<span class="evi-ico">${icon(c.token, 0, 0, 'big')}</span></div>
-        <p class="lead">¡Llegó una colección! Junta <b>${c.tokens}</b> y cámbialas por premios <b>exclusivos</b>: avatar, reverso, marco, fondo, viajero y más.</p>
+        <p class="lead">¡Llegó una colección! Junta <b>${c.tokens}</b> y cámbia${c.m ? 'los' : 'las'} por premios <b>exclusivos</b>: avatar, reverso, marco, fondo, viajero y más.</p>
         <ul class="evi-rules">
-          <li>${icon('star')}<span>Cada <b>estrella nueva</b> que ganas te da <b>1 ${c.token}</b>.</span></li>
-          <li>${icon('bag')}<span>Cámbialas en su tienda: toca su botón a la <b>derecha</b>.</span></li>
-          <li>${icon('flag')}<span>Te quedan <b>${daysLeft(colLeft())}</b>: las ${c.tokens} que sobren se pierden.</span></li>
+          <li>${icon('star')}<span>Cada <b>estrella nueva</b> que ganas te da <b>1 ${c.one || c.token}</b>.</span></li>
+          <li>${icon('bag')}<span>Cámbia${c.m ? 'los' : 'las'} en su tienda: toca su botón a la <b>derecha</b>.</span></li>
+          <li>${icon('flag')}<span>Te quedan <b>${daysLeft(colLeft())}</b>: ${c.m ? 'los' : 'las'} ${c.tokens} que sobren se pierden.</span></li>
         </ul>`,
       buttons: [{ label: `${icon(c.token)}<span>¡A juntar!</span>`, cls: 'gold wide' }],
       onClose: () => {

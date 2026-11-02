@@ -108,6 +108,14 @@ const ICONS = {
     + `<path d="M16 7q0-3 3-4" stroke="${K}" stroke-width="2.6" fill="none" stroke-linecap="round"/>`,
   caramelo: () => tshape('M9.5 16 2.5 9.5v13z', '#ff9cc8', '#f27aad', '', 1.8) + tshape('M22.5 16l7-6.5v13z', '#ff9cc8', '#f27aad', '', 1.8)
     + tshape(CIRCLE(16, 16, 8), '#ff5f7e', '#d63d5f', '<path d="M10 11q6 3 3 12M15 8.5q6 4 4 14" stroke="#fff" stroke-width="2.2" fill="none" opacity=".85"/>'),
+  // Fósil (Valle de los dinosaurios): piedra con la huella de un dinosaurio.
+  fosil: () => tshape('M5 12.5C6 6 11.5 3.6 17 4.2c6 .6 10.6 4 10.8 10.4.2 6.6-3.4 12.6-11 13.2C9.6 28.4 3.8 21 5 12.5z', '#f0d4a0', '#d4b078',
+    `<path d="M16.4 24.6Q12.4 24 12.6 19.6L7.6 10.4Q7.6 8.6 9.4 9.4L14.6 15.4 15.4 6.2Q16.4 4.4 17.4 6.2L18.2 15.4 23.4 9.4Q25.2 8.6 25.2 10.4L20.2 19.6Q20.4 24 16.4 24.6z" fill="#a8622a"/>`
+    + `<g fill="#c98a4a"><circle cx="8.6" cy="22.4" r="1.1"/><circle cx="24.4" cy="22" r=".9"/><circle cx="23.4" cy="7.8" r=".8"/></g><path d="M8 9.6q2-3 5-3.8" stroke="#fff6e0" stroke-width="2" fill="none" stroke-linecap="round"/>`, 2.2),
+  // Tuerca (Taller de robots): hexágono de metal con su agujero y su rosca.
+  tuerca: () => tshape('M16 2.6 27.6 9.3V22.7L16 29.4 4.4 22.7V9.3z', '#c9d2ea', '#9aa7cf',
+    `<path d="M16 2.6V9.4M27.6 9.3 22 12.6M27.6 22.7 22 19.4M16 29.4V22.6M4.4 22.7 10 19.4M4.4 9.3 10 12.6" stroke="#aab4d8" stroke-width="1.4"/><path d="M8.4 9.4 15 5.6" stroke="#fff" stroke-width="2" stroke-linecap="round" opacity=".8"/>`, 2.2)
+    + `<circle cx="16" cy="16" r="6.4" fill="#5a6494" stroke="${K}" stroke-width="2"/><circle cx="16" cy="16" r="4.2" fill="none" stroke="#7f8ab8" stroke-width="1.4" stroke-dasharray="2 1.6"/><circle cx="16" cy="16" r="2.4" fill="#3a4270"/>`,
   // Estrella morada del nivel secreto (mismo dibujo que la dorada).
   starSecret: () => tshape(starPath(16, 17, 14, 6.6), '#b36bff', '#8a3fe0', `<path d="M10.5 13.5l2.2-3.6" stroke="#ecdcff" stroke-width="2.2" stroke-linecap="round"/>`),
   starOff: () => tshape(starPath(16, 17, 14, 6.6), '#ddd3c0', '#c7baa2'),
@@ -198,6 +206,9 @@ export const BACKS = {
   cristales: { a: '#5a3d99', b: '#47307d', dots: '#e3d8ff', art: () => `<g transform="translate(14 22) scale(1.1)">${ICONS.gema()}</g><g transform="translate(52 84) scale(1)">${ICONS.gema()}</g><g transform="translate(22 42) scale(1.75)">${ICONS.gema()}</g>` },
   hojas: { a: '#3f9a4a', b: '#2f7a3a', dots: '#d9f5c8', art: () => `${[[22, 30, -30], [78, 110, 150], [80, 34, 40]].map(([x, y, r]) => `<g transform="translate(${x} ${y}) rotate(${r})">${tshape('M0 -12Q10 0 0 12Q-10 0 0 -12z', '#8fd46a', '#5fb04a', '<path d="M0 -10V10" stroke="#3f8a3a" stroke-width="1.6"/>', 2)}</g>`).join('')}<g transform="translate(19 39) scale(1.95)">${ICONS.bellota()}</g>` },
   caramelos: { a: '#ffd6e8', b: '#ffbcd9', dots: '#ff7aa2', art: () => `<g transform="translate(12 18) rotate(-20 16 16) scale(.9)">${ICONS.caramelo()}</g><g transform="translate(58 96) rotate(25 16 16) scale(.8)">${ICONS.caramelo()}</g><g transform="translate(19 39) scale(1.95)">${ICONS.caramelo()}</g>` },
+  huellas: { a: '#e8853e', b: '#c9692a', dots: '#ffe0b8', art: () => `${[[22, 26, -20, 1], [78, 114, 160, 1.1], [80, 28, 20, 0.8], [22, 112, 200, 0.8]].map(([x, y, r, k]) => `<g transform="translate(${x} ${y}) rotate(${r}) scale(${k})" fill="#a8521c"><path d="M16.4 24.6Q12.4 24 12.6 19.6L7.6 10.4Q7.6 8.6 9.4 9.4L14.6 15.4 15.4 6.2Q16.4 4.4 17.4 6.2L18.2 15.4 23.4 9.4Q25.2 8.6 25.2 10.4L20.2 19.6Q20.4 24 16.4 24.6z" transform="translate(-16.4 -15)"/></g>`).join('')}<g transform="translate(14 36) scale(2.25)">${ICONS.fosil()}</g>` },
+  circuitos: { a: '#2d3f75', b: '#24335f', nodots: true, bg: () => `<g fill="none" stroke="#5ff0ff" stroke-width="2" opacity=".55" stroke-linejoin="round">${['M8 24H30L38 32V50', 'M92 30H70L62 22V8', 'M8 96H24L32 104V132', 'M92 110H74L66 118V132', 'M20 8V16H44', 'M80 132V122H56'].map((d) => `<path d="${d}"/>`).join('')}</g>${[[38, 50], [62, 8], [32, 104], [66, 118], [44, 16], [56, 122]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="3.2" fill="#2d3f75" stroke="#5ff0ff" stroke-width="2"/>`).join('')}${[[22, 40], [80, 56], [20, 76], [82, 90]].map(([x, y]) => `<rect x="${x - 7}" y="${y - 5}" width="14" height="10" rx="2" fill="#1d2a52" stroke="#7f8ab8" stroke-width="1.6"/>`).join('')}`,
+    art: () => `<g transform="translate(14 34) scale(2.25)">${ICONS.tuerca()}</g>` },
   // Exclusivos del evento del mes.
   calaverita: { a: '#7b2fbf', b: '#5e1f9a', dots: '#ffd27a', art: () => `${[[20, 26, 7], [80, 112, 8], [78, 28, 5], [24, 110, 5]].map(([x, y, r]) => marigold(x, y, r)).join('')}<g transform="translate(18 38) scale(2)">${ICONS.calavera()}</g>` },
   esferas: { a: '#c22c3c', b: '#a51f30', dots: '#ffd6d6', art: () => `${[[20, 26, 7], [80, 112, 8], [80, 26, 5.5], [22, 112, 5.5]].map(([x, y, r]) => flake(x, y, r, '#fff6e6', 1.6)).join('')}<path d="M8 30Q50 46 92 30" fill="none" stroke="#3f9a5a" stroke-width="5" stroke-linecap="round"/><g transform="translate(18 38) scale(2)">${ICONS.esfera()}</g>` },
@@ -380,6 +391,24 @@ export const AVATARS = {
     + P(ELL(50, 54, 29, 26), '#ff7a95', '#e8566f', '<ellipse cx="38" cy="40" rx="7" ry="4" fill="#fff" opacity=".45" transform="rotate(-25 38 40)"/>')
     + P(ELL(50, 64, 11, 8), '#ffb0c0', '#ff94a8') + eyes(51, 12, 4.4)
     + `<ellipse cx="50" cy="61" rx="3.6" ry="2.6" fill="${K}"/>` + smile(66, 5),
+  // Triceratops (Valle de los dinosaurios): cresta naranja con picos y manchas, dos cuernos, pico y cuerno en la nariz.
+  triceratops: () => shoulders('#5fb8d0', '#3f98b4')
+    + [[12, 50], [15, 32], [26, 18], [41, 11], [59, 11], [74, 18], [85, 32], [88, 50]].map(([x, y]) => P(CIRCLE(x, y, 6.5), '#ffa040', '#e8802a')).join('')
+    + P('M10 60Q6 16 50 12Q94 16 90 60Q70 50 50 50Q30 50 10 60z', '#ffa040', '#e8802a', `${[[19, 42], [28, 27], [50, 20], [72, 27], [81, 42]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="4" fill="#ffd23d"/>`).join('')}`)
+    + P(ELL(50, 60, 26, 23), '#6cc8de', '#4aa8c4', '<ellipse cx="36" cy="47" rx="6" ry="3.4" fill="#fff" opacity=".35" transform="rotate(-25 36 47)"/>')
+    + mirror(P('M33 44Q25 30 24 14Q36 27 43 40z', '#fff1d6', '#e8d2a8'))
+    + P('M38 67Q50 61 62 67Q61 79 50 86Q39 79 38 67z', '#8fd6e8', '#6cc0d6', `<circle cx="45.5" cy="70.5" r="1.7" fill="${K}"/><circle cx="54.5" cy="70.5" r="1.7" fill="${K}"/><path d="M45 76.5q5 3 10 0" fill="none" stroke="${K}" stroke-width="2.6" stroke-linecap="round"/>`)
+    + P('M45 66Q50 50 55 66z', '#fff1d6', '#e8d2a8', '', 3)
+    + eyes(54, 13, 4.6) + blush(65, 22),
+  // Perro robot (Taller de robots): cabeza de metal, orejas de antena, ojos de luz y collar con su tuerca.
+  robodog: () => shoulders('#9aa7cf', '#7884b0')
+    + P('M24 82Q50 92 76 82l2 7Q50 100 22 89z', '#ff9c5b', '#e2753a', `<g transform="translate(43.6 85.6) scale(.4)">${ICONS.tuerca()}</g>`)
+    + mirror(`<path d="M28 40 18 18" stroke="${K}" stroke-width="5" stroke-linecap="round"/><path d="M28 40 18 18" stroke="#c9d2ea" stroke-width="2" stroke-linecap="round"/>` + P(CIRCLE(17, 16, 5), '#ff5f7e', '#d63d5f'))
+    + mirror(`<g transform="rotate(14 20 52)">${P('M26 36Q10 38 12 64Q20 70 28 54z', '#7f8ab8', '#5f6a9a')}</g>`)
+    + P('M26 34h48a10 10 0 0 1 10 10v24a14 14 0 0 1-14 14H30a14 14 0 0 1-14-14V44a10 10 0 0 1 10-10z', '#d6dcf0', '#aab4d8', '<path d="M24 42h52" stroke="#aab4d8" stroke-width="2"/><circle cx="22" cy="40" r="1.6" fill="#7f8ab8"/><circle cx="78" cy="40" r="1.6" fill="#7f8ab8"/>')
+    + [-13, 13].map((x) => `<circle cx="${50 + x}" cy="54" r="7" fill="#24305e" stroke="${K}" stroke-width="2.4"/><circle cx="${50 + x}" cy="54" r="4" fill="#5ff0ff"/><circle cx="${50 + x - 1.4}" cy="52.4" r="1.4" fill="#fff"/>`).join('')
+    + P(ELL(50, 69, 12, 8), '#eef1fb', '#c9d2ea', `<ellipse cx="50" cy="66" rx="4.4" ry="3" fill="${K}"/><path d="M44 72q6 4 12 0" fill="none" stroke="${K}" stroke-width="2.4" stroke-linecap="round"/>`)
+    + blush(66, 25),
   // Exclusivo del evento: Día de Muertos.
   xolo: () => mirror(P('M26 46 16 10 42 30z', '#4a4560', '#36324a', '<path d="M25 37 21 18 35 30z" fill="#ff9cb0"/>'))
     + shoulders('#4a4560', '#36324a')
@@ -479,6 +508,14 @@ export const RINGS = {
   hojas: () => band(55, '#5fb04a', 5) + [-100, -30, 40, 110, 180, 250].map((d) => { const [x, y] = at(d, 56); return `<g transform="translate(${x} ${y}) rotate(${d + 45})">${tshape('M0 -10Q8 0 0 10Q-8 0 0 -10z', '#8fd46a', '#5fb04a', '<path d="M0 -8V8" stroke="#3f8a3a" stroke-width="1.4"/>', 2.2)}</g>`; }).join(''),
   caramelos: () => band(55, '#ff9cc8', 6) + `<circle cx="70" cy="70" r="55" fill="none" stroke="#fff" stroke-width="3" stroke-dasharray="6 8"/>`
     + [-90, 30, 150].map((d) => { const [x, y] = at(d, 56); return `<g transform="translate(${x - 9} ${y - 9}) rotate(${d + 90} 9 9) scale(.56)">${ICONS.caramelo()}</g>`; }).join(''),
+  // Huesitos (Valle de los dinosaurios): banda de piedra con huesos y la amonita arriba.
+  huesitos: () => band(55, '#e8a35a', 6) + `<circle cx="70" cy="70" r="55" fill="none" stroke="#fff1d6" stroke-width="2" stroke-dasharray="2 9" stroke-linecap="round"/>`
+    + [-30, 30, 90, 150, 210].map((d) => { const [x, y] = at(d, 56), b = (w, r, c) => `<path d="M-6 0H6" stroke="${c}" stroke-width="${w}" stroke-linecap="round"/>${[[-7, -2.6], [-7, 2.6], [7, -2.6], [7, 2.6]].map(([a, e]) => `<circle cx="${a}" cy="${e}" r="${r}" fill="${c}"/>`).join('')}`; return `<g transform="translate(${x} ${y}) rotate(${d + 90})">${b(7.6, 3.8, K)}${b(4, 2.4, '#fff1d6')}</g>`; }).join('')
+    + (() => { const [x, y] = at(-90, 56), k = 0.85; return `<g transform="translate(${x - 16 * k} ${y - 16 * k}) scale(${k})">${ICONS.fosil()}</g>`; })(),
+  // Tuercas (Taller de robots): banda de metal con remaches, tuercas y un foquito que parpadea.
+  tuercas: () => band(55, '#9aa7cf', 7) + Array.from({ length: 16 }, (_, i) => { const [x, y] = at(i * 22.5 + 11.25, 55); return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="1.5" fill="#5f6a9a"/>`; }).join('')
+    + [-30, 30, 150, 210].map((d, i) => { const [x, y] = at(d, 56), k = i % 2 ? 0.5 : 0.6; return `<g transform="translate(${x - 16 * k} ${y - 16 * k}) rotate(${d} ${16 * k} ${16 * k}) scale(${k})">${ICONS.tuerca()}</g>`; }).join('')
+    + (() => { const [x, y] = at(-90, 56); return `<rect x="${x - 6}" y="${y - 2}" width="12" height="8" rx="2" fill="#7f8ab8" stroke="${K}" stroke-width="2"/><g class="r-tw">${tshape(CIRCLE(x, y - 6, 7), '#ffe58a', '#ffc83d', `<circle cx="${x - 2.4}" cy="${y - 8.4}" r="2" fill="#fff"/>`, 2.2)}</g>`; })(),
   // Exclusivo del evento: Día de Muertos.
   cempasuchil: () => band(55, '#ff9c1a', 6) + `<circle cx="70" cy="70" r="55" fill="none" stroke="#b36bff" stroke-width="2.4" stroke-dasharray="3 9" stroke-linecap="round"/>`
     + [-90, -30, 30, 90, 150, 210].map((d, i) => marigold(...at(d, 56), i % 2 ? 8 : 10.5)).join(''),

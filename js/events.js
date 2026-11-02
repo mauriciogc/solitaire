@@ -9,7 +9,8 @@ import { EVENT_LEVELS, EVENT_PER_PLANET, EVENT_PLANETS } from './levels.js';
 
 // Los eventos se abren poco a poco, según los niveles ganados (save.next): primero la racha, luego la colección
 // y al final el evento del mes (el más difícil: pide comodines). Cada uno se presenta una vez (save.intro).
-export const UNLOCK = { racha: 20, col: 50, mes: 80 };
+// col2: al nivel 100 se suman las colecciones nuevas y hay colección 3 semanas al mes (ver weekInfo).
+export const UNLOCK = { racha: 20, col: 50, mes: 80, col2: 100 };
 export const isOn = (k) => (save.next || 0) >= UNLOCK[k];
 
 export const RACHA_GOALS = [
@@ -87,6 +88,7 @@ export function rachaClaim() {
 
 // ---------- Colección ----------
 // Dos semanas al mes (las que empiezan el 1.º y el 3.er lunes): de lunes 00:00 a domingo 23:59, hora del teléfono.
+// Desde el nivel 100 (col2) son tres (también la del 4.º lunes) y se turnan también las temáticas nuevas (plus).
 // Cada estrella nueva que ganas da 1 ficha, como las monedas: si sacas 2★ y luego 3★, la segunda vez da 1.
 // Las fichas se cambian en su tienda temporal; al terminar la semana, las que sobren se pierden.
 // Lo exclusivo de cada temática (7 cosméticos) es tuyo para siempre. No alcanza para todo en una semana:
@@ -100,28 +102,43 @@ export const COLECCIONES = [
     ex: { back: 'hojas', title: 'guardabosques', avatar: 'ardilla', ring: 'hojas', traveler: 'hoja', frame: 'bosque', space: 'bosque' } },
   { key: 'dulces', name: 'Feria de dulces', token: 'caramelo', tokens: 'caramelos', color: 'pink',
     ex: { back: 'caramelos', title: 'golosito', avatar: 'osito', ring: 'caramelos', traveler: 'paleta', frame: 'dulces', space: 'algodon' } },
+  // Desde el nivel 100. one: la ficha escrita (si no es igual a su icono) · m: es masculina (los fósiles) · ready: ya tiene sus dibujos (las que no, todavía no salen).
+  { key: 'dinos', name: 'Valle de los dinosaurios', token: 'fosil', one: 'fósil', tokens: 'fósiles', m: 1, color: 'orange', plus: true, ready: true,
+    ex: { back: 'huellas', title: 'paleontologo', avatar: 'triceratops', ring: 'huesitos', traveler: 'ptero', frame: 'dinos', space: 'volcan' } },
+  { key: 'robots', name: 'Taller de robots', token: 'tuerca', tokens: 'tuercas', color: 'gray', plus: true, ready: true,
+    ex: { back: 'circuitos', title: 'inventor', avatar: 'robodog', ring: 'tuercas', traveler: 'robotin', frame: 'robots', space: 'taller' } },
 ];
 // Precio en fichas de cada exclusivo (igual en todas las temáticas). Suman 560: más de lo que se junta en una semana.
 const EX_PRICE = { title: 40, frame: 50, space: 60, ring: 70, avatar: 90, back: 110, traveler: 140 };
 const DAY = 864e5;
 // Lunes de esta semana (en días locales) y si esa semana hay colección.
 const mondayOf = (day) => day - ((day + 3) % 7); // el día 0 (1 ene 1970) fue jueves
-const weekInfo = (monday) => {
-  const d = new Date(monday * DAY), dom = d.getUTCDate();
-  const on = dom <= 7 || (dom >= 15 && dom <= 21);
-  return { on, theme: COLECCIONES[((d.getUTCFullYear() * 12 + d.getUTCMonth()) * 2 + (dom > 7 ? 1 : 0)) % COLECCIONES.length] };
+// Sin plus: 2 semanas al mes y las 4 de siempre (cada una vuelve cada 2 meses).
+// Con plus: 3 semanas al mes y todas las que estén listas (con 6, también cada 2 meses).
+const BASE_COL = COLECCIONES.filter((c) => !c.plus);
+const PLUS_COL = COLECCIONES.filter((c) => !c.plus || c.ready);
+const weekInfo = (monday, plus = isOn('col2')) => {
+  const d = new Date(monday * DAY), dom = d.getUTCDate(), m = d.getUTCFullYear() * 12 + d.getUTCMonth();
+  const slot = dom <= 7 ? 0 : dom >= 15 && dom <= 21 ? 1 : plus && dom >= 22 && dom <= 28 ? 2 : -1;
+  const list = plus ? PLUS_COL : BASE_COL;
+  return { on: slot >= 0, theme: list[(m * (plus ? 3 : 2) + slot) % list.length] };
 };
 // La colección activa (o null). Al cambiar de semana se empieza de cero: las fichas viejas se pierden.
+// La temática se guarda al empezar la semana: si llega al nivel 100 a media semana, no cambia.
 export function col() {
   if (!isOn('col')) return null;
   const monday = mondayOf(today()), w = weekInfo(monday);
-  if (!w.on) return null;
-  if (save.col?.id !== monday) {
-    save.col = { id: monday, n: 0, bought: {} };
-    persist();
+  if (save.col?.id === monday) {
+    const theme = COLECCIONES.find((c) => c.key === save.col.key) || weekInfo(monday, false).theme;
+    return { ...theme, state: save.col, monday };
   }
+  if (!w.on) return null;
+  save.col = { id: monday, key: w.theme.key, n: 0, bought: {} };
+  persist();
   return { ...w.theme, state: save.col, monday };
 }
+// Las temáticas nuevas que se suman en el nivel 100 (para su aviso).
+export const plusCols = () => COLECCIONES.filter((c) => c.plus && c.ready);
 // Cuánto falta para que termine (domingo a medianoche).
 export const colLeft = () => {
   const c = col();
