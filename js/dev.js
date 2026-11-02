@@ -2,7 +2,7 @@
 // Se activa con ?dev en la URL (y se apaga con ?dev=0). Queda guardado en el navegador.
 import { save, prefs, persist, resetProfile, backupOnce, restoreBackup, setDev } from './storage.js';
 import { rachaWin, rachaLose, racha, RACHA_GOALS, col, daysToNextCol, ev, daysToNextEvent, EVENT_PER_PLANET, EVENT_LEVELS } from './events.js';
-import { generateLevel, packGroups, worldInfo, TOTAL_LEVELS, LEVELS_PER_WORLD, MECH_NAMES, MECHANICS } from './levels.js';
+import { generateLevel, packGroups, worldInfo, specials, specialGroup, SPECIAL_ID, TOTAL_LEVELS, LEVELS_PER_WORLD, MECH_NAMES, MECHANICS } from './levels.js';
 import { playCasual, solve, initState } from './engine.js';
 import { openModal, toast, updateCoins } from './ui.js';
 import { mulberry32 } from './rng.js';
@@ -18,7 +18,7 @@ export const dev = {
 };
 
 // Dónde estaba la galería, para volver a la misma página y filtros al salir de un nivel.
-export const gallery = { start: 0, tpl: 'todas', boss: false, mA: '', mB: '', active: false };
+export const gallery = { start: 0, tpl: 'todas', boss: false, mA: '', mB: '', help: '', active: false };
 
 export function initDevFromUrl() {
   const q = new URLSearchParams(location.search);
@@ -27,7 +27,7 @@ export function initDevFromUrl() {
   history.replaceState(null, '', location.pathname);
 }
 
-const label = (g) => `Mundo ${Math.floor(g / LEVELS_PER_WORLD) + 1} · Nivel ${(g % LEVELS_PER_WORLD) + 1}`;
+const label = (g) => (g >= SPECIAL_ID ? `Especial ${g - SPECIAL_ID + 1} · grupo ${specialGroup(g - SPECIAL_ID) + 1}` : `Mundo ${Math.floor(g / LEVELS_PER_WORLD) + 1} · Nivel ${(g % LEVELS_PER_WORLD) + 1}`);
 
 function askLevel(current) {
   const v = prompt(`Ir a nivel (1-${TOTAL_LEVELS}). También vale "mundo-nivel", ej. 12-3`, String(current + 1));
@@ -95,7 +95,9 @@ export function attachDevBar(game, { go, toGallery }) {
 
 function showInfo(L) {
   const t0 = performance.now();
-  const sol = solve(L, initState(L));
+  let sol = null, w = 0;
+  for (; w <= 3 && !sol; w++) sol = solve(L, initState(L), w ? 60000 : 250000, w);
+  w--;
   const ms = Math.round(performance.now() - t0);
   const free = L.cards.filter((c) => !c.coveredBy.length).length;
   const rows = [
@@ -107,8 +109,9 @@ function showInfo(L) {
     ['Mecánicas', L.meta.mechs.length ? L.meta.mechs.map((m) => MECH_NAMES[m]).join(', ') : 'ninguna'],
     ['Candados', L.meta.locks],
     ['Carta regalo', L.meta.pack ? `+${L.meta.pack} cartas al mazo` : 'no'],
+    ['Ayudas', L.help ? `pide ${L.help} (comodines o compras de +5): sin ellas no hay solución` : 'no pide'],
     ['Bot casual gana', `${casualRate(L)}%`],
-    ['Solucionador', sol ? `resuelve en ${sol.length} pasos (${ms} ms)` : `no encontró (${ms} ms)`],
+    ['Solucionador', sol ? `resuelve en ${sol.length} pasos${w ? ` con ${w} comodín${w > 1 ? 'es' : ''}` : ''} (${ms} ms)` : `no encontró (${ms} ms)`],
   ];
   openModal({
     title: 'Info del nivel',
@@ -160,30 +163,40 @@ export function galleryScreen({ onPlay, onBack }) {
           </select>`,
         )
         .join('')}
+      <select data-g="help">
+        ${[['', 'ayudas: todas'], ['any', 'piden ayuda'], ['1', 'piden 1'], ['2', 'piden 2'], ['3', 'piden 3'], ['s1', 'especiales de 1'], ['s2', 'especiales de 2'], ['s3', 'especiales de 3'], ['s4', 'especiales de 4']]
+          .map(([v, t]) => `<option value="${v}"${st.help === v ? ' selected' : ''}>${t}</option>`)
+          .join('')}
+      </select>
     </div>
     <div class="g-grid"></div>`;
   const grid = el.querySelector('.g-grid');
 
+  // Especiales: se recorre su lista (st.start cuenta dentro de ella); si no, los niveles del camino.
+  const list = () => (st.help[0] === 's' ? specials(+st.help[1]).map((i) => SPECIAL_ID + i) : null);
+  const last = () => list()?.length ?? TOTAL_LEVELS;
   function render() {
-    const items = [];
+    const items = [], sp = list(), end = last();
     let g = st.start;
-    while (items.length < PAGE && g < TOTAL_LEVELS) {
-      if (!st.boss || g % LEVELS_PER_WORLD === LEVELS_PER_WORLD - 1) {
-        const L = generateLevel(g);
+    while (items.length < PAGE && g < end) {
+      const id = sp ? sp[g] : g;
+      if (!st.boss || id % LEVELS_PER_WORLD === LEVELS_PER_WORLD - 1 || sp) {
+        const L = generateLevel(id);
         const ms = L.meta.mechs;
         const okM = (m) => !m || (m === 'none' ? !ms.length : ms.includes(m));
-        if ((st.tpl === 'todas' || L.template === st.tpl) && okM(st.mA) && okM(st.mB)) items.push(L);
+        const okH = sp || !st.help || (st.help === 'any' ? L.help : L.help === +st.help);
+        if ((st.tpl === 'todas' || L.template === st.tpl) && okM(st.mA) && okM(st.mB) && okH && (!st.boss || L.boss)) items.push(L);
       }
       g++;
       if (g - st.start > 4000) break; // filtros muy estrictos: no colgar la página
     }
     st.end = g;
-    el.querySelector('.g-range').textContent = `#${st.start + 1} – #${g}`;
+    el.querySelector('.g-range').textContent = sp ? `especiales ${st.start + 1} – ${g} de ${end}` : `#${st.start + 1} – #${g}`;
     grid.innerHTML = items
       .map(
         (L) => `<button class="tile" data-play="${L.g}">
           <div class="pv">${preview(L)}</div>
-          <div class="tl"><b>#${L.g + 1}</b> ${label(L.g)}${L.boss ? ' · jefe' : ''}</div>
+          <div class="tl"><b>${L.special != null ? '' : `#${L.g + 1}`}</b> ${label(L.g)}${L.boss ? ' · jefe' : ''}${L.help ? ` · <b>pide ${L.help}</b>` : ''}</div>
           <div class="tl">${L.template} · d ${L.d.toFixed(2)} · ${L.cards.length} cartas · mazo ${L.stock.length}</div>
           <div class="tl mechs">${L.meta.mechs.map((m) => `<i class="tag m-${m}">${MECH_NAMES[m]}</i>`).join('') || '—'}</div>
           <div class="tl rate" data-rate="${L.g}">bot …</div>
@@ -221,7 +234,7 @@ export function galleryScreen({ onPlay, onBack }) {
       st.start = Math.max(0, st.start - PAGE);
       render();
     }
-    if (a === 'next' && st.end < TOTAL_LEVELS) {
+    if (a === 'next' && st.end < last()) {
       st.start = st.end;
       render();
     }
@@ -236,6 +249,10 @@ export function galleryScreen({ onPlay, onBack }) {
   el.addEventListener('change', (e) => {
     if (e.target.dataset.g === 'tpl') st.tpl = e.target.value;
     if (e.target.dataset.g === 'boss') st.boss = e.target.checked;
+    if (e.target.dataset.g === 'help') {
+      st.help = e.target.value;
+      st.start = 0;
+    }
     if (e.target.dataset.g === 'mA' || e.target.dataset.g === 'mB') {
       st[e.target.dataset.g] = e.target.value;
       st.start = 0;

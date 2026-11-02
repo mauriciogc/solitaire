@@ -24,7 +24,7 @@ export const wait = (ms) => new Promise((ok) => setTimeout(ok, ms));
 // Colores de cabecera por tipo de ventana.
 const HEADS = {
   violet: ['#8a5cf0', '#6c3fd4'], blue: ['#4aa8de', '#2f86c0'], green: ['#47c27a', '#2f9e5c'], orange: ['#ff9c5b', '#e2753a'],
-  gold: ['#ffc83d', '#e89a17'], pink: ['#ff5f7e', '#d63d5f'], gray: ['#9188c0', '#6e66a3'],
+  gold: ['#ffc83d', '#e89a17'], pink: ['#ff5f7e', '#d63d5f'], red: ['#e8434f', '#c22c3c'], gray: ['#9188c0', '#6e66a3'],
 };
 
 // Ventana con cabecera de color, botón de cerrar y botones abajo.

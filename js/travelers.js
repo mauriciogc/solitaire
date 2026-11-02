@@ -297,6 +297,98 @@ const MODELS = {
       body.position.y = Math.sin(t * 2.5) * 0.06; head.rotation.y = Math.sin(t * 0.9) * 0.3;
     } };
   },
+  // Trineo (Navidad): rojo con patines dorados que se enroscan al frente y su costal de regalos.
+  trineo(part) {
+    const g = new THREE.Group(), sled = new THREE.Group();
+    sled.add(part(new THREE.BoxGeometry(0.34, 0.16, 0.5), '#e8434f', { y: 0.12, ol: 0.06 }));
+    sled.add(part(new THREE.BoxGeometry(0.34, 0.2, 0.1), '#c22c3c', { y: 0.26, z: -0.22, ol: 0.07 }));
+    sled.add(part(new THREE.BoxGeometry(0.36, 0.035, 0.52), '#ffc83d', { y: 0.215, ol: 0.08 }));
+    for (const x of [-0.15, 0.15]) {
+      sled.add(part(new THREE.BoxGeometry(0.035, 0.035, 0.62), '#ffc83d', { x, y: -0.02, ol: 0.15 }));
+      sled.add(part(new THREE.TorusGeometry(0.07, 0.018, 6, 14, Math.PI * 1.3), '#ffc83d', { x, y: 0.05, z: 0.31, ry: Math.PI / 2, rz: -Math.PI / 2, ol: 0.15 }));
+      for (const z of [-0.14, 0.14]) sled.add(part(new THREE.BoxGeometry(0.025, 0.1, 0.025), '#ffc83d', { x, y: 0.03, z, ol: 0.2 }));
+    }
+    const sack = new THREE.Group();
+    sack.add(part(new THREE.SphereGeometry(0.16, 16, 12).scale(1, 1.1, 0.9), '#a8693a', { ol: 0.07 }));
+    sack.add(part(new THREE.CylinderGeometry(0.05, 0.07, 0.06, 10), '#e8434f', { y: 0.17, ol: 0.12 }));
+    sack.position.set(0, 0.34, -0.1); sled.add(sack);
+    sled.add(part(new THREE.BoxGeometry(0.1, 0.1, 0.1), '#3fa0e0', { x: 0.1, y: 0.28, z: 0.1, ry: 0.4, ol: 0.12 }));
+    sled.add(part(new THREE.BoxGeometry(0.08, 0.08, 0.08), '#4fb85e', { x: -0.1, y: 0.27, z: 0.13, ry: -0.3, ol: 0.12 }));
+    sled.add(part(new THREE.BoxGeometry(0.11, 0.015, 0.02), '#ffc83d', { x: 0.1, y: 0.33, z: 0.1, ry: 0.4, ol: 0 }));
+    sled.rotation.y = 0.6; sled.position.y = -0.2; sled.scale.setScalar(1.25);
+    g.add(sled);
+    return { obj: g, tick: (t) => { sled.position.y = -0.2 + Math.sin(t * 2) * 0.06; sled.rotation.x = Math.sin(t * 2 - 0.8) * 0.12; sack.rotation.z = Math.sin(t * 2.6) * 0.1; } };
+  },
+  // Camello (Día de Reyes): dos jorobas, manta morada con borde dorado y un regalo; camina moviendo las patas.
+  camello(part) {
+    const g = new THREE.Group(), body = new THREE.Group(), tan = '#d9a564', dark = '#b8834a';
+    body.add(part(new THREE.SphereGeometry(0.22, 20, 14).scale(0.85, 0.8, 1.35), tan, { ol: 0.06 }));
+    for (const z of [-0.12, 0.1]) body.add(part(new THREE.SphereGeometry(0.12, 16, 12).scale(1, 1.1, 1), tan, { y: 0.17, z, ol: 0.08 }));
+    body.add(part(new THREE.BoxGeometry(0.4, 0.03, 0.18), '#8a5cf0', { y: 0.13, ol: 0.08 }));
+    for (const x of [-0.2, 0.2]) body.add(part(new THREE.BoxGeometry(0.03, 0.12, 0.18), '#8a5cf0', { x, y: 0.07, ol: 0.1 }), part(new THREE.BoxGeometry(0.035, 0.02, 0.19), '#ffc83d', { x, y: 0.01, ol: 0.1 }));
+    body.add(part(new THREE.BoxGeometry(0.09, 0.09, 0.09), '#e8434f', { y: 0.33, z: -0.12, ry: 0.4, ol: 0.12 }), part(new THREE.BoxGeometry(0.1, 0.015, 0.02), '#ffc83d', { y: 0.38, z: -0.12, ry: 0.4, ol: 0 }));
+    const neck = new THREE.Group();
+    neck.add(part(new THREE.CapsuleGeometry(0.055, 0.22, 6, 10), tan, { y: 0.12, ol: 0.1 }));
+    const head = new THREE.Group();
+    head.add(part(new THREE.SphereGeometry(0.08, 14, 10).scale(1, 0.9, 1.5), tan, { ol: 0.1 }));
+    head.add(part(new THREE.SphereGeometry(0.05, 10, 8), dark, { z: 0.1, y: -0.02, ol: 0.12 }));
+    for (const x of [-0.05, 0.05]) {
+      head.add(part(new THREE.SphereGeometry(0.018, 8, 6), INK, { x, y: 0.03, z: 0.05, ol: 0 }));
+      head.add(part(new THREE.SphereGeometry(0.025, 8, 6).scale(0.6, 1.2, 0.6), dark, { x: x * 1.3, y: 0.07, z: -0.04, ol: 0.15 }));
+    }
+    head.position.set(0, 0.26, 0.05); neck.add(head);
+    neck.position.set(0, 0.06, 0.26); neck.rotation.x = 0.45; body.add(neck);
+    const legs = [];
+    for (const [x, z] of [[-0.09, 0.15], [0.09, 0.15], [-0.09, -0.15], [0.09, -0.15]]) {
+      const l = new THREE.Group();
+      l.add(part(new THREE.CapsuleGeometry(0.035, 0.2, 4, 8), tan, { y: -0.12, ol: 0.15 }));
+      l.position.set(x, -0.1, z); body.add(l); legs.push(l);
+    }
+    body.rotation.y = 0.7; body.scale.setScalar(1.3); body.position.y = 0.05;
+    g.add(body);
+    return { obj: g, tick: (t) => {
+      legs.forEach((l, k) => (l.rotation.x = Math.sin(t * 4 + (k === 0 || k === 3 ? 0 : Math.PI)) * 0.35));
+      body.position.y = 0.05 + Math.abs(Math.sin(t * 4)) * 0.03; neck.rotation.x = 0.45 + Math.sin(t * 4) * 0.08;
+    } };
+  },
+  // Corazón (Amor y Amistad): corazón rojo inflado que flota, gira y late.
+  alado(part) {
+    const g = new THREE.Group(), heart = new THREE.Group();
+    const sh = new THREE.Shape();
+    sh.moveTo(0, -0.28); sh.bezierCurveTo(-0.34, -0.06, -0.34, 0.2, -0.17, 0.24); sh.bezierCurveTo(-0.07, 0.26, 0, 0.18, 0, 0.12);
+    sh.bezierCurveTo(0, 0.18, 0.07, 0.26, 0.17, 0.24); sh.bezierCurveTo(0.34, 0.2, 0.34, -0.06, 0, -0.28);
+    const geo = new THREE.ExtrudeGeometry(sh, { depth: 0.12, bevelEnabled: true, bevelThickness: 0.05, bevelSize: 0.04, bevelSegments: 4, curveSegments: 20 }).center();
+    heart.add(part(geo, '#ff4f6e', { ol: 0.06 }));
+    heart.add(part(new THREE.SphereGeometry(0.045, 10, 8).scale(1.4, 0.8, 0.5), '#ffc2dc', { x: -0.11, y: 0.1, z: 0.1, ol: 0 }));
+    heart.scale.setScalar(1.4);
+    g.add(heart);
+    return { obj: g, tick: (t) => {
+      heart.position.y = Math.sin(t * 2.4) * 0.07; heart.rotation.y = -1.07 + Math.sin(t * 0.9) * 0.35;
+      const b = 1 + Math.max(0, Math.sin(t * 5)) * 0.06; heart.scale.setScalar(1.4 * b);
+    } };
+  },
+  // Mariposa (Primavera): alas lila y rosa con puntos, cuerpo oscuro y antenas; aletea y revolotea.
+  mariposa(part) {
+    const g = new THREE.Group(), fly = new THREE.Group();
+    fly.add(part(new THREE.CapsuleGeometry(0.035, 0.3, 6, 10).rotateX(Math.PI / 2), '#3a3550', { ol: 0.15 }));
+    fly.add(part(new THREE.SphereGeometry(0.05, 10, 8), '#3a3550', { z: 0.2, ol: 0.15 }));
+    for (const x of [-0.03, 0.03]) fly.add(part(new THREE.CylinderGeometry(0.006, 0.006, 0.16, 5), '#3a3550', { x: x * 2, y: 0.06, z: 0.27, rx: 0.9, rz: -x * 8, ol: 0 }), part(new THREE.SphereGeometry(0.018, 8, 6), '#3a3550', { x: x * 4.2, y: 0.12, z: 0.33, ol: 0 }));
+    const wings = [];
+    for (const side of [-1, 1]) {
+      const w = new THREE.Group();
+      w.add(part(new THREE.SphereGeometry(0.2, 16, 10).scale(1, 0.06, 0.85), '#b36bff', { x: side * 0.18, z: 0.08, ol: 0.08 }));
+      w.add(part(new THREE.SphereGeometry(0.14, 14, 8).scale(1, 0.06, 0.9), '#ff7ab8', { x: side * 0.13, z: -0.15, ol: 0.1 }));
+      w.add(part(new THREE.SphereGeometry(0.045, 10, 6).scale(1, 0.4, 1), '#fff6ee', { x: side * 0.24, y: 0.015, z: 0.12, ol: 0 }));
+      w.add(part(new THREE.SphereGeometry(0.03, 10, 6).scale(1, 0.4, 1), '#ffc83d', { x: side * 0.15, y: 0.015, z: -0.17, ol: 0 }));
+      fly.add(w); wings.push([w, side]);
+    }
+    fly.rotation.set(-1.2, 0.25, 0); fly.scale.setScalar(1.5);
+    g.add(fly);
+    return { obj: g, tick: (t) => {
+      wings.forEach(([w, s]) => (w.rotation.z = s * Math.sin(t * 9) * 0.8));
+      fly.position.y = Math.sin(t * 2.2) * 0.08 + Math.sin(t * 9) * 0.015; fly.rotation.y = 0.25 + Math.sin(t * 0.8) * 0.3;
+    } };
+  },
   // Mantarraya: aletas que aletean despacio y cola larga.
   mantarraya(part) {
     const g = new THREE.Group(), ray = new THREE.Group();

@@ -2,12 +2,12 @@
 // Primero sigue la solución con la que se generó cada nivel (robando cuando hace falta) con el motor
 // de reglas real, que aplica premios de racha, cartas regalo, bombas, etc. Si esa ruta no alcanza,
 // prueba con el solucionador. Uso: node tests/verify-levels.mjs
-import { generateLevel, eventLevel, EVENT_LEVELS, TOTAL_LEVELS, WORLD_COUNT, overlaps, MECHANICS } from '../js/levels.js';
-import { initState, playRank, play, draw, won, solve } from '../js/engine.js';
+import { generateLevel, eventLevel, specialLevel, hardHelp, EVENT_LEVELS, EVENT_WORLDS, SPECIAL_COUNT, TOTAL_LEVELS, WORLD_COUNT, overlaps, MECHANICS } from '../js/levels.js';
+import { initState, playRank, play, draw, won, solve, solveHelp } from '../js/engine.js';
 
 let fails = 0;
 let bySolver = 0;
-const stats = { cards: [], stock: [], tpl: {}, mechs: {} };
+const stats = { cards: [], stock: [], tpl: {}, mechs: {}, help: { camino: {}, evento: {}, especiales: {} }, missing: 0 };
 
 function reference(L) {
   let s = initState(L);
@@ -22,17 +22,21 @@ function reference(L) {
   return won(s);
 }
 
-// Los 5,200 niveles normales, los 520 secretos (uno por mundo) y una muestra del evento del mes:
-// 3 años de ediciones (8 meses cada uno) × jugadores en distintos mundos × sus 25 niveles.
+// Los 5,200 niveles normales, los 520 secretos (uno por mundo) y el evento del mes:
+// 2 años de ediciones (8 meses cada uno) × los 5 grupos de mundos × sus 25 niveles.
+// Al final, los 1,000 tableros especiales. Los que piden ayudas (L.help: los del evento, los marcados
+// en hardHelp del camino y los especiales) deben ganarse con esos comodines y con esas compras de +5,
+// y no tener solución con una ayuda menos (comprobado buscando todo).
 const ALL = TOTAL_LEVELS + WORLD_COUNT;
 const EVENT_MONTHS = [0, 1, 3, 6, 8, 9, 10, 11];
 const EVENTS = [];
-for (let y = 2026; y < 2029; y++) for (const m of EVENT_MONTHS) for (const w of [0, 3, 12, 20, 30, 80, 250, 519]) EVENTS.push([y * 12 + m, w]);
-const N = ALL + EVENTS.length * EVENT_LEVELS;
+for (let y = 2026; y < 2028; y++) for (const m of EVENT_MONTHS) for (const w of EVENT_WORLDS) EVENTS.push([y * 12 + m, w]);
+const SPEC = ALL + EVENTS.length * EVENT_LEVELS, N = SPEC + SPECIAL_COUNT;
 let evCount = 0;
 for (let g = 0; g < N; g++) {
-  const isEv = g >= ALL, e = isEv && EVENTS[Math.floor((g - ALL) / EVENT_LEVELS)];
-  const L = isEv ? eventLevel(e[0], (g - ALL) % EVENT_LEVELS, e[1]) : generateLevel(g);
+  const isSp = g >= SPEC, isEv = g >= ALL && !isSp, e = isEv && EVENTS[Math.floor((g - ALL) / EVENT_LEVELS)];
+  const L = isSp ? specialLevel(g - SPEC) : isEv ? eventLevel(e[0], (g - ALL) % EVENT_LEVELS, e[1]) : generateLevel(g);
+  if ((isSp || (g < TOTAL_LEVELS && hardHelp(g))) && !L.help) stats.missing++;
   if (isEv) evCount++;
   let ok = true;
 
@@ -41,13 +45,18 @@ for (let g = 0; g < N; g++) {
     for (const b of L.cards)
       if (a.id < b.id && a.group === b.group && a.z === b.z && overlaps(a, b)) { ok = false; console.log('misma capa', g, L.template, a.id, b.id); }
 
-  if (ok && !reference(L)) {
+  if (ok && L.help) {
+    const less = solveHelp(L, L.help - 1);
+    ok = solveHelp(L, L.help).ok && solveHelp(L, 0, L.help).ok && !less.ok && !less.cut;
+    const hs = stats.help[isSp ? 'especiales' : isEv ? 'evento' : 'camino'];
+    hs[L.help] = (hs[L.help] || 0) + 1;
+  } else if (ok && !reference(L)) {
     bySolver++;
     ok = !!solve(L, initState(L));
   }
   if (!ok) {
     fails++;
-    if (fails < 10) console.log('FALLA nivel', isEv ? `evento ${e[0]} (mundo ${e[1] + 1}) nivel ${L.k + 1}` : L.secret ? `secreto del mundo ${L.world + 1}` : g + 1, L.template, L.meta.mechs.join(','));
+    if (fails < 10) console.log('FALLA nivel', isSp ? `especial ${L.special}` : isEv ? `evento ${e[0]} (mundo ${e[1] + 1}) nivel ${L.k + 1}` : L.secret ? `secreto del mundo ${L.world + 1}` : g + 1, L.template, L.meta.mechs.join(','));
   }
   stats.cards.push(L.cards.length);
   stats.stock.push(L.stock.length);
@@ -58,10 +67,13 @@ for (let g = 0; g < N; g++) {
 
 const sum = (a) => a.reduce((x, y) => x + y, 0);
 const fmt = (a) => `min ${Math.min(...a)} · media ${(sum(a) / a.length).toFixed(1)} · max ${Math.max(...a)}`;
-console.log(`Niveles: ${TOTAL_LEVELS} + ${WORLD_COUNT} secretos + ${evCount} del evento · fallidos: ${fails} · resueltos con el solucionador: ${bySolver}`);
+console.log(`Niveles: ${TOTAL_LEVELS} + ${WORLD_COUNT} secretos + ${evCount} del evento + ${SPECIAL_COUNT} especiales · fallidos: ${fails} · resueltos con el solucionador: ${bySolver}`);
 console.log('Cartas en tablero:', fmt(stats.cards));
 console.log('Cartas en mazo:   ', fmt(stats.stock));
 console.log('Plantillas:', stats.tpl);
 console.log('Niveles por mecánica:', Object.fromEntries(MECHANICS.map((m) => [m, stats.mechs[m] || 0])));
 console.log('Con carta regalo y mazo de 3 o menos:', stats.short || 0);
-process.exit(fails ? 1 : 0);
+console.log('Niveles que piden 1, 2, 3 o 4 ayudas:', stats.help);
+// Marcados para pedir ayudas pero sin tablero endurecido en path-data.js o special-data.js: correr node tools/hard-levels.mjs --fix
+if (stats.missing) console.log('FALTAN', stats.missing, 'niveles con ayudas sin datos (node tools/hard-levels.mjs --fix)');
+process.exit(fails || stats.missing ? 1 : 0);

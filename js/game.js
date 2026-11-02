@@ -502,11 +502,13 @@ export class Game {
     updateCoins();
   }
 
-  // Indicador de racha por puntos: del 1 al 6, luego hasta 9 y luego hasta 12 (después, tramos de 3).
+  // Indicador de racha por puntos: del premio anterior al siguiente (1-6, 7-13, 14-18, 19-23, 24-31 y luego tramos de 3).
   // Al final de los puntos se dibuja el premio del tramo (carta violeta, comodín dorado o estrella al inventario).
+  // En el evento del mes los premios van al doble de distancia (level.rewardStep = 2).
   showCombo() {
-    const { at, kind } = E.nextReward(this.streak);
-    const from = at <= 12 ? 0 : at - 3;
+    const step = this.level.rewardStep ?? 1;
+    const { at, kind } = E.nextReward(this.streak, step);
+    const from = E.prevReward(at, step);
     let dots = '';
     // Faltan 1 o 2: el siguiente punto late, el premio se mueve y abajo sale "¡Falta n!".
     const left = at - this.streak, near = this.streak > 0 && left <= 2;
@@ -905,7 +907,7 @@ export class Game {
     if (this.coach) return;
     if (!this.history.length) return toast('Nada que deshacer');
     const inf = this.opts.dev?.infinite;
-    if (save.undo <= 0 && !inf) return this.offerBuy('undo');
+    if (save.undo <= 0 && !inf) return save.coins < this.priceOf('undo') ? this.noWayOut('undo') : this.offerBuy('undo');
     if (!inf) save.undo--;
     const h = this.history.pop();
     const ev = h.ev || {};
@@ -957,11 +959,12 @@ export class Game {
   useWild() {
     if (this.coach) return;
     if (this.st.top?.wild) return toast('Ya tienes un comodín en juego');
-    if (save.wild <= 0 && !this.opts.dev?.infinite) return this.offerBuy('wild');
+    if (save.wild <= 0 && !this.opts.dev?.infinite) return save.coins < this.priceOf('wild') ? this.noWayOut('wild') : this.offerBuy('wild');
     if (!this.opts.dev?.infinite) save.wild--;
     persist();
     this.history.push({ t: 'wild', before: this.st, best: this.best, bonus: this.bonus });
     this.st = { ...E.cloneState(this.st), top: { wild: true } };
+    this.updateStuck(); // con el comodín arriba ya hay jugada: se quita el aviso de atorado
     const a = this.el.querySelector('.wild-card').getBoundingClientRect();
     const b = this.wasteEl.getBoundingClientRect();
     const f = this.flyer({ wild: true }, { left: a.left + (a.width - b.width) / 2, top: a.top + (a.height - b.height) / 2, width: b.width }, true);
@@ -1119,12 +1122,14 @@ export class Game {
 
   // Sin mazo y sin jugadas: la carta +5 y "Finalizar nivel" saltan para que se vean (sin ventana).
   updateStuck(announce) {
-    const stuck = !this.done && !this.stock.length && !this.hasMove();
+    const stuck = this.isStuck();
     const was = this.el.classList.contains('no-moves');
     this.el.classList.toggle('no-moves', stuck);
     if (!stuck || was || !announce) return;
     setTimeout(() => {
-      if (!this.el.classList.contains('no-moves')) return;
+      // Se revisa de nuevo: pudo usar un comodín en este rato (y ya tener jugada).
+      if (!this.isStuck()) return this.updateStuck();
+      if (this.broke()) return this.noWayOut();
       toast('Sin jugadas: compra +5 cartas o finaliza el nivel');
       if (reduced()) return;
       const pop = [{ scale: 0.4, opacity: 0 }, { scale: 1.15, opacity: 1, offset: 0.6 }, { scale: 1, opacity: 1 }];
@@ -1133,10 +1138,47 @@ export class Game {
     }, 350);
   }
 
+  // Atorado y sin con qué salir: sin comodines y sin monedas para +5 ni para un comodín.
+  broke() {
+    return !this.opts.dev?.infinite && save.wild <= 0 && save.coins < Math.min(this.extraCost(), this.priceOf('wild'));
+  }
+  // Le dice qué hacer en vez de dejarlo atorado: esperar el regalo diario, o abandonar este nivel para juntar
+  // monedas en otros (jugar otro nivel pide abandonar el que está a medias). Con los botones de la pausa.
+  // kind: 'stuck' (sin jugadas) · 'wild' o 'undo' (tocó uno que tiene en 0 y no le alcanza para comprarlo).
+  noWayOut(kind = 'stuck') {
+    if (this.done || this.modalOpen) return;
+    this.modalOpen = true;
+    const left = this.cards.filter((c) => !c.removed).length, have = `(tienes ${save.coins})`;
+    const lead = {
+      stuck: `Te ${left === 1 ? 'falta 1 carta' : `faltan ${left} cartas`}, pero ya no tienes <b>comodines</b> y para <b>+5 cartas</b> necesitas ${coin()} ${Math.min(this.extraCost(), this.priceOf('wild'))} ${have}.`,
+      wild: `Ya no tienes <b>comodines</b> y uno cuesta ${coin()} ${this.priceOf('wild')} ${have}.`,
+      undo: `Ya no tienes <b>deshacer</b> y 3 cuestan ${coin()} ${this.priceOf('undo')} ${have}.`,
+    }[kind];
+    const m = openModal({
+      title: { stuck: '¡Te quedaste sin ayudas!', wild: '¡Sin comodines ni monedas!', undo: '¡Sin deshacer ni monedas!' }[kind],
+      color: 'violet',
+      cls: 'ev-intro broke-modal',
+      body: `<div class="evi-hero"><div class="rays"></div><span class="evi-ico">${icon(kind === 'undo' ? 'undo' : 'wild', 0, 0, 'big')}</span></div>
+        <p class="lead">${lead}</p>
+        <ul class="evi-rules">
+          <li>${icon('gift')}<span>Reclama tu <b>regalo diario</b>: trae monedas y a veces comodines.${this.opts.saved ? ' <b>Guarda y sal</b>: tu partida te espera.' : ''}</span></li>
+          <li>${icon('star')}<span>${this.opts.saved ? 'Para juntar monedas en <b>otros niveles</b> tienes que <b>abandonar</b> este.' : 'Junta monedas en <b>otros niveles</b>: cada estrella nueva paga.'}</span></li>
+        </ul>`,
+      onClose: () => (this.modalOpen = false),
+      buttons: this.pauseButtons(),
+    });
+    if (!reduced()) m.el.querySelectorAll('.evi-rules li').forEach((el, i) => el.animate([{ opacity: 0, translate: '-14px 0' }, { opacity: 1, translate: '0 0' }], { duration: 320, delay: 300 + i * 120, easing: 'ease-out', fill: 'backwards' }));
+  }
+
+  isStuck() {
+    return !this.done && !this.stock.length && !this.hasMove();
+  }
+
   // Comprar +5 cartas tocando la carta +5 (solo si estás atascado y te alcanza).
   // Tocar el hueco +5 del mazo: abre la ventana de compra (como comodín y deshacer).
   buyExtra() {
     if (this.done || this.busy || this.modalOpen) return;
+    if (this.broke() && this.isStuck()) return this.noWayOut();
     this.offerBuy('extra');
   }
   payExtra(cost) {
@@ -1229,9 +1271,8 @@ export class Game {
 
   // Nivel nuevo: salir guarda la partida (al volver sigues donde ibas) o la abandonas.
   // Repetición: salir pierde el intento.
-  exit() {
-    if (this.modalOpen) return;
-    this.modalOpen = true;
+  // Los 3 botones de la pausa (seguir, guardar y salir, abandonar): también en la ventana de "sin ayudas".
+  pauseButtons() {
     const free = () => (this.modalOpen = false);
     const confirmLeave = () =>
       openModal({
@@ -1241,24 +1282,36 @@ export class Game {
         body: `<p class="lead">${this.opts.event ? 'Se gasta tu boleto del evento: el siguiente llega en 24 horas.' : this.opts.free ? 'Se pierde este intento.' : 'Pierdes los boletos y lo que gastaste en este intento.'}</p>`,
         buttons: [{ label: 'Seguir jugando', cls: 'ghost' }, { label: 'Abandonar', cls: 'pink', onClick: () => this.opts.onAbandon() }],
       });
+    return [
+      { label: `${icon('play')} Continuar`, cls: 'green wide' },
+      this.opts.saved && { label: `${icon('door')} Guardar y salir`, cls: 'ghost wide', onClick: () => this.opts.onExit() },
+      { label: this.opts.saved ? 'Abandonar nivel' : `${icon('door')} Salir`, cls: 'pink wide', onClick: () => setTimeout(() => ((this.modalOpen = true), confirmLeave()), 0) },
+    ].filter(Boolean);
+  }
+
+  exit() {
+    if (this.modalOpen) return;
+    this.modalOpen = true;
+    const free = () => (this.modalOpen = false);
     if (!this.opts.saved && !this.history.length && !this.opts.dev) return free(), this.opts.onAbandon();
     openModal({
       title: 'Pausa',
       color: 'gray',
       onClose: free,
       body: this.opts.saved ? '<p class="note">Tu partida se guarda: al volver sigues donde te quedaste.</p>' : '<p class="note">Estás repitiendo un nivel: si sales, se pierde este intento.</p>',
-      buttons: [
-        { label: `${icon('play')} Continuar`, cls: 'green wide' },
-        this.opts.saved && { label: `${icon('door')} Guardar y salir`, cls: 'ghost wide', onClick: () => this.opts.onExit() },
-        { label: this.opts.saved ? 'Abandonar nivel' : `${icon('door')} Salir`, cls: 'pink wide', onClick: () => ((this.modalOpen = true), confirmLeave()) },
-      ].filter(Boolean),
+      buttons: this.pauseButtons(),
       cls: 'pause',
     });
   }
 
   // ---------- Modo dev (ver js/dev.js) ----------
+  // Si sin comodines no sale (niveles que piden ayuda), lo intenta con hasta 3.
   solveHere() {
-    return E.solve(this.level, this.st);
+    for (let w = 0; w <= 3; w++) {
+      const path = E.solve(this.level, this.st, w ? 60000 : 250000, w);
+      if (path) return path;
+    }
+    return null;
   }
 
   devReveal(on) {
@@ -1271,8 +1324,9 @@ export class Game {
     const path = this.solveHere();
     if (!path) return toast('Sin solución desde aquí: deshaz algo');
     let k = 0;
-    for (const m of path) if (m !== 'draw') this.cards[m].el?.insertAdjacentHTML('beforeend', `<span class="dev-num">${++k}</span>`);
-    toast(`Solución: ${k} jugadas y ${path.length - k} robos`);
+    const wilds = path.filter((m) => m === 'wild').length;
+    for (const m of path) if (m !== 'draw' && m !== 'wild') this.cards[m].el?.insertAdjacentHTML('beforeend', `<span class="dev-num">${++k}</span>`);
+    toast(`Solución: ${k} jugadas, ${path.length - k - wilds} robos${wilds ? ` y ${wilds} comodín${wilds > 1 ? 'es' : ''}` : ''}`);
   }
 
   devStep() {
@@ -1286,7 +1340,13 @@ export class Game {
     }
     this.boardEl.querySelectorAll('.dev-num').forEach((e) => e.remove());
     if (path[0] === 'draw') this.draw();
-    else this.play(this.cards[path[0]]);
+    else if (path[0] === 'wild') {
+      if (save.wild <= 0 && !this.opts.dev?.infinite) {
+        toast('Aquí va un comodín y no tienes');
+        return false;
+      }
+      this.useWild();
+    } else this.play(this.cards[path[0]]);
     return true;
   }
 

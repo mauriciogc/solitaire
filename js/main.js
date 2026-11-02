@@ -1,5 +1,5 @@
 import { save, prefs, persist, resetProfile, renameProfile, exportCode, readCode, loadProfile, setDev } from './storage.js';
-import { RACHA_GOALS, racha, rachaTheme, rachaReady, rachaHot, rachaWin, rachaLose, rachaClaim, msToMidnight, col, colLeft, colWin, colOffers, colBuy, ev, evLeft, evTicketLeft, evPrize, evEnter, evWin, evLose, EVENT_PLANETS, EVENT_PER_PLANET, EVENT_LEVELS } from './events.js';
+import { UNLOCK, isOn, nextEvent, daysToNextCol, RACHA_GOALS, racha, rachaTheme, rachaReady, rachaHot, rachaWin, rachaLose, rachaClaim, msToMidnight, col, colLeft, colWin, colOffers, colBuy, ev, evLeft, evTicketLeft, evPrize, evEnter, evWin, evLose, EVENT_PLANETS, EVENT_PER_PLANET, EVENT_LEVELS } from './events.js';
 import { WORLD_COUNT, LEVELS_PER_WORLD, TOTAL_LEVELS, worldInfo, generateLevel, variantLevel, MECH_INTRO, MECH_NAMES, secretId, isSecret, eventLevel } from './levels.js';
 import { Game, faceHTML, backHTML } from './game.js';
 import { DAILY_PATH, dailyState, starsNeeded, TICKET_PRICE, ticketCost, ticketRefund, coinsFor, bossChest, openSurprise, SECRET_MULT, SECRET_PRIZE } from './economy.js';
@@ -47,8 +47,16 @@ const setSafe = () => {
   s.setProperty('--cr', both && a === 90 ? '14px' : 'var(--sr)');
 };
 setSafe();
-new ResizeObserver(() => (setScale(), setSafe())).observe(document.documentElement);
-addEventListener('orientationchange', () => setTimeout(setSafe, 300));
+// Al girar, iPhone puede dejar la página desplazada o con zoom: el dibujo se ve en un lugar y los toques
+// caen en otro. Se regresa a su lugar en cada cambio de tamaño y otra vez cuando el giro termina.
+const pin = () => {
+  if (scrollX || scrollY) scrollTo(0, 0);
+  for (const e of [document.documentElement, document.body]) if (e.scrollTop || e.scrollLeft) e.scrollTop = e.scrollLeft = 0;
+};
+new ResizeObserver(() => (setScale(), setSafe(), pin())).observe(document.documentElement);
+addEventListener('orientationchange', () => [0, 150, 400, 800].forEach((t) => setTimeout(() => (pin(), setSafe()), t)));
+addEventListener('scroll', pin, { passive: true });
+visualViewport?.addEventListener('resize', pin);
 
 // Todo botón se hunde al tocarlo, al instante, para que se note que el toque llegó.
 addEventListener('touchstart', () => {}, { passive: true }); // en iPhone, sin esto :active no se activa
@@ -233,7 +241,8 @@ function showMap({ region, start = null, anim, after = null, unlock = null } = {
     cta.querySelector('.mech-tog')?.setAttribute('aria-expanded', false);
   });
   mount(el, anim);
-  rachaLost();
+  // Al volver de ganar, los avisos esperan a que termine el festejo (ver celebrateWin).
+  if (!after) notices();
   // Al volver de ganar, el monedero muestra lo de antes y luego se suma con las piezas que vuelan.
   if (after) {
     const c = el.querySelector('[data-coins]'), t = el.querySelector('[data-tickets]');
@@ -317,8 +326,9 @@ async function celebrateWin(galaxy, a, cta, paint, slide) {
   // Jefe ganado por primera vez: a la galaxia, a abrir el mundo siguiente (o a decir qué falta).
   if (a.res.chest && a.w + 1 < WORLD_COUNT) {
     await wait(600);
-    playUnlock(a.w + 1);
+    await playUnlock(a.w + 1);
   }
+  notices();
 }
 
 // Revela el nivel secreto del planeta en pantalla (una sola vez por mundo).
@@ -445,7 +455,7 @@ function showUniverse({ from = regionOf(currentWorld()) } = {}) {
     sideAction(a);
   });
   mount(el);
-  rachaLost();
+  notices();
   const make = () => {
     if (!el.isConnected) return;
     const regions = Array.from({ length: REGION_COUNT }, (_, r) => regionData(r));
@@ -467,6 +477,8 @@ function showUniverse({ from = regionOf(currentWorld()) } = {}) {
 const TICKET_WAIT = 24 * 3600e3;
 const ticketLeft = () => Math.max(0, (save.ticketAt || 0) + TICKET_WAIT - Date.now());
 const ticketGift = () => ticketCost(Math.min(save.next, TOTAL_LEVELS - 1));
+// Tiempo que le queda a un evento, en chiquito para su botón: días (3 d), horas (5 h) o minutos (40 m).
+const shortLeft = (ms) => (ms >= 864e5 ? `${Math.floor(ms / 864e5)} d` : ms >= 3600e3 ? `${Math.floor(ms / 3600e3)} h` : `${Math.max(1, Math.ceil(ms / 6e4))} m`);
 const leftText = (ms) => (ms >= 3600e3 ? `${Math.ceil(ms / 3600e3)} h` : `${Math.max(1, Math.ceil(ms / 60e3))} min`);
 const clock = (ms) => { const t = Math.ceil(ms / 1000); return `${Math.floor(t / 3600)}:${String(Math.floor(t / 60) % 60).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`; };
 const ticketBtn = () => {
@@ -481,23 +493,29 @@ setInterval(() => {
 }, 20e3);
 // Eventos: columna de la derecha, solo los activos.
 // prev: el número de antes de ganar (se pinta así y luego sube con el +1, sin avisos todavía).
+// fresh: recién desbloqueado y aún sin presentar (no se ve hasta que entra volando con su ventana).
+// revealed: ya entró volando aunque su ventana siga abierta (si el botón se vuelve a pintar, no se esconde).
+const revealed = new Set();
+const fresh = (k) => (save.intro?.[k] || revealed.has(k) ? '' : 'fresh');
 const rachaBtn = (prev = null) => {
+  if (!isOn('racha')) return '';
   const r = racha(), t = rachaTheme(), old = prev != null;
   const ready = !old && rachaReady(), hot = !old && !ready && rachaHot();
-  return `<button class="iconbtn tb press racha-btn ${ready ? 'ready' : ''} ${hot ? 'hot' : ''}" data-a="racha" aria-label="${t.name}" title="${t.name}">${hot ? `<span class="fire">${icon('flame')}</span>` : ''}${icon(t.ico)}<small class="rn">${old ? prev : r.n}</small>${ready ? '<span class="dot"></span>' : ''}</button>`;
+  return `<button class="iconbtn tb press racha-btn ${fresh('racha')} ${ready ? 'ready' : ''} ${hot ? 'hot' : ''}" data-a="racha" aria-label="${t.name}" title="${t.name}">${hot ? `<span class="fire">${icon('flame')}</span>` : ''}${icon(t.ico)}<small class="rn">${old ? prev : r.n}</small>${ready ? '<span class="dot"></span>' : ''}</button>`;
 };
-// Colección: la ficha de su temática con cuántas llevas; se mueve con punto rojo si ya alcanza para algo.
-const colBtn = (prev = null) => {
+// Colección: la ficha de su temática, arriba cuánto le queda y abajo cuántas lleva (como la racha; con 0 no sale);
+// se mueve con punto rojo si ya alcanza para algo.
+const colBtn = () => {
   const c = col();
   if (!c) return '';
-  const old = prev != null, ready = !old && colOffers(ticketGift()).some((o) => colAvail(o) && c.state.n >= o.price);
-  return `<button class="iconbtn tb press col-btn ${ready ? 'ready' : ''}" data-a="col" aria-label="${c.name}" title="${c.name}">${icon(c.token)}<small class="rn">${old ? prev : c.state.n}</small>${ready ? '<span class="dot"></span>' : ''}</button>`;
+  const ready = colOffers(ticketGift()).some((o) => colAvail(o) && c.state.n >= o.price);
+  return `<button class="iconbtn tb press col-btn ${fresh('col')} ${ready ? 'ready' : ''}" data-a="col" aria-label="${c.name}" title="${c.name}">${icon(c.token)}<small class="tl">${shortLeft(colLeft())}</small>${c.state.n ? `<small class="rn">${c.state.n}</small>` : ''}${ready ? '<span class="dot"></span>' : ''}</button>`;
 };
 // res: lo que dejó la victoria (se pinta el número de antes y luego sube).
-const eventButtons = (res) => rachaBtn(res?.racha ? res.racha - 1 : null) + colBtn(res?.col && col() ? col().state.n - res.col.n : null) + evBtn();
+const eventButtons = (res) => rachaBtn(res?.racha ? res.racha - 1 : null) + colBtn() + evBtn();
 const sideButtons = () => `${ibtn('gift', 'Regalo diario', 'daily', !dailyState(save.daily).claimed)}${ticketBtn()}${ibtn('bag', 'Tienda', 'shop')}${ibtn('album', 'Álbum de postales', 'album')}${ibtn('gear', 'Ajustes', 'settings')}`;
 function sideAction(a) {
-  const act = { me: () => !tourStep() && openProfile(), shop: () => openShop(), daily: openDaily, dticket: openDailyTicket, racha: openRacha, col: openCol, evento: () => showEvent(), album: openAlbum, settings: openSettings, dev: () => openDevMenu({ onGallery: () => showGallery(save.next), onRefresh: boot }) }[a];
+  const act = { me: () => !tourStep() && openProfile(), shop: () => openShop(), daily: openDaily, dticket: openDailyTicket, racha: openRacha, col: openCol, evento: () => warp(() => showEvent()), album: openAlbum, settings: openSettings, dev: () => openDevMenu({ onGallery: () => showGallery(save.next), onRefresh: boot }) }[a];
   act?.();
   return !!act;
 }
@@ -686,7 +704,7 @@ function startLevel(g, { resume = false, free = false, anim = 'up' } = {}) {
     saved,
     free: !!save.stars[g] || isSecret(g) || free || dev.infinite, // intento que no costó boleto
     tutorial: g === 0 && !save.tutorial,
-    racha: counts ? { n: racha().n, ico: rachaTheme().ico, hot: rachaHot() } : null,
+    racha: counts && isOn('racha') ? { n: racha().n, ico: rachaTheme().ico, hot: rachaHot() } : null,
     onSave: saved
       ? (state) => {
           save.run = { g, v, state };
@@ -746,6 +764,7 @@ function startLevel(g, { resume = false, free = false, anim = 'up' } = {}) {
       save.coins += coins;
       save.tickets += tickets;
       save.gold += gold;
+      const rachaOn = isOn('racha'); // la racha cuenta desde el nivel siguiente al que la abre
       if (g >= save.next) save.next = g + 1;
       if (g === 0) save.tutorial = true;
       // Cofre del jefe (primera vez): según el % de estrellas del mundo. Se guarda ya, aunque salgas antes de verlo.
@@ -756,7 +775,7 @@ function startLevel(g, { resume = false, free = false, anim = 'up' } = {}) {
         save.undo += chest.undo || 0;
         save.wild += chest.wild || 0;
       }
-      const racha = counts && !prev ? rachaWin() : null;
+      const racha = counts && !prev && rachaOn ? rachaWin() : null;
       persist();
       updateCoins();
       return { coins, tickets, prev, gold, chest, worldStars: worldStars(w), counted: true, first: !prev, racha, col: fichas ? { n: fichas, ico: col().token } : null };
@@ -777,7 +796,10 @@ function startLevel(g, { resume = false, free = false, anim = 'up' } = {}) {
 // ---------- Galería (modo dev) ----------
 function showGallery(start) {
   current = () => showGallery();
-  if (start != null) gallery.start = Math.max(0, start - (start % 24));
+  if (start != null) {
+    gallery.start = Math.max(0, start - (start % 24));
+    if (gallery.help[0] === 's') gallery.help = ''; // ir a un nivel del camino: deja la lista de especiales
+  }
   mount(galleryScreen({ onPlay: (g) => startLevel(g, save.run?.g === g ? { resume: true, anim: null } : { free: true, anim: null }), onBack: () => showMap() }));
 }
 
@@ -1058,7 +1080,8 @@ function bumpBtn(a, text, shine) {
 // ---------- Colección: tienda temporal ----------
 // ¿Todavía se puede cambiar? Lo exclusivo, si no es tuyo; las ayudas, siempre.
 const colAvail = (o) => !o.sec || !owns(o.sec, o.item);
-const daysLeft = (ms) => (ms > 864e5 ? `${Math.floor(ms / 864e5)} d ${clock(ms % 864e5).replace(/:\d\d$/, '')}` : clock(ms));
+// sec: con segundos (en la tienda de la colección, para que se vea avanzar).
+const daysLeft = (ms, sec = false) => { if (ms <= 864e5) return clock(ms); const t = clock(ms % 864e5); return `${Math.floor(ms / 864e5)} d ${sec ? t : t.replace(/:\d\d$/, '')}`; };
 const COL_KIND = { title: 'Título', frame: 'Postal', space: 'Espacio', ring: 'Marco', avatar: 'Avatar', back: 'Reverso', traveler: 'Viajero' };
 const COL_HELP = { wild: 'Comodín', undo: 'Deshacer', tickets: 'Boletos' };
 function openCol() {
@@ -1081,7 +1104,7 @@ function openCol() {
     wide: true,
     cls: 'col-modal',
     body: `<div class="ctop"><div class="cbank"><span class="cb-ico">${icon(c.token)}</span><b data-col-n>${c.state.n}</b></div>
-      <div class="rclock-chip">Termina en <b class="cclock">${daysLeft(colLeft())}</b></div></div>
+      <div class="rclock-chip">Termina en <b class="cclock">${daysLeft(colLeft(), true)}</b></div></div>
       <div class="cgrid"></div>`,
     onClose: () => {
       closeShelf();
@@ -1123,7 +1146,7 @@ function openCol() {
     } else grantPrize(o.prize, at);
   });
   const clk = m.el.querySelector('.cclock');
-  const tick = setInterval(() => (clk.isConnected ? (clk.textContent = daysLeft(colLeft())) : clearInterval(tick)), 1000);
+  const tick = setInterval(() => (clk.isConnected ? (clk.textContent = daysLeft(colLeft(), true)) : clearInterval(tick)), 1000);
 }
 // ---------- Evento del mes ----------
 // 5 planetas de 5 niveles en su propia constelación. Un boleto temático para entrar: ganar lo devuelve,
@@ -1133,14 +1156,17 @@ const EV_NODES = [0, 2, 5, 7, 9]; // dónde van sus 5 insignias en el camino del
 const evBtn = () => {
   const e = ev();
   if (!e || e.done) return ''; // terminado: el botón se va hasta el siguiente evento
-  // Sin número: el ícono grande. Si perdió el boleto, arriba lo que falta para el siguiente (como el boleto de regalo).
-  const left = !e.done && !e.state.run && evTicketLeft(), ready = !e.done && !left;
-  return `<button class="iconbtn tb press ev-btn ${ready ? 'ready' : ''} ${left ? 'waiting' : ''}" data-a="evento" aria-label="${e.name}" title="${e.name}">${icon(e.ico)}${left ? `<small class="wait">${leftText(left)}</small>` : ready ? '<span class="dot"></span>' : ''}</button>`;
+  // Arriba, lo que le queda al mes. El reloj del boleto vive adentro: aquí solo se apaga si no hay boleto
+  // y se mueve con su punto cuando sí lo hay.
+  const ready = !!(e.state.run || e.state.tk);
+  return `<button class="iconbtn tb press ev-btn ${fresh('mes')} ${ready ? 'ready' : 'waiting'}" data-a="evento" aria-label="${e.name}" title="${e.name}">${icon(e.ico)}<small class="tl">${shortLeft(evLeft())}</small>${ready ? '<span class="dot"></span>' : ''}</button>`;
 };
-// El reloj del botón avanza solo; cuando llega el boleto, el botón vuelve a moverse con su punto.
+// Los tiempos de los botones avanzan solos (y el del mes vuelve a moverse cuando llega el boleto).
 setInterval(() => {
   const b = document.querySelector('[data-a="evento"]');
-  if (b && (b.classList.contains('waiting') !== !!(ev() && !ev().state.run && evTicketLeft()) || b.querySelector('.wait'))) b.outerHTML = evBtn();
+  if (b && !b.classList.contains('fresh')) b.outerHTML = evBtn();
+  const c = document.querySelector('[data-a="col"]');
+  if (c && !c.classList.contains('fresh')) c.outerHTML = colBtn();
 }, 20e3);
 // El premio de un planeta, en chiquito (para la etiqueta del planeta y la ventana del premio).
 const EV_KIND = { space: 'Fondo', frame: 'Postal', ring: 'Marco', avatar: 'Avatar', back: 'Reverso', title: 'Título', traveler: 'Nave' };
@@ -1215,7 +1241,7 @@ function showEvent({ anim, after = null, start = null } = {}) {
   el.addEventListener('click', (ev2) => {
     const a = ev2.target.closest('[data-a]')?.dataset.a;
     if (galaxy?.busy) return;
-    if (a === 'back') return showMap({ anim: 'down' });
+    if (a === 'back') return warp(() => showMap(), { out: true });
     if (a === 'out') return galaxy?.zoomOut();
     if (a === 'ev-play') return evPlay();
     if (a === 'ev-wait') return openEvWait();
@@ -1291,9 +1317,10 @@ function evTicketArrives(el) {
 }
 // Bienvenida (la primera vez que se entra al evento del mes, y luego con el botón ?): de qué va y cómo se juega.
 // Los premios no se muestran: son sorpresa (solo se dice qué tipo de cosas se pueden ganar).
-function openEvIntro(e) {
-  e.state.intro = true;
-  persist();
+// go: se abre afuera (en las constelaciones) y su botón lleva al evento. Devuelve una promesa que se cumple al cerrarla.
+function openEvIntro(e, go = false) {
+  let done;
+  const closed = new Promise((r) => (done = r));
   const rule = (ico, html) => `<li>${icon(ico)}<span>${html}</span></li>`;
   const m = openModal({
     title: e.name,
@@ -1310,11 +1337,18 @@ function openEvIntro(e) {
         ${rule('flag', `Tienes <b>${evDays()}</b> para llegar al último planeta. ¡Entra cada día y no dejes pasar tu boleto!`)}
       </ul>`,
     // Botón del mes: con los colores y la flor de la temática (sin el triángulo de Jugar).
-    buttons: [{ label: `${icon('cempasuchil')}<span>¡A jugar!</span>${icon('cempasuchil')}`, cls: `wide ev-go ev-go-${e.key}` }],
+    buttons: [{ label: `${icon(e.deco)}<span>¡A jugar!</span>${icon(e.deco)}`, cls: `wide ev-go ev-go-${e.key}`, onClick: () => go && warp(() => showEvent()) }],
+    // Se da por vista al cerrarla (si se gira el teléfono con la ventana abierta, vuelve a salir).
+    onClose: () => {
+      e.state.intro = true;
+      persist();
+      done();
+    },
   });
-  if (reduced()) return;
+  if (reduced()) return closed;
   m.el.querySelectorAll('.evi-pl').forEach((el, i) => el.animate([{ opacity: 0, scale: 0.2 }, { opacity: 1, scale: 1.15, offset: 0.7 }, { opacity: 1, scale: 1 }], { duration: 460, delay: 150 + i * 90, easing: 'ease-out', fill: 'backwards' }));
   m.el.querySelectorAll('.evi-rules li').forEach((el, i) => el.animate([{ opacity: 0, translate: '-14px 0' }, { opacity: 1, translate: '0 0' }], { duration: 320, delay: 650 + i * 120, easing: 'ease-out', fill: 'backwards' }));
+  return closed;
 }
 // Evento terminado: el show (confeti, rayos, el ícono del evento) y Finalizar, que regresa al mapa.
 function openEvDone(e) {
@@ -1447,6 +1481,156 @@ function openEvPrize(e, res) {
         });
       }));
     }, 500);
+  });
+}
+
+// ---------- Avisos al llegar ----------
+// En las constelaciones (y al volver al mapa) salen, uno por uno: lo recién desbloqueado (una sola vez en la vida),
+// la bienvenida de la colección (cada colección) y la del evento del mes (cada mes con evento), y si se perdió la racha.
+// Cada uno se marca visto al cerrarlo. Al cambiar de pantalla (o al girar el teléfono, que vuelve a dibujarla)
+// la cola vieja se olvida y la pantalla nueva empieza otra.
+let noticeGen = 0;
+const modalOpen = () => !!document.querySelector('#modal-root .modal-back');
+// Espera a que no haya ventanas, túnel ni animaciones del mapa; false si mientras tanto cambió la pantalla.
+async function calm(gen) {
+  await wait(700);
+  while (gen === noticeGen && (modalOpen() || document.querySelector('.warp') || map?.galaxy?.busy || document.querySelector('.guide'))) await wait(250);
+  return gen === noticeGen;
+}
+async function notices() {
+  const gen = ++noticeGen;
+  if (tourStep() || save.onboard !== 'done') return;
+  for (const k of ['racha', 'col', 'mes']) {
+    if (!isOn(k) || save.intro?.[k]) continue;
+    if (!(await calm(gen))) return;
+    await openUnlock(k);
+  }
+  const c = col();
+  if (c && !c.state.intro) {
+    if (!(await calm(gen))) return;
+    await openColIntro(c);
+  }
+  const e = ev();
+  if (e && !e.done && !e.state.intro) {
+    if (!(await calm(gen))) return;
+    await openEvIntro(e, true);
+  }
+  if (await calm(gen)) rachaLost();
+}
+
+// Algo nuevo en la columna de la derecha: su botón entra volando, sale la ventana que lo explica
+// y, al cerrarla, el botón late con un anillo para que se vea dónde quedó.
+const UNLOCK_INFO = {
+  racha: () => {
+    const t = rachaTheme();
+    return {
+      title: `¡Nueva: ${t.name}!`, ico: t.ico, color: t.color, hero: icon(t.ico, 0, 0, 'big'),
+      lead: `Ganaste <b>${UNLOCK.racha} niveles</b>: ¡se abrió la racha! Gana niveles seguidos y llévate premios cada día.`,
+      rules: [
+        ['flag', 'Cuenta cada nivel <b>nuevo</b> que ganes, con las estrellas que sea. Repetir no cuenta.'],
+        ['gift', `Premios a los <b>${RACHA_GOALS.map((g) => g.n).join(', ')}</b> seguidos: monedas y <b>comodines</b>.`],
+        ['flame', 'Si pierdes o abandonas un nivel nuevo, la racha <b>vuelve a 0</b>.'],
+        ['rocket', 'A medianoche empieza otra. La encuentras a la <b>derecha</b>.'],
+      ],
+    };
+  },
+  col: () => {
+    const c = col(), days = daysToNextCol();
+    return {
+      title: '¡Nuevas: Colecciones!', ico: c?.token || 'concha', color: c?.color || 'blue', hero: ['concha', 'gema', 'bellota', 'caramelo'].map((t) => icon(t)).join(''),
+      lead: 'Una o dos semanas al mes llega una <b>colección</b> con su temática y su <b>tienda</b> de premios exclusivos.',
+      rules: [
+        ['star', 'Cada <b>estrella nueva</b> que ganas te da <b>1 ficha</b> de la colección.'],
+        ['bag', 'Cámbialas por avatares, reversos, viajeros y más que <b>solo salen ahí</b>.'],
+        ['flag', 'Termina el <b>domingo</b>: las fichas que sobren se pierden.'],
+        ['gift', c ? '¡Ya llegó una! Búscala a la <b>derecha</b>.' : `La próxima llega en <b>${days} ${days === 1 ? 'día' : 'días'}</b>.`],
+      ],
+    };
+  },
+  mes: () => {
+    const e = ev(), nx = !e && nextEvent();
+    return {
+      title: '¡Nuevo: Evento del mes!', ico: e?.ico || nx?.ico || 'calavera', color: e?.color || 'orange', hero: icon(e?.ico || nx?.ico || 'calavera', 0, 0, 'big'),
+      lead: 'Algunos meses llega un <b>evento de temporada</b>: 5 planetas, 25 niveles y premios que <b>solo salen ese mes</b>.',
+      rules: [
+        ['flame', 'Son los niveles <b>más difíciles</b>: muchos piden <b>comodines</b> o <b>+5 cartas</b>. ¡Guárdalos!'],
+        ['gift', 'Gana el <b>nivel 5</b> de cada planeta y abre su <b>regalo sorpresa</b>.'],
+        ['flag', 'Dura todo el mes. Si lo empiezas tarde, juega lo que alcances.'],
+        ['ticket', e ? `¡Este mes hay uno: <b>${e.name}</b>! Búscalo a la <b>derecha</b>.` : nx ? `El próximo, <b>${nx.name}</b>, llega en <b>${nx.days} ${nx.days === 1 ? 'día' : 'días'}</b>.` : 'Pronto llega el primero.'],
+      ],
+    };
+  },
+};
+async function openUnlock(k) {
+  const sel = `.side.r [data-a="${{ racha: 'racha', col: 'col', mes: 'evento' }[k]}"]`;
+  const btn = document.querySelector(sel);
+  revealed.add(k);
+  if (btn) {
+    btn.classList.remove('fresh');
+    if (!reduced()) {
+      const r = btn.getBoundingClientRect();
+      await btn.animate([{ scale: 0, rotate: '-30deg', opacity: 0 }, { scale: 1.35, rotate: '8deg', opacity: 1, offset: 0.6 }, { scale: 1, rotate: '0deg', opacity: 1 }], { duration: 620, easing: 'ease-out' }).finished;
+      sparkle({ x: r.left + r.width / 2, y: r.top + r.height / 2 }, 22);
+      buzz(20);
+      await wait(350);
+    }
+  }
+  const info = UNLOCK_INFO[k]();
+  await new Promise((done) => {
+    const m = openModal({
+      title: info.title,
+      color: info.color,
+      wide: true,
+      cls: `ev-intro unlock-${k}`,
+      body: `<div class="evi-hero"><div class="rays"></div><span class="evi-ico ul-hero">${info.hero}<span class="ul-new outl">¡Nuevo!</span></span></div>
+        <p class="lead">${info.lead}</p>
+        <ul class="evi-rules">${info.rules.map(([ico, html]) => `<li>${icon(ico)}<span>${html}</span></li>`).join('')}</ul>`,
+      buttons: [{ label: '¡Entendido!', cls: 'gold wide' }],
+      onClose: () => {
+        (save.intro ||= {})[k] = true;
+        persist();
+        done();
+      },
+    });
+    if (reduced()) return;
+    m.el.querySelectorAll('.ul-hero > .ico').forEach((el, i) => el.animate([{ opacity: 0, scale: 0.2 }, { opacity: 1, scale: 1.2, offset: 0.7 }, { opacity: 1, scale: 1 }], { duration: 500, delay: 150 + i * 110, easing: 'ease-out', fill: 'backwards' }));
+    m.el.querySelectorAll('.evi-rules li').forEach((el, i) => el.animate([{ opacity: 0, translate: '-14px 0' }, { opacity: 1, translate: '0 0' }], { duration: 320, delay: 550 + i * 120, easing: 'ease-out', fill: 'backwards' }));
+  });
+  // El botón pudo volverse a pintar mientras leía (su tiempo avanza solo): se busca el de ahora.
+  const now = document.querySelector(sel);
+  if (now) {
+    now.classList.add('spot');
+    setTimeout(() => now.classList.remove('spot'), 4200);
+  }
+}
+
+// Bienvenida de cada colección: cuál es, cómo se juntan sus fichas y qué exclusivos trae (estos sí se ven).
+function openColIntro(c) {
+  return new Promise((done) => {
+    const show = ['avatar', 'back', 'ring', 'space'];
+    const m = openModal({
+      title: c.name,
+      ico: c.token,
+      color: c.color,
+      wide: true,
+      cls: 'ev-intro col-intro',
+      body: `<div class="evi-hero"><div class="rays"></div>${show.map((sec, i) => `<span class="ci-ex" style="--i:${i < 2 ? i - 2 : i - 1}">${shopPreview(sec, c.ex[sec])}</span>`).join('')}<span class="evi-ico">${icon(c.token, 0, 0, 'big')}</span></div>
+        <p class="lead">¡Llegó una colección! Junta <b>${c.tokens}</b> y cámbialas por premios <b>exclusivos</b>: avatar, reverso, marco, fondo, viajero y más.</p>
+        <ul class="evi-rules">
+          <li>${icon('star')}<span>Cada <b>estrella nueva</b> que ganas te da <b>1 ${c.token}</b>.</span></li>
+          <li>${icon('bag')}<span>Cámbialas en su tienda: toca su botón a la <b>derecha</b>.</span></li>
+          <li>${icon('flag')}<span>Te quedan <b>${daysLeft(colLeft())}</b>: las ${c.tokens} que sobren se pierden.</span></li>
+        </ul>`,
+      buttons: [{ label: `${icon(c.token)}<span>¡A juntar!</span>`, cls: 'gold wide' }],
+      onClose: () => {
+        c.state.intro = true;
+        persist();
+        done();
+      },
+    });
+    if (reduced()) return;
+    m.el.querySelectorAll('.ci-ex').forEach((el, i) => el.animate([{ opacity: 0, scale: 0.2 }, { opacity: 1, scale: 1.15, offset: 0.7 }, { opacity: 1, scale: 1 }], { duration: 460, delay: 150 + i * 90, easing: 'ease-out', fill: 'backwards' }));
+    m.el.querySelectorAll('.evi-rules li').forEach((el, i) => el.animate([{ opacity: 0, translate: '-14px 0' }, { opacity: 1, translate: '0 0' }], { duration: 320, delay: 650 + i * 120, easing: 'ease-out', fill: 'backwards' }));
   });
 }
 
@@ -1682,7 +1866,7 @@ function openAlbum() {
 
 // Postal en grande: el planeta en 3D para girarlo, su nombre, estrellas y sello. Se guarda como foto.
 async function openPostcard(w) {
-  const info = worldInfo(w), stars = worldStars(w), tier = bossChest(stars).tier, pct = Math.round((stars / 30) * 100);
+  const info = worldInfo(w), stars = worldStars(w), tier = bossChest(stars).tier, pct = Math.round((stars / 30) * 100), frame = equipped('frame');
   let view = null;
   const m = openModal({
     title: esc(info.name),
@@ -1690,8 +1874,9 @@ async function openPostcard(w) {
     wide: true,
     cls: 'pc-modal',
     onClose: () => view?.dispose(),
-    body: `<div class="pc-view tier-${tier}" style="--h:${info.hue}">
-        <div class="pv-3d"><span class="pv-hint">${icon('prev')} Arrastra para girar ${icon('next')}</span></div>
+    body: `<div class="pc-view tier-${tier} ${frame === 'simple' ? '' : 'framed'}" style="--h:${info.hue}">
+        <div class="postcard pv-deco tier-${tier} fr-${frame}" aria-hidden="true"></div>
+        <div class="pv-3d"></div>
         <div class="pv-info">
           <small>Mundo ${w + 1} · ${regionName(regionOf(w))}</small>
           <b>${esc(info.name)}</b>
@@ -1723,7 +1908,10 @@ async function savePostcard(view, w, btn) {
   const g = c.getContext('2d');
   const rr = (x, y, w2, h2, r) => { g.beginPath(); g.roundRect(x, y, w2, h2, r); };
   g.fillStyle = '#2a1f5c'; g.fillRect(0, 0, W, H);
-  rr(30, 30, W - 60, H - 60, 56); g.fillStyle = TC[0]; g.fill(); g.lineWidth = 10; g.strokeStyle = TC[1]; g.stroke();
+  rr(30, 30, W - 60, H - 60, 56); g.fillStyle = TC[0]; g.fill();
+  // El marco de postal que tienes puesto (bandas, orilla y adornos), copiado del CSS.
+  const deco = await paintFrame(g, equipped('frame'), tier, 30, 30, W - 60, H - 60, 56);
+  rr(30, 30, W - 60, H - 60, 56); g.lineWidth = 8; g.strokeStyle = '#2a1f5c'; g.stroke();
   // Ventana del espacio con el planeta.
   const sx = 90, sy = 90, sw = W - 180, sh = 820;
   rr(sx, sy, sw, sh, 36);
@@ -1767,6 +1955,7 @@ async function savePostcard(view, w, btn) {
     g.fillStyle = '#fff'; g.textAlign = 'center'; g.font = '900 20px "Baloo 2"'; g.fillText('SECRETO', 0, 42);
     g.restore();
   }
+  deco();
   g.fillStyle = '#b3a9cf'; g.font = '800 26px "Baloo 2"'; g.textAlign = 'center'; g.fillText('Solitaire', W / 2, H - 56);
   const blob = await new Promise((ok) => c.toBlob(ok, 'image/png'));
   const name = `postal-mundo-${w + 1}.png`;
@@ -1782,6 +1971,109 @@ async function savePostcard(view, w, btn) {
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 2000);
   toast(`${icon('album')} Postal guardada`);
+}
+
+// Dibuja en el lienzo el marco de postal tal como lo pinta el CSS: se arma una postal invisible del mismo
+// tamaño (a escala) y se copian sus bandas (box-shadow), su línea punteada (outline) y sus capas ::before y
+// ::after (imágenes, cintas y orillas con --ring). Así cualquier marco nuevo sale en la foto sin dibujarlo aparte.
+// Pinta las bandas ya y devuelve una función que pinta los adornos encima de todo lo demás.
+async function paintFrame(g, frame, tier, X, Y, Wc, Hc, R) {
+  const k = 3, wd = Wc / k, hd = Hc / k;
+  const el = document.createElement('div');
+  el.className = `postcard tier-${tier} fr-${frame}`;
+  el.style.cssText = `position:fixed;left:-4000px;top:0;width:${wd}px;height:${hd}px;margin:0;padding:0;rotate:none;box-sizing:border-box;display:block`;
+  document.body.append(el);
+  const cs = getComputedStyle(el), px = (v) => parseFloat(v) || 0, bw = px(cs.borderLeftWidth);
+  // Separa una lista del CSS por comas de primer nivel (las imágenes data: llevan comas y paréntesis adentro).
+  const split = (v) => {
+    const out = [];
+    let depth = 0, q = '', cur = '';
+    for (const ch of v || '') {
+      if (q) { if (ch === q) q = ''; } else if (ch === '"' || ch === "'") q = ch; else if (ch === '(') depth++; else if (ch === ')') depth--; else if (ch === ',' && !depth) { out.push(cur.trim()); cur = ''; continue; }
+      cur += ch;
+    }
+    if (cur.trim()) out.push(cur.trim());
+    return out;
+  };
+  const path = (x, y, w, h, r) => { g.beginPath(); g.roundRect(x, y, w, h, Math.max(0, r)); };
+  // Bandas: box-shadow por dentro (la primera va encima, así que se pintan de la última a la primera).
+  const ix = X + bw * k, iy = Y + bw * k, iw = Wc - 2 * bw * k, ih = Hc - 2 * bw * k, ir = R - bw * k;
+  for (const sh of split(cs.boxShadow).reverse()) {
+    if (!sh.includes('inset')) continue;
+    const color = sh.match(/rgba?\([^)]*\)/)?.[0], n = sh.replace(/rgba?\([^)]*\)/, '').match(/-?[\d.]+px/g)?.map(px) || [];
+    const s = (n[3] || 0) * k;
+    if (!color || !s) continue;
+    g.save(); g.beginPath(); g.roundRect(ix, iy, iw, ih, ir); g.roundRect(ix + s, iy + s, iw - 2 * s, ih - 2 * s, Math.max(0, ir - s));
+    g.fillStyle = color; g.fill('evenodd'); g.restore();
+  }
+  // Línea punteada (outline) por dentro.
+  if (cs.outlineStyle !== 'none' && px(cs.outlineWidth)) {
+    const o = -px(cs.outlineOffset) * k, lw = px(cs.outlineWidth) * k;
+    g.save(); path(X + o + lw / 2, Y + o + lw / 2, Wc - 2 * o - lw, Hc - 2 * o - lw, R - o); g.lineWidth = lw; g.strokeStyle = cs.outlineColor;
+    if (cs.outlineStyle === 'dashed') g.setLineDash([lw * 3, lw * 2]); g.stroke(); g.restore();
+  }
+  // Capas ::before y ::after (en orden de z-index).
+  const layers = ['::before', '::after'].map((pe, i) => ({ pe, i, s: getComputedStyle(el, pe) })).filter((l) => l.s.content !== 'none' && l.s.content !== 'normal')
+    .map((l) => ({ ...l, z: parseInt(l.s.zIndex) || 0 })).sort((a, b) => a.z - b.z || a.i - b.i)
+    .map(({ s: live }) => {
+      // getComputedStyle está "en vivo": al quitar la postal se vacía, así que se copia lo que se usa.
+      const s = { getPropertyValue: () => live.getPropertyValue('--ring') };
+      for (const k of ['width', 'height', 'left', 'top', 'right', 'bottom', 'rotate', 'paddingTop', 'borderTopLeftRadius', 'backgroundColor', 'backgroundImage', 'backgroundPositionX', 'backgroundPositionY', 'backgroundSize', 'backgroundRepeat',
+        'borderLeftStyle', 'borderLeftWidth', 'borderLeftColor', 'borderRightStyle', 'borderRightWidth', 'borderRightColor']) s[k] = live[k];
+      const ringMark = live.getPropertyValue('--ring').trim();
+      s.getPropertyValue = () => ringMark;
+      const pw = wd - 2 * bw, ph = hd - 2 * bw, auto = (v) => v === 'auto' || v === '';
+      const w = !auto(s.width) && px(s.width) ? px(s.width) : pw - px(s.left) - px(s.right), h = !auto(s.height) && px(s.height) ? px(s.height) : ph - px(s.top) - px(s.bottom);
+      const x = auto(s.left) ? pw - px(s.right) - w : px(s.left), y = auto(s.top) ? ph - px(s.bottom) - h : px(s.top);
+      const urls = split(s.backgroundImage).map((u) => u.match(/^url\(\s*"(.*)"\s*\)$/s)?.[1] || u.match(/^url\((.*)\)$/s)?.[1] || null);
+      return { s, x, y, w, h, urls, ring: s.getPropertyValue('--ring').trim() === '1' };
+    });
+  el.remove();
+  const load = (u) => new Promise((ok) => { const im = new Image(); im.onload = () => ok(im); im.onerror = () => ok(null); im.src = u; });
+  for (const l of layers) l.imgs = await Promise.all(l.urls.map((u) => (u ? load(u) : null)));
+  // Posición de una capa de fondo: "0%", "100%", "26px", "calc(100% - 50px)", "right 50px"…
+  const pos = (v, room) => {
+    v = v.trim();
+    let base = 0, off = 0;
+    const kw = v.match(/^(left|right|center|top|bottom)\s*(.*)$/);
+    if (kw) { base = { left: 0, top: 0, center: 0.5, right: 1, bottom: 1 }[kw[1]]; off = px(kw[2]) * (kw[1] === 'right' || kw[1] === 'bottom' ? -1 : 1); return room * base + off; }
+    const pc = v.match(/(-?[\d.]+)%/), p2 = v.match(/([+-])\s*([\d.]+)px/), solo = v.match(/^(-?[\d.]+)px$/);
+    if (solo) return px(solo[1]);
+    if (pc) base = px(pc[1]) / 100;
+    if (p2) off = px(p2[2]) * (p2[1] === '-' ? -1 : 1);
+    return room * base + off;
+  };
+  const drawLayer = (l) => {
+    const { s } = l, ox = X + (bw + l.x) * k, oy = Y + (bw + l.y) * k, w = l.w * k, h = l.h * k;
+    g.save();
+    g.translate(ox + w / 2, oy + h / 2);
+    const rot = parseFloat(s.rotate); if (rot) g.rotate((rot * Math.PI) / 180);
+    g.translate(-w / 2, -h / 2);
+    if (l.ring) { const p = px(s.paddingTop) * k, r = px(s.borderTopLeftRadius) * k; g.beginPath(); g.roundRect(0, 0, w, h, r); g.roundRect(p, p, w - 2 * p, h - 2 * p, Math.max(0, r - p)); g.clip('evenodd'); }
+    if (s.backgroundColor && !/rgba\(0, 0, 0, 0\)|transparent/.test(s.backgroundColor)) { g.fillStyle = s.backgroundColor; g.fillRect(0, 0, w, h); }
+    for (const side of ['Left', 'Right']) if (s[`border${side}Style`] === 'dashed') {
+      const bwd = px(s[`border${side}Width`]) * k, x = side === 'Left' ? bwd / 2 : w - bwd / 2;
+      g.save(); g.strokeStyle = s[`border${side}Color`]; g.lineWidth = bwd; g.setLineDash([bwd * 2, bwd * 2]); g.beginPath(); g.moveTo(x, 0); g.lineTo(x, h); g.stroke(); g.restore();
+    }
+    const sx = split(s.backgroundPositionX), sy = split(s.backgroundPositionY), sz = split(s.backgroundSize), rp = split(s.backgroundRepeat);
+    l.imgs.forEach((im, i) => {
+      if (!im) return;
+      const vb = l.urls[i].match(/viewBox=['"]?[\d.-]+(?:%20|\s)+[\d.-]+(?:%20|\s)+([\d.]+)(?:%20|\s)+([\d.]+)/), asp = vb ? px(vb[1]) / px(vb[2]) : im.naturalWidth / im.naturalHeight || 1;
+      const [a, b] = (sz[i] || sz[0] || 'auto').split(/\s+/), dim = (v, full) => (v.endsWith('%') ? (px(v) / 100) * full : px(v) * k);
+      let iw2, ih2;
+      if (a === 'auto' && b) { ih2 = dim(b, h); iw2 = ih2 * asp; } else if (b && b !== 'auto') { iw2 = dim(a, w); ih2 = dim(b, h); } else if (a !== 'auto') { iw2 = dim(a, w); ih2 = iw2 / asp; } else { iw2 = im.naturalWidth * k; ih2 = im.naturalHeight * k; }
+      const rep = rp[i] || rp[0] || 'repeat', toPx = (v, room) => { const q = pos(v, room / k); return q * k + (v.match(/%/) ? 0 : 0); };
+      let px0 = toPx(sx[i] || sx[0] || '0%', w - iw2), py0 = toPx(sy[i] || sy[0] || '0%', h - ih2);
+      const rx = rep.startsWith('repeat') && !rep.startsWith('repeat no') && rep !== 'repeat-y', ry = rep === 'repeat' || rep === 'repeat repeat' || rep === 'repeat-y';
+      if (rx) px0 = (px0 % iw2) - (px0 % iw2 > 0 ? iw2 : 0);
+      if (ry) py0 = (py0 % ih2) - (py0 % ih2 > 0 ? ih2 : 0);
+      for (let yy = py0; yy < (ry ? h : py0 + 1); yy += ih2) for (let xx = px0; xx < (rx ? w : px0 + 1); xx += iw2) g.drawImage(im, xx, yy, iw2, ih2);
+    });
+    g.restore();
+  };
+  // Las orillas (--ring) van con las bandas; los adornos, al final, encima de todo.
+  layers.filter((l) => l.ring).forEach(drawLayer);
+  return () => layers.filter((l) => !l.ring).forEach(drawLayer);
 }
 
 // ---------- Abrir un mundo: boleto dorado + estrellas ----------
@@ -1867,37 +2159,53 @@ function openProfile() {
 
 // Formulario de jugador (crear o editar): nombre, avatar (inicial o personaje), color, marco, título, viajero,
 // fondo del universo y postal. p: { name, avatar, look, char, ring, title, traveler, space, frame } · onSave(p). La ventana toma el estilo del marco elegido.
-function profileForm({ title, p, action, onSave, noCancel = false }) {
+// first: al crear el jugador solo se elige entre lo gratis (inicial, Nico, Lila; marco sencillo o destello).
+function profileForm({ title, p, action, onSave, noCancel = false, first = false }) {
   p = { ...p };
-  const mine = (sec) => ITEMS[sec].filter((it) => owns(sec, it.k));
+  const mine = (sec) => ITEMS[sec].filter((it) => owns(sec, it.k) && (!first || it.price === 0));
+  if (first && p.look === 'char' && !mine('avatar').some((it) => it.k === p.char)) p.look = 'letter';
+  if (first && !mine('ring').some((it) => it.k === p.ring)) p.ring = 'sencillo';
   const chars = mine('avatar'), rings = mine('ring'), titles = mine('title'), travs = mine('traveler'), spaces = mine('space'), frames = mine('frame');
   const on = (yes) => (yes ? 'on' : '');
   const lookBtn = (look, k) => `<button data-look="${look}" data-char="${k || ''}" class="${on(p.look === look && (look === 'letter' || p.char === k))}" aria-label="${look === 'letter' ? 'Tu inicial' : item('avatar', k).name}" title="${look === 'letter' ? 'Tu inicial' : item('avatar', k).name}">${avatarHTML({ ...p, look, char: k })}</button>`;
   const shopBtn = (tab, cls, label) => (noCancel ? '' : `<button class="more ${cls}" data-shop="${tab}" aria-label="${label}" title="${label}">${icon('bag')}</button>`);
-  openModal({
+  // Al crear el jugador, Continuar va hasta abajo (dentro de lo que se desplaza) para que se vea que hay más
+  // opciones; la foto se queda fija arriba para ver lo que se va eligiendo.
+  const m = openModal({
     title,
     color: 'blue',
     closable: !noCancel,
-    cls: `pform mr-${p.ring}`,
+    cls: `pform ${first ? 'pf-first' : ''} mr-${p.ring}`,
     body: `<div class="avatar-preview">${avatarHTML(p, 'huge')}</div>
       <input class="text-in" maxlength="16" placeholder="Tu nombre" autocomplete="off" autocapitalize="words" enterkeyhint="done" value="${esc(p.name)}">
       <div class="pick-lbl">Avatar</div>
       <div class="look-pick">${lookBtn('letter')}${chars.map((it) => lookBtn('char', it.k)).join('')}${shopBtn('avatar', '', 'Más avatares en la tienda')}</div>
+      ${first ? `<div class="pf-more"><div class="pf-locked">${ITEMS.avatar.filter((it) => !owns('avatar', it.k)).slice(0, 5).map((it) => `<span>${avatarHTML({ ...p, look: 'char', char: it.k })}${icon('lock')}</span>`).join('')}</div><small>¡Mientras más juegues, más personajes desbloqueas!</small></div>` : ''}
       <div class="pick-lbl">Color</div>
       <div class="avatar-pick">${AVATAR_COLORS.map((c, i) => `<button data-av="${i}" class="${on(i === p.avatar)}" style="background:${c}" aria-label="Color ${i + 1}"></button>`).join('')}</div>
       ${rings.length > 1 || !noCancel ? `<div class="pick-lbl">Marco</div><div class="look-pick rings">${rings.map((it) => `<button data-ring="${it.k}" class="${on(it.k === p.ring)}" aria-label="${it.name}" title="${it.name}">${avatarHTML({ ...p, ring: it.k })}</button>`).join('')}${shopBtn('ring', '', 'Más marcos en la tienda')}</div>` : ''}
       ${titles.length > 1 ? `<div class="pick-lbl">Título</div><div class="title-pick">${titles.map((it) => titleHTML(it.k, on(it.k === p.title), 'button', `data-title="${it.k}"`)).join('')}</div>` : ''}
       ${noCancel ? '' : `<div class="pick-lbl">Viajero</div><div class="trav-pick">${travs.map((it) => `<button data-trav="${it.k}" class="${on(it.k === p.traveler)}" aria-label="${it.name}" title="${it.name}"><canvas data-kind="${it.k}"></canvas></button>`).join('')}${shopBtn('traveler', '', 'Más viajeros en la tienda')}</div>`}
       ${noCancel ? '' : `<div class="pick-lbl">Fondo del universo</div><div class="space-pick">${spaces.map((it) => `<button data-space="${it.k}" class="${on(it.k === p.space)}" aria-label="${it.name}" title="${it.name}"><div class="space-prev space-${it.k}"><div class="space"></div></div><small>${it.name}</small></button>`).join('')}${shopBtn('space', '', 'Más fondos en la tienda')}</div>
-      <div class="pick-lbl">Postal</div><div class="frame-pick">${frames.map((it) => `<button data-frame="${it.k}" class="${on(it.k === p.frame)}" aria-label="${it.name}" title="${it.name}"><div class="frame-prev">${postcardHTML(0, 24, 'mini', it.k)}</div><small>${it.name}</small></button>`).join('')}${shopBtn('frame', '', 'Más postales en la tienda')}</div>`}`,
-    buttons: [{ label: action, cls: 'green', onClick: () => onSave({ ...p, name: p.name.trim() }) }],
+      <div class="pick-lbl">Postal</div><div class="frame-pick">${frames.map((it) => `<button data-frame="${it.k}" class="${on(it.k === p.frame)}" aria-label="${it.name}" title="${it.name}"><div class="frame-prev">${postcardHTML(0, 24, 'mini', it.k)}</div><small>${it.name}</small></button>`).join('')}${shopBtn('frame', '', 'Más postales en la tienda')}</div>`}
+      ${first ? `<p class="pf-note">Puedes cambiar tu nombre y avatar <b>cuando quieras</b>.</p><button class="btn green pf-go">${action}</button>` : ''}`,
+    buttons: first ? [] : [{ label: action, cls: 'green', onClick: () => onSave({ ...p, name: p.name.trim() }) }],
     onClose: closeShelf,
   });
   const box = document.querySelector('.pform');
   const input = box.querySelector('.text-in');
   if (!noCancel) travShelf(box);
+  if (first) {
+    // La foto flotante vive en la cabecera (que no se desplaza) y aparece cuando la grande ya no se ve.
+    const head = box.querySelector('.mhead'), big = box.querySelector('.avatar-preview');
+    head.insertAdjacentHTML('beforeend', `<div class="pf-float">${avatarHTML(p)}</div>`);
+    const check = () => box.classList.toggle('floating', big.getBoundingClientRect().top + big.offsetHeight * 0.55 < head.getBoundingClientRect().bottom);
+    m.el.addEventListener('scroll', check, true);
+  }
   const paint = (pop) => {
     box.querySelector('.avatar-preview').innerHTML = avatarHTML(p, 'huge');
+    const fl = box.querySelector('.pf-float');
+    if (fl) fl.innerHTML = avatarHTML(p);
     box.querySelectorAll('[data-look]').forEach((b) => (b.innerHTML = avatarHTML({ ...p, look: b.dataset.look, char: b.dataset.char || p.char })));
     box.querySelectorAll('[data-ring]').forEach((b) => (b.innerHTML = avatarHTML({ ...p, ring: b.dataset.ring })));
     box.className = box.className.replace(/\bmr-\S+/, `mr-${p.ring}`);
@@ -1907,12 +2215,13 @@ function profileForm({ title, p, action, onSave, noCancel = false }) {
     p.name = input.value;
     paint();
   });
-  input.addEventListener('keydown', (e) => e.key === 'Enter' && box.querySelector('.mbtns .btn')?.click());
+  input.addEventListener('keydown', (e) => e.key === 'Enter' && box.querySelector('.mbtns .btn, .pf-go')?.click());
   const pick = (sel, b) => box.querySelectorAll(sel).forEach((x) => x.classList.toggle('on', x === b));
   const bounce = (el) => !reduced() && el.animate([{ scale: 0.8 }, { scale: 1.12, offset: 0.6 }, { scale: 1 }], { duration: 360, easing: 'ease-out' });
   box.addEventListener('click', (e) => {
     const b = e.target.closest('button');
     if (!b) return;
+    if (b.classList.contains('pf-go')) { m.close(); return onSave({ ...p, name: p.name.trim() }); }
     if (b.dataset.shop) { closeShelf(); document.getElementById('modal-root').replaceChildren(); return openShop(b.dataset.shop); }
     if (b.dataset.look) { p.look = b.dataset.look; if (b.dataset.char) p.char = b.dataset.char; pick('[data-look]', b); paint(true); }
     if (b.dataset.av) { p.avatar = +b.dataset.av; pick('[data-av]', b); paint(true); }
@@ -1931,16 +2240,121 @@ const savePlayer = (p, fallback) => {
   applyLook();
 };
 
-// Primera vez: pedir nombre y avatar (no se puede cerrar sin elegir).
-function welcome() {
+// ---------- Primera vez ----------
+// 1) Presentación: el logo y 3 escenas que avanzan solas (cartas, mundos, premios); al final, ¡Iniciar!. No se salta.
+// 2) Perfil: nombre, avatar y color; Continuar lleva a las constelaciones (y a su recorrido).
+// Las dos son obligatorias: save.onboard guarda el paso, así que si cierra el juego vuelve a la misma.
+// No tienen vista 3D: al girar el teléfono no se vuelven a dibujar (solo se acomodan).
+const LOGO = document.querySelector('#boot .logo')?.outerHTML.replace('<h1', '<div').replace('</h1>', '</div>') || '';
+const INTRO_SCENES = [
+  {
+    ill: () => `<div class="it-ill it-cards">${[[0, 'n', 8, 2], [1, 'n', 9, 3], [2, 'w', 7, 1]].map(([i, kind, r, s]) => `<div class="card up it-c${i} ${kind}">${faceHTML({ rank: r - 1, suit: s })}</div>`).join('')}<b class="it-plus outl p1">+1</b><b class="it-plus outl p2">+1</b></div>`,
+    text: 'Junta cartas <b>una arriba o una abajo</b> y limpia la mesa.',
+  },
+  {
+    ill: () => `<div class="it-ill it-worlds"><svg class="it-path" viewBox="0 0 300 110" preserveAspectRatio="none"><path d="M20 80Q90 10 150 60T280 40" /></svg>${Object.values(BIOMES).filter((_, i) => i % 3 === 0).slice(0, 4).map((b, i) => `<span class="it-pl" style="--i:${i};top:${[64, 14, 52, 6][i]}px">${miniPlanet(b.emblem)}</span>`).join('')}<span class="it-rocket">${icon('rocket')}</span></div>`,
+    text: 'Viaja por <b>cientos de mundos</b> y abre nuevas constelaciones.',
+  },
+  {
+    ill: () => `<div class="it-ill it-prizes"><div class="rays"></div><span class="it-gift">${icon('gift')}</span>${['coin', 'star', 'rocket', 'calavera', 'wild', 'gema'].map((k, i) => `<span class="it-pz" style="--a:${i * 60 - 90}deg;--d:${700 + i * 120}ms">${k === 'coin' ? coin() : icon(k)}</span>`).join('')}</div>`,
+    text: 'Gana <b>premios</b>, rachas y <b>eventos</b> de temporada.',
+  },
+];
+const SCENE_MS = 2700;
+// La palabra "Solitaire" con su o normal; el planeta del logo llega y la tumba para quedarse en su lugar.
+const LOGO_O = document.querySelector('#boot .logo-o')?.outerHTML || '';
+const introLogo = () => `<div class="logo" aria-label="Solitaire">S<span class="it-oslot">${LOGO_O}<b class="it-o">o</b></span>litaire</div>`;
+// Mueve un elemento a su nuevo lugar (después de cambiar el acomodo) con animación desde donde estaba.
+const flip = (el, change, ms = 650) => {
+  const a = el.getBoundingClientRect();
+  change();
+  const b = el.getBoundingClientRect();
+  if (reduced()) return Promise.resolve();
+  const dx = a.left + a.width / 2 - (b.left + b.width / 2), dy = a.top + a.height / 2 - (b.top + b.height / 2);
+  return el.animate([{ translate: `${dx}px ${dy}px`, scale: a.width / b.width }, { translate: '0 0', scale: 1 }], { duration: ms, easing: 'cubic-bezier(0.34, 1.3, 0.64, 1)' }).finished;
+};
+// Corre de principio a fin y no se puede saltar: logo, el planeta tumba la o, sube el logo, 3 escenas,
+// baja el logo y sale ¡Iniciar!.
+function showIntro() {
+  gallery.active = false;
+  current = showIntro;
+  const el = h(`<div class="screen intro-screen solo">
+    <div class="space"></div>
+    <div class="it-logo">${introLogo()}</div>
+    <div class="it-stage">${INTRO_SCENES.map((sc, i) => `<section class="it-scene" data-i="${i}">${sc.ill()}<p class="it-text">${sc.text}</p></section>`).join('')}</div>
+    <button class="go it-start" hidden><span class="t"><b class="outl">¡Iniciar!</b></span></button>
+  </div>`);
+  mount(el);
+  const scenes = [...el.querySelectorAll('.it-scene')], start = el.querySelector('.it-start'), logo = el.querySelector('.it-logo');
+  const planet = el.querySelector('.it-oslot .logo-o'), o = el.querySelector('.it-o');
+  const alive = () => el.isConnected;
+  // Las escenas miden 340×290: se achican lo necesario para caber debajo del logo en cualquier pantalla.
+  const stage = el.querySelector('.it-stage');
+  const fit = () => {
+    if (!alive()) return removeEventListener('resize', fit);
+    const cs = getComputedStyle(el), padY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom), padX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
+    const free = el.clientHeight - padY - logo.offsetHeight - parseFloat(cs.rowGap || 0) - 8;
+    stage.style.setProperty('--is', Math.max(0.4, Math.min(1, free / 290, (el.clientWidth - padX) / 340)).toFixed(3));
+  };
+  fit();
+  addEventListener('resize', fit);
+  (async () => {
+    if (!reduced()) {
+      logo.animate([{ scale: 0.3, opacity: 0, rotate: '-8deg' }, { scale: 1.12, opacity: 1, rotate: '3deg', offset: 0.65 }, { scale: 1, rotate: '0deg' }], { duration: 700, easing: 'ease-out' });
+      await wait(1000);
+      if (!alive()) return;
+      // El planeta cae girando desde arriba, choca con la o y la avienta.
+      planet.style.opacity = 1;
+      planet.animate([{ translate: '1.6em -2.2em', scale: 0.25, rotate: '-260deg' }, { translate: '0 0', scale: 1.15, rotate: '0deg', offset: 0.6 }, { translate: '0 0', scale: 0.92, offset: 0.8 }, { translate: '0 0', scale: 1 }], { duration: 900, easing: 'ease-in' });
+      await wait(540);
+      if (!alive()) return;
+      o.animate([{ translate: '0 0', rotate: '0deg', opacity: 1 }, { translate: '-130% -70%', rotate: '-80deg', opacity: 1, offset: 0.35 }, { translate: '-270% 150%', rotate: '-220deg', opacity: 0 }], { duration: 700, easing: 'ease-in', fill: 'forwards' });
+      const r = planet.getBoundingClientRect();
+      sparkle({ x: r.left + r.width / 2, y: r.top + r.height / 2 }, 18);
+      buzz(20);
+      await wait(1100);
+    } else {
+      planet.style.opacity = 1;
+      o.style.opacity = 0;
+    }
+    if (!alive()) return;
+    // Sube el logo y empiezan las escenas.
+    await flip(logo, () => el.classList.remove('solo'));
+    for (let i = 0; i < scenes.length; i++) {
+      if (!alive()) return;
+      scenes.forEach((sc, j) => sc.classList.toggle('on', j === i));
+      await wait(SCENE_MS);
+    }
+    if (!alive()) return;
+    // Se van las escenas, baja el logo y sale el botón.
+    scenes[scenes.length - 1].classList.remove('on');
+    await wait(380);
+    if (!alive()) return;
+    start.hidden = false;
+    flip(logo, () => el.classList.add('end'));
+    if (!reduced()) start.animate([{ scale: 0.3, opacity: 0 }, { scale: 1.12, opacity: 1, offset: 0.65 }, { scale: 1 }], { duration: 480, delay: 420, easing: 'ease-out', fill: 'backwards' });
+  })();
+  start.addEventListener('click', () => {
+    save.onboard = 'perfil';
+    persist();
+    warp(showSignup);
+  });
+}
+function showSignup() {
+  gallery.active = false;
+  current = showSignup;
+  mount(h(`<div class="screen intro-screen signup"><div class="space"></div><div class="it-logo">${LOGO}</div></div>`));
   profileForm({
-    title: '¡Bienvenido!',
+    title: '¡Crea tu jugador!',
     p: { ...playerNow(), name: '' },
-    action: 'Empezar',
+    action: 'Continuar',
     noCancel: true,
+    first: true,
     onSave: (p) => {
       savePlayer(p, 'Jugador');
-      showUniverse();
+      save.onboard = 'done';
+      persist();
+      warp(() => showUniverse());
     },
   });
 }
@@ -2015,6 +2429,7 @@ function screenInfo() {
       `pantalla  ${screen.width} × ${screen.height}`,
       `visible   ${vv ? `${Math.round(vv.width)} × ${Math.round(vv.height)} (arriba ${Math.round(vv.offsetTop)})` : '—'}`,
       `#app      ${Math.round(app.width)} × ${Math.round(app.height)} (y ${Math.round(app.top)})`,
+      `movida    x ${Math.round(scrollX)} y ${Math.round(scrollY)} · zoom ${vv ? vv.scale.toFixed(2) : '—'} · visible desde ${vv ? `${Math.round(vv.offsetLeft)}, ${Math.round(vv.offsetTop)}` : '—'}`,
       `orillas   ↑${px(cs.paddingTop)} →${px(cs.paddingRight)} ↓${px(cs.paddingBottom)} ←${px(cs.paddingLeft)}`,
       `modo      ${mode} · instalada ${navigator.standalone ? 'sí' : 'no'} · giro ${window.orientation ?? screen.orientation?.angle}`,
     ].join('\n');
@@ -2022,6 +2437,8 @@ function screenInfo() {
   paint();
   new ResizeObserver(paint).observe(document.documentElement);
   visualViewport?.addEventListener('resize', paint);
+  visualViewport?.addEventListener('scroll', paint);
+  addEventListener('scroll', paint, { passive: true });
   addEventListener('orientationchange', () => setTimeout(paint, 400));
 }
 screenInfo();
@@ -2161,12 +2578,12 @@ function hideLoader() {
 }
 
 // ---------- Arranque ----------
-// Si quedó un nivel a medias (se cerró la ventana o se salió), se vuelve directo a él.
+// La primera vez: presentación y perfil (obligatorias). Después siempre empieza en las constelaciones,
+// con la que vas al frente: ahí salen los avisos. Una partida a medias se retoma con Continuar.
 function boot() {
-  if (save.run) return startLevel(save.run.g, { resume: true, anim: null });
-  // La app empieza en las constelaciones (la vista de más afuera).
+  if (save.onboard === 'intro') return showIntro();
+  if (save.onboard === 'perfil') return showSignup();
   showUniverse();
-  if (!save.named) welcome();
 }
 
 (async () => {

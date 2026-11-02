@@ -19,6 +19,8 @@ const fresh = (name, avatar = 0) => ({
   run: null, // partida en curso de un nivel nuevo (se retoma al volver)
   tutorial: false,
   named: false, // la primera vez se le pide el nombre
+  onboard: 'intro', // primera vez: 'intro' (presentación) → 'perfil' (nombre y avatar) → 'done'. Obligatorio y se retoma al volver.
+  intro: {}, // eventos ya presentados al desbloquearse (racha, col, mes)
   daily: { day: 0, last: '' }, // camino del regalo diario: día siguiente a reclamar y fecha del último
   seen: {}, // mecánicas que ya se le explicaron
   secret: {}, // mundo -> mejores estrellas en su nivel secreto
@@ -51,6 +53,12 @@ const root = load();
 root.prefs ||= {};
 // Guardados de antes del boleto dorado: el mundo en el que ya estaba queda abierto.
 for (const p of Object.values(root.profiles)) if (p.open == null) p.open = Math.floor((p.next || 0) / 10);
+// Quien ya tenía nombre (guardados de antes de la presentación) no la vuelve a ver.
+const fixOnboard = (p) => {
+  if (p.onboard == null) p.onboard = p.named ? 'done' : 'intro';
+  return p;
+};
+for (const p of Object.values(root.profiles)) fixOnboard(p);
 // Astro era gratis antes de Nico y Lila: quien ya lo usaba se lo queda.
 for (const p of Object.values(root.profiles)) if (p.look === 'char' && p.char === 'astro') (p.owned ||= {})['avatar:astro'] = 1;
 
@@ -78,10 +86,10 @@ function swapTo(id) {
 
 // Borra todo el avance del jugador (también lo comprado), conserva nombre y avatar.
 export function resetProfile() {
-  const { name, avatar, named, look } = save;
+  const { name, avatar, named, look, onboard } = save;
   // Un personaje gratis (Nico o Lila) se conserva; uno comprado se pierde y vuelve a la inicial.
   const free = look === 'char' && ['nino', 'nina'].includes(save.char);
-  root.profiles[root.active] = { ...fresh(name, avatar), named, ...(free ? { look, char: save.char } : {}) };
+  root.profiles[root.active] = { ...fresh(name, avatar), named, onboard, ...(free ? { look, char: save.char } : {}) };
   swapTo(root.active);
 }
 
@@ -119,7 +127,7 @@ export async function readCode(text) {
 }
 // Reemplaza el avance del jugador por el del código (ya leído con readCode).
 export function loadProfile(p) {
-  root.profiles[root.active] = { ...fresh(p.name || 'Jugador 1'), ...p };
+  root.profiles[root.active] = { ...fresh(p.name || 'Jugador 1'), ...fixOnboard({ ...p }) };
   swapTo(root.active);
 }
 

@@ -46,6 +46,34 @@ export const EVENT_BIOMES = {
     // [agua, naranja desde, cuántas flores]
     [[0.4, 0.56, 1.2], [0.32, 0.55, 1.4], [0.48, 0.53, 0.9], [0.38, 0.48, 1.3], [0.35, 0.45, 1.6]],
   ),
+  // Navidad: pinos con punta nevada sobre pasto verde; la nieve (el "naranja" de sameLook) baja en cada planeta.
+  navidad: sameLook(
+    { emblem: ['#f2f8ff', '#4fa86a', '#5fa8e0'], colors: [['#2a5f9e', '#5fa8e0', '#e8f4ff', '#4fa86a', '#f2f8ff', '#ffffff']],
+      planet: { amp: 0.16, freq: 1.8, seed: 83, outline: 0x14284a, glow: 0xbfe6ff, prop: 'pine', path: '#ffd6d6' } },
+    // [agua, nieve desde, cuántos pinos]
+    [[0.4, 0.6, 1.1], [0.34, 0.56, 1.3], [0.46, 0.53, 0.9], [0.38, 0.5, 1.4], [0.3, 0.44, 1.6]],
+  ),
+  // Primavera: pradera verde con árboles en flor (copa rosa) y lagos azules; las flores suben en cada planeta.
+  primavera: sameLook(
+    { emblem: ['#8fd46a', '#ffb0cc', '#4fb6e0'], colors: [['#2f86c8', '#5fc0f0', '#fff4c9', '#8fd46a', '#ffc2dc', '#ffe3f1']],
+      planet: { amp: 0.14, freq: 1.7, seed: 101, outline: 0x1f4a2a, glow: 0xb9f0a0, prop: 'round', crown: '#ffb0cc', path: '#fff6ee' } },
+    // [agua, flores desde, cuántos árboles]
+    [[0.4, 0.66, 1.1], [0.34, 0.62, 1.3], [0.46, 0.58, 0.9], [0.38, 0.54, 1.4], [0.3, 0.5, 1.6]],
+  ),
+  // Amor y Amistad: praderas rosas con rosales y mares lila; el rosa fuerte sube en cada planeta.
+  amor: sameLook(
+    { emblem: ['#ff5f7e', '#ffb0cc', '#b36bff'], colors: [['#8a5cf0', '#b98cff', '#ffe3f1', '#ffb0cc', '#ff5f7e', '#ff8fb0']],
+      planet: { amp: 0.13, freq: 1.8, seed: 97, outline: 0x4a1030, glow: 0xff9cc8, prop: 'round', crown: '#ff4f6e', path: '#fff6ee' } },
+    // [agua, rosa fuerte desde, cuántos rosales]
+    [[0.4, 0.6, 1.1], [0.34, 0.56, 1.3], [0.46, 0.52, 0.9], [0.38, 0.5, 1.4], [0.3, 0.45, 1.6]],
+  ),
+  // Día de Reyes: desierto de arena con oasis y palmeras; las dunas doradas suben en cada planeta.
+  reyes: sameLook(
+    { emblem: ['#ffc83d', '#e8b56f', '#4fb6e0'], colors: [['#2f86c8', '#4fb6e0', '#fff1c9', '#e8b56f', '#ffc83d', '#ffe08a']],
+      planet: { amp: 0.15, freq: 1.6, seed: 89, outline: 0x4a2a10, glow: 0xffd27a, prop: 'palm', path: '#fff3d6' } },
+    // [agua, dorado desde, cuántas palmeras]
+    [[0.42, 0.62, 0.9], [0.36, 0.57, 1.1], [0.32, 0.53, 0.8], [0.38, 0.5, 1.2], [0.28, 0.46, 1]],
+  ),
 };
 // Planetas guardados para los mundos normales (aún sin lugar asignado): papel picado, velas, alebrijes y Mictlán.
 export const SPARE_BIOMES = {
@@ -130,6 +158,44 @@ function mantelTile() {
   for (let i = 0; i < 14; i++) s += `<ellipse cx="${(r() * W).toFixed(1)}" cy="${(r() * H).toFixed(1)}" rx="4" ry="2.6" fill="#ff9c1a" opacity=".7" transform="rotate(${(r() * 180).toFixed(0)} ${(r() * W).toFixed(1)} ${(r() * H).toFixed(1)})"/>`;
   return { url: enc(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">${s}</svg>`), w: W, h: H };
 }
+// Mantel de Navidad: rojo tejido, con filas de pinitos y copos (como suéter navideño).
+function mantelNavidadTile() {
+  const W = 360, H = 240;
+  let s = `<rect width="${W}" height="${H}" fill="#a51f30"/>`;
+  for (const y of [18, 222]) s += `<path d="M0 ${y}h${W}" stroke="#fff3d6" stroke-width="6" stroke-dasharray="8 8" opacity=".5"/>`;
+  for (let x = 0; x < W; x += 45) s += `<path d="M${x + 22} 40l-14 26h8l-12 22h36l-12-22h8z" fill="#2f7a42" opacity=".3"/>`;
+  for (let x = 0; x < W; x += 60) for (const [y, dx] of [[136, 0], [186, 30]]) {
+    const cx = x + 30 + dx;
+    s += `<g stroke="#fff3d6" stroke-width="3" stroke-linecap="round" opacity=".5">${[0, 60, 120].map((a) => `<path d="M${cx} ${y - 11}v22" transform="rotate(${a} ${cx} ${y})"/>`).join('')}</g>`;
+  }
+  return { url: enc(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">${s}</svg>`), w: W, h: H };
+}
+// Mantel de Día de Reyes: terciopelo morado con estrellitas doradas y una greca dorada.
+function mantelReyesTile() {
+  const W = 300, H = 300;
+  let s = `<rect width="${W}" height="${H}" fill="#3a1a6a"/>`;
+  for (let y = 0; y < H; y += 50) s += `<path d="M0 ${y + 25}h${W}" stroke="#42207a" stroke-width="14"/>`;
+  for (let y = 0; y < H; y += 75) for (let x = (y / 75) % 2 ? 37 : 0; x < W; x += 75) s += `<path d="${starPath(x + 18, y + 18, 7, 3)}" fill="#ffc83d" opacity=".45"/>`;
+  s += `<path d="M0 150h${W}" stroke="#ffc83d" stroke-width="3" stroke-dasharray="10 6" opacity=".35"/>`;
+  return { url: enc(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">${s}</svg>`), w: W, h: H };
+}
+// Mantel de Amor y Amistad: rosa con corazoncitos de encaje blanco y una orilla de puntitos.
+function mantelAmorTile() {
+  const W = 240, H = 240, hrt = (x, y, k) => `M${x} ${y + 7 * k}C${x - 11 * k} ${y} ${x - 7 * k} ${y - 8 * k} ${x} ${y - 3 * k}C${x + 7 * k} ${y - 8 * k} ${x + 11 * k} ${y} ${x} ${y + 7 * k}z`;
+  let s = `<rect width="${W}" height="${H}" fill="#e8559a"/>`;
+  for (let y = 0; y < H; y += 60) for (let x = (y / 60) % 2 ? 30 : 0; x < W; x += 60) s += `<path d="${hrt(x + 15, y + 15, 1.1)}" fill="none" stroke="#fff0f6" stroke-width="2.4" opacity=".5"/><circle cx="${x + 15}" cy="${y + 15}" r="2" fill="#fff0f6" opacity=".5"/>`;
+  s += `<path d="M0 120h${W}" stroke="#fff0f6" stroke-width="3" stroke-dasharray="2 8" stroke-linecap="round" opacity=".45"/>`;
+  return { url: enc(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">${s}</svg>`), w: W, h: H };
+}
+// Mantel de Primavera: cuadros de picnic verde y blanco, con florecitas.
+function mantelPrimaveraTile() {
+  const W = 240, H = 240;
+  let s = `<rect width="${W}" height="${H}" fill="#e9f7dc"/>`;
+  for (let x = 0; x < W; x += 40) s += `<rect x="${x}" y="0" width="20" height="${H}" fill="#7cc04f" opacity=".45"/>`;
+  for (let y = 0; y < H; y += 40) s += `<rect x="0" y="${y}" width="${W}" height="20" fill="#7cc04f" opacity=".45"/>`;
+  for (const [x, y, c] of [[30, 30, '#ff7ab8'], [150, 110, '#ffc83d'], [90, 190, '#b36bff'], [210, 30, '#fff']]) s += `<g opacity=".8">${[0, 72, 144, 216, 288].map((a) => `<ellipse cx="${x}" cy="${y - 5}" rx="3.4" ry="5" fill="${c}" transform="rotate(${a} ${x} ${y})"/>`).join('')}<circle cx="${x}" cy="${y}" r="2.6" fill="#ff9c1a"/></g>`;
+  return { url: enc(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">${s}</svg>`), w: W, h: H };
+}
 const TILE_CACHE = {};
 function tableTile(key) {
   if (TILE_CACHE[key]) return TILE_CACHE[key];
@@ -149,6 +215,7 @@ function tableTile(key) {
 const T = (x, y, a = 0, s = 1) => `transform="translate(${x} ${y}) rotate(${a}) scale(${s})"`;
 const tt = (d, base, shade, inside = '', sw = 2.6) => tshape(d, base, shade, inside, sw, [-3, -4]);
 const circ = (r) => CIRCLE(0, 0, r);
+const ELLd = (cx, cy, rx, ry) => `M${cx - rx} ${cy}a${rx} ${ry} 0 1 0 ${2 * rx} 0a${rx} ${ry} 0 1 0 ${-2 * rx} 0z`;
 const drop = (d, dx = 6, dy = 9) => `<path d="${d}" fill="#000" opacity=".3" transform="translate(${dx} ${dy})" filter="url(#pb)"/>`;
 const P = {
   mug: (c = ['#ff6f8e', '#d94a6a', '#ff8fa6']) => `${drop(circ(36))}<path d="M28 -6h12a11 11 0 0 1 0 22H28" fill="none" stroke="${K}" stroke-width="11"/><path d="M28 -6h12a11 11 0 0 1 0 22H28" fill="none" stroke="${c[2]}" stroke-width="5"/>${tt(circ(34), c[0], c[1])}${tt(circ(25), '#8a4f2a', '#6e3a1c', '', 2.2)}<g ${T(-6, -6, 20)}>${tt('M-7 -7h14v14h-14z', '#fffaf2', '#eadfce', '', 2)}</g><g ${T(9, 4, -12)}>${tt('M-6 -6h12v12h-12z', '#fffaf2', '#eadfce', '', 2)}</g>`,
@@ -171,6 +238,20 @@ const P = {
   marigolds: () => [[-20, -10, 17], [16, -18, 14], [8, 18, 16], [-14, 22, 11]].map(([x, y, r]) => `<g ${T(x, y)}>${drop(circ(r), 4, 6)}</g>${marigold(x, y, r)}`).join(''),
   sugarskull: () => `<g ${T(0, 0, -12)}>${drop(circ(34))}<g transform="translate(-48 -50) scale(3)">${icon('calavera').replace(/^<svg[^>]*>|<\/svg>$/g, '')}</g></g>`,
   pan: () => `${drop(circ(38))}${tt(circ(38), '#e0a25c', '#c4833d', `${[0, 60, 120].map((a) => `<path d="M-30 0h60" stroke="#c4833d" stroke-width="9" stroke-linecap="round" transform="rotate(${a})"/>`).join('')}${tt(circ(9), '#e8b070', '#c4833d', '', 2)}${[[-18, -20], [20, -14], [-22, 16], [16, 22], [2, -28], [28, 4]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="2.2" fill="#fff6e6"/>`).join('')}`)}`,
+  // Navidad: esferas y bastones de caramelo.
+  ornaments: () => [[-18, -10, 22, '#e8434f', '#c22c3c'], [20, -16, 17, '#ffc83d', '#ec9a17'], [8, 20, 19, '#3fa0e0', '#2a7cc0']].map(([x, y, r, c, d]) => `<g ${T(x, y, (x - y) / 2)}>${drop(circ(r), 4, 6)}${tt(circ(r), c, d, `<path d="M${-r} -2q${r} ${r * 0.4} ${2 * r} 0" stroke="#fff3d6" stroke-width="3" fill="none"/><ellipse cx="${-r * 0.4}" cy="${-r * 0.45}" rx="${r * 0.22}" ry="${r * 0.12}" fill="#fff" opacity=".6" transform="rotate(-35 ${-r * 0.4} ${-r * 0.45})"/>`)}${tt(`M-6 ${-r - 6}h12v8h-12z`, '#ffc83d', '#ec9a17', '', 2)}</g>`).join(''),
+  candycanes: () => [[-12, 2, -14], [14, -4, 18]].map(([x, y, a]) => `<g ${T(x, y, a)}><path d="M0 40V-14a12 12 0 0 1 24 0v6" fill="none" stroke="#000" stroke-opacity=".3" stroke-width="13" stroke-linecap="round" transform="translate(5 7)"/><path d="M0 40V-14a12 12 0 0 1 24 0v6" fill="none" stroke="${K}" stroke-width="13" stroke-linecap="round"/><path d="M0 40V-14a12 12 0 0 1 24 0v6" fill="none" stroke="#fff6ee" stroke-width="8" stroke-linecap="round"/><path d="M0 40V-14a12 12 0 0 1 24 0v6" fill="none" stroke="#e8434f" stroke-width="8" stroke-dasharray="6 7" stroke-linecap="butt"/></g>`).join(''),
+  // Primavera: ramo de tulipanes y mariposas.
+  tulips: () => [[-22, 4, -18], [0, -6, 0], [22, 4, 18]].map(([x, y, a]) => `<g ${T(x, y, a)}><g transform="translate(-24 -36) scale(1.5)">${icon('tulipan').replace(/^<svg[^>]*>|<\/svg>$/g, '')}</g></g>`).join(''),
+  butterflies: () => [[-14, -10, -20, 1.6], [18, 16, 25, 1.2]].map(([x, y, a, k]) => `<g ${T(x, y, a)}><g transform="translate(${-16 * k} ${-16 * k}) scale(${k})">${icon('mariposa').replace(/^<svg[^>]*>|<\/svg>$/g, '')}</g></g>`).join(''),
+  // Amor y Amistad: ramo de rosas, carta y caja de bombones en forma de corazón.
+  roses: () => [[-30, 0, -30], [30, 4, 30]].map(([x, y, a]) => `<g ${T(x, y, a)}>${tt('M0 -10Q8 0 0 10Q-8 0 0 -10z', '#4fb85e', '#2f8a42', '', 2)}</g>`).join('') + [[-16, -12, 15], [14, -18, 13], [10, 14, 14], [-14, 18, 11]].map(([x, y, r]) => `<g ${T(x, y, x * 3)}>${drop(circ(r), 3, 5)}${tt(circ(r), '#ff4f6e', '#d6304f', `<path d="M${-r * 0.55} ${r * 0.1}a${r * 0.55} ${r * 0.55} 0 0 1 ${r * 1.1} 0M${-r * 0.3} ${r * 0.2}a${r * 0.3} ${r * 0.32} 0 0 1 ${r * 0.6} 0M${-r * 0.75} ${-r * 0.15}q${r * 0.75} ${-r * 0.8} ${r * 1.5} 0" stroke="#a51f3c" stroke-width="2" fill="none" stroke-linecap="round"/>`, 2.4)}</g>`).join(''),
+  letter: () => `<g ${T(0, 0, -12)}>${drop('M-46 -30h92v60h-92z')}<g transform="translate(-52 -48) scale(3.25)">${icon('sobre').replace(/^<svg[^>]*>|<\/svg>$/g, '')}</g></g>`,
+  chocobox: () => `<g ${T(0, 0, 10)}>${drop('M0 40C-50 10-52-24-30-34-16-40-4-32 0-22 4-32 16-40 30-34 52-24 50 10 0 40z')}${tt('M0 40C-50 10-52-24-30-34-16-40-4-32 0-22 4-32 16-40 30-34 52-24 50 10 0 40z', '#c22c4f', '#a51f3c', [[-18, -14], [0, -2], [18, -14], [-10, 14], [10, 14]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="7" fill="#6e3a1c" stroke="${K}" stroke-width="2"/><circle cx="${x - 2}" cy="${y - 2}" r="2" fill="#a86a40"/>`).join(''))}</g>`,
+  // Día de Reyes: la rosca grande, una corona y estrellas doradas.
+  rosca: () => `${drop(ELLd(0, 0, 58, 40))}<g transform="translate(-58 -42) scale(3.6)">${icon('rosca').replace(/^<svg[^>]*>|<\/svg>$/g, '')}</g>`,
+  crown: () => `<g ${T(0, 0, -10)}>${drop(circ(30))}<g transform="translate(-40 -44) scale(2.5)">${icon('crown').replace(/^<svg[^>]*>|<\/svg>$/g, '')}</g></g>`,
+  goldstars: () => [[-16, -14, 20], [18, 8, 14], [-6, 24, 10]].map(([x, y, r]) => `<g ${T(x, y, x)}>${drop(starPath(0, 0, r, r * 0.45), 3, 4)}${tt(starPath(0, 0, r, r * 0.45), '#ffc83d', '#ec9a17', '', 2.2)}</g>`).join(''),
   plane: () => `<g ${T(0, 0, -20)}>${drop('M-36 0 36 -20 10 20z')}${tt('M-36 0 36 -20 4 4z', '#fffaf0', '#e8e0d0')}${tt('M4 4 36 -20 10 20z', '#ece4d4', '#d8cfbd')}</g>`,
 };
 // Objetos por tipo de mundo: [arriba-izquierda, arriba-derecha, abajo-izquierda]; abajo-derecha siempre es la canica con el planeta.
@@ -194,6 +275,10 @@ const call = (p) => (Array.isArray(p) ? P[p[0]](p[1]) : P[p]());
 // Mesas de los eventos del mes: mantel, tinte y objetos [arriba-izq, arriba-der, abajo-izq, abajo-der].
 const EVENT_TABLES = {
   muertos: { tile: mantelTile, tint: '#1a0614', props: ['marigolds', 'sugarskull', 'candle', 'pan'] },
+  primavera: { tile: mantelPrimaveraTile, tint: '#0a1a08', props: ['tulips', 'butterflies', ['mug', ['#47c27a', '#2f9e5c', '#a8e8b8']], 'flowers'] },
+  amor: { tile: mantelAmorTile, tint: '#1a0410', props: ['roses', 'letter', ['mug', ['#ff7ab8', '#e8559a', '#ffc2dc']], 'chocobox'] },
+  reyes: { tile: mantelReyesTile, tint: '#0e0620', props: ['rosca', 'crown', ['mug', ['#8a5cf0', '#6c3fd4', '#b9a6ff']], 'goldstars'] },
+  navidad: { tile: mantelNavidadTile, tint: '#1a0408', props: ['ornaments', 'candycanes', ['mug', ['#e8434f', '#c22c3c', '#ff8a94']], 'cookies'] },
 };
 // HTML del fondo de la mesa para el mundo w (o la del evento del mes: theme = su clave).
 export function tableHTML(w, theme) {

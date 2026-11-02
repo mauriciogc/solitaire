@@ -7,6 +7,11 @@ import { save, persist } from './storage.js';
 import { equip } from './shop.js';
 import { EVENT_LEVELS, EVENT_PER_PLANET, EVENT_PLANETS } from './levels.js';
 
+// Los eventos se abren poco a poco, según los niveles ganados (save.next): primero la racha, luego la colección
+// y al final el evento del mes (el más difícil: pide comodines). Cada uno se presenta una vez (save.intro).
+export const UNLOCK = { racha: 20, col: 50, mes: 80 };
+export const isOn = (k) => (save.next || 0) >= UNLOCK[k];
+
 export const RACHA_GOALS = [
   { n: 3, coins: 40 },
   { n: 5, coins: 80 },
@@ -49,6 +54,7 @@ export const msToMidnight = () => {
 
 // Ganó un nivel nuevo: suma 1 y aparta los premios que alcanzó.
 export function rachaWin() {
+  if (!isOn('racha')) return null;
   const r = racha();
   r.n++;
   RACHA_GOALS.forEach((g, i) => {
@@ -59,6 +65,7 @@ export function rachaWin() {
 }
 // Perdió o abandonó un nivel nuevo: vuelve a 0 (y se avisa al volver al mapa).
 export function rachaLose() {
+  if (!isOn('racha')) return;
   const r = racha();
   if (!r.n) return;
   r.lost = r.n;
@@ -103,6 +110,7 @@ const weekInfo = (monday) => {
 };
 // La colección activa (o null). Al cambiar de semana se empieza de cero: las fichas viejas se pierden.
 export function col() {
+  if (!isOn('col')) return null;
   const monday = mondayOf(today()), w = weekInfo(monday);
   if (!w.on) return null;
   if (save.col?.id !== monday) {
@@ -169,17 +177,33 @@ export function colBuy(o) {
 // ready: la temática ya tiene sus dibujos (se hacen por tandas; un mes sin dibujos no tiene evento).
 export const EVENTOS = {
   10: {
-    key: 'muertos', name: 'Día de Muertos', color: 'orange', ico: 'calavera', tk: 'tkMuertos', ready: true,
+    key: 'muertos', name: 'Día de Muertos', color: 'orange', ico: 'calavera', deco: 'cempasuchil', tk: 'tkMuertos', ready: true,
     planets: ['Campo de Cempasúchil', 'Cerro del Papel Picado', 'Valle de las Velas', 'Isla de los Alebrijes', 'Mictlán'],
     ex: [{ space: 'ofrenda' }, { frame: 'muertos' }, { ring: 'cempasuchil' }, { avatar: 'xolo', back: 'calaverita' }, { title: 'catrin', traveler: 'alebrije' }],
   },
-  0: { key: 'anio', name: 'Año Nuevo', color: 'gold', ready: false },
-  1: { key: 'amor', name: 'Amor y Amistad', color: 'pink', ready: false },
-  3: { key: 'primavera', name: 'Primavera', color: 'green', ready: false },
+  11: {
+    key: 'navidad', name: 'Navidad', color: 'red', ico: 'esfera', deco: 'copo', tk: 'tkNavidad', ready: true,
+    planets: ['Bosque de Pinos', 'Pueblo de Jengibre', 'Valle Nevado', 'Lago Congelado', 'Polo Norte'],
+    ex: [{ space: 'nevada' }, { frame: 'navidad' }, { ring: 'acebo' }, { avatar: 'reno', back: 'esferas' }, { title: 'duende', traveler: 'trineo' }],
+  },
+  0: {
+    key: 'reyes', name: 'Día de Reyes', color: 'violet', ico: 'rosca', deco: 'crown', tk: 'tkReyes', ready: true,
+    planets: ['Desierto de las Estrellas', 'Oasis de los Camellos', 'Valle de la Rosca', 'Palacio de Oro', 'Estrella de Oriente'],
+    ex: [{ space: 'oriente' }, { frame: 'reyes' }, { ring: 'corona' }, { avatar: 'reymago', back: 'rosca' }, { title: 'buscador', traveler: 'camello' }],
+  },
+  1: {
+    key: 'amor', name: 'Amor y Amistad', color: 'pink', ico: 'corazon', deco: 'sobre', tk: 'tkAmor', ready: true,
+    planets: ['Jardín de Rosas', 'Valle del Chocolate', 'Isla de las Cartas', 'Bosque de Cupido', 'Planeta Corazón'],
+    ex: [{ space: 'corazones' }, { frame: 'amor' }, { ring: 'cupido' }, { avatar: 'cupido', back: 'cartas' }, { title: 'flechazo', traveler: 'alado' }],
+  },
+  3: {
+    key: 'primavera', name: 'Primavera', color: 'green', ico: 'tulipan', deco: 'mariposa', tk: 'tkPrimavera', ready: true,
+    planets: ['Prado de Tulipanes', 'Jardín de Mariposas', 'Valle del Arcoíris', 'Bosque en Flor', 'Planeta Primavera'],
+    ex: [{ space: 'petalos' }, { frame: 'primavera' }, { ring: 'mariposas' }, { avatar: 'catarina', back: 'tulipanes' }, { title: 'jardinero', traveler: 'mariposa' }],
+  },
   6: { key: 'verano', name: 'Verano', color: 'blue', ready: false },
   8: { key: 'patrias', name: 'Fiestas Patrias', color: 'green', ready: false },
   9: { key: 'halloween', name: 'Halloween', color: 'violet', ready: false },
-  11: { key: 'navidad', name: 'Navidad', color: 'blue', ready: false },
 };
 // Monedas de los niveles 1-4 de cada planeta (pocas) y lo que da el 5.º si ya tienes su exclusivo.
 export const EV_COINS = [20, 25, 30, 35, 40];
@@ -195,6 +219,7 @@ const eventOf = (d) => {
 // El evento activo (o null). Al cambiar de mes se empieza de cero.
 // world: hasta qué mundo llegabas al empezar (fija las mecánicas de sus niveles todo el mes).
 export function ev() {
+  if (!isOn('mes')) return null;
   const e = eventOf(now());
   if (!e) return null;
   if (save.ev?.id !== e.id) {
@@ -228,6 +253,15 @@ export function daysToNextEvent() {
     if (eventOf(t)) return Math.ceil((t - d) / DAY);
   }
   return 0;
+}
+// El siguiente evento (para decir cuándo llega): { name, ico, days } o null.
+export function nextEvent() {
+  const d = now();
+  for (let m = 1; m <= 12; m++) {
+    const t = new Date(d.getFullYear(), d.getMonth() + m, 1), e = eventOf(t);
+    if (e) return { ...e, days: Math.ceil((t - d) / DAY) };
+  }
+  return null;
 }
 // Premio del nivel k (0..24): monedas en los niveles 1-4; en el 5.º, los exclusivos del planeta
 // (o EV_REPEAT si ya los tienes todos). Devuelve { coins?, undo?, wild?, items: [{ sec, k }] }.

@@ -80,21 +80,32 @@ export const legal = (level, s) => level.cards.filter((c) => playRank(level, c, 
 export const won = (s) => s.rem.every(Boolean);
 
 // ---------- Premios de racha ----------
-// Racha 6: +1 carta útil al mazo · 9: un comodín al mazo · 12: +1 comodín al inventario
+// Racha 6: +1 carta útil al mazo · 13: un comodín al mazo · 18 y 23: +1 carta útil · 31: +1 comodín al inventario
 // · después, cada 3: +1 carta útil. Las cartas de premio entran en un lugar "al azar" del mazo, nunca entre las 3 primeras
 // (determinista según el estado, para que juego, solucionador y bot coincidan).
 // Los premios solo añaden cartas.
-export function streakReward(streak) {
-  if (streak === 6) return 'card';
-  if (streak === 9) return 'wild';
-  if (streak === 12) return 'bank';
-  if (streak > 12 && streak % 3 === 0) return 'card';
+// step: cada cuántas cartas cuenta un paso (level.rewardStep): 1 normal, 2 = premios al doble de distancia
+// (evento del mes), 0 = sin premios.
+const REWARDS = { 6: 'card', 13: 'wild', 18: 'card', 23: 'card', 31: 'bank' };
+const LAST_REWARD = 31;
+export function streakReward(streak, step = 1) {
+  if (!step || streak % step) return null;
+  streak /= step;
+  if (REWARDS[streak]) return REWARDS[streak];
+  if (streak > LAST_REWARD && (streak - LAST_REWARD) % 3 === 0) return 'card';
   return null;
 }
 
-export function nextReward(streak) {
+// Premio anterior (0 si no hay): de ahí empiezan los puntos de racha del tablero.
+export function prevReward(at, step = 1) {
+  for (let s = at - 1; s > 0; s--) if (streakReward(s, step)) return s;
+  return 0;
+}
+
+export function nextReward(streak, step = 1) {
+  if (!step) return null;
   for (let s = streak + 1; ; s++) {
-    const kind = streakReward(s);
+    const kind = streakReward(s, step);
     if (kind) return { at: s, kind };
   }
 }
@@ -107,7 +118,7 @@ function rewardCard(level, s, kind) {
 }
 
 function applyReward(level, s) {
-  const kind = streakReward(s.streak);
+  const kind = streakReward(s.streak, level.rewardStep ?? 1);
   if (!kind) return null;
   let pos = -1;
   if (kind !== 'bank') {
@@ -177,31 +188,71 @@ export function draw(level, s0) {
 // ---------- Solucionador y bot ----------
 const sig = (c) => (c.wild ? 'w' : `${c.rank}${c.alt != null ? `/${c.alt}` : ''}${c.arrow ? (c.arrow > 0 ? '+' : '-') : ''}`);
 
-// Busca una solución desde un estado (profundidad primero, con memoria). Devuelve [id | 'draw', …] o null.
-export function solve(level, s0, limit = 250000) {
+// Busca una solución desde un estado (profundidad primero, con memoria). Devuelve [id | 'draw' | 'wild', …] o null.
+// wilds: comodines que puede usar (como en el juego, solo al quedarse sin jugadas).
+export function solve(level, s0, limit = 250000, wilds = 0) {
   const timed = level.cards.some((c) => c.live || c.bomb);
   const seen = new Set();
   const path = [];
   let nodes = 0;
-  const dfs = (s) => {
+  const dfs = (s, w = wilds) => {
     if (won(s)) return true;
     if (++nodes > limit) return false;
-    const key = `${s.rem.map((b) => (b ? 1 : 0)).join('')}|${s.stock.map(sig).join(',')}|${sig(s.top)}|${Math.min(s.streak, 13 + (s.streak % 3))}${timed ? `|${s.actions}|${s.boom}` : ''}`;
+    const key = `${w}|${s.rem.map((b) => (b ? 1 : 0)).join('')}|${s.stock.map(sig).join(',')}|${sig(s.top)}|${Math.min(s.streak, 13 + (s.streak % 3))}${timed ? `|${s.actions}|${s.boom}` : ''}`;
     if (seen.has(key)) return false;
     seen.add(key);
-    for (const c of legal(level, s)) {
+    const moves = legal(level, s);
+    for (const c of moves) {
       path.push(c.id);
-      if (dfs(play(level, s, c.id).s)) return true;
+      if (dfs(play(level, s, c.id).s, w)) return true;
       path.pop();
     }
     if (s.stock.length) {
       path.push('draw');
-      if (dfs(draw(level, s).s)) return true;
+      if (dfs(draw(level, s).s, w)) return true;
+      path.pop();
+    }
+    if (!moves.length && w > 0 && !s.top.wild) {
+      path.push('wild');
+      if (dfs({ ...cloneState(s), top: { wild: true } }, w - 1)) return true;
       path.pop();
     }
     return false;
   };
   return dfs(s0) ? path : null;
+}
+
+// Solucionador con ayudas: wilds = comodines y five = compras de +5 cartas que se pueden usar.
+// Como en el juego, el comodín se usa al atorarse (sin jugadas) y el +5 solo con el mazo vacío
+// (llegan 5 cartas vecinas de las que están libres). Devuelve { ok, cut }: cut = se acabó el límite
+// sin terminar de buscar (entonces un "no" no está comprobado).
+export function solveHelp(level, wilds = 0, five = 0, limit = 60000) {
+  const timed = level.cards.some((c) => c.live || c.bomb);
+  const seen = new Set();
+  let nodes = 0, cut = false;
+  const dfs = (s, w, f) => {
+    if (won(s)) return true;
+    if (++nodes > limit) return !(cut = true);
+    const key = `${w}${f}|${s.rem.map((b) => (b ? 1 : 0)).join('')}|${s.stock.map(sig).join(',')}|${sig(s.top)}|${Math.min(s.streak, 13 + (s.streak % 3))}${timed ? `|${s.actions}|${s.boom}` : ''}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    const moves = legal(level, s);
+    for (const c of moves) if (dfs(play(level, s, c.id).s, w, f)) return true;
+    if (s.stock.length && dfs(draw(level, s).s, w, f)) return true;
+    if (moves.length) return false;
+    if (w > 0 && !s.top.wild && dfs({ ...cloneState(s), top: { wild: true } }, w - 1, f)) return true;
+    if (f > 0 && !s.stock.length) {
+      const free = level.cards.filter((c) => isOpen(level, c, s)), t = cloneState(s);
+      for (let i = 0; i < 5; i++) {
+        const c = free[i % Math.max(1, free.length)];
+        t.stock.push({ rank: c ? mod13(rankOf(c, s) + (i % 2 ? -1 : 1)) : 0, suit: i % 4 });
+      }
+      if (dfs(t, w, f - 1)) return true;
+    }
+    return false;
+  };
+  const ok = dfs(initState(level), wilds, five);
+  return { ok, cut: !ok && cut };
 }
 
 // Jugador casual: juega cualquier carta válida al azar; si no hay, roba. Sin boosters, con premios de racha.

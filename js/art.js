@@ -47,6 +47,11 @@ export const marigold = (x, y, r, a = '#ffb13d', b = '#ff8a1a') => {
   const ring = (rr, n, pr, c, off) => Array.from({ length: n }, (_, i) => { const t = ((i + off) / n) * Math.PI * 2; return `<circle cx="${(x + Math.cos(t) * rr).toFixed(2)}" cy="${(y + Math.sin(t) * rr).toFixed(2)}" r="${pr.toFixed(2)}" fill="${c}"/>`; }).join('');
   return `<circle cx="${x}" cy="${y}" r="${r}" fill="${K}"/>${ring(r * 0.62, 9, r * 0.36, b, 0)}${ring(r * 0.36, 7, r * 0.3, a, 0.5)}<circle cx="${x}" cy="${y}" r="${(r * 0.22).toFixed(2)}" fill="#e0700a"/>`;
 };
+// Copo de nieve: 6 brazos con ramitas, contorno de tinta. w = grosor del color.
+export const flake = (x, y, r, c = '#bfe8ff', w = 2.2) => {
+  const arms = [0, 60, 120, 180, 240, 300].map((a) => `<g transform="rotate(${a} ${x} ${y})"><path d="M${x} ${y}v${-r}M${x} ${y - r * 0.62}l${-r * 0.28} ${-r * 0.24}M${x} ${y - r * 0.62}l${r * 0.28} ${-r * 0.24}M${x} ${y - r * 0.3}l${-r * 0.2} ${-r * 0.18}M${x} ${y - r * 0.3}l${r * 0.2} ${-r * 0.18}"/></g>`).join('');
+  return `<g fill="none" stroke-linecap="round" stroke-linejoin="round"><g stroke="${K}" stroke-width="${w + 2.4}">${arms}</g><g stroke="${c}" stroke-width="${w}">${arms}</g></g><circle cx="${x}" cy="${y}" r="${r * 0.18}" fill="#fff" stroke="${K}" stroke-width="${w * 0.8}"/>`;
+};
 const ICONS = {
   coin: () => tshape(CIRCLE(16, 16, 12.5), '#ffc83d', '#ec9a17', `<circle cx="14.6" cy="13.8" r="8" fill="none" stroke="#ec9a17" stroke-width="2"/><path d="${starPath(14.6, 14.2, 4.8, 2.2)}" fill="#fff4c7"/>`),
   star: () => tshape(starPath(16, 17, 14, 6.6), '#ffc83d', '#ec9a17', `<path d="M10.5 13.5l2.2-3.6" stroke="#fff4c7" stroke-width="2.2" stroke-linecap="round"/>`),
@@ -55,6 +60,28 @@ const ICONS = {
     `${[[11, 15], [21, 15]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="4" fill="#ff5fa8"/><circle cx="${x}" cy="${y}" r="2.6" fill="${K}"/><circle cx="${x - 0.8}" cy="${y - 0.9}" r=".8" fill="#fff"/>`).join('')}<path d="M16 18.6l-1.6 2.6h3.2z" fill="${K}"/><path d="M12.5 23.5v3M16 23.5v3M19.5 23.5v3" stroke="${K}" stroke-width="1.3" stroke-linecap="round"/><path d="M10.5 23.2h11" stroke="${K}" stroke-width="1.3" stroke-linecap="round"/>${[0, 72, 144, 216, 288].map((a) => `<circle cx="${(16 + Math.cos((a * Math.PI) / 180) * 2.1).toFixed(1)}" cy="${(8 + Math.sin((a * Math.PI) / 180) * 2.1).toFixed(1)}" r="1.5" fill="#ffb13d"/>`).join('')}<circle cx="16" cy="8" r="1.1" fill="#5fd1c5"/>`, 2.2),
   cempasuchil: () => `<path d="M16 22v8" stroke="${K}" stroke-width="4.4" stroke-linecap="round"/><path d="M16 22v8" stroke="#4fae4a" stroke-width="2" stroke-linecap="round"/>` + marigold(16, 14, 11),
   tkMuertos: () => `<g transform="rotate(-12 16 16)">${tshape('M3 10.5a2 2 0 0 1 2-2h22a2 2 0 0 1 2 2v3a2.6 2.6 0 0 0 0 5.2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-3a2.6 2.6 0 0 0 0-5.2z', '#ff9c1a', '#e0700a', `<path d="M21 9v14" stroke="#fff" stroke-width="1.8" stroke-dasharray="2 2"/>${marigold(11.5, 15.8, 5, '#fff6e6', '#ffd6a0')}`)}</g>`,
+  // Evento del mes: Navidad (esfera = ícono del evento, copo = adorno de botones, boleto rojo).
+  esfera: () => `<path d="M16 5.5V3.2q0-1.6 2.2-1.6" fill="none" stroke="${K}" stroke-width="1.8" stroke-linecap="round"/>` + tshape(CIRCLE(16, 18.5, 11), '#e8434f', '#c22c3c',
+    `<path d="M5.6 15.6q10.4 4.4 20.8 0" stroke="#fff3d6" stroke-width="2.2" fill="none"/><path d="M5.4 21.8q10.6 4.4 21.2 0" stroke="#ffc83d" stroke-width="2.2" fill="none"/>${[[10.5, 18.9], [16, 20.2], [21.5, 18.9]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="1.4" fill="#fff3d6"/>`).join('')}<ellipse cx="11" cy="12.6" rx="2.4" ry="1.3" fill="#fff" opacity=".65" transform="rotate(-35 11 12.6)"/>`, 2.2)
+    + tshape('M12.6 5h6.8v3.6h-6.8z', '#ffc83d', '#ec9a17', '', 1.8),
+  copo: () => flake(16, 16, 13),
+  tkNavidad: () => `<g transform="rotate(-12 16 16)">${tshape('M3 10.5a2 2 0 0 1 2-2h22a2 2 0 0 1 2 2v3a2.6 2.6 0 0 0 0 5.2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-3a2.6 2.6 0 0 0 0-5.2z', '#e8434f', '#c22c3c', `<path d="M21 9v14" stroke="#fff" stroke-width="1.8" stroke-dasharray="2 2"/>`)}${flake(11.5, 15.8, 5.2, '#fff6e6', 1.2)}</g>`,
+  // Evento del mes: Día de Reyes (rosca = ícono del evento, corona = adorno de botones, boleto morado).
+  rosca: () => tshape(ELL(16, 17, 13.5, 10), '#e8a654', '#c9853a', `<ellipse cx="16" cy="17" rx="6.2" ry="3.6" fill="#7a4a2a" stroke="${K}" stroke-width="1.6"/>${[[16, 8.6, 0, '#e8434f'], [25.6, 12.4, 38, '#4fb85e'], [26.4, 21, -30, '#ffc83d'], [16, 25.6, 0, '#e8434f'], [5.6, 21, 30, '#4fb85e'], [6.4, 12.4, -38, '#ffc83d']].map(([x, y, a, c]) => `<rect x="${x - 3}" y="${y - 1.4}" width="6" height="2.8" rx="1.4" fill="${c}" stroke="${K}" stroke-width="1.1" transform="rotate(${a} ${x} ${y})"/>`).join('')}${[[11, 10.6], [21, 10.6], [24, 16.4], [8, 16.4], [11, 23.6], [21, 23.6]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="1" fill="#fff6e6"/>`).join('')}`, 2.2),
+  tkReyes: () => `<g transform="rotate(-12 16 16)">${tshape('M3 10.5a2 2 0 0 1 2-2h22a2 2 0 0 1 2 2v3a2.6 2.6 0 0 0 0 5.2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-3a2.6 2.6 0 0 0 0-5.2z', '#8a5cf0', '#6c3fd4', `<path d="M21 9v14" stroke="#fff" stroke-width="1.8" stroke-dasharray="2 2"/><g transform="translate(6.3 10.6) scale(.34)">${ICONS.crown()}</g>`)}</g>`,
+  // Evento del mes: Amor y Amistad (corazón = ícono del evento, sobre = adorno de botones, boleto rosa).
+  corazon: () => tshape('M16 27.5C6 21 3 15.5 3.6 11.2 4.3 6.4 9.4 4.4 13 7.2c1.3 1 2.3 2.2 3 3.4.7-1.2 1.7-2.4 3-3.4 3.6-2.8 8.7-.8 9.4 4 .6 4.3-2.4 9.8-12.4 16.3z', '#ff4f6e', '#d6304f', '<ellipse cx="9.6" cy="10.4" rx="2.6" ry="1.6" fill="#fff" opacity=".7" transform="rotate(-40 9.6 10.4)"/>', 2.2),
+  sobre: () => tshape('M3.5 9.5a2 2 0 0 1 2-2h21a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2h-21a2 2 0 0 1-2-2z', '#fff6ee', '#f0dccb', `<path d="M4 9l12 9 12-9" fill="none" stroke="${K}" stroke-width="1.8" stroke-linejoin="round"/><path d="M4 24l8.6-7.4M28 24l-8.6-7.4" stroke="${K}" stroke-width="1.4" opacity=".5"/><g transform="translate(10.6 12.6) scale(.34)">${tshape('M16 27.5C6 21 3 15.5 3.6 11.2 4.3 6.4 9.4 4.4 13 7.2c1.3 1 2.3 2.2 3 3.4.7-1.2 1.7-2.4 3-3.4 3.6-2.8 8.7-.8 9.4 4 .6 4.3-2.4 9.8-12.4 16.3z', '#ff4f6e', '#d6304f', '', 4)}</g>`, 2.2),
+  tkAmor: () => `<g transform="rotate(-12 16 16)">${tshape('M3 10.5a2 2 0 0 1 2-2h22a2 2 0 0 1 2 2v3a2.6 2.6 0 0 0 0 5.2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-3a2.6 2.6 0 0 0 0-5.2z', '#ff7ab8', '#e8559a', `<path d="M21 9v14" stroke="#fff" stroke-width="1.8" stroke-dasharray="2 2"/><g transform="translate(6.6 10.8) scale(.34)">${tshape('M16 27.5C6 21 3 15.5 3.6 11.2 4.3 6.4 9.4 4.4 13 7.2c1.3 1 2.3 2.2 3 3.4.7-1.2 1.7-2.4 3-3.4 3.6-2.8 8.7-.8 9.4 4 .6 4.3-2.4 9.8-12.4 16.3z', '#fff6ee', '#ffd6ec', '', 4)}</g>`)}</g>`,
+  // Evento del mes: Primavera (tulipán = ícono del evento, mariposa = adorno de botones, boleto verde).
+  tulipan: () => `<path d="M16 16v13" stroke="${K}" stroke-width="4.4" stroke-linecap="round"/><path d="M16 16v13" stroke="#4fae4a" stroke-width="2" stroke-linecap="round"/>`
+    + tshape('M16 29c-1-6-6-9-10-9 2 5 6 8 10 9z', '#5fbf5a', '#3f9a46', '', 1.8) + tshape('M16 29c1-6 6-9 10-9-2 5-6 8-10 9z', '#5fbf5a', '#3f9a46', '', 1.8)
+    + tshape('M8 4.5l4 4 4-5.5 4 5.5 4-4V12a8 8 0 0 1-16 0z', '#ff5f7e', '#e0496b', '<path d="M16 3v14" stroke="#e0496b" stroke-width="1.4"/><ellipse cx="11.6" cy="11" rx="1.4" ry="2.6" fill="#fff" opacity=".55"/>', 2.2),
+  mariposa: () => tshape('M16 15C12 3.5 2.8 4 3.4 10.6 3.9 15 10 16.2 16 16z', '#b36bff', '#8a4ad8', '<circle cx="8.6" cy="10" r="2.2" fill="#fff6ee"/>', 1.8)
+    + tshape('M16 15C20 3.5 29.2 4 28.6 10.6 28.1 15 22 16.2 16 16z', '#b36bff', '#8a4ad8', '<circle cx="23.4" cy="10" r="2.2" fill="#fff6ee"/>', 1.8)
+    + tshape('M16 16C10 16 5 19 6.4 23.6 7.8 27.4 13 24.4 16 18z', '#ff7ab8', '#e8559a', '', 1.8) + tshape('M16 16C22 16 27 19 25.6 23.6 24.2 27.4 19 24.4 16 18z', '#ff7ab8', '#e8559a', '', 1.8)
+    + `<path d="M16 9v15" stroke="${K}" stroke-width="3.2" stroke-linecap="round"/><path d="M15.4 9.4Q13.6 5.4 11.2 4.4M16.6 9.4Q18.4 5.4 20.8 4.4" stroke="${K}" stroke-width="1.4" fill="none" stroke-linecap="round"/>`,
+  tkPrimavera: () => `<g transform="rotate(-12 16 16)">${tshape('M3 10.5a2 2 0 0 1 2-2h22a2 2 0 0 1 2 2v3a2.6 2.6 0 0 0 0 5.2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-3a2.6 2.6 0 0 0 0-5.2z', '#47c27a', '#2f9e5c', `<path d="M21 9v14" stroke="#fff" stroke-width="1.8" stroke-dasharray="2 2"/><g transform="translate(6.4 10.6) scale(.34)">${ICONS.tulipan()}</g>`)}</g>`,
   // Fichas de la colección (una por temática).
   concha: () => tshape('M16 27.5 4.5 14.5C5 7.5 10 4 16 4s11 3.5 11.5 10.5z', '#ffb3c7', '#f28aa5', ['M16 27V6', 'M16 27 9.5 7.5', 'M16 27 22.5 7.5', 'M16 27 5.5 12', 'M16 27 26.5 12'].map((d) => `<path d="${d}" stroke="#e0607f" stroke-width="1.6" fill="none"/>`).join(''))
     + tshape('M11 26.5h10l-1.5 3h-7z', '#ffb3c7', '#f28aa5', '', 1.8),
@@ -156,6 +183,10 @@ export const BACKS = {
   caramelos: { a: '#ffd6e8', b: '#ffbcd9', dots: '#ff7aa2', art: () => `<g transform="translate(12 18) rotate(-20 16 16) scale(.9)">${ICONS.caramelo()}</g><g transform="translate(58 96) rotate(25 16 16) scale(.8)">${ICONS.caramelo()}</g><g transform="translate(19 39) scale(1.95)">${ICONS.caramelo()}</g>` },
   // Exclusivos del evento del mes.
   calaverita: { a: '#7b2fbf', b: '#5e1f9a', dots: '#ffd27a', art: () => `${[[20, 26, 7], [80, 112, 8], [78, 28, 5], [24, 110, 5]].map(([x, y, r]) => marigold(x, y, r)).join('')}<g transform="translate(18 38) scale(2)">${ICONS.calavera()}</g>` },
+  esferas: { a: '#c22c3c', b: '#a51f30', dots: '#ffd6d6', art: () => `${[[20, 26, 7], [80, 112, 8], [80, 26, 5.5], [22, 112, 5.5]].map(([x, y, r]) => flake(x, y, r, '#fff6e6', 1.6)).join('')}<path d="M8 30Q50 46 92 30" fill="none" stroke="#3f9a5a" stroke-width="5" stroke-linecap="round"/><g transform="translate(18 38) scale(2)">${ICONS.esfera()}</g>` },
+  rosca: { a: '#6c3fd4', b: '#5a2fbf', dots: '#ffd27a', art: () => `${[[20, 24], [80, 114]].map(([x, y]) => `<g transform="translate(${x - 9} ${y - 9}) scale(.56)">${ICONS.crown()}</g>`).join('')}${[[80, 26, 5], [22, 114, 5]].map(([x, y, r]) => `<path d="${starPath(x, y, r, r * 0.45)}" fill="#ffd27a"/>`).join('')}<g transform="translate(14 38) scale(2.25)">${ICONS.rosca()}</g>` },
+  cartas: { a: '#ff7ab8', b: '#e8559a', dots: '#fff0f6', art: () => `${[[20, 26, 0.3], [80, 114, 0.34], [80, 26, 0.24], [22, 112, 0.24]].map(([x, y, k]) => `<g transform="translate(${x - 16 * k} ${y - 16 * k}) scale(${k})">${ICONS.corazon()}</g>`).join('')}<g transform="translate(14 36) scale(2.25)">${ICONS.sobre()}</g>` },
+  tulipanes: { a: '#47c27a', b: '#2f9e5c', dots: '#e9ffd9', art: () => `${[[20, 26, 0.32], [80, 114, 0.36], [80, 24, 0.26], [22, 114, 0.26]].map(([x, y, k]) => `<g transform="translate(${x - 16 * k} ${y - 16 * k}) scale(${k})">${ICONS.mariposa()}</g>`).join('')}<g transform="translate(14 36) scale(2.25)">${ICONS.tulipan()}</g>` },
   regalo: { a: '#7b4ee6', b: '#6438c8', star: ['#fff6e6', '#e3d3ff'] },
   comodin: { a: '#ffc83d', b: '#eca21f', star: ['#ff9c2b', '#e8761a'], dots: '#fff4c7' },
 };
@@ -337,6 +368,33 @@ export const AVATARS = {
     + P(ELL(50, 67, 13, 9), '#6e6888', '#5a5472') + eyes(53, 12, 4.6)
     + `<ellipse cx="50" cy="62" rx="4.6" ry="3.4" fill="${K}"/>` + smile(70, 5) + blush(66, 20)
     + marigold(70, 33, 8),
+  // Exclusivo del evento: Navidad. Reno con suéter verde y bufanda de rayas.
+  reno: () => mirror(`<path d="M37 36Q31 22 25 9M29.5 22 17 18M33 29 22 31" fill="none" stroke="${K}" stroke-width="8.6" stroke-linecap="round"/><path d="M37 36Q31 22 25 9M29.5 22 17 18M33 29 22 31" fill="none" stroke="#e8c08a" stroke-width="4" stroke-linecap="round"/>`)
+    + mirror(P(ELL(23, 47, 9, 5), '#a8693a', '#8a5228', '<ellipse cx="23" cy="47" rx="5" ry="2.2" fill="#ffc8a0"/>'))
+    + shoulders('#4fae4a', '#3a8a3a')
+    + P(ELL(50, 56, 25, 24), '#a8693a', '#8a5228', '<ellipse cx="39" cy="42" rx="6" ry="3.4" fill="#fff" opacity=".35" transform="rotate(-25 39 42)"/>')
+    + P('M24 80Q50 90 76 80l3 9Q50 100 21 89z', '#e8434f', '#c22c3c', '<path d="M33 83v12M44 86v12M56 86v12M67 83v12" stroke="#fff" stroke-width="4"/>')
+    + P(ELL(50, 68, 14, 9.5), '#ecc79e', '#d4a676') + eyes(52, 11, 4.6)
+    + P(CIRCLE(50, 63, 5.6), '#ff4a5a', '#d62a3c', '<circle cx="48.3" cy="61.3" r="1.7" fill="#fff"/>') + smile(71, 5) + blush(64, 19),
+  // Exclusivo del evento: Día de Reyes. Rey Mago: capa morada con cuello dorado y su corona.
+  reymago: () => kid('#8a5cf0', '#6c3fd4')
+    + P('M28 81Q50 93 72 81l2 7Q50 101 26 88z', '#ffc83d', '#ec9a17', '<circle cx="50" cy="92" r="3" fill="#e8434f"/><circle cx="38" cy="89" r="2.2" fill="#3fa0e0"/><circle cx="62" cy="89" r="2.2" fill="#4fb85e"/>')
+    + P('M24 52Q22 31 50 30Q78 31 76 52Q70 43 50 42Q30 43 24 52z', '#3a2418', '#2a180e')
+    + P('M29 36 27 11l10 9 13-13 13 13 10-9-2 25z', '#ffc83d', '#ec9a17', '<circle cx="50" cy="27" r="3.4" fill="#e8434f"/><circle cx="36" cy="30" r="2.4" fill="#3fa0e0"/><circle cx="64" cy="30" r="2.4" fill="#4fb85e"/><path d="M30 33h40" stroke="#fff3b8" stroke-width="2" opacity=".7"/>')
+    + kidFace(),
+  // Exclusivo del evento: Amor y Amistad. Cupido: rizos dorados, alitas y diadema con corazón.
+  cupido: () => mirror(P('M24 84Q4 80 6 62Q16 70 22 66Q12 58 18 50Q28 62 34 80z', '#fff6ee', '#e3d6ee', '<path d="M12 64q6 4 12 2M16 54q6 6 12 10" stroke="#cfc0e0" stroke-width="1.6" fill="none"/>'))
+    + kid('#ff7ab8', '#e8559a')
+    + P('M24 50Q20 26 50 26Q80 26 76 50Q72 40 66 38Q62 44 56 40Q50 46 44 40Q38 44 34 38Q28 40 24 50z', '#ffc83d', '#ec9a17', '<circle cx="34" cy="34" r="3" fill="#ffe08a"/><circle cx="50" cy="31" r="3" fill="#ffe08a"/><circle cx="66" cy="34" r="3" fill="#ffe08a"/>')
+    + `<g transform="translate(41 14) scale(.56)">${ICONS.corazon()}</g>`
+    + kidFace(),
+  // Exclusivo del evento: Primavera. Catarina: carita oscura, caparazón rojo con puntos y antenas.
+  catarina: () => mirror(`<path d="M42 33Q37 19 30 14" fill="none" stroke="${K}" stroke-width="3.4" stroke-linecap="round"/><circle cx="30" cy="14" r="4.4" fill="#3a3550" stroke="${K}" stroke-width="2.4"/>`)
+    + shoulders('#ff4f5a', '#d63040') + `${[[28, 94], [72, 94], [42, 100], [58, 100]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="3.6" fill="${K}"/>`).join('')}`
+    + P(ELL(50, 58, 26, 24), '#3a3550', '#2a2540')
+    + P('M23 54Q23 28 50 28Q77 28 77 54Q66 45 50 45Q34 45 23 54z', '#ff4f5a', '#d63040', `<path d="M50 29v16" stroke="${K}" stroke-width="2.4"/>${[[36, 38], [64, 38], [42, 32], [58, 32]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="3.4" fill="${K}"/>`).join('')}<ellipse cx="34" cy="34" rx="4" ry="2.2" fill="#fff" opacity=".45" transform="rotate(-30 34 34)"/>`)
+    + [-11, 11].map((x) => `<circle cx="${50 + x}" cy="60" r="6.6" fill="#fff" stroke="${K}" stroke-width="2"/><circle cx="${50 + x + 1}" cy="61" r="3.6" fill="${K}"/><circle cx="${50 + x}" cy="59.4" r="1.3" fill="#fff"/>`).join('')
+    + `<path d="M44 70q6 5 12 0" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"/>` + blush(68, 20),
   sirena: () => P('M20 50Q12 82 20 104H80Q88 82 80 50Q78 24 50 22Q22 24 20 50z', '#ff6f61', '#e0524a')
     + kid('#5fd1c5', '#2fae9e')
     + mirror(P('M34 96Q38 84 46 88Q44 98 34 96z', '#ff9cc8', '#e870a8'))
@@ -362,6 +420,10 @@ const band = (r, color, w = 6) => `<circle cx="70" cy="70" r="${r}" fill="none" 
 const heart = (x, y, s) => `M${x} ${y + s * 0.9}C${x - s * 1.6} ${y - s * 0.1} ${x - s * 0.9} ${y - s * 1.3} ${x} ${y - s * 0.45}C${x + s * 0.9} ${y - s * 1.3} ${x + s * 1.6} ${y - s * 0.1} ${x} ${y + s * 0.9}z`;
 export const RINGS = {
   sencillo: () => '',
+  destello: () => band(55, '#5fe0c8', 5) + [-45, 45, 135, 225].map((d, i) => {
+    const [x, y] = at(d, 56), R = i % 2 ? 7.5 : 10.5;
+    return `<g class="r-tw" style="animation-delay:${i * 0.45}s">${tshape(`M${x} ${y - R}Q${x} ${y} ${x + R} ${y}Q${x} ${y} ${x} ${y + R}Q${x} ${y} ${x - R} ${y}Q${x} ${y} ${x} ${y - R}z`, '#fff6b8', '#ffc83d', '', 2.2)}</g>`;
+  }).join(''),
   dorado: () => band(55, '#ffc83d', 6) + `<circle cx="70" cy="70" r="55" fill="none" stroke="#fff3b8" stroke-width="2" stroke-dasharray="14 160" stroke-linecap="round" class="r-shine"/>`
     + [0, 90, 180, 270].map((d) => { const [x, y] = at(d - 90, 55); return tshape(`M${x} ${y - 8}L${x + 6} ${y}L${x} ${y + 8}L${x - 6} ${y}z`, '#5ff0ff', '#2fb6d8', '', 2.4); }).join(''),
   dulce: () => band(55, '#ff8fb0', 5) + [-90, -18, 54, 126, 198].map((d) => tshape(heart(...at(d, 56), 8), '#ff5f7e', '#d63d5f', '', 2.4)).join(''),
@@ -377,6 +439,22 @@ export const RINGS = {
   // Exclusivo del evento: Día de Muertos.
   cempasuchil: () => band(55, '#ff9c1a', 6) + `<circle cx="70" cy="70" r="55" fill="none" stroke="#b36bff" stroke-width="2.4" stroke-dasharray="3 9" stroke-linecap="round"/>`
     + [-90, -30, 30, 90, 150, 210].map((d, i) => marigold(...at(d, 56), i % 2 ? 8 : 10.5)).join(''),
+  // Exclusivo del evento: Navidad. Acebo: hojas y bolitas rojas sobre una banda verde.
+  acebo: () => band(55, '#3f9a5a', 6) + `<circle cx="70" cy="70" r="55" fill="none" stroke="#fff3d6" stroke-width="2.2" stroke-dasharray="2 10" stroke-linecap="round"/>`
+    + [-90, -18, 54, 126, 198].map((d) => { const [x, y] = at(d, 56); return `<g transform="translate(${x} ${y}) rotate(${d + 90})">${[-55, 55].map((r) => `<g transform="rotate(${r})">${tshape('M0 0Q8 -6 0 -16Q-8 -6 0 0z', '#4fb85e', '#2f8a42', '<path d="M0 -2V-13" stroke="#2f7a3a" stroke-width="1.4"/>', 2.2)}</g>`).join('')}${[[-3.4, 0], [3.4, 0], [0, 4.6]].map(([a, b]) => `<circle cx="${a}" cy="${b}" r="3.6" fill="#e8434f" stroke="${K}" stroke-width="2"/>`).join('')}</g>`; }).join(''),
+  // Exclusivo del evento: Día de Reyes. Corona real: banda dorada con gemas y la corona arriba.
+  corona: () => band(55, '#ffc83d', 6) + [-18, 54, 126, 198].map((d, i) => { const [x, y] = at(d, 55); return tshape(`M${x} ${y - 7}L${x + 6} ${y}L${x} ${y + 7}L${x - 6} ${y}z`, ['#e8434f', '#3fa0e0', '#4fb85e', '#b36bff'][i], '#00000033', '', 2.2); }).join('')
+    + `<g transform="translate(51 -4) scale(1.2)">${ICONS.crown()}</g>`,
+  // Exclusivo del evento: Amor y Amistad. Flecha de Cupido que atraviesa una banda rosa dorado.
+  cupido: () => band(55, '#ffb0c8', 6) + `<circle cx="70" cy="70" r="55" fill="none" stroke="#fff6ee" stroke-width="2" stroke-dasharray="2 9" stroke-linecap="round"/>`
+    + `<path d="M14 126 126 14" stroke="${K}" stroke-width="8" stroke-linecap="round"/><path d="M14 126 126 14" stroke="#ffc83d" stroke-width="3.6" stroke-linecap="round"/>`
+    + tshape('M126 14l-16 3 13 13z', '#ff4f6e', '#d6304f', '', 2.4)
+    + tshape('M14 126l4-14 6 6zM14 126l14-4-6-6z', '#fff6ee', '#e3d6ee', '', 2)
+    + [[-90, 9], [150, 7], [30, 6]].map(([d, r]) => tshape(heart(...at(d, 56), r), '#ff4f6e', '#d6304f', '', 2.4)).join(''),
+  // Exclusivo del evento: Primavera. Mariposas sobre una banda verde con florecitas.
+  mariposas: () => band(55, '#8fd46a', 6) + `<circle cx="70" cy="70" r="55" fill="none" stroke="#fff6ee" stroke-width="2.4" stroke-dasharray="2 10" stroke-linecap="round"/>`
+    + [-135, -45, 45, 135].map((d, i) => { const [x, y] = at(d, 56), k = i % 2 ? 0.5 : 0.62; return `<g transform="translate(${x - 16 * k} ${y - 16 * k}) rotate(${d + 90} ${16 * k} ${16 * k}) scale(${k})">${ICONS.mariposa()}</g>`; }).join('')
+    + [-90, 0, 90, 180].map((d) => { const [x, y] = at(d, 55); return `<circle cx="${x}" cy="${y}" r="5" fill="#ffc83d" stroke="${K}" stroke-width="2"/><circle cx="${x}" cy="${y}" r="2" fill="#ff8a1a"/>`; }).join(''),
   arcoiris: () => `<circle cx="70" cy="70" r="56" fill="none" stroke="${K}" stroke-width="13"/><g class="r-spin">${['#ff5f7e', '#ff9c5b', '#ffc83d', '#6fd36a', '#4aa8de', '#8a5cf0'].map((c, i) => `<circle cx="70" cy="70" r="56" fill="none" stroke="${c}" stroke-width="8" pathLength="6" stroke-dasharray="1 5" stroke-dashoffset="${-i}"/>`).join('')}</g>`,
 };
 const ringOf = (p) => (RINGS[p.ring] ? p.ring : RINGS[p.equip?.ring] ? p.equip.ring : 'sencillo');

@@ -1,5 +1,8 @@
 import { mulberry32, hash, randInt, pick, shuffle } from './rng.js';
 import { follows, mod13, solve, initState } from './engine.js';
+import { EVENT_DATA } from './event-data.js';
+import { HARD_DATA } from './path-data.js';
+import { SPECIAL_DATA } from './special-data.js';
 
 // Unidades del tablero: una carta mide W x H. Posiciones = esquina superior izquierda.
 export const W = 1;
@@ -286,16 +289,25 @@ export const secretId = (w) => TOTAL_LEVELS + w;
 export const isSecret = (g) => g >= TOTAL_LEVELS && g < TOTAL_LEVELS + WORLD_COUNT;
 
 // ev: nivel del evento del mes (ver eventLevel): trae su propia dificultad, semilla y mundo de mecánicas.
+// Los niveles que piden ayudas (hardHelp) y los tableros especiales salen ya endurecidos de path-data.js y special-data.js.
 export function generateLevel(g, ev = null) {
+  if (ev) return buildLevel(g, ev);
+  if (g >= SPECIAL_ID) return specialLevel(g - SPECIAL_ID);
+  const h = hardHelp(g), d = h && hardData(HARD_DATA[g]);
+  return h ? hardened(buildLevel(g, null, d?.t), d, h) : buildLevel(g);
+}
+
+// Tablero sin endurecer. t: otro tablero para el mismo nivel (tools/hard-levels.mjs prueba varios hasta que uno se deja).
+export function buildLevel(g, ev = null, t = 0) {
   const secret = !ev && isSecret(g);
   const base = ev ? ev.world * LEVELS_PER_WORLD + ev.index : secret ? (g - TOTAL_LEVELS) * LEVELS_PER_WORLD + LEVELS_PER_WORLD - 1 : g;
   const world = Math.floor(base / LEVELS_PER_WORLD);
   const index = base % LEVELS_PER_WORLD;
-  const r = mulberry32(hash(ev ? ev.seed : g));
+  const r = mulberry32(hash(ev ? ev.seed : t ? g + t * 104729 : g));
   const d = ev ? ev.d : secret ? Math.min(1, difficulty(base) + 0.05) : difficulty(base);
   // Evento: en cada planeta salen más seguido las formas que más cuestan (medido con el bot casual).
   // Evento: en cada planeta salen más seguido las formas que más cuestan (medido con el bot casual).
-  const template = ev && (index === LEVELS_PER_WORLD - 1 || r() < 0.15 + ev.tight * 0.17) ? pick(r, ['peaks', 'peaks', 'scatter', 'invPyramid']) : chooseTemplate(r, ev ? Math.max(3, base) : base, d);
+  const template = ev?.template || (ev && (index === LEVELS_PER_WORLD - 1 || r() < 0.15 + ev.tight * 0.17) ? pick(r, ['peaks', 'peaks', 'scatter', 'invPyramid']) : chooseTemplate(r, ev ? Math.max(3, base) : base, d));
 
   const raw = template === 'clusters' ? clusters(r, d, index === LEVELS_PER_WORLD - 1) : [TEMPLATES[template](r, d)];
   const groups = raw.map(normalizeGroup);
@@ -546,6 +558,8 @@ export function generateLevel(g, ev = null) {
   // Bomba y carta viva dependen de cuántas acciones haces, y en el juego los premios de racha añaden robos.
   // Se comprueba con el solucionador (que sí aplica premios); si no hay solución, se quitan.
   // Si no hay solución: primero se quita la carta viva y luego se le da más margen a la bomba.
+  // En el evento los premios de racha van al doble de distancia: se comprueba igual que se juega.
+  if (ev) level.rewardStep = 2;
   const check = () => !cards.some((c) => c.live || c.bomb) || !!solve(level, initState(level), 60000);
   if (!check()) {
     for (const c of cards) if (c.live) (c.rank = ranks[c.id]), delete c.live;
@@ -566,16 +580,92 @@ export const eventDifficulty = (k) => {
   const p = Math.floor(k / EVENT_PER_PLANET), j = k % EVENT_PER_PLANET;
   return Math.min(1, 0.42 + p * 0.1 + j * 0.02 + (j === EVENT_PER_PLANET - 1 ? 0.05 : 0));
 };
-export function eventLevel(key, k, world) {
-  const j = k % EVENT_PER_PLANET, boss = j === EVENT_PER_PLANET - 1;
-  const w = Math.max(0, Math.min(WORLD_COUNT - 1, world));
+// Ayudas que pide cada nivel (por planeta): sin ellas no hay solución; con ese número de comodines
+// (o de compras de +5) sí. Planeta 1: 1 de 5 niveles, planeta 2: 2 de 5… planeta 5: los 5. El 5.º de cada planeta es el más duro.
+export const EVENT_HELP = [
+  [0, 0, 0, 0, 1],
+  [0, 0, 1, 0, 2],
+  [0, 1, 0, 1, 2],
+  [0, 1, 1, 1, 3],
+  [1, 2, 1, 2, 3],
+];
+// Los tableros del evento dependen de qué mecánicas conoces: 5 grupos según el mundo al empezar el evento
+// (el evento se abre al ganar el nivel 80, mundo 9). El mundo de cada grupo es el que se usa para armarlo.
+export const EVENT_WORLDS = [8, 11, 15, 19, 24];
+export const eventGroup = (world) => EVENT_WORLDS.reduce((b, w, i) => (world >= w ? i : b), 0);
+// Tablero base (antes de endurecerlo). t = intento: tools/event-levels.mjs prueba varios hasta dar con uno que cumpla.
+// En el evento los premios de racha van al doble de distancia (rewardStep 2).
+export function eventBase(month, k, group, t = 0) {
+  const p = Math.floor(k / EVENT_PER_PLANET), j = k % EVENT_PER_PLANET, boss = j === EVENT_PER_PLANET - 1;
   // Índice dentro del mundo: el jefe usa el 10 (tableros de jefe); los demás, del 2 al 8.
-  const L = generateLevel(EVENT_ID + k, { world: w, index: boss ? LEVELS_PER_WORLD - 1 : 1 + j * 2, d: eventDifficulty(k), tight: Math.floor(k / EVENT_PER_PLANET), seed: 7e6 + key * 64 + k });
-  return { ...L, k, planet: Math.floor(k / EVENT_PER_PLANET), boss };
+  const L = generateLevel(EVENT_ID + k, { world: EVENT_WORLDS[group], index: boss ? LEVELS_PER_WORLD - 1 : 1 + j * 2, d: eventDifficulty(k), tight: p, seed: 7e6 + month * 977 + group * 131 + k + t * 7919 });
+  return { ...L, k, planet: p, boss, rewardStep: 2, help: EVENT_HELP[p][j] };
+}
+// key = edición (año × 12 + mes). Los tableros salen de event-data.js (ya probados: piden sus ayudas);
+// cada año se cambian los números de las cartas (mismo tablero, misma dificultad).
+export function eventLevel(key, k, world) {
+  const month = key % 12, group = eventGroup(world);
+  const d = EVENT_DATA[`${month}.${group}`]?.[k];
+  let L = eventBase(month, k, group, d?.t || 0);
+  if (d?.s && L.help) L = { ...L, stock: L.stock.map((c, i) => ({ ...c, rank: d.s[i] })), help: d.h ?? L.help };
+  else L.help = 0;
+  const v = Math.floor(key / 12) - 2026;
+  return v > 0 ? { ...variantLevel(L, v), variant: 0 } : L;
 }
 // Id de los niveles del evento (después de los normales y los secretos): solo sirve para guardar intentos.
 export const EVENT_ID = TOTAL_LEVELS + WORLD_COUNT;
 export const isEvent = (g) => g >= EVENT_ID;
+
+// ---------- Niveles que piden ayudas (camino normal) ----------
+// Cada constelación (10 mundos = 100 niveles) tiene redondear(3 + (c − 1) × 37 / 51) niveles que no se
+// ganan sin ayudas (comodines o compras de +5): 3 en la primera y sube hasta 40 (el tope, 40%) en la 52.
+// Cuáles son sale de una semilla fija (los mismos para todos; en la primera, desde el planeta 6). Constelaciones 1-15:
+// todos piden 1; 16-35: algunos piden 2; 36-52: algunos 2 y algunos 3.
+// Su mazo ya probado viene de path-data.js (tools/hard-levels.mjs) y npm test lo revisa.
+export const CONST_LEVELS = 10 * LEVELS_PER_WORLD;
+export const hardCount = (c) => Math.round(3 + (c * 37) / 51); // c desde 0
+const HARD = new Map();
+for (let c = 0; c < TOTAL_LEVELS / CONST_LEVELS; c++) {
+  const from = c ? 0 : 5 * LEVELS_PER_WORLD;
+  const slots = shuffle(mulberry32(hash(9e6 + c)), [...Array(CONST_LEVELS - from).keys()]).slice(0, hardCount(c));
+  const n = slots.length, n3 = c >= 35 ? Math.round(n * 0.2) : 0, n2 = c >= 15 ? Math.round(n * 0.3) : 0;
+  slots.forEach((i, k) => HARD.set(c * CONST_LEVELS + from + i, k < n3 ? 3 : k < n3 + n2 ? 2 : 1));
+}
+export const hardHelp = (g) => HARD.get(g) || 0;
+
+// Datos guardados: "t:mazo[:h]" (t = tablero, mazo = un carácter por carta en base 13, h = ayudas si se
+// lograron menos de las pedidas). Sin datos (aún no se corre la herramienta) queda el tablero normal.
+export function hardData(str) {
+  if (!str) return null;
+  const [t, s, h] = str.split(':');
+  return { t: +t, s: [...s].map((c) => parseInt(c, 13)), ...(h && { h: +h }) };
+}
+function hardened(L, d, help) {
+  return d?.s ? { ...L, stock: L.stock.map((c, i) => ({ ...c, rank: d.s[i] })), help: d.h ?? help } : L;
+}
+
+// ---------- Tableros especiales (para eventos exclusivos) ----------
+// 1,000 tableros aparte, que no salen ni en el camino ni en el evento del mes, ordenados por cuántas ayudas
+// piden: 0-249 piden 1, 250-499 piden 2, 500-749 piden 3 y 750-999 piden 4. Cada uno es de un grupo de
+// mecánicas como el evento (grupo 0-4 = el jugador ya llegó al mundo 9, 12, 16, 20 o 25): solo usan las que ya conoce.
+// Cada 4.º es tablero de jefe. specialLevel(i) da el tablero ya probado (special-data.js); specials(h, grupo) los busca.
+export const SPECIAL_COUNT = 1000;
+export const SPECIAL_ID = EVENT_ID + EVENT_LEVELS;
+export const specialHelp = (i) => 1 + Math.floor(i / 250);
+export const specialGroup = (i) => i % EVENT_WORLDS.length;
+export const specials = (h, group = null) => [...Array(SPECIAL_COUNT).keys()].filter((i) => specialHelp(i) === h && (group == null || specialGroup(i) === group));
+// Para que no salgan todos con la misma forma, cada uno trae la suya (se turnan); si en 300 tableros no se deja
+// endurecer, se permite cualquiera. Dispersa y capas casi nunca aguantan 4 ayudas: en esos no van.
+const SPECIAL_SHAPES = ['pyramid', 'diamond', 'wall', 'invPyramid', 'clusters', 'towers', 'peaks', 'scatter', 'layers'];
+export function specialBase(i, t = 0) {
+  const h = specialHelp(i), boss = i % 4 === 3, shapes = SPECIAL_SHAPES.slice(0, h === 4 ? 7 : 9);
+  const L = buildLevel(SPECIAL_ID + i, { world: EVENT_WORLDS[specialGroup(i)], index: boss ? LEVELS_PER_WORLD - 1 : 1 + (i % 4) * 2, d: Math.min(1, 0.45 + h * 0.1), tight: h, template: t < 300 ? shapes[i % shapes.length] : null, seed: 8e6 + i * 13 + t * 7919 });
+  return { ...L, event: false, special: i, help: h, rewardStep: 2 };
+}
+export function specialLevel(i) {
+  const d = hardData(SPECIAL_DATA[i]);
+  return hardened(specialBase(i, d?.t), d, specialHelp(i));
+}
 
 // ---------- Mecánicas por mundo ----------
 export const MECHANICS = ['lock', 'pack', 'ice', 'double', 'arrow', 'curtain', 'bomb', 'live'];

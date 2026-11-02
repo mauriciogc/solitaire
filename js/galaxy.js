@@ -772,7 +772,7 @@ export class Galaxy {
   }
 }
 
-// ---------- Un planeta solo, para la postal (se gira arrastrando y se puede guardar como foto) ----------
+// ---------- Un planeta solo, para la postal (gira solo y se puede guardar como foto) ----------
 // Usa el mismo dibujo que la galaxia (mismas funciones), en su propio lienzo.
 export class PlanetView {
   // wd: { w, place } · host: caja donde va el lienzo.
@@ -798,23 +798,7 @@ export class PlanetView {
     const o = (this.o = this.makePlanet({ ...wd, state: 'done', done: 10 }, { u: 0, c: 0, s: 1 }, 0));
     o.holder.position.set(0, 0, 0);
     o.body.geometry = o.outline.geometry = this.planetGeo(o.t, o.seed, 72).g;
-    // Gira solo despacio; al arrastrar, lo mueve el dedo y sigue con inercia.
-    this.vy = 0.35; this.vx = 0; this.down = null;
-    const el = this.renderer.domElement;
-    el.style.touchAction = 'none';
-    el.addEventListener('pointerdown', (e) => { this.down = { x: e.clientX, y: e.clientY, t: performance.now() }; el.setPointerCapture(e.pointerId); this.vy = 0; });
-    el.addEventListener('pointermove', (e) => {
-      const d = this.down;
-      if (!d) return;
-      const dx = e.clientX - d.x, dy = e.clientY - d.y, dt = Math.max(1, performance.now() - d.t) / 1000;
-      o.spin.rotation.y += dx * 0.012;
-      o.holder.rotation.x = clamp(o.holder.rotation.x + dy * 0.008, -0.9, 0.9);
-      this.vy = (dx * 0.012) / dt; this.vx = 0;
-      Object.assign(d, { x: e.clientX, y: e.clientY, t: performance.now() });
-    });
-    const up = () => { this.down = null; };
-    el.addEventListener('pointerup', up);
-    el.addEventListener('pointercancel', up);
+    // Gira solo, despacio (sin arrastre: así pesa menos).
     this.last = performance.now();
     this.raf = requestAnimationFrame((t) => this.frame(t));
   }
@@ -822,12 +806,7 @@ export class PlanetView {
   frame(now) {
     if (this.dead) return;
     const dt = Math.min(0.05, (now - this.last) / 1000), o = this.o; this.last = now;
-    if (!this.down) {
-      // La inercia se frena hasta volver al giro lento.
-      this.vy += (0.35 - this.vy) * Math.min(1, dt * 2);
-      o.spin.rotation.y += this.vy * dt;
-      o.holder.rotation.x *= 1 - Math.min(1, dt * 1.5);
-    }
+    o.spin.rotation.y += 0.35 * dt;
     if (o.orbit) o.orbit.rotation.y += dt * 0.35;
     this.renderer.render(this.scene, this.camera);
     this.raf = requestAnimationFrame((t) => this.frame(t));
