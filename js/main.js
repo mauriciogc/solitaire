@@ -1,6 +1,6 @@
 import { save, prefs, persist, resetProfile, renameProfile, exportCode, readCode, loadProfile, setDev } from './storage.js';
-import { UNLOCK, EVENTOS, isOn, nextEvent, daysToNextCol, plusCols, RACHA_GOALS, racha, rachaTheme, rachaReady, rachaHot, rachaWin, rachaLose, rachaClaim, msToMidnight, col, colLeft, colWin, colOffers, colBuy, ev, evLeft, evTicketLeft, evPrize, evEnter, evWin, evLose, evAlbum, EVENT_PLANETS, EVENT_PER_PLANET, EVENT_LEVELS } from './events.js';
-import { WORLD_COUNT, LEVELS_PER_WORLD, TOTAL_LEVELS, worldInfo, generateLevel, variantLevel, MECH_INTRO, MECH_NAMES, secretId, isSecret, eventLevel } from './levels.js';
+import { UNLOCK, EVENTOS, isOn, nextEvent, daysToNextCol, plusCols, RACHA_GOALS, racha, rachaTheme, rachaReady, rachaHot, rachaWin, rachaLose, rachaClaim, msToMidnight, col, colLeft, colWin, colOffers, colBuy, ev, evLeft, evTicketLeft, evPrize, evEnter, evWin, evLose, evAlbum, EVENT_PLANETS, EVENT_PER_PLANET, EVENT_LEVELS, fiesta, fiestaLeft, nextFiesta, fiEnter, fiWin, fiLose, FIESTA_PLANETS, FIESTA_PER_PLANET, FIESTA_LEVELS } from './events.js';
+import { WORLD_COUNT, LEVELS_PER_WORLD, TOTAL_LEVELS, worldInfo, generateLevel, variantLevel, MECH_INTRO, MECH_NAMES, secretId, isSecret, eventLevel, fiestaLevel } from './levels.js';
 import { Game, faceHTML, backHTML } from './game.js';
 import { DAILY_PATH, dailyState, starsNeeded, TICKET_PRICE, ticketCost, ticketRefund, coinsFor, bossChest, openSurprise, SECRET_MULT, SECRET_PRIZE } from './economy.js';
 import { openModal, toast, updateCoins, money, esc, reduced, wait, flyToWallet, spendFromWallet, sparkle, confetti, starsHTML, warp, buzz, balloons, popBalloon } from './ui.js';
@@ -201,7 +201,7 @@ function showMap({ region, start = null, anim, after = null, unlock = null } = {
   </div>`);
   let galaxy = null;
   const cta = el.querySelector('.cta'), phud = el.querySelector('.phud');
-  const paintGalaxyCTA = () => (cta.innerHTML = playCTA());
+  const paintGalaxyCTA = () => (cta.innerHTML = fiBtn() + playCTA());
   const paintPlanet = (w) => {
     const info = worldInfo(w), b = BIOMES[biomeKey(info.place)];
     const mech = Object.entries(MECH_INTRO).find(([, iw]) => iw === w)?.[0];
@@ -216,7 +216,7 @@ function showMap({ region, start = null, anim, after = null, unlock = null } = {
     // Brinca hasta que lo lee (o hasta que vio el "Nuevo: …" del tablero).
     cta.classList.remove('mech-open');
     cta.innerHTML = mech ? `<div class="newmech info"><div><b>Aquí aparece: ${MECH_NAMES[mech].toLowerCase()}</b><span>${MECH_TEXT[mech]}</span></div></div>
-      <button class="mech-tog tb press${save.seen[mech] ? ' seen' : ''}" data-a="mech" aria-expanded="false" aria-label="Qué hay de nuevo en este mundo" title="Nuevo en este mundo">${mechCard(mech)}<i>?</i></button>${go}` : go;
+      <button class="mech-tog tb press${save.seen[mech] ? ' seen' : ''}" data-a="mech" aria-expanded="false" aria-label="Qué hay de nuevo en este mundo" title="Nuevo en este mundo">${mechCard(mech)}<i>?</i></button>${fiBtn()}${go}` : fiBtn() + go;
   };
   const paint = () => (galaxy?.mode === 'planet' && galaxy.sel ? paintPlanet(galaxy.sel.wd.w) : paintGalaxyCTA());
   paintGalaxyCTA();
@@ -445,7 +445,7 @@ function showUniverse({ from = regionOf(currentWorld()) } = {}) {
     <div class="side r">${eventButtons()}</div>
     <button class="dev-pill" data-a="dev">DEV</button>
     <div class="res">${wallet()}</div>
-    <div class="cta">${playCTA()}</div>
+    <div class="cta">${fiBtn()}${playCTA()}</div>
   </div>`);
   let uni = null;
   // Entrar a una constelación: la cámara se lanza hacia ella y el túnel de estrellas lleva a sus planetas.
@@ -523,7 +523,7 @@ const colBtn = () => {
 const eventButtons = (res) => rachaBtn(res?.racha ? res.racha - 1 : null) + colBtn() + evBtn();
 const sideButtons = () => `${ibtn('gift', 'Regalo diario', 'daily', !dailyState(save.daily).claimed)}${ticketBtn()}${ibtn('bag', 'Tienda', 'shop')}${ibtn('album', 'Álbum de postales', 'album')}${ibtn('gear', 'Ajustes', 'settings')}`;
 function sideAction(a) {
-  const act = { me: () => !tourStep() && openProfile(), shop: () => openShop(), daily: openDaily, dticket: openDailyTicket, racha: openRacha, col: openCol, evento: () => warp(() => showEvent()), album: openAlbum, settings: openSettings, dev: () => openDevMenu({ onGallery: () => showGallery(save.next), onRefresh: boot }) }[a];
+  const act = { me: () => !tourStep() && openProfile(), shop: () => openShop(), daily: openDaily, dticket: openDailyTicket, racha: openRacha, col: openCol, evento: () => warp(() => showEvent({ kind: 'mes' })), fiesta: openFiesta, album: openAlbum, settings: openSettings, dev: () => openDevMenu({ onGallery: () => showGallery(save.next), onRefresh: boot }) }[a];
   act?.();
   return !!act;
 }
@@ -1177,6 +1177,16 @@ function openCol() {
 // perder lo gasta y el siguiente llega a las 24 h (no se compra). El 5.º nivel de cada planeta da su exclusivo.
 const EV_W = 900; // w de los planetas del evento en la vista 3D (solo para sus semillas y para reconocerlos)
 const EV_NODES = [0, 2, 5, 7, 9]; // dónde van sus 5 insignias en el camino del planeta
+// El evento del mes y las festividades (24 h) usan la misma pantalla: EVS dice cuál se está viendo y cómo se juega.
+// get: el evento (o null) · P planetas de N niveles (L en total) · W: w de sus planetas en la vista 3D · tk: lleva boleto.
+const EVK = {
+  mes: { get: () => ev(), enter: evEnter, win: evWin, lose: evLose, P: EVENT_PLANETS, N: EVENT_PER_PLANET, L: EVENT_LEVELS, W: EV_W, nodes: EV_NODES, tk: true,
+    level: (e, k) => eventLevel(e.id, k, e.state.world), left: () => evLeft() },
+  fiesta: { get: () => { const f = fiesta(); return f && !f.soon ? f : null; }, enter: fiEnter, win: fiWin, lose: fiLose, P: FIESTA_PLANETS, N: FIESTA_PER_PLANET, L: FIESTA_LEVELS, W: 950, nodes: [0, 4, 9], tk: false,
+    level: (e, k) => fiestaLevel(e.day, k, e.state.world), left: () => fiestaLeft() },
+};
+let EVS = EVK.mes;
+const kindOf = (e) => (e.date ? 'fiesta' : 'mes');
 const evBtn = () => {
   const e = ev();
   if (!e || e.done) return ''; // terminado: el botón se va hasta el siguiente evento
@@ -1185,8 +1195,36 @@ const evBtn = () => {
   const ready = !!(e.state.run || e.state.tk);
   return `<button class="iconbtn tb press ev-btn ${fresh('mes')} ${ready ? 'ready' : 'waiting'}" data-a="evento" aria-label="${e.name}" title="${e.name}">${icon(e.ico)}<small class="tl">${shortLeft(evLeft())}</small>${ready ? '<span class="dot"></span>' : ''}</button>`;
 };
+// Festividad (24 h): botón dorado junto a Jugar, del tamaño de los laterales. Un día antes sale gris, con candado
+// y la cuenta regresiva ("en 19 h"); el día de la fiesta, a color con "¡Hoy!" y lo que le queda.
+const fiBtn = () => {
+  const f = fiesta();
+  if (!f || f.done) return '';
+  const left = shortLeft(fiestaLeft());
+  return f.soon
+    ? `<button class="iconbtn tb press fi-btn soon ${fresh('fiesta')}" data-a="fiesta" aria-label="${f.name}: mañana" title="${f.name}">${icon(f.ico)}<span class="fi-lock">${icon('lock')}</span><small class="tl">en ${left}</small></button>`
+    : `<button class="iconbtn tb press fi-btn ready ${fresh('fiesta')}" data-a="fiesta" aria-label="${f.name}" title="${f.name}">${icon(f.ico)}<small class="tl">${left}</small><em class="fi-hoy outl">¡Hoy!</em><span class="dot"></span></button>`;
+};
+// Un día antes: de qué va y la cuenta regresiva (nunca se dice que los niveles piden ayudas). El día de la fiesta, el botón lleva a ella.
+function openFiesta() {
+  const f = fiesta();
+  if (!f) return;
+  if (!f.soon) return warp(() => showEvent({ kind: 'fiesta' }));
+  const m = openModal({
+    title: `¡Mañana es ${f.name}!`,
+    color: f.color,
+    cls: 'fi-soon',
+    body: `<div class="dticket wait"><div class="rays"></div><span style="--i:0">${icon(f.ico, 0, 0, 'big')}</span></div><p class="tk-clock">${clock(fiestaLeft())}</p>
+      <p class="note">Solo por 24 horas: <b>${FIESTA_PLANETS} planetas</b>, ${FIESTA_LEVELS} niveles y premios <b>exclusivos</b>.<br>No necesitas <b>boletos</b>: juega y reintenta las veces que quieras.</p>`,
+    buttons: [{ label: '¡Ahí estaré!', cls: 'gold wide' }],
+  });
+  const c = m.el.querySelector('.tk-clock');
+  const t = setInterval(() => (c.isConnected ? (fiesta()?.soon ? (c.textContent = clock(fiestaLeft())) : (m.close(), current?.())) : clearInterval(t)), 1000);
+}
 // Los tiempos de los botones avanzan solos (y el del mes vuelve a moverse cuando llega el boleto).
 setInterval(() => {
+  const fb = document.querySelector('[data-a="fiesta"]');
+  if (fb && !fb.classList.contains('fresh')) fb.outerHTML = fiBtn();
   const b = document.querySelector('[data-a="evento"]');
   if (b && !b.classList.contains('fresh')) b.outerHTML = evBtn();
   const c = document.querySelector('[data-a="col"]');
@@ -1196,7 +1234,8 @@ setInterval(() => {
 const EV_KIND = { space: 'Fondo', frame: 'Postal', ring: 'Marco', avatar: 'Avatar', back: 'Reverso', title: 'Título', traveler: 'Nave' };
 const evPrizeArt = (sec, k) => (sec === 'title' ? titleHTML(k) : shopPreview(sec, k));
 // Tiempo que queda del evento, dicho para animar a jugar: días (o horas el último día).
-const evDays = () => { const ms = evLeft(), d = Math.floor(ms / 864e5); return d >= 2 ? `${d} días` : d === 1 ? '1 día' : `${Math.max(1, Math.ceil(ms / 3600e3))} horas`; };
+const evDaysOf = (K) => { const ms = K.left(), d = Math.floor(ms / 864e5); return d >= 2 ? `${d} días` : d === 1 ? '1 día' : `${Math.max(1, Math.ceil(ms / 3600e3))} horas`; };
+const evDays = () => { const ms = EVS.left(), d = Math.floor(ms / 864e5); return d >= 2 ? `${d} días` : d === 1 ? '1 día' : `${Math.max(1, Math.ceil(ms / 3600e3))} horas`; };
 // El ícono del evento como imagen (la insignia del jefe se dibuja en un lienzo). Se carga una vez por temática.
 const evImgs = {};
 function evIcoImg(e) {
@@ -1208,12 +1247,13 @@ function evIcoImg(e) {
 // hold: planeta que se dibuja aún cerrado (para animar que se abre al volver de ganar el jefe anterior).
 function evWorlds(e, hold = null) {
   const s = e.state, B = EVENT_BIOMES[e.key];
-  return Array.from({ length: EVENT_PLANETS }, (_, p) => {
-    const first = p * EVENT_PER_PLANET, done = Math.max(0, Math.min(EVENT_PER_PLANET, s.k - first));
-    const state = p === hold ? 'locked' : done >= EVENT_PER_PLANET ? 'done' : s.k >= first ? 'current' : 'locked';
-    const levels = Array.from({ length: EVENT_PER_PLANET }, (_, j) => ({ kind: first + j < s.k ? 'done' : first + j === s.k ? 'cur' : 'lock', stars: 0, paused: s.run?.k === first + j }));
-    const chip = state === 'done' ? `<span class="chip info">${icon('check')}${icon('gift')}</span>` : state === 'current' ? `<span class="chip info">${icon('flag')}${done + 1}/${EVENT_PER_PLANET}</span>` : `<span class="lk">${icon('lock')}</span>`;
-    return { w: EV_W + p, theme: B[p].planet, state, levels, done, pin: true, gift: true, badgeIco: evIcoImg(e), nodes: EV_NODES, chip };
+  const { P, N } = EVS;
+  return Array.from({ length: P }, (_, p) => {
+    const first = p * N, done = Math.max(0, Math.min(N, s.k - first));
+    const state = p === hold ? 'locked' : done >= N ? 'done' : s.k >= first ? 'current' : 'locked';
+    const levels = Array.from({ length: N }, (_, j) => ({ kind: first + j < s.k ? 'done' : first + j === s.k ? 'cur' : 'lock', stars: 0, paused: s.run?.k === first + j }));
+    const chip = state === 'done' ? `<span class="chip info">${icon('check')}${icon('gift')}</span>` : state === 'current' ? `<span class="chip info">${icon('flag')}${done + 1}/${N}</span>` : `<span class="lk">${icon('lock')}</span>`;
+    return { w: EVS.W + p, theme: B[p].planet, state, levels, done, pin: true, gift: true, badgeIco: evIcoImg(e), nodes: EVS.nodes, chip };
   });
 }
 const evTicketPill = (e) => `<div class="pill info ev-tk" aria-label="Boleto del evento">${icon(e.tk)}<span data-evtk>${e.state.tk}</span></div>`;
@@ -1221,12 +1261,15 @@ function evCTA(e) {
   const s = e.state;
   if (e.done) return '';
   if (s.run) return goBtn('Continuar', `Nivel ${s.k + 1}`, 'ev-play');
-  if (s.tk) return goBtn('Jugar', `Nivel ${s.k + 1}`, 'ev-play');
+  if (s.tk || !EVS.tk) return goBtn('Jugar', `Nivel ${s.k + 1}`, 'ev-play');
   return `<button class="go wait" data-a="ev-wait">${icon(e.tk)}<span class="t"><b class="outl">Boleto en</b><small data-evclock>${clock(evTicketLeft())}</small></span></button>`;
 }
 // after: lo que dejó la victoria ({ k, res }) para animar el avance al volver.
-function showEvent({ anim, after = null, start = null } = {}) {
-  const e = ev();
+// kind: 'mes' o 'fiesta' (si no se dice, el que se estaba viendo).
+function showEvent({ anim, after = null, start = null, kind = null } = {}) {
+  if (kind) EVS = EVK[kind];
+  noticeGen++; // los avisos que el mapa tenía en fila ya no salen aquí
+  const e = EVS.get();
   if (!e) return showMap({ anim });
   gallery.active = false;
   current = () => showEvent();
@@ -1238,7 +1281,7 @@ function showEvent({ anim, after = null, start = null } = {}) {
       <div class="wtitle info">${icon(e.ico, 0, 0, 'em')}<div><b>${e.name}</b><small>¡A jugar! Quedan <span data-evleft>${evDays()}</span></small></div><button class="ev-help tb press" data-a="ev-help" aria-label="Cómo funciona el evento" title="Cómo funciona">?</button></div>
     </div>
     <div class="p-only phud"></div>
-    <div class="res">${evTicketPill(e)}<div class="pill info" aria-label="Monedas">${coin()}<span data-coins>${money(save.coins - (after?.coins || 0))}</span></div>
+    <div class="res">${EVS.tk ? evTicketPill(e) : ''}<div class="pill info" aria-label="Monedas">${coin()}<span data-coins>${money(save.coins - (after?.coins || 0))}</span></div>
       <button class="me press" data-a="me" aria-label="Tu perfil" title="Tu perfil">${avatarHTML(save)}</button></div>
     <div class="cta"></div>
     <button class="dev-pill" data-a="dev">DEV</button>
@@ -1246,15 +1289,16 @@ function showEvent({ anim, after = null, start = null } = {}) {
   let galaxy = null;
   const cta = el.querySelector('.cta'), phud = el.querySelector('.phud');
   const paint = () => {
-    const now = ev();
+    const now = EVS.get();
     if (!now) return showMap();
     cta.innerHTML = evCTA(now);
-    el.querySelector('[data-evtk]').textContent = now.state.tk;
-    if (galaxy?.mode === 'planet' && galaxy.sel) paintPlanet(galaxy.sel.wd.w - EV_W);
+    const tk = el.querySelector('[data-evtk]');
+    if (tk) tk.textContent = now.state.tk;
+    if (galaxy?.mode === 'planet' && galaxy.sel) paintPlanet(galaxy.sel.wd.w - EVS.W);
   };
   const paintPlanet = (p) => {
     phud.innerHTML = `<button class="hbtn tb press out-btn" data-a="out" aria-label="Volver a los planetas" title="Planetas">${icon('prev')}</button>
-      <div class="wtitle info">${miniPlanet(EVENT_BIOMES[e.key][p].emblem, 'em')}<div><b>${e.planets[p]}</b><small>Planeta ${p + 1} de ${EVENT_PLANETS}</small></div></div>`;
+      <div class="wtitle info">${miniPlanet(EVENT_BIOMES[e.key][p].emblem, 'em')}<div><b>${e.planets[p]}</b><small>Planeta ${p + 1} de ${EVS.P}</small></div></div>`;
   };
   // El reloj del boleto y el del mes corren solos; al llegar el boleto, el botón cambia a Jugar.
   const tick = setInterval(() => {
@@ -1270,7 +1314,7 @@ function showEvent({ anim, after = null, start = null } = {}) {
     if (a === 'out') return galaxy?.zoomOut();
     if (a === 'ev-play') return evPlay();
     if (a === 'ev-wait') return openEvWait();
-    if (a === 'ev-help') return openEvIntro(ev() || e);
+    if (a === 'ev-help') return openEvIntro(EVS.get() || e);
     if (a === 'me') return openProfile();
     if (a === 'dev') return sideAction(a);
   });
@@ -1280,20 +1324,20 @@ function showEvent({ anim, after = null, start = null } = {}) {
   const make = () => {
     if (!el.isConnected) return;
     galaxy = new Galaxy(el.querySelector('.g3d'), el.querySelector('.glabels'), {
-      worlds: evWorlds(e, after && after.k % EVENT_PER_PLANET === EVENT_PER_PLANET - 1 && !after.last ? after.planet + 1 : null),
+      worlds: evWorlds(e, after && after.k % EVS.N === EVS.N - 1 && !after.last ? after.planet + 1 : null),
       player: { traveler: equipped('traveler') },
-      start: p0 != null ? EV_W + p0 : null,
-      celebrate: after ? { w: EV_W + after.planet, i: after.k % EVENT_PER_PLANET, kind: 'cur', stars: 0 } : null,
+      start: p0 != null ? EVS.W + p0 : null,
+      celebrate: after ? { w: EVS.W + after.planet, i: after.k % EVS.N, kind: 'cur', stars: 0 } : null,
       on: {
         mode: (m, w) => {
           el.classList.toggle('zoomed', m === 'planet');
-          current = () => showEvent({ start: m === 'planet' ? w - EV_W : null });
-          if (m === 'planet') paintPlanet(w - EV_W);
+          current = () => showEvent({ start: m === 'planet' ? w - EVS.W : null });
+          if (m === 'planet') paintPlanet(w - EVS.W);
         },
         locked: () => toast(`${icon('lock')} Primero termina el planeta anterior`),
         relayout: () => current?.(),
         level: (w, i) => {
-          const k = (w - EV_W) * EVENT_PER_PLANET + i, s = ev()?.state;
+          const k = (w - EVS.W) * EVS.N + i, s = EVS.get()?.state;
           if (!s) return;
           if (k < s.k) return toast(`${icon('check')} Ya lo ganaste`);
           if (k > s.k) return toast('Gana el nivel anterior');
@@ -1318,20 +1362,20 @@ async function evCelebrate(galaxy, a, el, cta, paint) {
   await Promise.all(runs);
   updateCoins();
   if (a.wild || a.undo) toast(prizeIcons({ undo: a.undo, wild: a.wild }).join(' '));
-  const boss = a.k % EVENT_PER_PLANET === EVENT_PER_PLANET - 1;
-  if (boss && a.planet + 1 < EVENT_PLANETS && galaxy.sel) {
+  const boss = a.k % EVS.N === EVS.N - 1;
+  if (boss && a.planet + 1 < EVS.P && galaxy.sel) {
     await wait(500);
     await galaxy.zoomOut();
-    const e = ev();
+    const e = EVS.get();
     galaxy.busy = true;
-    if (e) await galaxy.unlock(EV_W + a.planet + 1, evWorlds(e)[a.planet + 1]);
+    if (e) await galaxy.unlock(EVS.W + a.planet + 1, evWorlds(e)[a.planet + 1]);
     toast(`¡${e?.planets[a.planet + 1] || 'Siguiente planeta'} abierto!`);
   }
   galaxy.busy = false;
   paint();
   cta.style.opacity = '';
   if (!reduced()) cta.animate([{ scale: 0.4, opacity: 0 }, { scale: 1.08, opacity: 1, offset: 0.6 }, { scale: 1 }], { duration: 420, easing: 'ease-out' });
-  if (a.last) openEvDone(ev() || { name: 'el evento', ico: 'trophy', color: 'gold' });
+  if (a.last) openEvDone(EVS.get() || { name: 'el evento', ico: 'trophy', color: 'gold' });
 }
 // El boleto llega (a las 24 h): el contador salta y brilla.
 function evTicketArrives(el) {
@@ -1345,6 +1389,7 @@ function evTicketArrives(el) {
 // Los premios no se muestran: son sorpresa (solo se dice qué tipo de cosas se pueden ganar).
 // go: se abre afuera (en las constelaciones) y su botón lleva al evento. Devuelve una promesa que se cumple al cerrarla.
 function openEvIntro(e, go = false) {
+  const kind = kindOf(e), K = EVK[kind];
   let done;
   const closed = new Promise((r) => (done = r));
   const rule = (ico, html) => `<li>${icon(ico)}<span>${html}</span></li>`;
@@ -1354,16 +1399,22 @@ function openEvIntro(e, go = false) {
     color: e.color,
     wide: true,
     cls: 'ev-intro',
-    body: `<div class="evi-hero"><div class="rays"></div>${[0, 1, 2, 3, 4].map((p) => `<span class="evi-pl" style="--i:${p - 2}">${miniPlanet(EVENT_BIOMES[e.key][p].emblem)}</span>`).join('')}<span class="evi-ico">${icon(e.ico, 0, 0, 'big')}</span></div>
-      <p class="lead">¡Llegó el evento del mes! Viaja por <b>${EVENT_PLANETS} planetas</b> y gana premios <b>exclusivos</b> que solo salen ahora: avatares, marcos, reversos, postales, fondos, títulos y naves.</p>
+    body: `<div class="evi-hero"><div class="rays"></div>${EVENT_BIOMES[e.key].map((b, p, all) => `<span class="evi-pl" style="--i:${all.length === 3 ? [-2, -1, 1][p] : p - (all.length - 1) / 2}">${miniPlanet(b.emblem)}</span>`).join('')}${EVENT_BIOMES[e.key].length === 3 ? `<span class="evi-pl" style="--i:2">${icon(e.deco)}</span>` : ''}<span class="evi-ico">${icon(e.ico, 0, 0, 'big')}</span></div>
+      ${kind === 'fiesta' ? `<p class="lead">¡Hoy es <b>${e.name}</b>! Solo por hoy: viaja por <b>${K.P} planetas</b> y gana premios <b>exclusivos</b> que no salen en ningún otro lado.</p>
+      <ul class="evi-rules">
+        ${rule('ticket', `<b>Sin boletos</b>: entra y reintenta las veces que quieras.`)}
+        ${rule('flame', `${K.L} niveles <b>difíciles</b>. Aquí no cuentan las estrellas: solo ganar.`)}
+        ${rule('gift', `Gana el <b>nivel ${K.N}</b> de cada planeta y abre su <b>regalo sorpresa</b>. Es tuyo para siempre.`)}
+        ${rule('flag', `Termina hoy a la medianoche: te quedan <b>${evDaysOf(K)}</b>.`)}
+      </ul>` : `<p class="lead">¡Llegó el evento del mes! Viaja por <b>${EVENT_PLANETS} planetas</b> y gana premios <b>exclusivos</b> que solo salen ahora: avatares, marcos, reversos, postales, fondos, títulos y naves.</p>
       <ul class="evi-rules">
         ${rule(e.tk, `Entras con <b>1 boleto</b>. Si ganas, lo conservas; si pierdes, el siguiente llega en <b>24 horas</b>.`)}
         ${rule('gift', `Gana el <b>nivel 5</b> de cada planeta y abre su <b>regalo sorpresa</b>. Es tuyo para siempre.`)}
         ${rule('flame', `${EVENT_LEVELS} niveles <b>difíciles</b>. Aquí no cuentan las estrellas: solo ganar. Usa tus comodines y deshacer.`)}
         ${rule('flag', `Tienes <b>${evDays()}</b> para llegar al último planeta. ¡Entra cada día y no dejes pasar tu boleto!`)}
-      </ul>`,
+      </ul>`}`,
     // Botón del mes: con los colores y la flor de la temática (sin el triángulo de Jugar).
-    buttons: [{ label: `${icon(e.deco)}<span>¡A jugar!</span>${icon(e.deco)}`, cls: `wide ev-go ev-go-${e.key}`, onClick: () => go && warp(() => showEvent()) }],
+    buttons: [{ label: `${icon(e.deco)}<span>¡A jugar!</span>${icon(e.deco)}`, cls: `wide ev-go ev-go-${e.key}`, onClick: () => go && warp(() => showEvent({ kind })) }],
     // Se da por vista al cerrarla (si se gira el teléfono con la ventana abierta, vuelve a salir).
     onClose: () => {
       e.state.intro = true;
@@ -1378,7 +1429,7 @@ function openEvIntro(e, go = false) {
 }
 // Evento terminado: el show (confeti, rayos, el ícono del evento) y Finalizar, que regresa al mapa.
 function openEvDone(e) {
-  const pcHere = e.state ? evAlbum().find((x) => x.id === e.state.id) : null; // la postal del álbum, con el año
+  const pcHere = e.state && !e.date ? evAlbum().find((x) => x.id === e.state.id) : null; // la postal del álbum, con el año
   confetti(120);
   buzz(30);
   const m = openModal({
@@ -1388,8 +1439,8 @@ function openEvDone(e) {
     closable: false,
     cls: 'win ev-done',
     body: `<div class="win-top"><div class="rays"></div><div class="ev-win">${icon(e.ico, 0, 0, 'big')}</div></div>
-      <p class="lead">Recorriste los ${EVENT_PLANETS} planetas y ganaste los ${EVENT_LEVELS} niveles. Todos los premios ya son tuyos.</p>
-      ${pcHere ? `${evPostcardHTML(pcHere, 'mini ev-done-pc')}<p class="note">Su postal ya está en tu álbum, en <b>Eventos</b>.</p>` : '<p class="note">El próximo evento trae una temática nueva. ¡Te esperamos!</p>'}`,
+      <p class="lead">Recorriste los ${EVS.P} planetas y ganaste los ${EVS.L} niveles. Todos los premios ya son tuyos.</p>
+      ${pcHere ? `${evPostcardHTML(pcHere, 'mini ev-done-pc')}<p class="note">Su postal ya está en tu álbum, en <b>Eventos</b>.</p>` : `<p class="note">${e.date ? 'La próxima festividad trae otra temática. ¡Te esperamos!' : 'El próximo evento trae una temática nueva. ¡Te esperamos!'}</p>`}`,
     // Un solo botón: se sale del evento y vuelves a tu mapa, donde ibas.
     buttons: [{ label: 'Finalizar', cls: `wide ev-go ev-go-${e.key || 'muertos'}`, onClick: () => warp(() => showMap(), { out: true }) }],
   });
@@ -1403,9 +1454,10 @@ function openEvDone(e) {
 }
 // Jugar el nivel que sigue: retoma la partida guardada o gasta el boleto (se rompe con su animación).
 function evPlay() {
-  const e = ev();
+  const e = EVS.get();
   if (!e || e.done) return;
   if (e.state.run) return startEvent();
+  if (!EVS.tk) return EVS.enter() && startEvent();
   if (!e.state.tk) return openEvWait();
   if (entering) return;
   entering = true;
@@ -1431,22 +1483,22 @@ function openEvWait() {
 }
 // La partida del evento: mismas reglas, sin estrellas. Perder, rendirse o abandonar gasta el boleto.
 function startEvent() {
-  const e = ev(), run = e?.state.run;
+  const e = EVS.get(), run = e?.state.run;
   if (!run) return showEvent();
   const old = [...app.children];
   game?.destroy();
   game = null;
   document.getElementById('modal-root').replaceChildren();
-  const level = variantLevel(eventLevel(e.id, run.k, e.state.world), run.v);
-  const back = (after) => showEvent({ anim: 'down', after, start: Math.floor(run.k / EVENT_PER_PLANET) });
-  const lose = () => (evLose(), back());
+  const K = EVS, level = variantLevel(K.level(e, run.k), run.v);
+  const back = (after) => showEvent({ anim: 'down', after, start: Math.floor(run.k / K.N) });
+  const lose = () => (K.lose(), back());
   game = new Game(app, level, {
     dev,
     resume: run.state,
     saved: true,
-    event: { ico: e.ico, table: e.key, boss: run.k % EVENT_PER_PLANET === EVENT_PER_PLANET - 1 },
+    event: { ico: e.ico, table: e.key, boss: run.k % K.N === K.N - 1 },
     onSave: (state) => {
-      const r = ev()?.state.run;
+      const r = K.get()?.state.run;
       if (r) (r.state = state), persist();
     },
     onExit: () => back(),
@@ -1457,10 +1509,10 @@ function startEvent() {
       back(res.counted ? res : null);
     },
     onWin: () => {
-      const r = evWin();
+      const r = K.win();
       if (!r) return { coins: 0, tickets: 0, prev: 0, items: [], title: '¡Nivel superado!' };
       persist();
-      return { ...r, coins: r.coins || 0, tickets: 0, prev: 0, counted: true, title: r.last ? '¡Evento completado!' : `¡Nivel ${r.k + 1} de ${EVENT_LEVELS}!` };
+      return { ...r, coins: r.coins || 0, tickets: 0, prev: 0, counted: true, title: r.last ? (e.date ? '¡Festividad completada!' : '¡Evento completado!') : `¡Nivel ${r.k + 1} de ${K.L}!` };
     },
   });
   const el = game.el;
@@ -1533,7 +1585,7 @@ async function calm(gen) {
 async function notices() {
   const gen = ++noticeGen;
   if (tourStep() || save.onboard !== 'done') return;
-  for (const k of ['racha', 'col', 'mes', 'col2']) {
+  for (const k of ['racha', 'col', 'mes', 'col2', 'fiesta']) {
     if (!isOn(k) || save.intro?.[k]) continue;
     if (!(await calm(gen))) return;
     await openUnlock(k);
@@ -1542,6 +1594,12 @@ async function notices() {
   if (c && !c.state.intro) {
     if (!(await calm(gen))) return;
     await openColIntro(c);
+  }
+  // La festividad va antes que el evento del mes: dura solo 24 horas.
+  const f = fiesta();
+  if (f && !f.soon && !f.done && !f.state.intro) {
+    if (!(await calm(gen))) return;
+    await openEvIntro(f, true);
   }
   const e = ev();
   if (e && !e.done && !e.state.intro) {
@@ -1593,6 +1651,20 @@ const UNLOCK_INFO = {
       ],
     };
   },
+  // Nivel 120: festividades de 24 h.
+  fiesta: () => {
+    const f = fiesta(), nx = nextFiesta();
+    return {
+      title: '¡Nuevo: Festividades!', ico: f?.ico || nx?.ico || 'tamal', color: 'gold', hero: icon(f?.ico || nx?.ico || 'tamal', 0, 0, 'big'),
+      lead: 'Los días de fiesta llega un <b>evento especial de 24 horas</b>: 3 planetas, 9 niveles y premios <b>exclusivos</b>.',
+      rules: [
+        ['ticket', '<b>Sin boletos</b>: entra y reintenta las veces que quieras.'],
+        ['flame', 'Niveles <b>difíciles</b> donde no cuentan las estrellas: solo ganar.'],
+        ['flag', 'Un día antes aparece su botón junto a <b>Jugar</b>, con la cuenta regresiva.'],
+        ['gift', f ? (f.soon ? `Mañana es <b>${f.name}</b>. ¡No te lo pierdas!` : `¡Hoy es <b>${f.name}</b>! Búscalo junto a <b>Jugar</b>.`) : nx ? `La próxima, <b>${nx.name}</b>, llega en <b>${nx.days} ${nx.days === 1 ? 'día' : 'días'}</b>.` : 'Pronto llega la primera.'],
+      ],
+    };
+  },
   mes: () => {
     const e = ev(), nx = !e && nextEvent();
     return {
@@ -1600,7 +1672,7 @@ const UNLOCK_INFO = {
       title: '¡Nuevo: Evento del mes!', ico: e?.ico || nx?.ico || 'calavera', color: e?.color || 'orange', hero: evHeroIcons(e?.ico || nx?.ico),
       lead: 'Algunos meses llega un <b>evento de temporada</b>: 5 planetas, 25 niveles y premios que <b>solo salen ese mes</b>.',
       rules: [
-        ['flame', 'Son los niveles <b>más difíciles</b>: muchos piden <b>comodines</b> o <b>+5 cartas</b>. ¡Guárdalos!'],
+        ['flame', 'Son los niveles <b>más difíciles</b>. Aquí no cuentan las estrellas: solo ganar.'],
         ['gift', 'Gana el <b>nivel 5</b> de cada planeta y abre su <b>regalo sorpresa</b>.'],
         ['flag', 'Dura todo el mes. Si lo empiezas tarde, juega lo que alcances.'],
         ['ticket', e ? `¡Este mes hay uno: <b>${e.name}</b>! Búscalo a la <b>derecha</b>.` : nx ? `El próximo, <b>${nx.name}</b>, llega en <b>${nx.days} ${nx.days === 1 ? 'día' : 'días'}</b>.` : 'Pronto llega el primero.'],
@@ -1615,7 +1687,7 @@ function evHeroIcons(main) {
   return [at(-1), at(0), at(1)].map((x, k) => icon(x, 0, 0, k === 1 ? 'main' : '')).join('');
 }
 async function openUnlock(k) {
-  const sel = `.side.r [data-a="${{ racha: 'racha', col: 'col', mes: 'evento', col2: 'col' }[k]}"]`;
+  const sel = k === 'fiesta' ? '.cta [data-a="fiesta"]' : `.side.r [data-a="${{ racha: 'racha', col: 'col', mes: 'evento', col2: 'col' }[k]}"]`;
   const btn = document.querySelector(sel);
   revealed.add(k);
   if (btn) {

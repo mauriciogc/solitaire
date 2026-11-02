@@ -325,6 +325,30 @@ const MODELS = {
       const blink = (t % 3.2) < 0.12 ? 0.15 : 1; eyes.forEach((e) => (e.scale.y = blink));
     } };
   },
+  // Olla tamalera (Candelaria): olla de barro con asas, tamales asomando y vapor que sube.
+  olla(part) {
+    const g = new THREE.Group(), pot = new THREE.Group();
+    const prof = [[0, -0.2], [0.2, -0.2], [0.3, -0.1], [0.33, 0.02], [0.3, 0.13], [0.24, 0.19], [0.25, 0.22], [0.27, 0.24]].map(([x, y]) => new THREE.Vector2(x, y));
+    pot.add(part(new THREE.LatheGeometry(prof, 28), '#d9783f', { ol: 0.05 }));
+    pot.add(part(new THREE.TorusGeometry(0.32, 0.018, 8, 32).rotateX(Math.PI / 2), '#fff1d6', { y: 0.04, ol: 0 }));
+    pot.add(part(new THREE.TorusGeometry(0.31, 0.012, 6, 32).rotateX(Math.PI / 2), '#fff1d6', { y: -0.03, ol: 0 }));
+    for (const sx of [-1, 1]) pot.add(part(new THREE.TorusGeometry(0.07, 0.022, 8, 16), '#b85a28', { x: sx * 0.33, y: 0.08, ry: Math.PI / 2, ol: 0.15 }));
+    pot.add(part(new THREE.CylinderGeometry(0.24, 0.24, 0.03, 24), '#7a4a2a', { y: 0.2, ol: 0 }));
+    for (const [x, z, rz, rx] of [[-0.08, 0, 0.25, 0.1], [0.07, 0.04, -0.2, -0.1], [0, -0.08, 0.05, -0.25]]) {
+      const t = new THREE.Group();
+      t.add(part(new THREE.ConeGeometry(0.075, 0.26, 10), '#c8d86a', { ol: 0.1 }));
+      t.add(part(new THREE.SphereGeometry(0.05, 10, 8).scale(1, 1.3, 1), '#ffe7a0', { y: -0.02, z: 0.04, ol: 0 }));
+      t.position.set(x, 0.3, z); t.rotation.set(rx, 0, rz); pot.add(t);
+    }
+    const steam = [];
+    for (let k = 0; k < 4; k++) { const m = new THREE.Mesh(new THREE.SphereGeometry(0.06, 10, 8), glow('#f4f1ff', 0.8)); pot.add(m); steam.push(m); }
+    pot.rotation.x = 0.3;
+    g.add(pot);
+    return { obj: g, tick: (t) => {
+      pot.position.y = Math.sin(t * 2) * 0.05; pot.rotation.z = Math.sin(t * 1.5) * 0.1; pot.rotation.y = Math.sin(t * 0.6) * 0.4;
+      steam.forEach((m, k) => { const p = (t * 0.45 + k / 4) % 1; m.position.set(Math.sin(p * 6 + k) * 0.08, 0.42 + p * 0.45, Math.cos(k * 2) * 0.06); m.scale.setScalar(0.6 + p * 1.2); m.material.opacity = 0.8 * (1 - p); });
+    } };
+  },
   // ---------- Exclusivos del evento del mes ----------
   // Alebrije (Día de Muertos): jaguar-dragón de colores con manchas, alas de mariposa y cola enroscada.
   alebrije(part) {

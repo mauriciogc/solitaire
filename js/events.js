@@ -5,12 +5,13 @@
 // los reclamados son tuyos; los que no, se pierden si la racha se reinicia o si pasa la medianoche.
 import { save, persist } from './storage.js';
 import { equip } from './shop.js';
-import { EVENT_LEVELS, EVENT_PER_PLANET, EVENT_PLANETS } from './levels.js';
+import { EVENT_LEVELS, EVENT_PER_PLANET, EVENT_PLANETS, FIESTA_LEVELS, FIESTA_PER_PLANET, FIESTA_PLANETS } from './levels.js';
 
 // Los eventos se abren poco a poco, según los niveles ganados (save.next): primero la racha, luego la colección
 // y al final el evento del mes (el más difícil: pide comodines). Cada uno se presenta una vez (save.intro).
 // col2: al nivel 100 se suman las colecciones nuevas y hay colección 3 semanas al mes (ver weekInfo).
-export const UNLOCK = { racha: 20, col: 50, mes: 80, col2: 100 };
+// fiesta: festividades de 24 h (ver más abajo).
+export const UNLOCK = { racha: 20, col: 50, mes: 80, col2: 100, fiesta: 120 };
 export const isOn = (k) => (save.next || 0) >= UNLOCK[k];
 
 export const RACHA_GOALS = [
@@ -359,3 +360,117 @@ export function evLose() {
   persist();
 }
 export { EVENT_PLANETS, EVENT_PER_PLANET, EVENT_LEVELS };
+
+// ---------- Festividades (eventos de 24 h) ----------
+// Un día de fiesta (de 00:00 a 23:59, hora del teléfono): 3 planetas de 3 niveles con tableros especiales que piden
+// 2, 2 y 3 ayudas (ver fiestaLevel). Sin boleto: perder o abandonar solo pide volver a intentarlo. El 3.º nivel de
+// cada planeta da sus exclusivos (planeta 1: fondo y postal · 2: marco y reverso · 3: avatar, título y nave); si ya
+// los tienes, da ayudas o monedas. Desde un día antes se ve su botón apagado con la cuenta regresiva.
+// date(año) = el día de la fiesta. Si dos caen el mismo día, la segunda se recorre al día siguiente.
+// ready: ya tiene sus dibujos (las que no, todavía no salen).
+const nthSunday = (y, m, n) => { const d = new Date(y, m, 1); return new Date(y, m, 1 + ((7 - d.getDay()) % 7) + (n - 1) * 7); };
+export const FIESTAS = [
+  { key: 'anionuevo', name: 'Año Nuevo', date: (y) => new Date(y, 0, 1) },
+  { key: 'candelaria', name: 'Día de la Candelaria', date: (y) => new Date(y, 1, 2), ready: true,
+    ico: 'tamal', deco: 'atole', color: 'gold',
+    planets: ['Milpa Dorada', 'Valle del Atole', 'Cerro de los Tamales'],
+    ex: [{ space: 'candelaria', frame: 'candelaria' }, { ring: 'tamalitos', back: 'tamales' }, { avatar: 'tamalito', title: 'tamalero', traveler: 'olla' }] },
+  { key: 'taco', name: 'Día del Taco', date: (y) => new Date(y, 2, 31) },
+  { key: 'tierra', name: 'Día de la Tierra', date: (y) => new Date(y, 3, 22) },
+  { key: 'nino', name: 'Día del Niño', date: (y) => new Date(y, 3, 30) },
+  { key: 'madres', name: 'Día de las Madres', date: (y) => new Date(y, 4, 10) },
+  { key: 'padre', name: 'Día del Padre', date: (y) => nthSunday(y, 5, 3) },
+  { key: 'gato', name: 'Día del Gato', date: (y) => new Date(y, 7, 8) },
+  { key: 'perro', name: 'Día del Perro', date: (y) => new Date(y, 7, 26) },
+  { key: 'gamer', name: 'Día del Gamer', date: (y) => new Date(y, 7, 29) },
+  { key: 'programador', name: 'Día del Programador', date: (y) => new Date(y, 0, 256) }, // día 256: 13 sep (12 en bisiesto)
+  { key: 'inocentes', name: 'Día de los Inocentes', date: (y) => new Date(y, 11, 28) },
+];
+export const FI_COINS = [20, 30, 40];
+export const FI_REPEAT = [{ coins: 300, undo: 2 }, { wild: 1, coins: 200 }, { wild: 2, coins: 400 }];
+const dayOf = (d) => Math.floor((d.getTime() - d.getTimezoneOffset() * 6e4) / DAY);
+// Las fiestas listas de un año, con su día (local) ya recorrido si chocan: [{ f, day }].
+function fiestaDays(y) {
+  const out = [];
+  for (const f of FIESTAS.filter((x) => x.ready).map((x) => ({ f: x, day: dayOf(x.date(y)) })).sort((a, b) => a.day - b.day)) {
+    while (out.some((o) => o.day === f.day)) f.day++;
+    out.push(f);
+  }
+  return out;
+}
+// La fiesta de hoy o la de mañana (null si ninguna). soon = todavía no empieza.
+function fiestaNow() {
+  const day = today(), y = new Date((day + 1) * DAY).getUTCFullYear();
+  const all = [...fiestaDays(y - 1), ...fiestaDays(y)];
+  const hoy = all.find((x) => x.day === day);
+  if (hoy) return { ...hoy, soon: false };
+  const man = all.find((x) => x.day === day + 1);
+  return man ? { ...man, soon: true } : null;
+}
+// La festividad activa (o la de mañana, con soon). Su avance vive en save.fi y se empieza de cero en cada edición.
+export function fiesta() {
+  if (!isOn('fiesta')) return null;
+  const x = fiestaNow();
+  if (!x) return null;
+  const id = `${x.f.key}-${x.day}`, base = { ...x.f, id, day: x.day, year: new Date(x.day * DAY).getUTCFullYear(), soon: x.soon };
+  if (x.soon) return base;
+  if (save.fi?.id !== id) {
+    save.fi = { id, k: 0, world: save.open || 0, run: null, tries: {} };
+    persist();
+  }
+  return { ...base, state: save.fi, done: save.fi.k >= FIESTA_LEVELS };
+}
+// Cuánto falta para que empiece (si es mañana) o para que termine (hoy): en los dos casos, hasta la medianoche.
+export const fiestaLeft = () => msToMidnight();
+// Días para la siguiente fiesta (modo dev: saltar al día de antes).
+export function daysToNextFiesta() {
+  const day = today(), y = new Date(day * DAY).getUTCFullYear();
+  const next = [...fiestaDays(y), ...fiestaDays(y + 1)].find((x) => x.day > day);
+  return next ? next.day - day : 0;
+}
+// La siguiente festividad lista (para decir cuándo llega): { name, ico, days } o null.
+export function nextFiesta() {
+  const day = today(), y = new Date(day * DAY).getUTCFullYear();
+  const next = [...fiestaDays(y), ...fiestaDays(y + 1)].find((x) => x.day > day);
+  return next ? { ...next.f, days: next.day - day } : null;
+}
+export function fiPrize(f, k) {
+  const p = Math.floor(k / FIESTA_PER_PLANET);
+  if (k % FIESTA_PER_PLANET !== FIESTA_PER_PLANET - 1) return { coins: FI_COINS[p], items: [] };
+  const items = Object.entries(f.ex[p]).filter(([sec, it]) => !save.owned[`${sec}:${it}`]).map(([sec, it]) => ({ sec, k: it }));
+  return items.length ? { items } : { ...FI_REPEAT[p], items: [], repeat: true };
+}
+// Entrar al nivel que sigue (sin boleto): cada intento cambia las cartas.
+export function fiEnter() {
+  const f = fiesta();
+  if (!f || f.soon || f.done) return false;
+  if (f.state.run) return true;
+  f.state.run = { k: f.state.k, v: f.state.tries[f.state.k] || 0, state: null };
+  f.state.tries[f.state.k] = f.state.run.v + 1;
+  persist();
+  return true;
+}
+export function fiWin() {
+  const f = fiesta();
+  if (!f?.state?.run) return null;
+  const k = f.state.run.k, prize = fiPrize(f, k);
+  f.state.run = null;
+  f.state.k = k + 1;
+  save.coins += prize.coins || 0;
+  save.undo += prize.undo || 0;
+  save.wild += prize.wild || 0;
+  for (const it of prize.items) {
+    save.owned[`${it.sec}:${it.k}`] = 1;
+    equip(it.sec, it.k);
+  }
+  persist();
+  return { ...prize, k, planet: Math.floor(k / FIESTA_PER_PLANET), last: k === FIESTA_LEVELS - 1 };
+}
+// Perdió, abandonó o pidió reintentar: solo se cierra la partida (se puede volver a entrar cuando quiera).
+export function fiLose() {
+  const f = fiesta();
+  if (!f?.state?.run) return;
+  f.state.run = null;
+  persist();
+}
+export { FIESTA_PLANETS, FIESTA_PER_PLANET, FIESTA_LEVELS };

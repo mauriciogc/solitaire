@@ -88,6 +88,13 @@ export const EVENT_BIOMES = {
     // [agua, rojo desde, cuántos nopales]
     [[0.46, 0.64, 0.7], [0.42, 0.62, 0.9], [0.5, 0.64, 0.6], [0.44, 0.58, 1], [0.4, 0.55, 0.9]],
   ),
+  // Festividad: Día de la Candelaria (3 planetas). Milpas verdes con árboles dorados como mazorcas; el dorado sube en cada planeta.
+  candelaria: sameLook(
+    { emblem: ['#f2c94a', '#6fae3a', '#4fb6e0'], colors: [['#2f86c8', '#4fb6e0', '#fff1c9', '#6fae3a', '#f2c94a', '#ffe08a']],
+      planet: { amp: 0.14, freq: 1.7, seed: 151, outline: 0x3a2a10, glow: 0xffe08a, prop: 'round', crown: '#f2c94a', path: '#fff6e0' } },
+    // [agua, dorado desde, cuántas matas]
+    [[0.42, 0.62, 1.1], [0.36, 0.56, 1.3], [0.3, 0.5, 1.5]],
+  ),
   // Halloween: mares morados, huertos de calabaza naranjas y árboles otoñales; el naranja sube en cada planeta.
   halloween: sameLook(
     { emblem: ['#5a2f9a', '#3a1a6a', '#ff8a1a'], colors: [['#3a1a6a', '#6a3fb0', '#c9b0e8', '#4a6a3a', '#ff8a1a', '#ffb13d']],
@@ -249,6 +256,17 @@ function mantelHalloweenTile() {
   for (const [x, y] of [[60, 150], [150, 70], [190, 180], [100, 220], [30, 90]]) s += `<path d="${starPath(x, y, 4, 1.8)}" fill="#ff8a1a" opacity=".5"/>`;
   return { url: enc(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">${s}</svg>`), w: W, h: H };
 }
+// Mantel de la Candelaria: servilleta crema bordada con florecitas rojas, verdes y amarillas en hileras.
+function mantelCandelariaTile() {
+  const W = 120, H = 120;
+  let s = `<rect width="${W}" height="${H}" fill="#f4e6c8"/>`;
+  for (const y of [0, 60]) s += `<path d="M0 ${y + 2}h${W}M0 ${y + 58}h${W}" stroke="#e8434f" stroke-width="2" stroke-dasharray="4 3" opacity=".6"/>`;
+  const flor = (x, y, c) => `${[0, 72, 144, 216, 288].map((a) => `<ellipse cx="${x}" cy="${y - 5}" rx="2.6" ry="4.4" fill="${c}" transform="rotate(${a} ${x} ${y})"/>`).join('')}<circle cx="${x}" cy="${y}" r="2.4" fill="#ffc83d"/>`;
+  [[30, 30, '#e8434f'], [90, 30, '#2f9e5c'], [60, 90, '#e8434f'], [0, 90, '#ff9c1a'], [120, 90, '#ff9c1a']].forEach(([x, y, c]) => (s += flor(x, y, c)));
+  s += `<path d="M30 42v10M90 42v10M60 102v10" stroke="#2f9e5c" stroke-width="2"/>`;
+  s += `<rect width="${W}" height="${H}" fill="#2a1408" opacity=".38"/>`;
+  return { url: enc(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">${s}</svg>`), w: W, h: H };
+}
 const TILE_CACHE = {};
 function tableTile(key) {
   if (TILE_CACHE[key]) return TILE_CACHE[key];
@@ -319,6 +337,10 @@ const P = {
   charro: () => `${drop(circ(60))}${tt(circ(60), '#f2d38a', '#d9b060', `<circle r="53" fill="none" stroke="#e8434f" stroke-width="4"/><circle r="47" fill="none" stroke="#2f9e5c" stroke-width="2.4" stroke-dasharray="5 5"/>`)}${tt(circ(28), '#f2d38a', '#d9b060', `<circle r="28" fill="none" stroke="#e8434f" stroke-width="7"/>${[0, 72, 144, 216, 288].map((a) => `<circle cx="${(Math.cos((a * Math.PI) / 180) * 28).toFixed(1)}" cy="${(Math.sin((a * Math.PI) / 180) * 28).toFixed(1)}" r="2.4" fill="#ffd27a"/>`).join('')}<ellipse cx="-8" cy="-10" rx="7" ry="4" fill="#fff" opacity=".35" transform="rotate(-30 -8 -10)"/>`)}`,
   chiles: () => [[-12, -8, -30, 2.3, false], [16, 14, 40, 2, true]].map(([x, y, a, k, green]) => `<g ${T(x, y, a)}><g transform="translate(${-16 * k} ${-16 * k}) scale(${k})">${(green ? icon('chile').replace(/#e8434f/g, '#5fbf5a').replace(/#c22c3c/g, '#3f9a46').replace(/#ff9aa2/g, '#b8f0a0') : icon('chile')).replace(/^<svg[^>]*>|<\/svg>$/g, '')}</g></g>`).join(''),
   maracas: () => [[-14, -4, -30, '#e8434f', '#c22c3c'], [16, 8, 30, '#2f9e5c', '#1f7a42']].map(([x, y, a, c, d]) => `<g ${T(x, y, a)}>${drop('M-5 10h10v34h-10zM0 -24a18 18 0 1 1 0 36a18 18 0 1 1 0-36z', 4, 6)}${tt('M-4.5 10h9v32a4.5 4.5 0 0 1-9 0z', '#c9893a', '#a86a22', '', 2.2)}${tt(CIRCLE(0, -6, 18), c, d, `<path d="M-17 -10q17 8 34 0" stroke="#ffc83d" stroke-width="4" fill="none"/><path d="M-16 0q16 7 32 0" stroke="#fff6e6" stroke-width="3" fill="none"/><ellipse cx="-7" cy="-15" rx="5" ry="3" fill="#fff" opacity=".45" transform="rotate(-30 -7 -15)"/>`)}</g>`).join(''),
+  // Candelaria: tamales, jarritos de atole y elotes.
+  tamalesPlate: () => `${drop(circ(52))}${tt(circ(52), '#fff6e6', '#e8dcc4', `<circle r="42" fill="none" stroke="#3fa0e0" stroke-width="3"/>`)}${[[-14, -6, -30, 1.7], [14, 4, 25, 1.7], [0, 18, 90, 1.5]].map(([x, y, a, k]) => `<g ${T(x, y, a)}><g transform="translate(${-16 * k} ${-16 * k}) scale(${k})">${icon('tamal').replace(/^<svg[^>]*>|<\/svg>$/g, '')}</g></g>`).join('')}`,
+  jarro: () => `${drop(circ(34))}<g transform="translate(-40 -44) scale(2.5)">${icon('atole').replace(/^<svg[^>]*>|<\/svg>$/g, '')}</g>`,
+  elotes: () => [[-14, -6, -25], [16, 10, 30]].map(([x, y, a]) => `<g ${T(x, y, a)}>${drop('M-10 -34h20v62h-20z', 4, 6)}${tt('M-12 30C-16 0-10-28 0-36 10-28 16 0 12 30z', '#7cc04f', '#4fa84a')}${tt('M-8 24C-10 0-6-22 0-28 6-22 10 0 8 24z', '#ffd23d', '#f0b020', [-18, -10, -2, 6, 14].map((yy) => `<path d="M-7 ${yy}h14" stroke="#e8a020" stroke-width="1.6"/>`).join('') + '<path d="M0 -26v48" stroke="#e8a020" stroke-width="1.6"/>', 2.2)}</g>`).join(''),
   // Halloween: calabaza tallada, murciélagos y un caldero con poción.
   pumpkin: () => `${drop(ELLd(0, 2, 48, 38))}<g transform="translate(-54 -62) scale(3.4)">${icon('calabaza').replace(/^<svg[^>]*>|<\/svg>$/g, '')}</g>`,
   bats: () => [[-14, -10, -15, 2.2], [20, 18, 20, 1.6]].map(([x, y, a, k]) => `<g ${T(x, y, a)}><g transform="translate(${-16 * k} ${-16 * k}) scale(${k})">${icon('murcielago').replace(/#5a4a8a/g, '#a890d8').replace(/#3f3270/g, '#7a62b8').replace(/^<svg[^>]*>|<\/svg>$/g, '')}</g></g>`).join(''),
@@ -351,6 +373,7 @@ const EVENT_TABLES = {
   navidad: { tile: mantelNavidadTile, tint: '#1a0408', props: ['ornaments', 'candycanes', ['mug', ['#e8434f', '#c22c3c', '#ff8a94']], 'cookies'] },
   verano: { tile: mantelVeranoTile, tint: '#04202e', props: ['beachball', 'sunglasses', ['mug', ['#38c2dd', '#1f8fc8', '#8fe8ff']], 'watermelons'] },
   patrias: { tile: mantelPatriasTile, tint: '#140814', props: ['charro', 'chiles', ['mug', ['#e8434f', '#c22c3c', '#ff9aa2']], 'maracas'] },
+  candelaria: { tile: mantelCandelariaTile, tint: '#1a0e04', props: ['tamalesPlate', 'elotes', ['mug', ['#d9783f', '#b85a28', '#f0a070']], 'jarro'] },
   halloween: { tile: mantelHalloweenTile, tint: '#0e0618', props: ['pumpkin', 'bats', ['mug', ['#6fd36a', '#3fae4a', '#b8f0a0']], 'cauldron'] },
 };
 // HTML del fondo de la mesa para el mundo w (o la del evento del mes: theme = su clave).

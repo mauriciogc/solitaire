@@ -667,6 +667,21 @@ export function specialLevel(i) {
   return hardened(specialBase(i, d?.t), d, specialHelp(i));
 }
 
+// ---------- Festividades (eventos de 24 h) ----------
+// 3 planetas de 3 niveles, todos con tableros especiales: los dos primeros de cada planeta piden 2 ayudas y el jefe 3
+// (y es tablero de jefe). Usan las mecánicas que ya conoces (grupo según el mundo al empezar). seed cambia con la
+// festividad y el año: cada edición trae otros tableros, y dentro de una no se repiten.
+export const FIESTA_PLANETS = 3;
+export const FIESTA_PER_PLANET = 3;
+export const FIESTA_LEVELS = FIESTA_PLANETS * FIESTA_PER_PLANET;
+export const FIESTA_HELP = [2, 2, 3];
+export function fiestaLevel(seed, k, world) {
+  const j = k % FIESTA_PER_PLANET, boss = j === FIESTA_PER_PLANET - 1;
+  const pool = specials(FIESTA_HELP[j], eventGroup(world)).filter((i) => (i % 4 === 3) === boss);
+  const i = pool[(hash(seed) + k * 7) % pool.length];
+  return { ...specialLevel(i), k, planet: Math.floor(k / FIESTA_PER_PLANET), boss };
+}
+
 // ---------- Mecánicas por mundo ----------
 export const MECHANICS = ['lock', 'pack', 'ice', 'double', 'arrow', 'curtain', 'bomb', 'live'];
 const MECH_FIELD = { lock: 'lock', pack: 'pack', ice: 'ice', double: 'alt', arrow: 'arrow', curtain: 'curtain', bomb: 'bomb', live: 'live' };
