@@ -464,6 +464,65 @@ const MODELS = {
       smoke.forEach((m, k) => { const p = (t * 0.45 + k / 4) % 1; m.position.set(Math.sin(p * 6 + k) * 0.08, 0.12 + p * 0.6, Math.cos(k * 2) * 0.06); m.scale.setScalar((0.5 + p * 1.3) * (0.3 + o * 0.7)); m.material.opacity = 0.7 * (1 - p); });
     } };
   },
+  // Caja con michi (Día del Gato): caja de cartón con las tapas abiertas; el gatito gris se asoma, mueve las orejas y la cola.
+  cajamichi(part) {
+    const g = new THREE.Group(), box = new THREE.Group(), cat = new THREE.Group(), ears = [];
+    box.add(part(new THREE.BoxGeometry(0.5, 0.36, 0.42), '#c98a5a', { ol: 0.05 }));
+    box.add(part(new THREE.BoxGeometry(0.505, 0.05, 0.425), '#e0a878', { y: -0.06, ol: 0 }));
+    for (const [x, z, rz, rx, w, d] of [[-0.3, 0, 0.9, 0, 0.12, 0.42], [0.3, 0, -0.9, 0, 0.12, 0.42], [0, 0.26, 0, -0.9, 0.5, 0.12]])
+      box.add(part(new THREE.BoxGeometry(w, 0.012, d), '#d9996a', { x, y: 0.2, z, rx, rz, ol: 0.12 }));
+    cat.add(part(new THREE.SphereGeometry(0.17, 20, 14).scale(1.1, 0.95, 1), '#a9b0c8', { ol: 0.06 }));
+    for (const s of [-1, 1]) {
+      const ear = part(new THREE.ConeGeometry(0.06, 0.12, 4), '#a9b0c8', { x: s * 0.1, y: 0.16, rz: -s * 0.3, ol: 0.15 });
+      cat.add(ear); ears.push(ear);
+      cat.add(part(new THREE.SphereGeometry(0.03, 10, 8), '#2a1f5c', { x: s * 0.065, y: 0.02, z: 0.155, ol: 0 }));
+      cat.add(part(new THREE.SphereGeometry(0.035, 8, 6).scale(1.3, 0.8, 1), '#ff9cb4', { x: s * 0.11, y: -0.05, z: 0.14, ol: 0 }));
+    }
+    cat.add(part(new THREE.SphereGeometry(0.018, 8, 6), '#ff7a9a', { y: -0.03, z: 0.17, ol: 0 }));
+    for (const [y, rx] of [[0.15, 0.2], [0.12, -0.3]]) cat.add(part(new THREE.SphereGeometry(0.02, 8, 6).scale(1, 2.2, 1), '#6e7690', { y: y, z: 0.12, rx, ol: 0 }));
+    box.add(cat);
+    const tail = new THREE.Group();
+    tail.add(part(new THREE.CylinderGeometry(0.025, 0.03, 0.34, 8), '#a9b0c8', { y: 0.17, ol: 0.15 }));
+    tail.position.set(0.18, 0.12, -0.2); box.add(tail);
+    box.rotation.set(0.3, -0.5, 0);
+    g.add(box);
+    return { obj: g, tick: (t) => {
+      box.position.y = Math.sin(t * 2) * 0.05; box.rotation.z = Math.sin(t * 1.4) * 0.08;
+      const peek = (Math.sin(t * 1.2) + 1) / 2; cat.position.y = 0.04 + peek * 0.2; cat.rotation.z = Math.sin(t * 2.4) * 0.12 * peek;
+      ears.forEach((e, k) => (e.rotation.x = Math.max(0, Math.sin(t * 6 + k * 2)) * 0.5));
+      tail.rotation.z = Math.sin(t * 2.6) * 0.5; tail.rotation.x = -0.3 + Math.sin(t * 1.3) * 0.2;
+    } };
+  },
+  // Disco volador (Día del Perro): disco rojo que gira; encima, un perrito con la lengua de fuera y las orejas al viento.
+  frisbee(part) {
+    const g = new THREE.Group(), all = new THREE.Group(), disc = new THREE.Group(), dog = new THREE.Group(), ears = [];
+    disc.add(part(new THREE.CylinderGeometry(0.34, 0.3, 0.06, 32), '#e8434f', { ol: 0.04 }));
+    disc.add(part(new THREE.TorusGeometry(0.24, 0.012, 6, 32).rotateX(Math.PI / 2), '#fff6e6', { y: 0.032, ol: 0 }));
+    disc.add(part(new THREE.TorusGeometry(0.14, 0.012, 6, 32).rotateX(Math.PI / 2), '#fff6e6', { y: 0.032, ol: 0 }));
+    all.add(disc);
+    dog.add(part(new THREE.SphereGeometry(0.15, 18, 14).scale(1, 0.75, 1), '#f6d4a0', { y: 0.08, ol: 0.07 }));
+    dog.add(part(new THREE.SphereGeometry(0.15, 20, 14), '#f6d4a0', { y: 0.27, z: 0.06, ol: 0.06 }));
+    dog.add(part(new THREE.SphereGeometry(0.07, 12, 10).scale(1, 0.8, 1), '#fff6e6', { y: 0.23, z: 0.19, ol: 0.1 }));
+    dog.add(part(new THREE.SphereGeometry(0.03, 10, 8), '#2a1f5c', { y: 0.26, z: 0.26, ol: 0 }));
+    dog.add(part(new THREE.BoxGeometry(0.05, 0.08, 0.012), '#ff7a9a', { y: 0.17, z: 0.24, rx: 0.4, ol: 0.15 }));
+    for (const s of [-1, 1]) {
+      dog.add(part(new THREE.SphereGeometry(0.025, 10, 8), '#2a1f5c', { x: s * 0.06, y: 0.32, z: 0.18, ol: 0 }));
+      const ear = new THREE.Group();
+      ear.add(part(new THREE.SphereGeometry(0.06, 10, 8).scale(0.5, 1.4, 0.9), '#8a5a3a', { y: -0.06, ol: 0.12 }));
+      ear.position.set(s * 0.13, 0.34, 0.02); dog.add(ear); ears.push(ear);
+    }
+    const tail = part(new THREE.CylinderGeometry(0.018, 0.028, 0.14, 8).translate(0, 0.07, 0), '#f6d4a0', { ol: 0.15 });
+    tail.position.set(0, 0.1, -0.13); dog.add(tail);
+    dog.position.y = 0.03; all.add(dog);
+    all.rotation.set(0.35, -0.5, 0);
+    g.add(all);
+    return { obj: g, tick: (t) => {
+      all.position.y = Math.sin(t * 2) * 0.05; all.rotation.z = Math.sin(t * 1.3) * 0.1;
+      disc.rotation.y = t * 4;
+      ears.forEach((e, k) => { e.rotation.z = (k ? 1 : -1) * (1.1 + Math.sin(t * 9 + k) * 0.25); e.rotation.x = -0.6; });
+      tail.rotation.x = -0.7; tail.rotation.z = Math.sin(t * 14) * 0.6;
+    } };
+  },
   alebrije(part) {
     const g = new THREE.Group(), body = new THREE.Group();
     body.add(part(new THREE.SphereGeometry(0.2, 20, 14).scale(1, 0.85, 1.35), '#ff5fa8', { ol: 0.07 }));

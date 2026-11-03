@@ -130,6 +130,20 @@ export const EVENT_BIOMES = {
     // [agua, bosque desde, cuántos pinos]
     [[0.46, 0.64, 1.1], [0.4, 0.58, 1.3], [0.34, 0.52, 1.5]],
   ),
+  // Festividad: Día del Gato (3 planetas). Pasto de hierba gatera con flores rosas y cerros lila que suben en cada planeta.
+  gato: sameLook(
+    { emblem: ['#b48cff', '#9ad46a', '#ff9cc8'], colors: [['#3a5fb8', '#6f9be8', '#f0e2c8', '#9ad46a', '#c9a6e8', '#e8d8ff']],
+      planet: { amp: 0.14, freq: 1.8, seed: 211, outline: 0x2a1a4a, glow: 0xc9a6ff, prop: 'round', crown: '#ff9cc8', path: '#fff6ee' } },
+    // [agua, lila desde, cuántos árboles]
+    [[0.4, 0.62, 1.1], [0.34, 0.56, 1.3], [0.3, 0.5, 1.5]],
+  ),
+  // Festividad: Día del Perro (3 planetas). Parques de pasto con árboles de copa verde y caminos de tierra naranja que suben.
+  perro: sameLook(
+    { emblem: ['#ff9c5b', '#7fc46a', '#fff6e6'], colors: [['#2f86c8', '#5fc0f0', '#f6e0b8', '#7fc46a', '#e8a35a', '#f6c890']],
+      planet: { amp: 0.13, freq: 1.7, seed: 223, outline: 0x3a200a, glow: 0xffc890, prop: 'round', crown: '#5fae5a', path: '#fff6e6' } },
+    // [agua, tierra desde, cuántos árboles]
+    [[0.42, 0.64, 1.2], [0.36, 0.58, 1.4], [0.3, 0.52, 1.6]],
+  ),
   // Halloween: mares morados, huertos de calabaza naranjas y árboles otoñales; el naranja sube en cada planeta.
   halloween: sameLook(
     { emblem: ['#5a2f9a', '#3a1a6a', '#ff8a1a'], colors: [['#3a1a6a', '#6a3fb0', '#c9b0e8', '#4a6a3a', '#ff8a1a', '#ffb13d']],
@@ -339,6 +353,25 @@ function mantelPadreTile() {
   s += `<rect width="${W}" height="${H}" fill="#06122a" opacity=".55"/>`;
   return { url: enc(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">${s}</svg>`), w: W, h: H };
 }
+// Mantel del Día del Gato: cojín lila con huellitas.
+function mantelGatoTile() {
+  const W = 120, H = 120;
+  let s = `<rect width="${W}" height="${H}" fill="#d8c6f5"/>`;
+  const paw = (x, y, a) => `<g transform="translate(${x} ${y}) rotate(${a})" fill="#a98ae0"><ellipse cy="3" rx="5" ry="4.2"/>${[[-5.4, -3.4], [-1.8, -6.2], [1.8, -6.2], [5.4, -3.4]].map(([a2, b]) => `<circle cx="${a2}" cy="${b}" r="1.9"/>`).join('')}</g>`;
+  [[24, 26, -20], [42, 50, -10], [84, 80, 15], [100, 104, 25], [90, 20, 40], [20, 92, -35]].forEach(([x, y, a]) => (s += paw(x, y, a)));
+  s += `<rect width="${W}" height="${H}" fill="#140a2a" opacity=".55"/>`;
+  return { url: enc(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">${s}</svg>`), w: W, h: H };
+}
+// Mantel del Día del Perro: cobija naranja a rayas con huesitos.
+function mantelPerroTile() {
+  const W = 120, H = 120;
+  let s = `<rect width="${W}" height="${H}" fill="#f6c890"/>`;
+  [0, 60].forEach((y) => (s += `<rect y="${y + 22}" width="${W}" height="16" fill="#e8853e" opacity=".6"/><rect y="${y + 26}" width="${W}" height="3" fill="#fff6e6" opacity=".7"/>`));
+  const bone = (x, y, a) => `<g transform="translate(${x} ${y}) rotate(${a})" fill="#fff6e6"><rect x="-7" y="-2" width="14" height="4" rx="1"/>${[[-7, -2.4], [-7, 2.4], [7, -2.4], [7, 2.4]].map(([a2, b]) => `<circle cx="${a2}" cy="${b}" r="2.6"/>`).join('')}</g>`;
+  [[30, 10, -20], [90, 50, 25], [30, 70, 15], [90, 110, -30]].forEach(([x, y, a]) => (s += bone(x, y, a)));
+  s += `<rect width="${W}" height="${H}" fill="#1a0c04" opacity=".55"/>`;
+  return { url: enc(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">${s}</svg>`), w: W, h: H };
+}
 // Mantel del Día de las Madres: rosa clarito con florecitas y su orilla de encaje.
 function mantelMadresTile() {
   const W = 120, H = 120;
@@ -441,6 +474,14 @@ const P = {
   corbataProp: () => `<g ${T(0, 0, -18)}>${drop(circ(36))}<g transform="translate(-50 -50) scale(3.1)">${icon('corbata').replace(/^<svg[^>]*>|<\/svg>$/g, '')}</g></g>`,
   tools: () => `<g ${T(-18, 0, -24)}>${drop('M-12 -24a12 12 0 0 1 8-12v10h8v-10a12 12 0 0 1 8 12 12 12 0 0 1-8 11.4V26a4 4 0 0 1-8 0V-12.6A12 12 0 0 1-12 -24z', 4, 5)}${tt('M-4 -14h8v40a4 4 0 0 1-8 0z', '#b8c4d8', '#8f9bb5', '', 2.4)}${tt('M-12 -24a12 12 0 0 1 8-12v10h8v-10a12 12 0 0 1 8 12 12 12 0 0 1-9 11.6h-6A12 12 0 0 1-12 -24z', '#cfd8e8', '#9aa7cf', '', 2.4)}</g>`
     + `<g ${T(20, 4, 22)}>${drop('M-4 -18h8v48h-8z', 4, 5)}${tt('M-3.5 -16h7v46h-7z', '#c98a3a', '#a86a22', '', 2.4)}${tt('M-18 -28h30a6 6 0 0 1 6 6v7h-36z', '#8f9bb5', '#6e7a96', '<path d="M-14 -24h20" stroke="#cfd8e8" stroke-width="2.4" stroke-linecap="round"/>', 2.4)}</g>`,
+  // Día del Gato: el gatito, dos bolas de estambre y un pescadito.
+  gatitoProp: () => `<g ${T(0, 0, -12)}>${drop(circ(38))}<g transform="translate(-52 -54) scale(3.25)">${icon('gatito').replace(/^<svg[^>]*>|<\/svg>$/g, '')}</g></g>`,
+  estambres: () => [[-14, -8, -14, 2.2], [18, 16, 30, 1.6]].map(([x, y, a, k]) => `<g ${T(x, y, a)}>${drop(circ(13 * k), 3, 4)}<g transform="translate(${-17 * k} ${-15 * k}) scale(${k})">${icon('estambre').replace(/^<svg[^>]*>|<\/svg>$/g, '')}</g></g>`).join(''),
+  pescadito: () => `<g ${T(0, 0, -24)}>${drop('M-34 0C-20-18 10-18 22 0 10 18-20 18-34 0zM20 0l16-14v28z')}${tt('M-34 0C-20-18 10-18 22 0 10 18-20 18-34 0z', '#7fc4f0', '#4aa8de', '<path d="M-8-12q6 12 0 24M2-12q6 12 0 24" stroke="#3f8ad8" stroke-width="2.4" fill="none"/>')}${tt('M20 0 36-14v28z', '#7fc4f0', '#4aa8de', '', 2.4)}<circle cx="-22" cy="-3" r="3.6" fill="${K}"/><circle cx="-23" cy="-4.2" r="1.2" fill="#fff"/></g>`,
+  // Día del Perro: el cachorro, dos huesitos y una pelota de tenis.
+  cachorroProp: () => `<g ${T(0, 0, -12)}>${drop(circ(38))}<g transform="translate(-52 -54) scale(3.25)">${icon('cachorro').replace(/^<svg[^>]*>|<\/svg>$/g, '')}</g></g>`,
+  huesos: () => [[-10, -12, -28, 2.2], [14, 18, 20, 1.7]].map(([x, y, a, k]) => `<g ${T(x, y, a)}>${drop('M-30 -6h60v12h-60z', 3, 4)}<g transform="translate(${-16 * k} ${-16 * k}) scale(${k})">${icon('hueso').replace(/^<svg[^>]*>|<\/svg>$/g, '')}</g></g>`).join(''),
+  tennis: () => `${drop(circ(26))}${tt(circ(26), '#d8f05a', '#b8d03a', '<path d="M-24-10q14 10 0 22M24-12q-14 10 0 24" stroke="#fff" stroke-width="3.4" fill="none"/>')}`,
   // Halloween: calabaza tallada, murciélagos y un caldero con poción.
   pumpkin: () => `${drop(ELLd(0, 2, 48, 38))}<g transform="translate(-54 -62) scale(3.4)">${icon('calabaza').replace(/^<svg[^>]*>|<\/svg>$/g, '')}</g>`,
   bats: () => [[-14, -10, -15, 2.2], [20, 18, 20, 1.6]].map(([x, y, a, k]) => `<g ${T(x, y, a)}><g transform="translate(${-16 * k} ${-16 * k}) scale(${k})">${icon('murcielago').replace(/#5a4a8a/g, '#a890d8').replace(/#3f3270/g, '#7a62b8').replace(/^<svg[^>]*>|<\/svg>$/g, '')}</g></g>`).join(''),
@@ -479,6 +520,8 @@ const EVENT_TABLES = {
   nino: { tile: mantelNinoTile, tint: '#0a0a24', props: ['pinataProp', 'globos', ['mug', ['#ff7ab8', '#e8559a', '#ffc2dc']], 'goldstars'] },
   madres: { tile: mantelMadresTile, tint: '#1a0410', props: ['ramo', 'regalitos', ['mug', ['#ff7aa6', '#e0406f', '#ffc2d6']], 'letter'] },
   padre: { tile: mantelPadreTile, tint: '#060e24', props: ['corbataProp', 'tools', ['mug', ['#4aa8de', '#2f86c0', '#bfe2ff']], 'letter'] },
+  gato: { tile: mantelGatoTile, tint: '#0e0820', props: ['gatitoProp', 'estambres', ['mug', ['#b48cff', '#8a5cf0', '#e2d4ff']], 'pescadito'] },
+  perro: { tile: mantelPerroTile, tint: '#140a04', props: ['cachorroProp', 'huesos', ['mug', ['#ff9c5b', '#e2753a', '#ffe0c4']], 'tennis'] },
   halloween: { tile: mantelHalloweenTile, tint: '#0e0618', props: ['pumpkin', 'bats', ['mug', ['#6fd36a', '#3fae4a', '#b8f0a0']], 'cauldron'] },
 };
 // HTML del fondo de la mesa para el mundo w (o la del evento del mes: theme = su clave).

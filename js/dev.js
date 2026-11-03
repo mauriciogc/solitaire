@@ -359,7 +359,6 @@ export function openDevMenu({ onGallery, onRefresh }) {
       evNow && { l: 'Ir al jefe del planeta', fn: () => evSet({ k: Math.min(EVENT_LEVELS - 1, Math.floor(evNow.state.k / EVENT_PER_PLANET) * EVENT_PER_PLANET + EVENT_PER_PLANET - 1) }) },
       evNow && { l: 'Siguiente planeta', fn: () => evSet({ k: Math.min(EVENT_LEVELS - 1, (Math.floor(evNow.state.k / EVENT_PER_PLANET) + 1) * EVENT_PER_PLANET) }) },
       evNow && { l: 'Ganar todo hasta el último jefe', title: 'Gana los niveles que faltan (con sus premios) y te deja en el jefe del último planeta', fn: () => (ev().state.tk = 1, ev().state.run = null, winTo(ev, evEnter, evWin, EVENT_LEVELS - 1)) },
-      evNow && { l: 'Ir al último jefe del último planeta', title: 'Ganarlo termina el evento y da su postal (álbum → Eventos)', fn: () => evSet({ k: EVENT_LEVELS - 1 }) },
       evNow && { l: 'Empezar de cero', fn: () => ((save.ev = null), persist(), onRefresh()) },
     ] },
     { t: 'Festividad', sub: `${fiNow ? `${fiNow.name} · ${fiNow.soon ? 'mañana' : `nivel ${Math.min(fiNow.state.k + 1, FIESTA_LEVELS)} de ${FIESTA_LEVELS}`}` : fiNext ? `próxima: ${fiNext.name} en ${fiNext.days} días` : 'ninguna lista'}${isOn('fiesta') ? '' : ` · se abre en el nivel ${UNLOCK.fiesta}`}`, items: [
@@ -368,7 +367,6 @@ export function openDevMenu({ onGallery, onRefresh }) {
       fiOn && { l: 'Ir al jefe del planeta', fn: () => fiSet({ k: Math.min(FIESTA_LEVELS - 1, Math.floor(fiNow.state.k / FIESTA_PER_PLANET) * FIESTA_PER_PLANET + FIESTA_PER_PLANET - 1) }) },
       fiOn && { l: 'Siguiente planeta', fn: () => fiSet({ k: Math.min(FIESTA_LEVELS - 1, (Math.floor(fiNow.state.k / FIESTA_PER_PLANET) + 1) * FIESTA_PER_PLANET) }) },
       fiOn && { l: 'Ganar todo hasta el último jefe', title: 'Gana los niveles que faltan (con sus premios) y te deja en el jefe del último planeta', fn: () => ((fiesta().state.run = null), winTo(fiesta, fiEnter, fiWin, FIESTA_LEVELS - 1)) },
-      fiOn && { l: 'Ir al último jefe del último planeta', title: 'Ganarlo termina la festividad', fn: () => fiSet({ k: FIESTA_LEVELS - 1 }) },
       fiOn && { l: 'Empezar de cero', fn: () => ((save.fi = null), persist(), onRefresh()) },
       { l: 'Ver el aviso de Festividades', title: 'La ventana que sale al desbloquearlas (nivel 120), con 3 iconos', fn: () => (save.intro && delete save.intro.fiesta, persist(), onRefresh()) },
     ] },
