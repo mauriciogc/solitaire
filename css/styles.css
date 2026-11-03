@@ -153,9 +153,8 @@ button:disabled { cursor: default; }
 .rhero { position: relative; display: flex; justify-content: center; align-items: center; height: 110px; }
 .rh-ico .ico { width: 104px; height: 104px; animation: hero-float 2.6s ease-in-out infinite; }
 .rhero b { position: absolute; left: calc(50% + 30px); bottom: 4px; font: 400 44px 'Lilita One'; color: #fff; -webkit-text-stroke: 7px var(--ink); paint-order: stroke fill; }
-.rsub { text-align: center; margin: 4px 0 14px; }
-.rpath { position: relative; display: grid; grid-template-columns: repeat(7, 1fr); align-items: end; margin: 6px 0 12px; }
-.rbar { position: absolute; left: calc(100% / 14); right: calc(100% / 14); top: 51px; height: 10px; border-radius: 5px; background: #e3d6c0; border: 2px solid var(--ink); overflow: hidden; }
+.rpath { position: relative; display: grid; grid-template-columns: repeat(var(--cols, 7), 1fr); align-items: end; margin: 6px 0 12px; }
+.rbar { position: absolute; left: calc(100% / var(--cols, 7) / 2); right: calc(100% / var(--cols, 7) / 2); top: 51px; height: 10px; border-radius: 5px; background: #e3d6c0; border: 2px solid var(--ink); overflow: hidden; }
 .rbar i { display: block; height: 100%; width: calc(var(--fill) * 100%); background: linear-gradient(#ffc83d, #ff8a3d); transition: width 600ms var(--ease-out); }
 .rg { position: relative; display: grid; grid-template-rows: 80px 40px; justify-items: center; }
 .rps { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; padding-top: 4px; }
@@ -173,6 +172,8 @@ button:disabled { cursor: default; }
 .rg .rays { position: absolute; top: 56px; left: 50%; translate: -50% -50%; width: 150px; height: 150px; z-index: 0; }
 .rg.got > i { background: #5ad68c; box-shadow: inset 0 -4px 0 #2f9e5c; color: var(--ink); animation: none; }
 .rg.start > i { --s: 38px; background: #ffd8bd; }
+.rg.miss > i { background: #d9d2e6; box-shadow: inset 0 -4px 0 #b4abc6; animation: none; }
+.rg.miss .rp { opacity: .4; text-decoration: line-through; }
 .rg.ready > i { background: var(--gold); box-shadow: inset 0 -4px 0 #e89a17, 0 0 18px #ffc83d; animation: ready-wiggle 1.6s ease-in-out infinite; }
 .rp { display: flex; align-items: center; gap: 1px; height: 18px; font-size: 12.5px; font-weight: 800; color: #5d5385; white-space: nowrap; }
 .rg.t4 .rp, .rg.t5 .rp { font-size: 14px; color: var(--ink); }
@@ -196,11 +197,10 @@ button.rg { width: 100%; }
 button.rg > i { transition: scale 140ms var(--ease-out); }
 button.rg:active > i { scale: .92; }
 .racha-modal .rclaim { display: none; }
-/* Acostado: número, texto y Reclamar en una sola fila arriba; el botón de abajo se esconde (quedaría fuera de la pantalla). */
+/* Acostado: número y Reclamar en una sola fila arriba; el botón de abajo se esconde (quedaría fuera de la pantalla). */
 @media (max-height: 500px) {
   .rtop { display: flex; align-items: center; justify-content: center; gap: 14px; margin-bottom: 4px; }
   .rhero { height: 64px; width: 96px; flex: none; } .rh-ico .ico { width: 62px; height: 62px; } .rhero b { font-size: 32px; left: calc(50% + 18px); bottom: 0; }
-  .rsub { margin: 0; text-align: left; max-width: 220px; }
   .racha-modal .rclaim { display: inline-flex; flex: none; animation: ready-wiggle 1.6s ease-in-out infinite; }
   .racha-modal .mbtns { display: none; }
 }
@@ -501,10 +501,10 @@ button.rg:active > i { scale: .92; }
 .rays { position: absolute; width: 240px; height: 240px; border-radius: 50%; pointer-events: none; opacity: .55;
   background: repeating-conic-gradient(#ffd75a 0 9deg, transparent 9deg 22.5deg); mask: radial-gradient(circle, #000 25%, transparent 68%); animation: spin 9s linear infinite; }
 @keyframes spin { to { rotate: 360deg; } }
-.big-stars { position: relative; display: flex; justify-content: center; align-items: flex-end; gap: 6px; margin: 6px 0 14px; }
-.big-stars .ico { width: 62px; height: 62px; animation: starpop 560ms var(--spring) both 380ms; filter: drop-shadow(0 4px 0 #0b062a33); }
+.big-stars { position: relative; display: flex; justify-content: center; align-items: flex-end; gap: 10px; margin: 22px 0 30px; }
+.big-stars .ico { width: 78px; height: 78px; animation: starpop 560ms var(--spring) both 380ms; filter: drop-shadow(0 4px 0 #0b062a33); }
 .big-stars .ico:nth-child(1) { rotate: -10deg; }
-.big-stars .ico:nth-child(2) { width: 84px; height: 84px; animation-delay: 580ms; translate: 0 -10px; }
+.big-stars .ico:nth-child(2) { width: 106px; height: 106px; animation-delay: 580ms; translate: 0 -14px; }
 .big-stars .ico:nth-child(3) { rotate: 10deg; animation-delay: 780ms; }
 @keyframes starpop { from { scale: 3; opacity: 0; } 60% { scale: 0.85; opacity: 1; } }
 .win .mhead h2 { font-size: 28px; }
@@ -818,7 +818,7 @@ button.rg:active > i { scale: .92; }
 
 /* ---------- Menos movimiento ---------- */
 @media (prefers-reduced-motion: reduce) {
-  .hero-card, .hero-undo span, .hero-fan i, .g-ring, .card.shake, .undo-btn.nudge, .streak.pop, .confetti, .day.today, .iconbtn.ready, .racha-btn.hot, .racha-pill.hot, .fire, .rg.ready > i, .rclaim, .combo i.next, .combo.near .prize, .combo.hot, .combo .need, .rh-ico .ico, .dticket span, .logo-bands, .big-stars .ico, .rays, .gbox, .loot-it { animation: none !important; }
+  .hero-card, .hero-undo span, .hero-fan i, .g-ring, .card.shake, .undo-btn.nudge, .streak.pop, .confetti, .day.today, .iconbtn.ready, .racha-btn.hot, .racha-pill.hot, .fire, .rg.ready > i, .rclaim, .rw-ico, .combo i.next, .combo.near .prize, .combo.hot, .combo .need, .rh-ico .ico, .dticket span, .logo-bands, .big-stars .ico, .rays, .gbox, .loot-it { animation: none !important; }
   .card .inner, .stock .card { transition-duration: 0.01ms !important; }
 }
 
@@ -1434,9 +1434,13 @@ html:not(.dev-on) .dev-pill { display: none; }
 .btn.ev-go-tierra { background: linear-gradient(#8fd46a, #5fb04a); box-shadow: inset 0 -6px 0 #2f86c0, inset 0 3px 0 #c8f0b0, 0 4px 0 var(--ink); }
 .btn.ev-go-nino { background: linear-gradient(#ff9cc8, #ff6fae); box-shadow: inset 0 -6px 0 #4aa8de, inset 0 3px 0 #ffd6ea, 0 4px 0 var(--ink); }
 .btn.ev-go-madres { background: linear-gradient(#ff8fb0, #ff5f8f); box-shadow: inset 0 -6px 0 #c22c5c, inset 0 3px 0 #ffd6e4, 0 4px 0 var(--ink); }
-.racha-warn { margin-top: 10px; text-align: center; color: #c2501c; }
-.racha-warn .ico { width: 18px; height: 18px; vertical-align: -3px; margin-right: 3px; }
-.racha-warn b { color: #c2501c; }
+.racha-warn { display: flex; align-items: center; gap: 10px; margin-top: 12px; padding: 8px 12px; border-radius: 14px; background: #ffe2cc; border: 2.5px solid var(--ink); box-shadow: inset 0 -3px 0 #f6c39e; text-align: left; color: #8a3a12; font-size: 14px; line-height: 1.25; }
+.racha-warn p { margin: 0; }
+.racha-warn p b { display: block; color: #c2501c; font-size: 15.5px; }
+.rw-ico { position: relative; flex: none; width: 46px; height: 46px; display: grid; place-items: center; animation: rw-shake 1.4s ease-in-out infinite; }
+.rw-ico .ico { width: 40px; height: 40px; }
+.rw-ico > b { position: absolute; right: -4px; bottom: -4px; font: 400 18px 'Lilita One'; }
+@keyframes rw-shake { 0%, 60%, 100% { rotate: 0deg; } 66% { rotate: -12deg; } 74% { rotate: 10deg; } 82% { rotate: -7deg; } 90% { rotate: 4deg; } }
 .rclock-chip.urgent { background: #e2503a; color: #fff3e6; animation: nudge 1.2s var(--ease-out) infinite; }
 .rclock-chip.urgent b { color: #fff; }
 /* Globos del jefe: encima de la ventana, se truenan al tocarlos (balloons en ui.js). */
@@ -1444,5 +1448,7 @@ html:not(.dev-on) .dev-pill { display: none; }
 .balloon { position: absolute; top: 100%; width: var(--s); height: calc(var(--s) * 1.66); padding: 0; border: 0; background: none; pointer-events: auto; touch-action: manipulation; -webkit-tap-highlight-color: transparent; filter: drop-shadow(0 4px 0 #0f0a2d55); }
 .balloon svg { display: block; width: 100%; height: 100%; transform-origin: 50% 66%; }
 .shred { position: fixed; z-index: 2600; width: 9px; height: 6px; margin: -3px 0 0 -4px; border: 1.5px solid var(--ink); border-radius: 3px; pointer-events: none; }
+.pop-prize { position: fixed; z-index: 2600; translate: -50% -50%; display: flex; align-items: center; gap: 4px; font: 400 34px 'Lilita One'; color: #fff; pointer-events: none; white-space: nowrap; }
+.pop-prize svg { width: 64px; height: 64px; filter: drop-shadow(0 4px 0 #2a1f5c55); }
 .pop-txt { position: fixed; z-index: 2600; font: 400 24px 'Lilita One'; pointer-events: none; white-space: nowrap; }
 .ev-done-pc { margin: 12px auto 6px; max-width: 320px; }

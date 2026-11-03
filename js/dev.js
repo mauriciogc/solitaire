@@ -1,10 +1,10 @@
 // Modo dev: probar niveles rápido sin jugarlos a mano.
 // Se activa con ?dev en la URL (y se apaga con ?dev=0). Queda guardado en el navegador.
 import { save, prefs, persist, resetProfile, backupOnce, restoreBackup, setDev } from './storage.js';
-import { rachaWin, rachaLose, racha, RACHA_GOALS, col, daysToNextCol, ev, daysToNextEvent, evEnter, evWin, EVENT_PER_PLANET, EVENT_LEVELS, fiesta, fiEnter, fiWin, nextFiesta, daysToNextFiesta, isOn, UNLOCK, FIESTA_PER_PLANET, FIESTA_LEVELS } from './events.js';
+import { rachaWin, rachaLose, racha, nextGoal, col, daysToNextCol, ev, daysToNextEvent, evEnter, evWin, EVENT_PER_PLANET, EVENT_LEVELS, fiesta, fiEnter, fiWin, nextFiesta, daysToNextFiesta, isOn, UNLOCK, FIESTA_PER_PLANET, FIESTA_LEVELS } from './events.js';
 import { generateLevel, packGroups, worldInfo, specials, specialGroup, SPECIAL_ID, TOTAL_LEVELS, LEVELS_PER_WORLD, MECH_NAMES, MECHANICS } from './levels.js';
 import { playCasual, solve, initState } from './engine.js';
-import { openModal, toast, updateCoins } from './ui.js';
+import { openModal, toast, updateCoins, popGoal } from './ui.js';
 import { mulberry32 } from './rng.js';
 import { icon } from './art.js';
 
@@ -282,6 +282,8 @@ export function openDevMenu({ onGallery, onRefresh }) {
   // fiNext: la siguiente fiesta que no es la de hoy ni la de mañana (para brincar al día antes de ella).
   const fiNow = fiesta(), fiNext = nextFiesta(fiNow?.soon ? 1 : 0), fiOn = fiNow && !fiNow.soon;
   const fiSet = (patch) => { Object.assign(fiesta().state, { run: null, ...patch }); persist(); onRefresh(); };
+  // Deja la cuenta a 1 del premio: el siguiente globo (jefe) o burbuja (cofre) que truene lo da.
+  const popNear = (k) => { const p = ((save.pops ||= {})[k] ||= { n: 0, lvl: 0 }); p.n = popGoal(k, p.lvl) - 1; persist(); onRefresh(); };
   const toDay = (d) => ((save.devDay = (save.devDay || 0) + d), persist(), onRefresh());
   // Gana uno por uno los niveles que faltan antes del último jefe: se cobran sus monedas y sus regalos (como si se jugaran).
   const winTo = (get, enter, win, last) => {
@@ -337,9 +339,14 @@ export function openDevMenu({ onGallery, onRefresh }) {
     ] },
     { t: 'Racha', sub: `va en ${racha().n}`, items: [
       { l: '+1 victoria', fn: () => (rachaWin(), onRefresh()) },
-      { l: 'Al siguiente premio', fn: () => { const g = RACHA_GOALS.find((x) => x.n > racha().n); if (!g) return toast('Ya llegó al último premio'); while (racha().n < g.n) rachaWin(); onRefresh(); } },
+      { l: 'Al siguiente premio', fn: () => { const g = nextGoal(); while (racha().n < g.n) rachaWin(); onRefresh(); } },
       { l: 'Perderla', fn: () => (rachaLose(), onRefresh()) },
       { l: 'Pasar al otro día', fn: () => ((save.devDay = (save.devDay || 0) + 1), persist(), onRefresh()) },
+    ] },
+    { t: 'Globos y burbujas', sub: ['globo', 'burbuja'].map((k) => { const p = save.pops?.[k] || { n: 0, lvl: 0 }; return `${k}s ${p.n} de ${popGoal(k, p.lvl)}`; }).join(' · '), items: [
+      { l: 'A 1 globo del comodín', fn: () => popNear('globo') },
+      { l: 'A 1 burbuja de las monedas', title: 'Las burbujas salen de los premios al ganar cualquier nivel y del cofre del jefe', fn: () => popNear('burbuja') },
+      { l: 'Empezar de cero', fn: () => ((save.pops = {}), persist(), onRefresh()) },
     ] },
     { t: 'Colección', sub: colNow ? `${colNow.name} · ${colNow.state.n} fichas` : 'no hay esta semana', items: [
       { l: colNow ? 'Siguiente colección' : 'Ir a la próxima', fn: () => ((save.devDay = (save.devDay || 0) + daysToNextCol()), persist(), onRefresh()) },

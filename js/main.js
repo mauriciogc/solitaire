@@ -1,9 +1,9 @@
 import { save, prefs, persist, resetProfile, renameProfile, exportCode, readCode, loadProfile, setDev } from './storage.js';
-import { UNLOCK, EVENTOS, isOn, nextEvent, daysToNextCol, plusCols, RACHA_GOALS, racha, rachaTheme, rachaReady, rachaHot, rachaWin, rachaLose, rachaClaim, msToMidnight, col, colLeft, colWin, colOffers, colBuy, ev, evLeft, evTicketLeft, evPrize, evEnter, evWin, evLose, evAlbum, EVENT_PLANETS, EVENT_PER_PLANET, EVENT_LEVELS, fiesta, fiestaLeft, nextFiesta, fiEnter, fiWin, fiLose, FIESTA_PLANETS, FIESTA_PER_PLANET, FIESTA_LEVELS } from './events.js';
+import { UNLOCK, EVENTOS, isOn, nextEvent, daysToNextCol, plusCols, RACHA_GOALS, RACHA_STEP, rachaGoal, nextIndex, racha, rachaTheme, rachaReady, rachaHot, rachaWin, rachaLose, rachaClaim, msToMidnight, col, colLeft, colWin, colOffers, colBuy, ev, evLeft, evTicketLeft, evPrize, evEnter, evWin, evLose, evAlbum, EVENT_PLANETS, EVENT_PER_PLANET, EVENT_LEVELS, fiesta, fiestaLeft, nextFiesta, fiEnter, fiWin, fiLose, FIESTA_PLANETS, FIESTA_PER_PLANET, FIESTA_LEVELS } from './events.js';
 import { WORLD_COUNT, LEVELS_PER_WORLD, TOTAL_LEVELS, worldInfo, generateLevel, variantLevel, MECH_INTRO, MECH_NAMES, secretId, isSecret, eventLevel, fiestaLevel } from './levels.js';
 import { Game, faceHTML, backHTML } from './game.js';
 import { DAILY_PATH, dailyState, starsNeeded, TICKET_PRICE, ticketCost, ticketRefund, coinsFor, bossChest, openSurprise, SECRET_MULT, SECRET_PRIZE } from './economy.js';
-import { openModal, toast, updateCoins, money, esc, reduced, wait, flyToWallet, spendFromWallet, sparkle, confetti, starsHTML, warp, buzz, balloons, popBalloon } from './ui.js';
+import { openModal, toast, updateCoins, money, esc, reduced, wait, flyToWallet, spendFromWallet, sparkle, confetti, starsHTML, warp, buzz, balloons, lootBubbles, rachaWarnHTML } from './ui.js';
 import { icon, star, coin, miniPlanet, avatarHTML, AVATAR_COLORS, cardBackURL, setDeck, lockIcon, chestBody, chestLid, boxBody, boxLid } from './art.js';
 import { GROUPS, SECTIONS, ITEMS, shopItems, groupOf, owns, equipped, equip, buy, item, lockedUntil, titleHTML } from './shop.js';
 import { BIOMES, biomeKey, EVENT_BIOMES } from './biomes.js';
@@ -628,7 +628,7 @@ const runCounts = (g) => !save.stars[g] && !isSecret(g) && g <= save.next;
 const runRacha = (g) => {
   const r = racha();
   if (!runCounts(g) || !isOn('racha') || !r.n) return '';
-  return `<p class="note racha-warn">${icon('flame')} Si lo abandonas, tu racha de <b>${r.n}</b> vuelve a 0${r.pend.length ? ' y pierdes los premios sin reclamar' : ''}.</p>`;
+  return rachaWarnHTML(r.n, r.pend.length, 'Si lo abandonas');
 };
 function enterLevel(g) {
   if (worldOf(g) > save.open && !dev.infinite) return openWorldGate(worldOf(g));
@@ -707,10 +707,11 @@ function startLevel(g, { resume = false, free = false, anim = 'up' } = {}) {
     persist();
   }
   const level = variantLevel(generateLevel(g), v);
-  // Cuenta para la racha: nivel nuevo del camino normal (no repetir, no secreto, no la galería dev).
-  const counts = !free && !save.stars[g] && !isSecret(g) && g <= save.next;
-  // Repetir un nivel ganado del camino: no suma a la racha, pero rendirse o abandonar la reinicia.
-  const replay = !free && !!save.stars[g] && !isSecret(g);
+  // Cuenta para la racha: nivel nuevo del camino o secreto aún no ganado (no repetir, no la galería dev).
+  const won = isSecret(g) ? !!save.secret[worldOf(g)] : !!save.stars[g];
+  const counts = !free && !won && (isSecret(g) || g <= save.next);
+  // Repetir un nivel ganado: no suma a la racha, pero rendirse o abandonar la reinicia.
+  const replay = !free && won;
   const back = () => (dev.on && gallery.active ? showGallery() : showWorld(worldOf(g), 'down'));
   const clearRun = () => {
     if (save.run?.g === g) save.run = null;
@@ -734,7 +735,7 @@ function startLevel(g, { resume = false, free = false, anim = 'up' } = {}) {
     rachaRisk: () => ((counts || replay) && isOn('racha') && racha().n ? { n: racha().n, pend: racha().pend.length, isNew: counts } : null),
     // gaveUp: se rindió o abandonó (no solo salió de un nivel repetido sin jugar).
     onAbandon: (gaveUp) => {
-      if (counts || (replay && gaveUp)) rachaLose();
+      if ((counts && gaveUp !== false) || (replay && gaveUp)) rachaLose();
       clearRun();
       back();
     },
@@ -769,10 +770,11 @@ function startLevel(g, { resume = false, free = false, anim = 'up' } = {}) {
         save.coins += coins;
         save.wild += wild;
         save.undo += undo;
+        const racha = counts && isOn('racha') ? rachaWin() : null;
         persist();
         updateCoins();
         // Primera vez con 3 estrellas: la postal del mundo gana el sello secreto (se celebra al continuar).
-        return { coins, tickets: 0, prev, wild, undo, counted: true, first: !prev, replay: !free, seal: stars >= 3 && prev < 3, col: fichas ? { n: fichas, ico: col().token } : null };
+        return { coins, tickets: 0, prev, wild, undo, counted: true, first: !prev, racha, replay: !free, seal: stars >= 3 && prev < 3, col: fichas ? { n: fichas, ico: col().token } : null };
       }
       // En modo dev se puede saltar a cualquier nivel: solo cuenta si ya estaba desbloqueado.
       if (g > save.next) return { coins: 0, tickets: 0, prev: 0, replay: !free };
@@ -1022,21 +1024,30 @@ function helpTip(m, text) {
 }
 
 // ---------- Racha diaria ----------
-// Camino: un punto de salida y los 6 premios, igual de separados; la barra se llena entre premio y premio.
+// Una fila de 6 premios a la vez, igual de separados: primero 3 a 30; cuando esa se acaba (alcanzados o perdidos),
+// la siguiente de 50 en 50 (50 a 300, luego 350 a 600…). Se queda en la fila con premios sin reclamar.
+// La barra se llena entre premio y premio.
 function openRacha() {
-  const r = racha(), t = rachaTheme(), next = RACHA_GOALS.find((x) => x.n > r.n);
-  const pts = [0, ...RACHA_GOALS.map((x) => x.n)];
-  let k = pts.findIndex((v) => v > r.n);
-  const fill = k < 0 ? 1 : (k - 1 + (r.n - pts[k - 1]) / (pts[k] - pts[k - 1])) / (pts.length - 1);
-  const stateOf = (i) => (r.pend.includes(i) ? 'ready' : r.got.includes(i) ? 'got' : 'next');
-  const prize = (x) => `<div class="rps"><span class="rp">${coin()}<b>${x.coins}</b></span>${x.wild ? `<span class="rp">${icon('wild')}<b>×${x.wild}</b></span>` : ''}</div>`;
-  // Entre mejor el premio, más grande y más vistoso el punto (el último lleva rayos y una caja).
-  const nodes = RACHA_GOALS.map((x, i) => {
-    const st = stateOf(i), last = i === RACHA_GOALS.length - 1;
+  const r = racha(), t = rachaTheme(), miss = r.miss || [], N = RACHA_GOALS.length;
+  const stateOf = (i) => (r.pend.includes(i) ? 'ready' : miss.includes(i) ? 'miss' : r.got.includes(i) ? 'got' : 'next');
+  const prize = (x) => `<div class="rps"><span class="rp">${coin()}<b>${x.coins}</b></span>${x.wild ? `<span class="rp">${icon('wild')}<b>×${x.wild}</b></span>` : ''}${x.undo ? `<span class="rp">${icon('undo')}<b>×${x.undo}</b></span>` : ''}</div>`;
+  // Entre más lejos en la fila, más grande y más vistoso el punto (el último lleva rayos).
+  // Los alcanzados llevan palomita; los que se perdieron sin reclamar, tache.
+  const node = (i) => {
+    const x = rachaGoal(i), st = stateOf(i), tier = i < N ? i : (i - N) % N;
     // Los premios listos también son botón: se canjean al tocarlos.
     const tag = st === 'ready' ? 'button' : 'div';
-    return `<${tag} class="rg t${i} ${st}" data-i="${i}"${st === 'ready' ? ' aria-label="Reclamar"' : ''}>${last ? '<span class="rays"></span>' : ''}<i>${st === 'got' ? icon('check') : `<b>${x.n}</b>`}</i>${prize(x)}</${tag}>`;
-  }).join('');
+    return `<${tag} class="rg t${tier} ${st}" data-i="${i}"${st === 'ready' ? ' aria-label="Reclamar"' : ''}>${tier === N - 1 ? '<span class="rays"></span>' : ''}<i>${st === 'got' ? icon('check') : st === 'miss' ? icon('close') : `<b>${x.n}</b>`}</i>${prize(x)}</${tag}>`;
+  };
+  const row = (from, idx, start) => {
+    const pts = [from, ...idx.map((i) => rachaGoal(i).n)], k = pts.findIndex((v) => v > r.n);
+    const fill = k < 0 ? 1 : k === 0 ? 0 : (k - 1 + (r.n - pts[k - 1]) / (pts[k] - pts[k - 1])) / (pts.length - 1);
+    return `<div class="rpath" style="--fill:${fill};--cols:${pts.length}"><div class="rbar"><i></i></div><div class="rg start"><i>${start}</i><div class="rps"></div></div>${idx.map(node).join('')}</div>`;
+  };
+  const rowOf = (i) => (i < N ? 0 : 1 + Math.floor((i - N) / N));
+  const k = rowOf(Math.min(nextIndex(r), ...r.pend)), first = k ? N + (k - 1) * N : 0;
+  const idx = Array.from({ length: N }, (_, j) => first + j);
+  const path = row(k ? rachaGoal(first - 1).n : 0, idx, k ? `<b>${rachaGoal(first - 1).n}</b>` : icon(t.ico));
   const ready = rachaReady();
   let m;
   const claim = async () => {
@@ -1064,15 +1075,14 @@ function openRacha() {
     wide: true,
     cls: 'racha-modal',
     body: `<div class="rtop"><div class="rhero"><span class="rh-ico">${icon(t.ico)}</span><b>${r.n}</b></div>
-      <p class="lead rsub">${next ? `Gana <b>${next.n - r.n}</b> más para el siguiente premio` : '¡Llegaste al premio más grande!'}</p>
       ${ready ? `<button class="btn gold rclaim">${icon('gift')} Reclamar</button>` : ''}</div>
-      <div class="rpath" style="--fill:${fill}"><div class="rbar"><i></i></div><div class="rg start"><i>${icon(t.ico)}</i><div class="rps"></div></div>${nodes}</div>
+      ${path}
       <div class="rclock-chip${ready ? ' urgent' : ''}">${ready ? 'Reclama antes de' : 'Nueva racha en'} <b class="rclock">${clock(msToMidnight())}</b></div>`,
     // Solo sirve para ver y canjear: sin botón de jugar.
     buttons: ready ? [{ label: `${icon('gift')} Reclamar`, cls: 'gold', keep: true, onClick: claim }] : [],
   });
   m.el.querySelectorAll('.rclaim, .rg.ready').forEach((b) => b.addEventListener('click', claim));
-  helpTip(m, 'Gana niveles nuevos seguidos, con las estrellas que sea. Repetir niveles no suma. Si pierdes o abandonas uno nuevo, o te rindes en uno repetido, vuelves a 0 y se pierden los premios sin reclamar. A medianoche empieza otra: lo que no reclames antes, se pierde.');
+  helpTip(m, 'Gana niveles nuevos seguidos (también los secretos), con las estrellas que sea. Repetir niveles no suma. Si pierdes o abandonas uno nuevo, o te rindes en uno repetido, vuelves a 0 y se pierden los premios sin reclamar; los que ya alcanzaste no se repiten. Después del 30, hay premio cada 50. A medianoche empieza otra: lo que no reclames antes, se pierde.');
   const c = m.el.querySelector('.rclock');
   const tick = setInterval(() => (c.isConnected ? (c.textContent = clock(msToMidnight())) : clearInterval(tick)), 1000);
 }
@@ -1618,8 +1628,8 @@ const UNLOCK_INFO = {
       title: `¡Nueva: ${t.name}!`, ico: t.ico, color: t.color, hero: icon(t.ico, 0, 0, 'big'),
       lead: `Ganaste <b>${UNLOCK.racha} niveles</b>: ¡se abrió la racha! Gana niveles seguidos y llévate premios cada día.`,
       rules: [
-        ['flag', 'Cuenta cada nivel <b>nuevo</b> que ganes, con las estrellas que sea. Repetir no suma.'],
-        ['gift', `Premios a los <b>${RACHA_GOALS.map((g) => g.n).join(', ')}</b> seguidos: monedas y <b>comodines</b>.`],
+        ['flag', 'Cuenta cada nivel <b>nuevo</b> que ganes (también los secretos), con las estrellas que sea. Repetir no suma.'],
+        ['gift', `Premios a los <b>${RACHA_GOALS.map((g) => g.n).join(', ')}</b> seguidos y luego cada <b>${RACHA_STEP}</b>: monedas, <b>deshacer</b> y <b>comodines</b>.`],
         ['flame', 'Si pierdes o abandonas un nivel nuevo, o te rindes en uno repetido, la racha <b>vuelve a 0</b> y se pierden los premios sin reclamar.'],
         ['rocket', 'A medianoche empieza otra: <b>reclama tus premios</b> antes o se pierden. La encuentras a la <b>derecha</b>.'],
       ],
@@ -1878,34 +1888,10 @@ function openBossReward(w, res) {
     });
     balloons(m);
     // Los premios son burbujas: salen del cofre y suben despacio (más lento que los globos) por encima de la ventana.
-    const layer = document.createElement('div');
-    layer.className = 'bubbles';
-    m.el.append(layer);
-    const bubbles = prizeIcons(ch).map((x) => {
-      const b = document.createElement('button');
-      b.className = 'loot-bub';
-      b.setAttribute('aria-label', 'Tronar burbuja');
-      b.innerHTML = `<span class="lb-wob">${x}</span>`;
-      b.addEventListener('pointerdown', (e) => {
-        e.stopPropagation();
-        b.getAnimations({ subtree: true }).forEach((a) => a.pause());
-        if (popBalloon(b, ['#fff3c4', '#ffc83d'])) sparkle(center(b), 12);
-      });
-      return b;
-    });
-    const center = (el) => { const r = el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; };
-    const place = () => {
-      const r = m.el.querySelector('.chest').getBoundingClientRect(), n = bubbles.length;
-      bubbles.forEach((b, i) => {
-        b.style.left = `${r.left + r.width / 2 + (i - (n - 1) / 2) * 78}px`;
-        b.style.top = `${r.top - 30 - (i % 2) * 18}px`;
-        layer.append(b);
-      });
-      return r;
-    };
+    const loot = () => lootBubbles(m, prizeIcons(ch), m.el.querySelector('.chest'));
     if (reduced()) {
       m.el.querySelector('.chest-row').classList.add('open', 'done');
-      return place();
+      return loot();
     }
     const pc = m.el.querySelector('.postcard'), stamp = m.el.querySelector('.stamp'), chest = m.el.querySelector('.chest');
     pc.animate([{ rotate: '-8deg', scale: 0.7, opacity: 0 }, { rotate: '3deg', scale: 1.04, opacity: 1, offset: 0.7 }, { rotate: '-1.5deg', scale: 1 }], { duration: 620, delay: 150, easing: 'ease-out', fill: 'backwards' });
@@ -1914,24 +1900,9 @@ function openBossReward(w, res) {
       await chest.animate([{ rotate: '0deg' }, { rotate: '-8deg' }, { rotate: '7deg' }, { rotate: '-5deg' }, { rotate: '0deg' }], { duration: 520, iterations: 2 }).finished;
       const row = m.el.querySelector('.chest-row');
       row.classList.add('open');
-      const r = place(), cx = r.left + r.width / 2, cy = r.top + r.height / 3;
-      sparkle({ x: cx, y: cy }, 20);
-      // Cada premio sale del cofre con un salto, se mece como burbuja y luego sube despacio hasta salir de la pantalla.
-      await Promise.all(bubbles.map((el, i) => {
-        const b = center(el), dx = cx - b.x, dy = cy - b.y;
-        el.querySelector('.lb-wob').animate([{ translate: '-5px 2px', rotate: '-5deg' }, { translate: '5px -3px', rotate: '5deg' }], { duration: 1600 + i * 300, direction: 'alternate', iterations: Infinity, easing: 'ease-in-out' });
-        return el.animate([
-          { translate: `${dx}px ${dy}px`, scale: 0.3, opacity: 0 },
-          { translate: `${dx * 0.4}px -40px`, scale: 1.15, opacity: 1, offset: 0.6 },
-          { translate: '0 0', scale: 1, opacity: 1 },
-        ], { duration: 640, delay: 120 + i * 240, easing: 'cubic-bezier(0.3, 0.7, 0.4, 1)', fill: 'backwards' }).finished.then(() => {
-          sparkle(center(el), 10);
-          buzz(12);
-          if (el.popped) return;
-          const drift = (Math.random() - 0.5) * 90, top = el.getBoundingClientRect().top;
-          el.animate([{ translate: '0 0' }, { translate: `${drift}px ${-(top + 160)}px` }], { duration: 16000 + i * 2500, delay: 900, easing: 'cubic-bezier(0.4, 0, 0.8, 1)', fill: 'forwards' }).finished.then(() => el.remove(), () => {});
-        });
-      }));
+      const r = m.el.querySelector('.chest').getBoundingClientRect();
+      sparkle({ x: r.left + r.width / 2, y: r.top + r.height / 3 }, 20);
+      await loot();
       row.classList.add('done');
     }, 1300);
   });

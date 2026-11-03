@@ -25,6 +25,7 @@ const fresh = (name, avatar = 0) => ({
   seen: {}, // mecánicas que ya se le explicaron
   secret: {}, // mundo -> mejores estrellas en su nivel secreto
   secretSeen: {}, // mundos cuyo nivel secreto ya se mostró (la revelación se anima una sola vez)
+  pops: {}, // globos y burbujas truenados: tipo -> { n: cuenta desde el último premio, lvl: premios dados } (ver countPop en ui.js)
   evAlbum: {}, // eventos del mes ganados completos (id = año·12 + mes -> 1): su postal en el álbum, con el año
   look: 'letter', // avatar: 'letter' = su inicial · 'char' = un personaje (char)
   char: 'nino', // Nico y Lila son gratis

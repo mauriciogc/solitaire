@@ -14,14 +14,25 @@ import { EVENT_LEVELS, EVENT_PER_PLANET, EVENT_PLANETS, FIESTA_LEVELS, FIESTA_PE
 export const UNLOCK = { racha: 20, col: 50, mes: 80, col2: 100, fiesta: 120 };
 export const isOn = (k) => (save.next || 0) >= UNLOCK[k];
 
+// Primera fila: 3/5/10/15/20/30. Luego una fila sin fin cada 50 (50, 100, 150…): se turnan comodín y deshacer,
+// con monedas que suben poco a poco. Las monedas son provisionales: se revisan en la fase de economía.
 export const RACHA_GOALS = [
-  { n: 3, coins: 40 },
-  { n: 5, coins: 80 },
-  { n: 10, coins: 150, wild: 1 },
-  { n: 15, coins: 250 },
-  { n: 20, coins: 400, wild: 2 },
-  { n: 30, coins: 700, wild: 3 },
+  { n: 3, coins: 20 },
+  { n: 5, coins: 30 },
+  { n: 10, coins: 40, undo: 1 },
+  { n: 15, coins: 50 },
+  { n: 20, coins: 60 },
+  { n: 30, coins: 80, wild: 1 },
 ];
+export const RACHA_STEP = 50;
+// Premio i (índice global): los primeros son la fila de arriba; del 6 en adelante, la fila de 50 en 50.
+export function rachaGoal(i) {
+  if (i < RACHA_GOALS.length) return RACHA_GOALS[i];
+  const j = i - RACHA_GOALS.length;
+  return { n: RACHA_STEP * (j + 1), coins: 100 + 20 * j, ...(j % 2 ? { undo: 1 } : { wild: 1 }) };
+}
+// Índice del primer premio que todavía no alcanza esa racha.
+export const goalIndex = (n) => (n < RACHA_GOALS[RACHA_GOALS.length - 1].n ? RACHA_GOALS.findIndex((g) => g.n > n) : RACHA_GOALS.length + Math.floor(n / RACHA_STEP));
 // Nombre, icono y color de la ventana.
 const RACHA_THEME = { key: 'cohete', name: 'Racha cohete', ico: 'rocket', color: 'pink' };
 
@@ -34,20 +45,26 @@ export function racha() {
   const day = today();
   if (save.racha?.day !== day) {
     // Lo que no se reclamó ayer se pierde (como el regalo diario): se avisa al llegar al mapa.
-    save.racha = { day, n: 0, got: [], pend: [], ...(save.racha?.pend?.length ? { expired: true } : {}) };
+    save.racha = { day, n: 0, got: [], pend: [], miss: [], ...(save.racha?.pend?.length ? { expired: true } : {}) };
     persist();
   }
   return save.racha;
 }
 export const rachaTheme = () => RACHA_THEME;
 export const rachaReady = () => racha().pend.length > 0;
-export const nextGoal = () => RACHA_GOALS.find((g) => g.n > racha().n) || null;
+// Siguiente premio por ganar: tras un reinicio se salta los que ya alcanzó ese día.
+export const nextIndex = (r) => {
+  let i = goalIndex(r.n);
+  while (r.got.includes(i)) i++;
+  return i;
+};
+export const nextGoal = () => rachaGoal(nextIndex(racha()));
 // "En llamas": le falta muy poco para el siguiente premio (1 victoria; 2 si el tramo es largo).
 export function rachaHot() {
-  const r = racha(), i = RACHA_GOALS.findIndex((g) => g.n > r.n);
-  if (i < 0) return false;
-  const from = i ? RACHA_GOALS[i - 1].n : 0, left = RACHA_GOALS[i].n - r.n;
-  return left <= Math.max(1, Math.ceil((RACHA_GOALS[i].n - from) * 0.2));
+  const r = racha(), i = nextIndex(r);
+  const from = i ? rachaGoal(i - 1).n : 0, left = rachaGoal(i).n - r.n;
+  // En la fila de 50 en 50 arde solo en las últimas 2.
+  return left <= (i >= RACHA_GOALS.length ? 2 : Math.max(1, Math.ceil((rachaGoal(i).n - from) * 0.2)));
 }
 export const msToMidnight = () => {
   const d = new Date();
@@ -60,28 +77,32 @@ export function rachaWin() {
   if (!isOn('racha')) return null;
   const r = racha();
   r.n++;
-  RACHA_GOALS.forEach((g, i) => {
-    if (r.n >= g.n && !r.got.includes(i)) r.got.push(i), r.pend.push(i);
-  });
+  for (let i = 0; i < goalIndex(r.n); i++) if (!r.got.includes(i)) r.got.push(i), r.pend.push(i);
   persist();
   return r.n;
 }
 // Perdió o abandonó un nivel nuevo (o se rindió en uno repetido): vuelve a 0 y los premios sin reclamar se pierden
-// (se avisa al volver al mapa).
+// (se avisa al volver al mapa). Los que ya alcanzó ese día no se reinician: no se vuelven a ganar (si llegó al 3.º,
+// para otro premio tiene que pasar del 3.º).
 export function rachaLose() {
   if (!isOn('racha')) return;
   const r = racha();
   if (!r.n) return;
   r.lost = r.n;
   r.n = 0;
-  r.got = [];
+  r.miss = [...(r.miss || []), ...r.pend]; // perdidos sin reclamar: en la ventana se ven tachados
   r.pend = [];
   persist();
 }
 // Junta los premios pendientes y los quita de la lista.
 export function rachaClaim() {
-  const r = racha(), p = { coins: 0, wild: 0 };
-  for (const i of r.pend) (p.coins += RACHA_GOALS[i].coins), (p.wild += RACHA_GOALS[i].wild || 0);
+  const r = racha(), p = { coins: 0, wild: 0, undo: 0 };
+  for (const i of r.pend) {
+    const g = rachaGoal(i);
+    p.coins += g.coins;
+    p.wild += g.wild || 0;
+    p.undo += g.undo || 0;
+  }
   r.pend = [];
   persist();
   return p;

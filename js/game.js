@@ -1,5 +1,5 @@
 import { save, persist } from './storage.js';
-import { openModal, toast, confetti, updateCoins, money, starsHTML, reduced, buzz, sparkle, wait, spendFromWallet, balloons } from './ui.js';
+import { openModal, toast, confetti, updateCoins, money, starsHTML, reduced, buzz, sparkle, wait, spendFromWallet, balloons, lootBubbles, rachaWarnHTML } from './ui.js';
 import { worldInfo, packGroups, MECH_NAMES, LEVELS_PER_WORLD } from './levels.js';
 import * as E from './engine.js';
 import { price } from './economy.js';
@@ -1222,7 +1222,7 @@ export class Game {
     const r = this.opts.rachaRisk?.();
     if (!r) return '';
     const when = !end ? 'Si abandonas' : r.isNew ? 'Si reintentas o te rindes' : 'Si te rindes';
-    return `<p class="note racha-warn">${icon('flame')} ${when}, tu racha de <b>${r.n}</b> vuelve a 0${r.pend ? ' y pierdes los premios sin reclamar' : ''}.</p>`;
+    return rachaWarnHTML(r.n, r.pend, when);
   }
 
   win() {
@@ -1234,15 +1234,17 @@ export class Game {
     const { coins, tickets, prev, gold, wild, undo, col } = res;
     const ev = this.opts.event;
     const title = ev ? res.title : this.level.secret ? '¡Nivel secreto!' : this.level.boss ? '¡Jefe derrotado!' : '¡Nivel superado!';
-    // Premios en fichas que saltan una tras otra (después de las estrellas).
-    const chips = [
-      !(ev && !coins) && `<div class="reward">${coin()}${coins ? `+${coins}` : '—'}</div>`,
-      tickets && `<div class="reward">${icon('ticket')}+${tickets}</div>`,
-      gold && `<div class="reward gold">${icon('gold')}+1<small>boleto dorado</small></div>`,
-      wild && `<div class="reward">${icon('wild')}+${wild}<small>comodín</small></div>`,
-      undo && `<div class="reward">${icon('undo')}+${undo}<small>deshacer</small></div>`,
-      col && `<div class="reward">${icon(col.ico)}+${col.n}<small>colección</small></div>`,
-      ev && res.items?.length && `<div class="reward gold">${icon('gift')}+${res.items.length}<small>exclusivo${res.items.length > 1 ? 's' : ''}</small></div>`,
+    // Los premios son burbujas (icono + cantidad, sin texto) que salen de las estrellas y suben despacio; se pueden
+    // tronar y cuentan para el premio de burbujas (countPop en ui.js).
+    const bub = (ico, n) => `${ico}<b>+${n}</b>`;
+    const loot = [
+      coins && bub(coin(), coins),
+      tickets && bub(icon('ticket'), tickets),
+      gold && bub(icon('gold'), 1),
+      wild && bub(icon('wild'), wild),
+      undo && bub(icon('undo'), undo),
+      col && bub(icon(col.ico), col.n),
+      ev && res.items?.length && bub(icon('gift'), res.items.length),
     ].filter(Boolean);
     const note = ev ? (res.repeat ? '<p class="note">Ya tenías los exclusivos de este planeta: te tocan ayudas.</p>' : '')
       : !coins && prev >= 3
@@ -1259,8 +1261,7 @@ export class Game {
         color: 'gold',
         closable: false,
         cls: 'win',
-        body: `<div class="win-top"><div class="rays"></div>${ev ? `<div class="ev-win">${icon(ev.ico, 0, 0, 'big')}</div>` : `<div class="big-stars">${starsHTML(stars)}</div>`}</div>
-          <div class="rewards">${chips.join('')}</div>${note}`,
+        body: `<div class="win-top"><div class="rays"></div>${ev ? `<div class="ev-win">${icon(ev.ico, 0, 0, 'big')}</div>` : `<div class="big-stars">${starsHTML(stars)}</div>`}</div>${note}`,
         // Sin las 3 estrellas puede repetirlo ahí mismo (gratis: ya lo ganó). Se queda su mejor resultado.
         buttons: [
           res.replay && stars < 3 && { label: `${icon('undo')} Repetir`, cls: 'ghost', onClick: () => this.opts.onReplay() },
@@ -1269,8 +1270,12 @@ export class Game {
       });
       // Jefe sin cofre (el del evento o uno ya ganado): los globos salen aquí. Si hay cofre, salen en su ventana.
       if (((this.level.boss && !this.level.secret) || ev?.boss) && !res.chest) balloons(m);
-      if (reduced()) return;
-      // Cada estrella cae con su golpe; luego saltan los premios.
+      // Las burbujas se colocan cuando la ventana ya terminó de entrar (si no, salen desfasadas), justo debajo de las estrellas.
+      const top = m.el.querySelector('.win-top');
+      const settled = () => Promise.all(m.el.getAnimations({ subtree: true }).filter((a) => a.effect?.getTiming().iterations !== Infinity && !a.effect.target?.closest?.('.balloons')).map((a) => a.finished.catch(() => {})));
+      const launch = () => settled().then(() => m.el.isConnected && lootBubbles(m, loot, top, { lift: 40 - top.offsetHeight }));
+      if (reduced()) return launch();
+      // Cada estrella cae con su golpe; luego salen los premios.
       m.el.querySelectorAll('.big-stars .star').forEach((el, i) => {
         if (i >= stars) return;
         setTimeout(() => {
@@ -1279,9 +1284,7 @@ export class Game {
           sparkle({ x: r.left + r.width / 2, y: r.top + r.height / 2 }, 8);
         }, 520 + i * 200);
       });
-      m.el.querySelectorAll('.rewards .reward').forEach((el, i) =>
-        el.animate([{ scale: 0, rotate: '-12deg', opacity: 0 }, { scale: 1.15, rotate: '4deg', opacity: 1, offset: 0.65 }, { scale: 1, rotate: '0deg', opacity: 1 }], { duration: 420, delay: 1050 + i * 160, easing: 'ease-out', fill: 'backwards' }),
-      );
+      setTimeout(launch, ev ? 700 : 600 + stars * 200);
     }, 450);
   }
 
@@ -1309,12 +1312,14 @@ export class Game {
     if (this.modalOpen) return;
     this.modalOpen = true;
     const free = () => (this.modalOpen = false);
-    if (!this.opts.saved && !this.history.length && !this.opts.dev) return free(), this.opts.onAbandon();
+    // Sin haber jugado nada: sale directo y no cuenta como abandonar (la racha no se pierde).
+    if (!this.opts.saved && !this.history.length && !this.opts.dev) return free(), this.opts.onAbandon(false);
     openModal({
       title: 'Pausa',
       color: 'gray',
       onClose: free,
-      body: this.opts.saved ? '<p class="note">Tu partida se guarda: al volver sigues donde te quedaste.</p>' : '<p class="note">Estás repitiendo un nivel: si sales, se pierde este intento.</p>',
+      body: (this.opts.saved ? '<p class="note">Tu partida se guarda: al volver sigues donde te quedaste.</p>' : this.level.secret && this.opts.rachaRisk?.()?.isNew ? '<p class="note">Si sales del nivel secreto, se pierde este intento.</p>' : '<p class="note">Estás repitiendo un nivel: si sales, se pierde este intento.</p>')
+        + (this.opts.saved ? '' : this.rachaWarn()),
       buttons: this.pauseButtons(),
       cls: 'pause',
     });

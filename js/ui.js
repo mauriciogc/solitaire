@@ -1,4 +1,4 @@
-import { save } from './storage.js';
+import { save, persist } from './storage.js';
 import { star, icon, coin } from './art.js';
 
 // Monedero: hasta 9,999 completo; después abreviado para que quepa (12.5K, 250K, 1.2M).
@@ -346,6 +346,93 @@ export function popBalloon(b, [c, d], { remove = true } = {}) {
   t.animate([{ scale: 0.3, opacity: 0, translate: '-50% -50%' }, { scale: 1.15, opacity: 1, translate: '-50% -50%', offset: 0.35 }, { scale: 1, opacity: 0, translate: '-50% -110%' }], { duration: 620, easing: 'ease-out' }).finished.then(() => t.remove());
   return true;
 }
+// Aviso de que se pierde la racha (abandonar, rendirse, reintentar): el cohete con el número tiembla.
+export const rachaWarnHTML = (n, pend, when) =>
+  `<div class="racha-warn"><span class="rw-ico">${icon('rocket')}<b class="outl">${n}</b></span><p><b>¡Pierdes tu racha de ${n}!</b> ${when}, vuelve a 0${pend ? ' y se pierden los premios sin reclamar' : ''}.</p></div>`;
+
+// Globos y burbujas truenados (save.pops). Se acumulan entre niveles. A los 100 globos regala 1 comodín y la cuenta
+// vuelve a 0; el siguiente pide 200, luego 400… (siempre 1 comodín). Las burbujas de premios (las de cada victoria
+// y las del cofre) igual pero desde 20 (20, 40, 80…) y dan siempre 50 monedas (provisional: fase de economía).
+const POPS = { globo: { from: 100 }, burbuja: { from: 20, coins: 50 } };
+export const popGoal = (kind, lvl) => POPS[kind].from * 2 ** lvl;
+export function countPop(kind, at) {
+  const p = ((save.pops ||= {})[kind] ||= { n: 0, lvl: 0 });
+  if (++p.n < popGoal(kind, p.lvl)) return persist();
+  p.n = 0;
+  p.lvl++;
+  const coins = POPS[kind].coins;
+  if (coins) save.coins += coins;
+  else save.wild++;
+  persist();
+  popPrize(coins ? coin() : icon('wild'), `+${coins || 1}`, at);
+  if (coins) wait(reduced() ? 0 : 700).then(() => flyToWallet('coins', at, coins));
+}
+// Premios como burbujas: salen de `from` (el cofre, o cada ficha de premio si es una lista), saltan, se mecen y suben
+// despacio por encima de la ventana hasta salir de la pantalla. Al tocarlas se truenan y cuentan (countPop).
+// lift: cuánto arriba de `from` quedan (negativo = sobre él).
+export function lootBubbles(m, items, from, { lift = 30 } = {}) {
+  const layer = document.createElement('div');
+  layer.className = 'bubbles';
+  m.el.append(layer);
+  const box = layer.getBoundingClientRect();
+  const center = (el) => { const r = el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; };
+  const origin = (i) => (Array.isArray(from) ? from[i] : from);
+  const bubbles = items.map((x, i) => {
+    const b = document.createElement('button');
+    b.className = 'loot-bub';
+    b.setAttribute('aria-label', 'Tronar burbuja');
+    b.innerHTML = `<span class="lb-wob">${x}</span>`;
+    b.addEventListener('pointerdown', (e) => {
+      e.stopPropagation();
+      b.getAnimations({ subtree: true }).forEach((a) => a.pause());
+      const c = center(b);
+      if (popBalloon(b, ['#fff3c4', '#ffc83d'])) sparkle(c, 12), countPop('burbuja', c);
+    });
+    // Todas desde un mismo punto: en fila; cada una desde su ficha: encima de ella. La capa no siempre empieza en la
+    // orilla de la pantalla (en el tablero va dentro del juego): las posiciones son relativas a ella.
+    const r = origin(i).getBoundingClientRect(), n = Array.isArray(from) ? 1 : items.length, k = Array.isArray(from) ? 0 : i;
+    const gap = Math.min(78, (box.width - 90) / Math.max(1, n - 1));
+    b.style.left = `${r.left - box.left + r.width / 2 + (k - (n - 1) / 2) * gap}px`;
+    b.style.top = `${r.top - box.top - lift - (i % 2) * 18}px`;
+    layer.append(b);
+    return b;
+  });
+  if (reduced()) return Promise.resolve();
+  return Promise.all(bubbles.map((el, i) => {
+    const r = origin(i).getBoundingClientRect(), b = center(el), dx = r.left + r.width / 2 - b.x, dy = r.top + r.height / 3 - b.y;
+    el.querySelector('.lb-wob').animate([{ translate: '-5px 2px', rotate: '-5deg' }, { translate: '5px -3px', rotate: '5deg' }], { duration: 1600 + i * 300, direction: 'alternate', iterations: Infinity, easing: 'ease-in-out' });
+    return el.animate([
+      { translate: `${dx}px ${dy}px`, scale: 0.3, opacity: 0 },
+      { translate: `${dx * 0.4}px -40px`, scale: 1.15, opacity: 1, offset: 0.6 },
+      { translate: '0 0', scale: 1, opacity: 1 },
+    ], { duration: 640, delay: 120 + i * 240, easing: 'cubic-bezier(0.3, 0.7, 0.4, 1)', fill: 'backwards' }).finished.then(() => {
+      sparkle(center(el), 10);
+      buzz(12);
+      if (el.popped) return;
+      const drift = (Math.random() - 0.5) * 90, top = el.getBoundingClientRect().top;
+      el.animate([{ translate: '0 0' }, { translate: `${drift}px ${-(top + 160)}px` }], { duration: 16000 + i * 2500, delay: 900, easing: 'cubic-bezier(0.4, 0, 0.8, 1)', fill: 'forwards' }).finished.then(() => el.remove(), () => {});
+    }, () => {});
+  }));
+}
+// El premio sale grande del globo, se presume y sube (sin texto: el icono basta).
+function popPrize(html, n, { x, y }) {
+  buzz([20, 40, 30]);
+  sparkle({ x, y }, 22);
+  confetti(30);
+  const f = document.createElement('div');
+  f.className = 'pop-prize outl';
+  f.innerHTML = `${html}<b>${n}</b>`;
+  f.style.cssText = `left:${x}px;top:${y}px`;
+  document.body.append(f);
+  if (reduced()) return setTimeout(() => f.remove(), 1400);
+  f.animate([
+    { scale: 0.2, opacity: 0, rotate: '-20deg', translate: '-50% -50%' },
+    { scale: 1.35, opacity: 1, rotate: '8deg', translate: '-50% -50%', offset: 0.25 },
+    { scale: 1, opacity: 1, rotate: '0deg', translate: '-50% -50%', offset: 0.4 },
+    { scale: 1, opacity: 1, translate: '-50% -90%', offset: 0.8 },
+    { scale: 0.8, opacity: 0, translate: '-50% -140%' },
+  ], { duration: 1800, easing: 'ease-out' }).finished.then(() => f.remove());
+}
 export function balloons(m, { max = 7 } = {}) {
   if (reduced()) return;
   const layer = document.createElement('div');
@@ -369,7 +456,8 @@ export function balloons(m, { max = 7 } = {}) {
       b.addEventListener('pointerdown', (e) => {
         e.stopPropagation();
         b.getAnimations({ subtree: true }).forEach((a) => a.pause());
-        popBalloon(b, col);
+        const r = b.getBoundingClientRect();
+        if (popBalloon(b, col)) countPop('globo', { x: r.left + r.width / 2, y: r.top + r.width / 2 });
       });
     }
     setTimeout(spawn, 500 + Math.random() * 800);
