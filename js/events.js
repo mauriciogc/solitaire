@@ -10,8 +10,9 @@ import { EVENT_LEVELS, EVENT_PER_PLANET, EVENT_PLANETS, FIESTA_LEVELS, FIESTA_PE
 // Los eventos se abren poco a poco, según los niveles ganados (save.next): primero la racha, luego la colección
 // y al final el evento del mes (el más difícil: pide comodines). Cada uno se presenta una vez (save.intro).
 // col2: al nivel 100 se suman las colecciones nuevas y hay colección 3 semanas al mes (ver weekInfo).
+// col3: al nivel 150 se suman 3 más (arte, música y cine) y hay colección todas las semanas.
 // fiesta: festividades de 24 h (ver más abajo).
-export const UNLOCK = { racha: 20, col: 50, mes: 80, col2: 100, fiesta: 120 };
+export const UNLOCK = { racha: 20, col: 50, mes: 80, col2: 100, fiesta: 120, col3: 150 };
 export const isOn = (k) => (save.next || 0) >= UNLOCK[k];
 
 // Primera fila: 3/5/10/15/20/30. Luego una fila sin fin cada 50 (50, 100, 150…): se turnan comodín y deshacer,
@@ -129,6 +130,13 @@ export const COLECCIONES = [
     ex: { back: 'huellas', title: 'paleontologo', avatar: 'triceratops', ring: 'huesitos', traveler: 'ptero', frame: 'dinos', space: 'volcan' } },
   { key: 'robots', name: 'Taller de robots', token: 'tuerca', tokens: 'tuercas', color: 'gray', plus: true, ready: true,
     ex: { back: 'circuitos', title: 'inventor', avatar: 'robodog', ring: 'tuercas', traveler: 'robotin', frame: 'robots', space: 'taller' } },
+  // Desde el nivel 150 (plus: 2): las de hacer arte, música y cine.
+  { key: 'arte', name: 'Taller de arte', token: 'gota', one: 'gota de pintura', tokens: 'gotas de pintura', color: 'red', plus: 2, ready: true,
+    ex: { back: 'lienzo', title: 'artista', avatar: 'pulpopintor', ring: 'pinceles', traveler: 'paletapintor', frame: 'arte', space: 'manchas' } },
+  { key: 'musica', name: 'Banda musical', token: 'nota', tokens: 'notas', color: 'violet', plus: 2, ready: true,
+    ex: { back: 'partitura', title: 'estrellarock', avatar: 'ranita', ring: 'pentagrama', traveler: 'tocadiscos', frame: 'musica', space: 'concierto' } },
+  { key: 'cine', name: 'Estudio de cine', token: 'claqueta', tokens: 'claquetas', color: 'gold', plus: 2, ready: true,
+    ex: { back: 'peliculas', title: 'director', avatar: 'mapache', ring: 'rollo', traveler: 'proyector', frame: 'cine', space: 'estreno' } },
 ];
 // Precio en fichas de cada exclusivo (igual en todas las temáticas). Suman 560: más de lo que se junta en una semana.
 const EX_PRICE = { title: 40, frame: 50, space: 60, ring: 70, avatar: 90, back: 110, traveler: 140 };
@@ -136,10 +144,13 @@ const DAY = 864e5;
 // Lunes de esta semana (en días locales) y si esa semana hay colección.
 const mondayOf = (day) => day - ((day + 3) % 7); // el día 0 (1 ene 1970) fue jueves
 // Sin plus: 2 semanas al mes y las 4 de siempre (cada una vuelve cada 2 meses).
-// Con plus: 3 semanas al mes y todas las que estén listas (con 6, también cada 2 meses).
+// Con plus: 3 semanas al mes y las 6 (también cada 2 meses).
+// Desde el nivel 150: todas las semanas, y las 9 se van turnando una tras otra.
 const BASE_COL = COLECCIONES.filter((c) => !c.plus);
-const PLUS_COL = COLECCIONES.filter((c) => !c.plus || c.ready);
-const weekInfo = (monday, plus = isOn('col2')) => {
+const PLUS_COL = COLECCIONES.filter((c) => !c.plus || (c.plus === true && c.ready));
+const ALL_COL = COLECCIONES.filter((c) => !c.plus || c.ready);
+const weekInfo = (monday, plus = isOn('col2'), all = isOn('col3')) => {
+  if (all) return { on: true, theme: ALL_COL[Math.floor(monday / 7) % ALL_COL.length] };
   const d = new Date(monday * DAY), dom = d.getUTCDate(), m = d.getUTCFullYear() * 12 + d.getUTCMonth();
   const slot = dom <= 7 ? 0 : dom >= 15 && dom <= 21 ? 1 : plus && dom >= 22 && dom <= 28 ? 2 : -1;
   const list = plus ? PLUS_COL : BASE_COL;
@@ -151,7 +162,7 @@ export function col() {
   if (!isOn('col')) return null;
   const monday = mondayOf(today()), w = weekInfo(monday);
   if (save.col?.id === monday) {
-    const theme = COLECCIONES.find((c) => c.key === save.col.key) || weekInfo(monday, false).theme;
+    const theme = COLECCIONES.find((c) => c.key === save.col.key) || weekInfo(monday, false, false).theme;
     return { ...theme, state: save.col, monday };
   }
   if (!w.on) return null;
@@ -159,8 +170,8 @@ export function col() {
   persist();
   return { ...w.theme, state: save.col, monday };
 }
-// Las temáticas nuevas que se suman en el nivel 100 (para su aviso).
-export const plusCols = () => COLECCIONES.filter((c) => c.plus && c.ready);
+// Las temáticas nuevas que se suman en el nivel 100 (tier 1) o en el 150 (tier 2), para su aviso.
+export const plusCols = (tier = 1) => COLECCIONES.filter((c) => c.ready && (tier === 2 ? c.plus === 2 : c.plus === true));
 // Cuánto falta para que termine (domingo a medianoche).
 export const colLeft = () => {
   const c = col();
@@ -289,6 +300,12 @@ export function ev() {
     persist();
   }
   return { ...e, state: s, done: s.k >= EVENT_LEVELS };
+}
+// El evento del mes que empieza mañana (el último día del mes anterior): su botón sale bloqueado. null si no.
+export function evSoon() {
+  if (!isOn('mes')) return null;
+  const d = now(), t = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1);
+  return t.getMonth() !== d.getMonth() ? eventOf(t) : null;
 }
 // Cuánto falta para el siguiente boleto (0 = ya tienes).
 export const evTicketLeft = () => {
@@ -453,21 +470,23 @@ function fiestaDays(y) {
   }
   return out;
 }
-// La fiesta de hoy o la de mañana (null si ninguna). soon = todavía no empieza.
+// Días antes de la fiesta en que ya se ve su botón (gris, con candado y la cuenta regresiva).
+export const FIESTA_SOON = 3;
+// La fiesta de hoy o la que viene en los próximos FIESTA_SOON días (null si ninguna). soon = todavía no empieza; inDays = días que faltan.
 function fiestaNow() {
-  const day = today(), y = new Date((day + 1) * DAY).getUTCFullYear();
+  const day = today(), y = new Date((day + FIESTA_SOON) * DAY).getUTCFullYear();
   const all = [...fiestaDays(y - 1), ...fiestaDays(y)];
   const hoy = all.find((x) => x.day === day);
-  if (hoy) return { ...hoy, soon: false };
-  const man = all.find((x) => x.day === day + 1);
-  return man ? { ...man, soon: true } : null;
+  if (hoy) return { ...hoy, soon: false, inDays: 0 };
+  const next = all.filter((x) => x.day > day && x.day <= day + FIESTA_SOON).sort((a, b) => a.day - b.day)[0];
+  return next ? { ...next, soon: true, inDays: next.day - day } : null;
 }
-// La festividad activa (o la de mañana, con soon). Su avance vive en save.fi y se empieza de cero en cada edición.
+// La festividad activa (o la que viene, con soon). Su avance vive en save.fi y se empieza de cero en cada edición.
 export function fiesta() {
   if (!isOn('fiesta')) return null;
   const x = fiestaNow();
   if (!x) return null;
-  const id = `${x.f.key}-${x.day}`, base = { ...x.f, id, day: x.day, year: new Date(x.day * DAY).getUTCFullYear(), soon: x.soon };
+  const id = `${x.f.key}-${x.day}`, base = { ...x.f, id, day: x.day, year: new Date(x.day * DAY).getUTCFullYear(), soon: x.soon, inDays: x.inDays };
   if (x.soon) return base;
   if (save.fi?.id !== id) {
     fiRecord(); // la de antes, si se ganó completa, se queda en el álbum
@@ -476,8 +495,8 @@ export function fiesta() {
   }
   return { ...base, state: save.fi, done: save.fi.k >= FIESTA_LEVELS };
 }
-// Cuánto falta para que empiece (si es mañana) o para que termine (hoy): en los dos casos, hasta la medianoche.
-export const fiestaLeft = () => msToMidnight();
+// Cuánto falta para que empiece (si todavía no) o para que termine (hoy).
+export const fiestaLeft = () => msToMidnight() + Math.max(0, (fiestaNow()?.inDays || 0) - 1) * DAY;
 // Días para la siguiente fiesta (modo dev: saltar al día de antes).
 export function daysToNextFiesta() {
   const day = today(), y = new Date(day * DAY).getUTCFullYear();

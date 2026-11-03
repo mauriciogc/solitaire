@@ -58,6 +58,9 @@ export const ITEMS = {
     { k: 'osito', name: 'Gomi', text: 'Osito de gomita', ev: 'dulces' },
     { k: 'triceratops', name: 'Trici', text: 'Triceratops', ev: 'dinos' },
     { k: 'robodog', name: 'Rufo', text: 'Perro robot', ev: 'robots' },
+    { k: 'pulpopintor', name: 'Pincelín', text: 'Pulpo pintor', ev: 'arte' },
+    { k: 'ranita', name: 'Ranita', text: 'Toca la guitarra', ev: 'musica' },
+    { k: 'mapache', name: 'Mapache director', text: 'Con su megáfono', ev: 'cine' },
     { k: 'tamalito', name: 'Tamalito', text: 'Envuelto en su hoja de maíz', ev: 'candelaria', mes: 1 },
     { k: 'taquito', name: 'Taquito', text: 'Con todo y cilantro', ev: 'taco', mes: 1 },
     { k: 'arbolito', name: 'Arbolito', text: 'Con su florecita', ev: 'tierra', mes: 1 },
@@ -94,6 +97,9 @@ export const ITEMS = {
     { k: 'caramelos', name: 'Caramelos', ev: 'dulces' },
     { k: 'huesitos', name: 'Huesitos', ev: 'dinos' },
     { k: 'tuercas', name: 'Tuercas', ev: 'robots' },
+    { k: 'pinceles', name: 'Paleta de pintor', ev: 'arte' },
+    { k: 'pentagrama', name: 'Pentagrama', ev: 'musica' },
+    { k: 'rollo', name: 'Rollo de película', ev: 'cine' },
     { k: 'tamalitos', name: 'Tamalitos', ev: 'candelaria', mes: 1 },
     { k: 'salsas', name: 'Salsas', ev: 'taco', mes: 1 },
     { k: 'brotes', name: 'Brotes', ev: 'tierra', mes: 1 },
@@ -129,6 +135,9 @@ export const ITEMS = {
     { k: 'golosito', name: 'Amo de los dulces', ev: 'dulces' },
     { k: 'paleontologo', name: 'Paleontólogo', ev: 'dinos' },
     { k: 'inventor', name: 'Inventor', ev: 'robots' },
+    { k: 'artista', name: 'Gran artista', ev: 'arte' },
+    { k: 'estrellarock', name: 'Estrella de la música', ev: 'musica' },
+    { k: 'director', name: 'Gran director', ev: 'cine' },
     { k: 'tamalero', name: 'Tamalero', ev: 'candelaria', mes: 1 },
     { k: 'taquero', name: 'Taquero', ev: 'taco', mes: 1 },
     { k: 'heroeverde', name: 'Héroe verde', ev: 'tierra', mes: 1 },
@@ -173,6 +182,9 @@ export const ITEMS = {
     { k: 'caramelos', name: 'Caramelos', ev: 'dulces' },
     { k: 'huellas', name: 'Huellas de dino', ev: 'dinos' },
     { k: 'circuitos', name: 'Circuitos', ev: 'robots' },
+    { k: 'lienzo', name: 'Caballete', ev: 'arte' },
+    { k: 'partitura', name: 'Tocadiscos', ev: 'musica' },
+    { k: 'peliculas', name: 'Noche de estreno', ev: 'cine' },
     { k: 'tamales', name: 'Tamales', ev: 'candelaria', mes: 1 },
     { k: 'tacos', name: 'Tacos', ev: 'taco', mes: 1 },
     { k: 'planetaverde', name: 'Planeta verde', ev: 'tierra', mes: 1 },
@@ -229,6 +241,9 @@ export const ITEMS = {
     { k: 'paleta', name: 'Paleta', text: 'Da vueltas de colores', ev: 'dulces' },
     { k: 'ptero', name: 'Pterodáctilo', text: 'Aletea con sus alas de piel', ev: 'dinos' },
     { k: 'robotin', name: 'Robot volador', text: 'Vuela con su hélice y saluda', ev: 'robots' },
+    { k: 'paletapintor', name: 'Paleta voladora', text: 'Su pincel pinta en el aire', ev: 'arte' },
+    { k: 'tocadiscos', name: 'Tocadiscos', text: 'Gira su disco y suelta notas', ev: 'musica' },
+    { k: 'proyector', name: 'Proyector', text: 'Giran sus rollos y alumbra', ev: 'cine' },
     { k: 'olla', name: 'Olla tamalera', text: 'Echa vapor al volar', ev: 'candelaria', mes: 1 },
     { k: 'trompo', name: 'Trompo al pastor', text: 'Gira con su piña arriba', ev: 'taco', mes: 1 },
     { k: 'regadera', name: 'Regadera', text: 'Riega gotitas al volar', ev: 'tierra', mes: 1 },
@@ -262,6 +277,9 @@ export const ITEMS = {
     { k: 'algodon', name: 'Algodón de azúcar', ev: 'dulces' },
     { k: 'volcan', name: 'Noche de volcanes', ev: 'dinos' },
     { k: 'taller', name: 'Taller de chispas', ev: 'robots' },
+    { k: 'manchas', name: 'Cielo de acuarela', ev: 'arte' },
+    { k: 'concierto', name: 'Noche de concierto', ev: 'musica' },
+    { k: 'estreno', name: 'Alfombra roja', ev: 'cine' },
     { k: 'candelaria', name: 'Noche de la Candelaria', ev: 'candelaria', mes: 1 },
     { k: 'taquera', name: 'Noche taquera', ev: 'taco', mes: 1 },
     { k: 'tierra', name: 'Noche de la Tierra', ev: 'tierra', mes: 1 },
@@ -295,6 +313,9 @@ export const ITEMS = {
     { k: 'dulces', name: 'Dulces', ev: 'dulces' },
     { k: 'dinos', name: 'Dinosaurios', ev: 'dinos' },
     { k: 'robots', name: 'Taller', ev: 'robots' },
+    { k: 'arte', name: 'Galería', ev: 'arte' },
+    { k: 'musica', name: 'Partitura', ev: 'musica' },
+    { k: 'cine', name: 'Película', ev: 'cine' },
     { k: 'candelaria', name: 'Hoja de maíz', ev: 'candelaria', mes: 1 },
     { k: 'taco', name: 'Taquería', ev: 'taco', mes: 1 },
     { k: 'tierra', name: 'Hojas verdes', ev: 'tierra', mes: 1 },
@@ -348,7 +369,7 @@ export function buy(sec, k) {
 }
 
 // Cada título se ve distinto: color, icono y forma (los más caros, más vistosos).
-const TITLE_ICO = { novato: 'star', explorador: 'flag', cazacometas: 'rocket', maestro: 'trophy', viajero: 'planet', bombas: 'bomb', leyenda: 'crown', buscaconchas: 'concha', cazagemas: 'gema', guardabosques: 'bellota', golosito: 'caramelo', paleontologo: 'fosil', inventor: 'tuerca', tamalero: 'tamal', taquero: 'taco', heroeverde: 'tierra', jugueton: 'pinata', consentido: 'clavel', orgullo: 'corbata', amigomichi: 'gatito', mejoramigo: 'hueso', catrin: 'calavera', duende: 'esfera', buscador: 'rosca', flechazo: 'corazon', jardinero: 'tulipan', olas: 'sol', mariachi: 'sombrero', hechicero: 'calabaza', jefefinal: 'control', cerobugs: 'llaves', bromista: 'bufon', propositos: 'reloj' };
+const TITLE_ICO = { novato: 'star', explorador: 'flag', cazacometas: 'rocket', maestro: 'trophy', viajero: 'planet', bombas: 'bomb', leyenda: 'crown', buscaconchas: 'concha', cazagemas: 'gema', guardabosques: 'bellota', golosito: 'caramelo', paleontologo: 'fosil', inventor: 'tuerca', tamalero: 'tamal', taquero: 'taco', heroeverde: 'tierra', jugueton: 'pinata', consentido: 'clavel', orgullo: 'corbata', amigomichi: 'gatito', mejoramigo: 'hueso', catrin: 'calavera', duende: 'esfera', buscador: 'rosca', flechazo: 'corazon', jardinero: 'tulipan', olas: 'sol', mariachi: 'sombrero', hechicero: 'calabaza', jefefinal: 'control', cerobugs: 'llaves', bromista: 'bufon', propositos: 'reloj', artista: 'gota', estrellarock: 'nota', director: 'claqueta' };
 export const titleName = (k = equipped('title')) => item('title', k).name;
 export const titleHTML = (k = equipped('title'), cls = '', tag = 'span', attrs = '') =>
   `<${tag} class="title-chip t-${k} ${cls}" ${attrs}>${icon(TITLE_ICO[k] || 'star')}<span>${titleName(k)}</span></${tag}>`;

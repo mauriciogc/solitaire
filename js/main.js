@@ -1,9 +1,9 @@
 import { save, prefs, persist, resetProfile, renameProfile, exportCode, readCode, loadProfile, setDev } from './storage.js';
-import { UNLOCK, EVENTOS, FIESTAS, COLECCIONES, isOn, nextEvent, daysToNextCol, plusCols, RACHA_GOALS, RACHA_STEP, rachaGoal, nextIndex, racha, rachaTheme, rachaReady, rachaHot, rachaWin, rachaLose, rachaClaim, msToMidnight, col, colLeft, colWin, colOffers, colBuy, ev, evLeft, evTicketLeft, evPrize, evEnter, evWin, evLose, evAlbum, fiAlbum, EVENT_PLANETS, EVENT_PER_PLANET, EVENT_LEVELS, fiesta, fiestaLeft, nextFiesta, fiEnter, fiWin, fiLose, FIESTA_PLANETS, FIESTA_PER_PLANET, FIESTA_LEVELS } from './events.js';
+import { UNLOCK, EVENTOS, FIESTAS, COLECCIONES, evSoon, isOn, nextEvent, daysToNextCol, plusCols, RACHA_GOALS, RACHA_STEP, rachaGoal, nextIndex, racha, rachaTheme, rachaReady, rachaHot, rachaWin, rachaLose, rachaClaim, msToMidnight, col, colLeft, colWin, colOffers, colBuy, ev, evLeft, evTicketLeft, evPrize, evEnter, evWin, evLose, evAlbum, fiAlbum, EVENT_PLANETS, EVENT_PER_PLANET, EVENT_LEVELS, fiesta, fiestaLeft, nextFiesta, fiEnter, fiWin, fiLose, FIESTA_PLANETS, FIESTA_PER_PLANET, FIESTA_LEVELS } from './events.js';
 import { WORLD_COUNT, LEVELS_PER_WORLD, TOTAL_LEVELS, worldInfo, generateLevel, variantLevel, MECH_INTRO, MECH_NAMES, secretId, isSecret, eventLevel, fiestaLevel } from './levels.js';
 import { Game, faceHTML, backHTML } from './game.js';
 import { DAILY_PATH, dailyState, starsNeeded, TICKET_PRICE, ticketCost, ticketRefund, coinsFor, bossChest, openSurprise, SECRET_MULT, SECRET_PRIZE } from './economy.js';
-import { openModal, toast, updateCoins, money, esc, reduced, wait, flyToWallet, spendFromWallet, sparkle, confetti, starsHTML, warp, buzz, balloons, lootBubbles, rachaWarnHTML } from './ui.js';
+import { pauseOffscreen, openModal, toast, updateCoins, money, esc, reduced, wait, flyToWallet, spendFromWallet, sparkle, confetti, starsHTML, warp, buzz, balloons, lootBubbles, rachaWarnHTML } from './ui.js';
 import { icon, star, coin, miniPlanet, avatarHTML, AVATAR_COLORS, cardBackURL, setDeck, lockIcon, chestBody, chestLid, boxBody, boxLid } from './art.js';
 import { GROUPS, SECTIONS, ITEMS, shopItems, groupOf, owns, equipped, equip, buy, item, lockedUntil, titleHTML } from './shop.js';
 import { BIOMES, biomeKey, EVENT_BIOMES } from './biomes.js';
@@ -488,7 +488,7 @@ const ticketGift = () => ticketCost(Math.min(save.next, TOTAL_LEVELS - 1));
 // Tiempo que le queda a un evento, en chiquito para su botón: días (3 d), horas (5 h) o minutos (40 m).
 const shortLeft = (ms) => (ms >= 864e5 ? `${Math.floor(ms / 864e5)} d` : ms >= 3600e3 ? `${Math.floor(ms / 3600e3)} h` : `${Math.max(1, Math.ceil(ms / 6e4))} m`);
 const leftText = (ms) => (ms >= 3600e3 ? `${Math.ceil(ms / 3600e3)} h` : `${Math.max(1, Math.ceil(ms / 60e3))} min`);
-const clock = (ms) => { const t = Math.ceil(ms / 1000); return `${Math.floor(t / 3600)}:${String(Math.floor(t / 60) % 60).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`; };
+const clock = (ms) => { const t = Math.ceil(ms / 1000), d = Math.floor(t / 86400); return `${d ? `${d} d ` : ''}${Math.floor(t / 3600) % (d ? 24 : Infinity)}:${String(Math.floor(t / 60) % 60).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`; };
 const ticketBtn = () => {
   const left = ticketLeft();
   return `<button class="iconbtn tb press tk-btn ${left ? 'waiting' : 'ready'}" data-a="dticket" aria-label="Boletos de regalo" title="Boletos de regalo">${icon('ticket')}${left ? `<small class="wait">${leftText(left)}</small>` : '<span class="dot"></span>'}</button>`;
@@ -523,7 +523,7 @@ const colBtn = () => {
 const eventButtons = (res) => rachaBtn(res?.racha ? res.racha - 1 : null) + colBtn() + evBtn();
 const sideButtons = () => `${ibtn('gift', 'Regalo diario', 'daily', !dailyState(save.daily).claimed)}${ticketBtn()}${ibtn('bag', 'Tienda', 'shop')}${ibtn('album', 'Álbum de postales', 'album')}${ibtn('gear', 'Ajustes', 'settings')}`;
 function sideAction(a) {
-  const act = { me: () => !tourStep() && openProfile(), shop: () => openShop(), daily: openDaily, dticket: openDailyTicket, racha: openRacha, col: openCol, evento: () => warp(() => showEvent({ kind: 'mes' })), fiesta: openFiesta, album: openAlbum, settings: openSettings, dev: () => openDevMenu({ onGallery: () => showGallery(save.next), onRefresh: boot }) }[a];
+  const act = { me: () => !tourStep() && openProfile(), shop: () => openShop(), daily: openDaily, dticket: openDailyTicket, racha: openRacha, col: openCol, evento: openEvento, fiesta: openFiesta, album: openAlbum, settings: openSettings, dev: () => openDevMenu({ onGallery: () => showGallery(save.next), onRefresh: boot }) }[a];
   act?.();
   return !!act;
 }
@@ -921,6 +921,7 @@ function openShop(tab = 'avatar') {
     // Un subtítulo por origen (si solo hay de la tienda, sin subtítulo).
     const list = shopItems(sec), groups = ORIGINS.map((o) => ({ ...o, its: list.filter((it) => (exFrom(it)?.g || 'tienda') === o.k) })).filter((o) => o.its.length);
     grid.innerHTML = groups.map((o) => (groups.length > 1 ? `<h3 class="s-sub">${icon(o.ico)}${o.name}</h3>` : '') + o.its.map((it) => card(sec, it)).join('')).join('');
+    pauseOffscreen(grid, '.sitem');
     if (anim && !reduced()) [...grid.children].forEach((el, i) => el.animate([{ opacity: 0, translate: '0 16px', scale: 0.9 }, { opacity: 1, translate: '0 0', scale: 1 }], { duration: 360, delay: i * 45, easing: 'cubic-bezier(0.34, 1.45, 0.64, 1)', fill: 'backwards' }));
     if (sec === 'traveler') travShelf(grid).then(() => tab !== 'traveler' && closeShelf());
   };
@@ -1219,29 +1220,46 @@ let EVS = EVK.mes;
 const kindOf = (e) => (e.date ? 'fiesta' : 'mes');
 const evBtn = () => {
   const e = ev();
-  if (!e || e.done) return ''; // terminado: el botón se va hasta el siguiente evento
+  // Un día antes del mes con evento: el botón ya sale, gris y con candado, con la cuenta regresiva.
+  if (!e || e.done) { const n = evSoon(); return n ? `<button class="iconbtn tb press ev-btn soon ${fresh('mes')}" data-a="evento" aria-label="${n.name}: mañana" title="${n.name}">${icon(n.ico)}<span class="fi-lock">${icon('lock')}</span><small class="tl">en ${shortLeft(msToMidnight())}</small></button>` : ''; }
   // Arriba, lo que le queda al mes. El reloj del boleto vive adentro: aquí solo se apaga si no hay boleto
   // y se mueve con su punto cuando sí lo hay.
   const ready = !!(e.state.run || e.state.tk);
   return `<button class="iconbtn tb press ev-btn ${fresh('mes')} ${ready ? 'ready' : 'waiting'}" data-a="evento" aria-label="${e.name}" title="${e.name}">${icon(e.ico)}<small class="tl">${shortLeft(evLeft())}</small>${ready ? '<span class="dot"></span>' : ''}</button>`;
 };
-// Festividad (24 h): botón dorado junto a Jugar, del tamaño de los laterales. Un día antes sale gris, con candado
-// y la cuenta regresiva ("en 19 h"); el día de la fiesta, a color con "¡Hoy!" y lo que le queda.
+// Evento del mes: si ya empezó, a su pantalla; si empieza mañana, de qué va y la cuenta regresiva.
+function openEvento() {
+  if (ev() && !ev().done) return warp(() => showEvent({ kind: 'mes' }));
+  const n = evSoon();
+  if (!n) return;
+  const m = openModal({
+    title: `¡Mañana empieza ${n.name}!`,
+    color: n.color,
+    cls: 'fi-soon',
+    body: `<div class="dticket wait"><div class="rays"></div><span style="--i:0">${icon(n.ico, 0, 0, 'big')}</span></div><p class="tk-clock">${clock(msToMidnight())}</p>
+      <p class="note">Todo el mes: <b>${EVENT_PLANETS} planetas</b>, ${EVENT_LEVELS} niveles y premios <b>exclusivos</b>.</p>`,
+    buttons: [{ label: '¡Ahí estaré!', cls: 'gold wide' }],
+  });
+  const c = m.el.querySelector('.tk-clock');
+  const t = setInterval(() => (c.isConnected ? (evSoon() ? (c.textContent = clock(msToMidnight())) : (m.close(), current?.())) : clearInterval(t)), 1000);
+}
+// Festividad (24 h): botón dorado junto a Jugar, del tamaño de los laterales. Desde 3 días antes sale gris, con
+// candado y la cuenta regresiva ("en 2 d", "en 19 h"); el día de la fiesta, a color con "¡Hoy!" y lo que le queda.
 const fiBtn = () => {
   const f = fiesta();
   if (!f || f.done) return '';
   const left = shortLeft(fiestaLeft());
   return f.soon
-    ? `<button class="iconbtn tb press fi-btn soon ${fresh('fiesta')}" data-a="fiesta" aria-label="${f.name}: mañana" title="${f.name}">${icon(f.ico)}<span class="fi-lock">${icon('lock')}</span><small class="tl">en ${left}</small></button>`
+    ? `<button class="iconbtn tb press fi-btn soon ${fresh('fiesta')}" data-a="fiesta" aria-label="${f.name}: ${f.inDays > 1 ? `en ${f.inDays} días` : 'mañana'}" title="${f.name}">${icon(f.ico)}<span class="fi-lock">${icon('lock')}</span><small class="tl">en ${left}</small></button>`
     : `<button class="iconbtn tb press fi-btn ready ${fresh('fiesta')}" data-a="fiesta" aria-label="${f.name}" title="${f.name}">${icon(f.ico)}<small class="tl">${left}</small><em class="fi-hoy outl">¡Hoy!</em><span class="dot"></span></button>`;
 };
-// Un día antes: de qué va y la cuenta regresiva (nunca se dice que los niveles piden ayudas). El día de la fiesta, el botón lleva a ella.
+// Antes de que empiece: de qué va y la cuenta regresiva (nunca se dice que los niveles piden ayudas). El día de la fiesta, el botón lleva a ella.
 function openFiesta() {
   const f = fiesta();
   if (!f) return;
   if (!f.soon) return warp(() => showEvent({ kind: 'fiesta' }));
   const m = openModal({
-    title: `¡Mañana es ${f.name}!`,
+    title: f.inDays > 1 ? `¡En ${f.inDays} días es ${f.name}!` : `¡Mañana es ${f.name}!`,
     color: f.color,
     cls: 'fi-soon',
     body: `<div class="dticket wait"><div class="rays"></div><span style="--i:0">${icon(f.ico, 0, 0, 'big')}</span></div><p class="tk-clock">${clock(fiestaLeft())}</p>
@@ -1615,7 +1633,7 @@ async function calm(gen) {
 async function notices() {
   const gen = ++noticeGen;
   if (tourStep() || save.onboard !== 'done') return;
-  for (const k of ['racha', 'col', 'mes', 'col2', 'fiesta']) {
+  for (const k of ['racha', 'col', 'mes', 'col2', 'fiesta', 'col3']) {
     if (!isOn(k) || save.intro?.[k]) continue;
     if (!(await calm(gen))) return;
     await openUnlock(k);
@@ -1681,6 +1699,19 @@ const UNLOCK_INFO = {
       ],
     };
   },
+  // Nivel 150: se suman arte, música y cine, y hay colección todas las semanas.
+  col3: () => {
+    const c = col(), days = daysToNextCol(), nuevas = plusCols(2), n = nuevas.length;
+    return {
+      title: `¡${n} colecciones nuevas!`, ico: nuevas[0].token, color: nuevas[0].color, hero: nuevas.map((x) => icon(x.token)).join(''),
+      lead: `Llegaste al <b>nivel ${UNLOCK.col3}</b>: se suman ${n} colecciones nuevas y ahora hay colección <b>todas las semanas</b>.`,
+      rules: [
+        ...nuevas.map((x) => [x.token, `<b>${x.name}</b>: junta <b>${x.tokens}</b> y gana sus exclusivos.`]),
+        ['star', 'Cada semana cambia: se turnan las <b>9 temáticas</b>, una tras otra.'],
+        ['gift', c ? 'Hay una ahora mismo: búscala a la <b>derecha</b>.' : `La próxima llega en <b>${days} ${days === 1 ? 'día' : 'días'}</b>.`],
+      ],
+    };
+  },
   // Nivel 120: festividades de 24 h.
   fiesta: () => {
     const f = fiesta(), nx = nextFiesta();
@@ -1690,8 +1721,8 @@ const UNLOCK_INFO = {
       rules: [
         ['ticket', '<b>Sin boletos</b>: entra y reintenta las veces que quieras.'],
         ['flame', 'Niveles <b>difíciles</b>. Aquí no cuentan las estrellas: solo ganar.'],
-        ['flag', 'Un día antes aparece su botón junto a <b>Jugar</b>, con la cuenta regresiva.'],
-        ['gift', f ? (f.soon ? `Mañana es <b>${f.name}</b>. ¡No te lo pierdas!` : `¡Hoy es <b>${f.name}</b>! Búscalo junto a <b>Jugar</b>.`) : nx ? `La próxima, <b>${nx.name}</b>, llega en <b>${nx.days} ${nx.days === 1 ? 'día' : 'días'}</b>.` : 'Pronto llega la primera.'],
+        ['flag', '3 días antes aparece su botón junto a <b>Jugar</b>, con la cuenta regresiva.'],
+        ['gift', f ? (f.soon ? `${f.inDays > 1 ? `En ${f.inDays} días` : 'Mañana'} es <b>${f.name}</b>. ¡No te lo pierdas!` : `¡Hoy es <b>${f.name}</b>! Búscalo junto a <b>Jugar</b>.`) : nx ? `La próxima, <b>${nx.name}</b>, llega en <b>${nx.days} ${nx.days === 1 ? 'día' : 'días'}</b>.` : 'Pronto llega la primera.'],
       ],
     };
   },
@@ -1718,7 +1749,7 @@ function evHeroIcons(main, list = Object.keys(EVENTOS).map(Number).sort((a, b) =
   return [at(-1), at(0), at(1)].map((x, k) => icon(x, 0, 0, k === 1 ? 'main' : '')).join('');
 }
 async function openUnlock(k) {
-  const sel = k === 'fiesta' ? '.cta [data-a="fiesta"]' : `.side.r [data-a="${{ racha: 'racha', col: 'col', mes: 'evento', col2: 'col' }[k]}"]`;
+  const sel = k === 'fiesta' ? '.cta [data-a="fiesta"]' : `.side.r [data-a="${{ racha: 'racha', col: 'col', mes: 'evento', col2: 'col', col3: 'col' }[k]}"]`;
   const btn = document.querySelector(sel);
   revealed.add(k);
   if (btn) {
@@ -1976,6 +2007,7 @@ function openAlbum() {
   const show = (html) => {
     body.innerHTML = html;
     body.scrollTop = 0;
+    pauseOffscreen(body, '.postcard');
     if (!reduced()) [...body.querySelectorAll('.vol, .postcard, .album-empty')].slice(0, 12).forEach((el, i) =>
       el.animate([{ opacity: 0, translate: '0 14px', scale: 0.96 }, { opacity: 1, translate: '0 0', scale: 1 }], { duration: 320, delay: i * 45, easing: 'cubic-bezier(0.22, 1, 0.36, 1)', fill: 'backwards' }));
   };
@@ -1993,16 +2025,21 @@ function openAlbum() {
   const evs = evAlbum(), fis = fiAlbum();
   const tab = (k, ico, label, t) => `<button role="tab" data-tab="${k}" aria-selected="${t === k}">${icon(ico)}${label}</button>`;
   const tabs = (t) => (evs.length || fis.length ? `<div class="tabs" role="tablist">${tab('mundos', 'album', 'Mundos', t)}${evs.length ? tab('eventos', 'trophy', 'Eventos', t) : ''}${fis.length ? tab('especiales', 'gift', 'Especiales', t) : ''}</div>` : '');
-  const events = () => {
+  // Eventos y Especiales van por año (una página por año, el más reciente primero): con los años serán muchas.
+  // Si hay más de un año, arriba sale ◀ 2027 ▶ para cambiar de página.
+  const yearsOf = (list) => [...new Set(list.map((x) => x.year))].sort((a, b) => b - a);
+  const page = { eventos: 0, especiales: 0 };
+  const pager = (k, years) => (years.length > 1 ? `<div class="pager"><button data-pg="${k}" data-d="-1" aria-label="Año más nuevo" ${page[k] ? '' : 'disabled'}>${icon('prev')}</button>
+      <span><b>${years[page[k]]}</b><small>${page[k] + 1} de ${years.length}</small></span>
+      <button data-pg="${k}" data-d="1" aria-label="Año anterior" ${page[k] < years.length - 1 ? '' : 'disabled'}>${icon('next')}</button></div>` : '');
+  const yearPage = (k, list, attr, note) => {
+    const years = yearsOf(list), y = years[Math.min(page[k], years.length - 1)];
     setHead('Álbum de postales', false);
-    show(`${tabs('eventos')}<p class="note">Una postal por cada evento que ganaste completo. El sello dice el año.</p>
-      <div class="album">${evs.map((x, i) => `<button class="pc-btn" data-ev="${i}">${evPostcardHTML(x, 'mini')}</button>`).join('')}</div>`);
+    show(`${tabs(k)}<p class="note">${note}</p>${pager(k, years)}
+      <div class="album">${list.map((x, i) => (x.year === y ? `<button class="pc-btn" ${attr}="${i}">${evPostcardHTML(x, 'mini')}</button>` : '')).join('')}</div>`);
   };
-  const specials = () => {
-    setHead('Álbum de postales', false);
-    show(`${tabs('especiales')}<p class="note">Una postal por cada festividad que ganaste completa. El sello dice el año.</p>
-      <div class="album">${fis.map((x, i) => `<button class="pc-btn" data-fi="${i}">${evPostcardHTML(x, 'mini')}</button>`).join('')}</div>`);
-  };
+  const events = () => yearPage('eventos', evs, 'data-ev', 'Una postal por cada evento que ganaste completo. El sello dice el año.');
+  const specials = () => yearPage('especiales', fis, 'data-fi', 'Una postal por cada festividad que ganaste completa. El sello dice el año.');
   function regions() {
     const last = regionOf(currentWorld());
     const vols = [];
@@ -2030,8 +2067,9 @@ function openAlbum() {
     show(`<div class="album">${cards.join('')}</div>`);
   };
   body.addEventListener('click', (e) => {
-    const t = e.target.closest('[data-r], [data-w], [data-ev], [data-fi], [data-tab]');
+    const t = e.target.closest('[data-r], [data-w], [data-ev], [data-fi], [data-tab], [data-pg]');
     if (!t) return;
+    if (t.dataset.pg) { page[t.dataset.pg] += +t.dataset.d; return (t.dataset.pg === 'eventos' ? events : specials)(); }
     if (t.dataset.tab) return t.getAttribute('aria-selected') === 'true' ? null : ({ eventos: events, especiales: specials }[t.dataset.tab] || regions)();
     if (t.dataset.r != null) return region(+t.dataset.r);
     if (t.dataset.ev != null) return openEvPostcard(evs[+t.dataset.ev]);
@@ -2377,12 +2415,43 @@ function profileForm({ title, p, action, onSave, noCancel = false, first = false
   const shopBtn = (tab, cls, label) => (noCancel ? '' : `<button class="more ${cls}" data-shop="${tab}" aria-label="${label}" title="${label}">${icon('bag')}</button>`);
   // Al crear el jugador, Continuar va hasta abajo (dentro de lo que se desplaza) para que se vea que hay más
   // opciones; la foto se queda fija arriba para ver lo que se va eligiendo.
+  // Editar (no la primera vez): arriba una franja fija con tu avatar, nombre y título sobre tu cielo; abajo
+  // pestañas con ícono y en cada una solo sus opciones, separadas por de dónde salen. Así no se amontona
+  // aunque tengas de todo, y las naves 3D solo se dibujan en su pestaña.
+  const TABS = [
+    { k: 'avatar', name: 'Avatar', ico: 'face' },
+    { k: 'ring', name: 'Marco', ico: 'crown' },
+    { k: 'title', name: 'Título', ico: 'flag' },
+    { k: 'traveler', name: 'Viajero', ico: 'rocket' },
+    { k: 'space', name: 'Fondo', ico: 'planet' },
+    { k: 'frame', name: 'Postal', ico: 'album' },
+  ];
+  // Una lista en grupos por origen (tienda, colección, mes, festividades), con subtítulo si hay más de uno.
+  // cls: la cuadrícula de siempre de esa sección · lead: lo que va primero (tu inicial, en Avatar).
+  const grouped = (list, cell, cls, lead = '') => {
+    const gs = ORIGINS.map((o) => ({ ...o, its: list.filter((it) => (exFrom(it)?.g || 'tienda') === o.k) })).filter((o) => o.its.length || (lead && o.k === 'tienda'));
+    return gs.map((o, i) => (gs.length > 1 ? `<h3 class="s-sub">${icon(o.ico)}${o.name}</h3>` : '') + `<div class="${cls}">${i ? '' : lead}${o.its.map(cell).join('')}</div>`).join('');
+  };
+  const panel = (tab) => ({
+    avatar: () => `<div class="pick-lbl">Color</div><div class="avatar-pick">${AVATAR_COLORS.map((c, i) => `<button data-av="${i}" class="${on(i === p.avatar)}" style="background:${c}" aria-label="Color ${i + 1}"></button>`).join('')}</div>
+      <div class="pick-lbl">Personaje</div>${grouped(chars, (it) => lookBtn('char', it.k), 'look-pick', lookBtn('letter'))}`,
+    ring: () => grouped(rings, (it) => `<button data-ring="${it.k}" class="${on(it.k === p.ring)}" aria-label="${it.name}" title="${it.name}">${avatarHTML({ ...p, ring: it.k })}</button>`, 'look-pick rings'),
+    title: () => grouped(titles, (it) => titleHTML(it.k, on(it.k === p.title), 'button', `data-title="${it.k}"`), 'title-pick'),
+    traveler: () => grouped(travs, (it) => `<button data-trav="${it.k}" class="${on(it.k === p.traveler)}" aria-label="${it.name}" title="${it.name}"><canvas data-kind="${it.k}"></canvas></button>`, 'trav-pick'),
+    space: () => grouped(spaces, (it) => `<button data-space="${it.k}" class="${on(it.k === p.space)}" aria-label="${it.name}" title="${it.name}"><div class="space-prev space-${it.k}"><div class="space"></div></div><small>${it.name}</small></button>`, 'space-pick'),
+    frame: () => grouped(frames, (it) => `<button data-frame="${it.k}" class="${on(it.k === p.frame)}" aria-label="${it.name}" title="${it.name}"><div class="frame-prev">${postcardHTML(0, 24, 'mini', it.k)}</div><small>${it.name}</small></button>`, 'frame-pick'),
+  })[tab]();
+  let tabNow = 'avatar'; // la pestaña abierta: el botón de la tienda (junto a Guardar) lleva a esa sección
+  const editBody = `<div class="pf-top"><div class="pf-hero space-${p.space}"><div class="space"></div><div class="avatar-preview">${avatarHTML(p, 'huge')}</div>
+      <div class="pf-id"><input class="text-in" maxlength="16" placeholder="Tu nombre" autocomplete="off" autocapitalize="words" enterkeyhint="done" value="${esc(p.name)}"><div class="pf-title">${titleHTML(p.title)}</div></div></div>
+      <div class="pf-tabs">${TABS.map((t) => `<button class="pf-tab ${on(t.k === 'avatar')}" data-tab="${t.k}">${icon(t.ico)}<span>${t.name}</span></button>`).join('')}</div></div>
+      <div class="pf-panel">${panel('avatar')}</div>`;
   const m = openModal({
     title,
     color: 'blue',
     closable: !noCancel,
-    cls: `pform ${first ? 'pf-first' : ''} mr-${p.ring}`,
-    body: `<div class="avatar-preview">${avatarHTML(p, 'huge')}</div>
+    cls: `pform ${first ? 'pf-first' : 'pf-edit'} mr-${p.ring}`,
+    body: first ? `<div class="avatar-preview">${avatarHTML(p, 'huge')}</div>
       <input class="text-in" maxlength="16" placeholder="Tu nombre" autocomplete="off" autocapitalize="words" enterkeyhint="done" value="${esc(p.name)}">
       <div class="pick-lbl">Avatar</div>
       <div class="look-pick">${lookBtn('letter')}${chars.map((it) => lookBtn('char', it.k)).join('')}${shopBtn('avatar', '', 'Más avatares en la tienda')}</div>
@@ -2394,13 +2463,16 @@ function profileForm({ title, p, action, onSave, noCancel = false, first = false
       ${noCancel ? '' : `<div class="pick-lbl">Viajero</div><div class="trav-pick">${travs.map((it) => `<button data-trav="${it.k}" class="${on(it.k === p.traveler)}" aria-label="${it.name}" title="${it.name}"><canvas data-kind="${it.k}"></canvas></button>`).join('')}${shopBtn('traveler', '', 'Más viajeros en la tienda')}</div>`}
       ${noCancel ? '' : `<div class="pick-lbl">Fondo del universo</div><div class="space-pick">${spaces.map((it) => `<button data-space="${it.k}" class="${on(it.k === p.space)}" aria-label="${it.name}" title="${it.name}"><div class="space-prev space-${it.k}"><div class="space"></div></div><small>${it.name}</small></button>`).join('')}${shopBtn('space', '', 'Más fondos en la tienda')}</div>
       <div class="pick-lbl">Postal</div><div class="frame-pick">${frames.map((it) => `<button data-frame="${it.k}" class="${on(it.k === p.frame)}" aria-label="${it.name}" title="${it.name}"><div class="frame-prev">${postcardHTML(0, 24, 'mini', it.k)}</div><small>${it.name}</small></button>`).join('')}${shopBtn('frame', '', 'Más postales en la tienda')}</div>`}
-      ${first ? `<p class="pf-note">Puedes cambiar tu nombre y avatar <b>cuando quieras</b>.</p><button class="btn green pf-go">${action}</button>` : ''}`,
-    buttons: first ? [] : [{ label: action, cls: 'green', onClick: () => onSave({ ...p, name: p.name.trim() }) }],
+      ${first ? `<p class="pf-note">Puedes cambiar tu nombre y avatar <b>cuando quieras</b>.</p><button class="btn green pf-go">${action}</button>` : ''}` : editBody,
+    buttons: first ? [] : [
+      { label: icon('bag'), cls: 'ghost sq', title: 'Ir a la tienda', onClick: () => openShop(tabNow) },
+      { label: action, cls: 'green grow', onClick: () => onSave({ ...p, name: p.name.trim() }) },
+    ],
     onClose: closeShelf,
   });
   const box = document.querySelector('.pform');
+  if (!first) pauseOffscreen(box.querySelector('.pf-panel'), 'button');
   const input = box.querySelector('.text-in');
-  if (!noCancel) travShelf(box);
   if (first) {
     // La foto flotante vive en la cabecera (que no se desplaza) y aparece cuando la grande ya no se ve.
     const head = box.querySelector('.mhead'), big = box.querySelector('.avatar-preview');
@@ -2429,12 +2501,25 @@ function profileForm({ title, p, action, onSave, noCancel = false, first = false
     if (!b) return;
     if (b.classList.contains('pf-go')) { m.close(); return onSave({ ...p, name: p.name.trim() }); }
     if (b.dataset.shop) { closeShelf(); document.getElementById('modal-root').replaceChildren(); return openShop(b.dataset.shop); }
+    if (b.dataset.tab) {
+      if (b.classList.contains('on')) return;
+      pick('[data-tab]', b);
+      tabNow = b.dataset.tab;
+      closeShelf();
+      const pn = box.querySelector('.pf-panel');
+      pn.innerHTML = panel(b.dataset.tab);
+      pauseOffscreen(pn, 'button');
+      box.querySelector('.mbody').scrollTop = 0;
+      if (b.dataset.tab === 'traveler') travShelf(pn);
+      if (!reduced()) [...pn.querySelectorAll('.pf-panel button')].slice(0, 24).forEach((el, i) => el.animate([{ opacity: 0, scale: 0.8 }, { opacity: 1, scale: 1 }], { duration: 260, delay: i * 18, easing: 'cubic-bezier(0.34, 1.45, 0.64, 1)', fill: 'backwards' }));
+      return;
+    }
     if (b.dataset.look) { p.look = b.dataset.look; if (b.dataset.char) p.char = b.dataset.char; pick('[data-look]', b); paint(true); }
     if (b.dataset.av) { p.avatar = +b.dataset.av; pick('[data-av]', b); paint(true); }
     if (b.dataset.ring) { p.ring = b.dataset.ring; pick('[data-ring]', b); paint(true); }
-    if (b.dataset.title) { p.title = b.dataset.title; pick('[data-title]', b); bounce(b); }
+    if (b.dataset.title) { p.title = b.dataset.title; pick('[data-title]', b); bounce(b); const t = box.querySelector('.pf-title'); if (t) { t.innerHTML = titleHTML(p.title); bounce(t); } }
     if (b.dataset.trav) { p.traveler = b.dataset.trav; pick('[data-trav]', b); bounce(b); }
-    if (b.dataset.space) { p.space = b.dataset.space; pick('[data-space]', b); bounce(b); }
+    if (b.dataset.space) { p.space = b.dataset.space; pick('[data-space]', b); bounce(b); const hero = box.querySelector('.pf-hero'); if (hero) hero.className = `pf-hero space-${p.space}`; }
     if (b.dataset.frame) { p.frame = b.dataset.frame; pick('[data-frame]', b); bounce(b); }
   });
   if (matchMedia('(pointer: fine)').matches) input.focus();

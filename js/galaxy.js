@@ -3,7 +3,7 @@
 import * as THREE from 'three';
 import { BIOMES, LOCKED, biomeKey } from './biomes.js';
 import { INK, icon, star } from './art.js';
-import { makeTraveler } from './travelers.js';
+import { makeTraveler, mapCovered } from './travelers.js';
 
 const K = INK;
 const TAU = Math.PI * 2;
@@ -717,7 +717,7 @@ export class Galaxy {
   frame(now) {
     if (this.dead) return;
     const dt = Math.min(0.05, (now - this.last) / 1000), calm = reduced(); this.last = now;
-    if (this.visible) {
+    if (this.visible && !mapCovered()) {
       if (this.anim) this.applyAnim(now);
       this.tw = this.tw.filter((t) => { const k = Math.min(1, (now - t.t0) / t.dur); t.fn(k); if (k >= 1) t.ok(); return k < 1; });
       // Inercia al soltar y regreso suave si se pasó de la orilla.
@@ -808,7 +808,7 @@ export class PlanetView {
     const dt = Math.min(0.05, (now - this.last) / 1000), o = this.o; this.last = now;
     o.spin.rotation.y += 0.35 * dt;
     if (o.orbit) o.orbit.rotation.y += dt * 0.35;
-    this.renderer.render(this.scene, this.camera);
+    if (!mapCovered()) this.renderer.render(this.scene, this.camera);
     this.raf = requestAnimationFrame((t) => this.frame(t));
   }
   // El lienzo con el planeta tal como se ve ahora (para la foto).
@@ -1060,7 +1060,7 @@ export class Universe {
   frame(now) {
     if (this.dead) return;
     const dt = Math.min(0.05, (now - this.last) / 1000), calm = reduced(); this.last = now;
-    if (!document.hidden) {
+    if (!document.hidden && !mapCovered()) {
       this.tw = this.tw.filter((t) => { const k = Math.min(1, (now - t.t0) / t.dur); t.fn(k); if (k >= 1) t.ok(); return k < 1; });
       if (!this.down && !this.busy) {
         if (Math.abs(this.vel) > 0.01) { this.cam += this.vel * dt; this.vel *= Math.pow(0.04, dt); }

@@ -610,6 +610,78 @@ const MODELS = {
       sparks.forEach((sp, k) => { const a = t * 1.4 + (k / 6) * Math.PI * 2, r = 0.42 + Math.sin(t * 3 + k) * 0.04; sp.position.set(Math.cos(a) * r, Math.sin(t * 2 + k * 1.7) * 0.2, Math.sin(a) * r); sp.rotation.y = t * 4; sp.scale.setScalar(0.5 + Math.abs(Math.sin(t * 5 + k)) * 0.8); });
     } };
   },
+  // Paleta voladora (Taller de arte): paleta de madera con sus manchas de pintura; el pincel se moja y pinta en el aire.
+  paletapintor(part) {
+    const g = new THREE.Group(), all = new THREE.Group(), brush = new THREE.Group();
+    const sh = new THREE.Shape();
+    sh.moveTo(0.3, 0); sh.bezierCurveTo(0.3, 0.22, 0.05, 0.3, -0.12, 0.26); sh.bezierCurveTo(-0.32, 0.22, -0.36, 0.02, -0.3, -0.12);
+    sh.bezierCurveTo(-0.24, -0.28, 0, -0.3, 0.12, -0.24); sh.bezierCurveTo(0.04, -0.14, 0.12, -0.04, 0.3, 0);
+    const hole = new THREE.Path(); hole.absarc(-0.16, -0.08, 0.045, 0, Math.PI * 2, true); sh.holes.push(hole);
+    all.add(part(new THREE.ExtrudeGeometry(sh, { depth: 0.04, bevelEnabled: false, curveSegments: 16 }).rotateX(-Math.PI / 2), '#e0b07a', { ol: 0.04 }));
+    const dabs = [['#ff5f7e', 0.14, -0.1], ['#ffc83d', 0.02, -0.16], ['#7fd36a', -0.12, -0.14], ['#4aa8de', -0.2, 0.04], ['#b48cff', 0.18, 0.08]];
+    for (const [c, x, z] of dabs) all.add(part(new THREE.SphereGeometry(0.045, 12, 8).scale(1, 0.45, 1), c, { x, y: 0.05, z, ol: 0.1 }));
+    brush.add(part(new THREE.CylinderGeometry(0.014, 0.018, 0.4, 8).translate(0, 0.2, 0), '#c98a3a', { ol: 0.15 }));
+    brush.add(part(new THREE.CylinderGeometry(0.02, 0.02, 0.05, 8), '#dfe6f2', { y: 0.01, ol: 0.15 }));
+    const tip = part(new THREE.ConeGeometry(0.022, 0.07, 8).rotateX(Math.PI), '#ff5f7e', { y: -0.04, ol: 0.15 });
+    brush.add(tip); brush.position.set(0.05, 0.08, 0.02); all.add(brush);
+    all.rotation.set(0.5, -0.4, 0);
+    g.add(all);
+    const cols = dabs.map(([c]) => new THREE.Color(c));
+    return { obj: g, tick: (t) => {
+      all.position.y = Math.sin(t * 2) * 0.05; all.rotation.z = Math.sin(t * 1.3) * 0.12;
+      const k = Math.floor(Math.abs(t) * 0.5) % dabs.length, a = (Math.abs(t) * 0.5) % 1;
+      brush.position.set(0.05 + Math.cos(a * Math.PI * 2) * 0.08, 0.1 + Math.abs(Math.sin(a * Math.PI * 2)) * 0.12, Math.sin(a * Math.PI * 2) * 0.06);
+      brush.rotation.z = -0.5 + Math.sin(t * 3) * 0.3; brush.rotation.x = 0.3;
+      tip.children[0].material.color.copy(cols[k]);
+    } };
+  },
+  // Tocadiscos (Banda musical): el disco gira, el brazo se mece y van saliendo notas que suben.
+  tocadiscos(part) {
+    const g = new THREE.Group(), all = new THREE.Group(), disc = new THREE.Group(), arm = new THREE.Group(), notes = [];
+    all.add(part(new THREE.BoxGeometry(0.62, 0.12, 0.5), '#c98a5a', { ol: 0.04 }));
+    disc.add(part(new THREE.CylinderGeometry(0.21, 0.21, 0.02, 32), '#2a2540', { ol: 0.04 }));
+    disc.add(part(new THREE.CylinderGeometry(0.07, 0.07, 0.024, 20), '#ff5f7e', { ol: 0 }));
+    disc.add(part(new THREE.BoxGeometry(0.02, 0.026, 0.06), '#fff6e6', { x: 0.04, ol: 0 }));
+    disc.position.set(-0.06, 0.075, 0); all.add(disc);
+    arm.add(part(new THREE.CylinderGeometry(0.03, 0.03, 0.05, 12), '#9aa2ba', { ol: 0.12 }));
+    arm.add(part(new THREE.BoxGeometry(0.02, 0.02, 0.24).translate(0, 0.03, -0.12), '#dfe6f2', { ol: 0.12 }));
+    arm.position.set(0.22, 0.09, 0.12); arm.rotation.y = -0.5; all.add(arm);
+    for (let k = 0; k < 3; k++) {
+      const n = new THREE.Group();
+      n.add(part(new THREE.SphereGeometry(0.035, 10, 8).scale(1.2, 0.85, 1), '#8a5cf0', { ol: 0.12 }));
+      n.add(part(new THREE.CylinderGeometry(0.008, 0.008, 0.11, 6), '#8a5cf0', { x: 0.035, y: 0.055, ol: 0.2 }));
+      all.add(n); notes.push(n);
+    }
+    all.rotation.set(0.45, -0.5, 0);
+    g.add(all);
+    return { obj: g, tick: (t) => {
+      all.position.y = Math.sin(t * 2) * 0.04; all.rotation.z = Math.sin(t * 1.2) * 0.06;
+      disc.rotation.y = -t * 3; arm.rotation.y = -0.5 + Math.sin(t * 1.5) * 0.06;
+      notes.forEach((n, k) => { const p = (((t * 0.4 + k / 3) % 1) + 1) % 1; n.position.set(-0.06 + Math.sin(p * 6 + k) * 0.12, 0.12 + p * 0.55, Math.cos(k * 2) * 0.08); n.rotation.z = Math.sin(t * 3 + k) * 0.4; n.scale.setScalar(Math.sin(p * Math.PI) + 0.001); });
+    } };
+  },
+  // Proyector (Estudio de cine): sus dos rollos giran arriba y la luz sale por el lente, parpadeando como película.
+  proyector(part) {
+    const g = new THREE.Group(), all = new THREE.Group(), reels = [];
+    all.add(part(new THREE.BoxGeometry(0.42, 0.26, 0.28), '#4a4560', { ol: 0.05 }));
+    all.add(part(new THREE.CylinderGeometry(0.07, 0.09, 0.12, 16).rotateZ(Math.PI / 2), '#2a2540', { x: 0.26, y: 0.02, ol: 0.08 }));
+    all.add(part(new THREE.CylinderGeometry(0.055, 0.055, 0.01, 16).rotateZ(Math.PI / 2), '#8fe8ff', { x: 0.325, y: 0.02, ol: 0 }));
+    for (const x of [-0.12, 0.1]) {
+      const r = new THREE.Group();
+      r.add(part(new THREE.CylinderGeometry(0.13, 0.13, 0.03, 24).rotateX(Math.PI / 2), '#9aa2ba', { ol: 0.06 }));
+      for (let k = 0; k < 3; k++) r.add(part(new THREE.CylinderGeometry(0.03, 0.03, 0.035, 10).rotateX(Math.PI / 2), '#4a4560', { x: Math.cos((k * Math.PI * 2) / 3) * 0.07, y: Math.sin((k * Math.PI * 2) / 3) * 0.07, ol: 0 }));
+      r.position.set(x, 0.27, 0); all.add(r); reels.push(r);
+    }
+    const beam = new THREE.Mesh(new THREE.ConeGeometry(0.2, 0.5, 20, 1, true).rotateZ(Math.PI / 2), glow('#fff4c7', 0.3));
+    beam.position.set(0.58, 0.02, 0); all.add(beam);
+    all.position.x = -0.1; all.rotation.set(0.3, -0.6, 0);
+    g.add(all);
+    return { obj: g, tick: (t) => {
+      all.position.y = Math.sin(t * 2) * 0.05; all.rotation.z = Math.sin(t * 1.3) * 0.06;
+      reels.forEach((r) => (r.rotation.z = -t * 2.4));
+      beam.material.opacity = 0.18 + (Math.floor(Math.abs(t) * 12) % 2) * 0.1;
+    } };
+  },
   alebrije(part) {
     const g = new THREE.Group(), body = new THREE.Group();
     body.add(part(new THREE.SphereGeometry(0.2, 20, 14).scale(1, 0.85, 1.35), '#ff5fa8', { ol: 0.07 }));
@@ -920,6 +992,11 @@ export function makeTraveler(kind, toon = toonMaker()) {
   return m;
 }
 
+// Vitrinas abiertas: mientras haya una, el mapa 3D de atrás (tapado por la ventana) deja de dibujarse.
+export const shelfOpen = { n: 0 };
+// ¿Está tapado el mapa? Por una vitrina 3D o por una ventana grande (tienda, editor del jugador, álbum).
+// Se revisa en cada cuadro, así nunca se queda pausado aunque la ventana se cierre por otro camino.
+export const mapCovered = () => shelfOpen.n > 0 || !!document.querySelector('#modal-root :is(.shop-modal, .pf-edit, .album-modal)');
 // Vitrina de la tienda: varios viajeros girando, cada uno en su lienzo 2D, con un solo contexto WebGL.
 export class TravelerShelf {
   constructor(slots) { // slots: [{ canvas, kind }]
@@ -937,28 +1014,42 @@ export class TravelerShelf {
       canvas.width = canvas.height = S;
       const t = makeTraveler(kind, toon), turn = new THREE.Group();
       turn.add(t.obj); turn.visible = false; this.scene.add(turn);
-      return { ctx: canvas.getContext('2d'), t, turn };
+      return { ctx: canvas.getContext('2d'), t, turn, vis: false, drawn: false };
     });
+    // Con muchas naves no se pueden dibujar todas en cada cuadro: solo se animan las que se ven en pantalla,
+    // y como máximo MAX por cuadro, turnándose. Las de fuera se dibujan una vez (quietas) para que ya tengan imagen.
+    const MAX = 6;
+    shelfOpen.n++;
+    this.io = new IntersectionObserver((es) => es.forEach((e) => { const it = this.items.find((o) => o.ctx.canvas === e.target); if (it) it.vis = e.isIntersecting; }), { rootMargin: '40px' });
+    this.items.forEach((it) => this.io.observe(it.ctx.canvas));
+    let turn = 0;
     this.t0 = performance.now();
     const loop = (now) => {
       if (this.dead) return;
       if (!this.items.some((it) => it.ctx.canvas.isConnected)) return this.dispose(); // se cerró la ventana
       const s = (now - this.t0) / 1000;
-      for (const it of this.items) {
-        if (!it.ctx.canvas.isConnected) continue;
+      const due = this.items.filter((it) => it.ctx.canvas.isConnected && (it.vis || !it.drawn));
+      const n = Math.min(MAX, due.length);
+      for (let i = 0; i < n; i++) {
+        const it = due[(turn + i) % due.length];
         this.items.forEach((o) => (o.turn.visible = o === it));
         it.t.tick(s);
         it.turn.rotation.y = calm() ? 0.4 : Math.sin(s * 0.7) * 0.6;
         this.renderer.render(this.scene, this.camera);
         it.ctx.clearRect(0, 0, S, S);
         it.ctx.drawImage(this.renderer.domElement, 0, 0);
+        it.drawn = true;
       }
+      turn = due.length ? (turn + n) % due.length : 0;
       this.raf = requestAnimationFrame(loop);
     };
     this.raf = requestAnimationFrame(loop);
   }
   dispose() {
+    if (this.dead) return;
     this.dead = true;
+    shelfOpen.n = Math.max(0, shelfOpen.n - 1);
+    this.io?.disconnect();
     cancelAnimationFrame(this.raf);
     this.scene.traverse((o) => { o.geometry?.dispose(); [].concat(o.material || []).forEach((m) => m.dispose()); });
     this.renderer.dispose();

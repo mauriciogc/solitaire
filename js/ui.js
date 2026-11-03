@@ -18,6 +18,13 @@ export const esc = (s) => String(s).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt
 
 // Solo se respeta "reducir movimiento" del sistema: el juego no tiene un ajuste propio (decisión del usuario: lo bonito es lo animado).
 export const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+// Listas largas (tienda, editor, álbum): lo animado que no se ve en pantalla se pausa (clase anim-off) y vuelve
+// a moverse al llegar a verlo. Así tener muchos marcos, postales o títulos no hace lento el juego.
+export function pauseOffscreen(root, sel) {
+  root._io?.disconnect();
+  const io = (root._io = new IntersectionObserver((es) => es.forEach((e) => e.target.classList.toggle('anim-off', !e.isIntersecting)), { rootMargin: '40px' }));
+  root.querySelectorAll(sel).forEach((el) => { el.classList.add('anim-off'); io.observe(el); });
+}
 export const buzz = (ms = 30) => navigator.vibrate?.(ms);
 export const wait = (ms) => new Promise((ok) => setTimeout(ok, ms));
 

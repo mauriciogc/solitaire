@@ -7,6 +7,8 @@ import { playCasual, solve, initState } from './engine.js';
 import { openModal, toast, updateCoins, popGoal } from './ui.js';
 import { mulberry32 } from './rng.js';
 import { icon } from './art.js';
+import { EVENTOS, COLECCIONES, FIESTAS } from './events.js';
+import { ITEMS, SECTIONS, owns, lockedUntil } from './shop.js';
 
 export const dev = {
   get on() {
@@ -280,7 +282,7 @@ export function openDevMenu({ onGallery, onRefresh }) {
   const evNow = ev(), colNow = col();
   const evSet = (patch) => { Object.assign(ev().state, { run: null, tk: 1, at: 0, ...patch }); persist(); onRefresh(); };
   // fiNext: la siguiente fiesta que no es la de hoy ni la de mañana (para brincar al día antes de ella).
-  const fiNow = fiesta(), fiNext = nextFiesta(fiNow?.soon ? 1 : 0), fiOn = fiNow && !fiNow.soon;
+  const fiNow = fiesta(), fiNext = nextFiesta(fiNow?.soon ? fiNow.inDays : 0), fiOn = fiNow && !fiNow.soon;
   const fiSet = (patch) => { Object.assign(fiesta().state, { run: null, ...patch }); persist(); onRefresh(); };
   // Deja la cuenta a 1 del premio: el siguiente globo (jefe) o burbuja (cofre) que truene lo da.
   const popNear = (k) => { const p = ((save.pops ||= {})[k] ||= { n: 0, lvl: 0 }); p.n = popGoal(k, p.lvl) - 1; persist(); onRefresh(); };
@@ -297,12 +299,39 @@ export function openDevMenu({ onGallery, onRefresh }) {
     toast(n ? `Ganaste ${n} nivel${n === 1 ? '' : 'es'}: sigue el último jefe` : 'Ya estás en el último jefe');
     onRefresh();
   };
+  // Recuento: cuántos eventos hay de cada tipo (y cuáles) y cuántas cosas hay en la tienda según de dónde salen.
+  const MES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+  const evs = Object.entries(EVENTOS).filter(([, e]) => e.ready).sort((a, b) => a[0] - b[0]);
+  const fis = FIESTAS.filter((f) => f.ready), y = new Date().getFullYear();
+  const origin = (it) => (!it.ev ? 'tienda' : FIESTAS.some((f) => f.key === it.ev) ? 'fiesta' : Object.values(EVENTOS).some((e) => e.key === it.ev) ? 'mes' : 'col');
+  const ORI = [['tienda', 'Tienda'], ['col', 'Colección'], ['mes', 'Del mes'], ['fiesta', 'De un día']];
+  const cnt = (sec, o) => ITEMS[sec].filter((it) => origin(it) === o).length;
+  const mine = (sec, o) => ITEMS[sec].filter((it) => origin(it) === o && owns(sec, it.k)).length;
+  const cell = (sec, o) => (cnt(sec, o) ? `${mine(sec, o)}/${cnt(sec, o)}` : '–');
+  const sum = (f) => SECTIONS.reduce((n, { k }) => n + f(k), 0);
+  // Desde qué nivel ganado se abre cada cosa, y si tú ya llegaste.
+  const won = save.next || 0;
+  const opens = (lvl) => (won >= lvl ? `<em class="d-ok">abierto</em>` : `<em class="d-no">faltan ${lvl - won}</em>`);
+  const UN = [['Racha', UNLOCK.racha], ['Colección (4 temáticas)', UNLOCK.col], ['Evento del mes', UNLOCK.mes], ['Colección: Dinos y Robots y 3.ª semana', UNLOCK.col2], ['Festividades de un día', UNLOCK.fiesta], ['Colección: Arte, Música y Cine, todas las semanas', UNLOCK.col3]];
+  const lastNeed = Math.max(...Object.values(ITEMS).flat().map((it) => it.need || 0));
+  const shopLocked = sum((k) => ITEMS[k].filter((it) => lockedUntil(k, it.k)).length);
+  const chips = (list) => `<div class="dcount">${list.map(([ico, txt]) => `<span>${icon(ico)}${txt}</span>`).join('')}</div>`;
+  const recuento = `<p class="dline"><b>Tú: ${won} niveles ganados</b> (mundo ${(save.open || 0) + 1})</p>
+    <table class="dtable"><tr><th>Se abre</th><th>Nivel</th><th>Tú</th></tr>${UN.map(([n, l]) => `<tr><td>${n}</td><td>${l}</td><td>${opens(l)}</td></tr>`).join('')}</table>
+    <p class="dline"><b>${evs.length + COLECCIONES.length + fis.length} eventos</b>: ${evs.length} del mes · ${COLECCIONES.length} colecciones · ${fis.length} de un día</p>
+    <p class="dline"><b>Del mes (${evs.length})</b></p>${chips(evs.map(([m, e]) => [e.ico, `${MES[m]} · ${e.name}`]))}
+    <p class="dline"><b>Colecciones (${COLECCIONES.length})</b></p>${chips(COLECCIONES.map((c) => [c.token, c.name]))}
+    <p class="dline"><b>De un día (${fis.length})</b></p>${chips(fis.map((f) => { const d = f.date(y); return [f.ico, `${d.getDate()} ${MES[d.getMonth()]} · ${f.name}`]; }))}
+    <p class="dline"><b>Tienda: tienes ${sum((k) => ITEMS[k].filter((it) => owns(k, it.k)).length)} de ${Object.values(ITEMS).flat().length}</b> (tuyas / que hay)</p>
+    <table class="dtable"><tr><th></th>${ORI.map(([, n]) => `<th>${n}</th>`).join('')}<th>Total</th></tr>${SECTIONS.map(({ k, name }) => `<tr><td>${name}</td>${ORI.map(([o]) => `<td>${cell(k, o)}</td>`).join('')}<td><b>${ITEMS[k].filter((it) => owns(k, it.k)).length}/${ITEMS[k].length}</b></td></tr>`).join('')}<tr><td><b>Total</b></td>${ORI.map(([o]) => `<td><b>${sum((k) => mine(k, o))}/${sum((k) => cnt(k, o))}</b></td>`).join('')}<td><b>${sum((k) => ITEMS[k].filter((it) => owns(k, it.k)).length)}/${Object.values(ITEMS).flat().length}</b></td></tr></table>
+    <p class="dline">De la tienda, ${shopLocked} siguen con candado por mundo; lo último se abre en el mundo ${lastNeed + 1} (nivel ${lastNeed * LEVELS_PER_WORLD + 1}).</p>`;
   // Secciones con título; cada botón dice en corto lo que hace (la explicación larga va en su title).
   const S = [
     { t: 'General', items: [
       { l: 'Galería de niveles', cls: 'gold', fn: onGallery },
       { l: `Boosters infinitos: ${prefs.devInfinite ? 'sí' : 'no'}`, fn: () => { prefs.devInfinite = !prefs.devInfinite; persist(); toast(`Boosters infinitos: ${prefs.devInfinite ? 'sí' : 'no'}`); } },
       { l: '+1000 monedas', fn: () => ((save.coins += 1000), persist(), updateCoins()) },
+      { l: '+20,000 monedas', fn: () => ((save.coins += 20000), persist(), updateCoins()) },
       { l: 'Explicar mecánicas', title: 'Las explicaciones de cada mecánica salen otra vez', fn: () => ((save.seen = {}), persist(), toast('Las explicaciones saldrán otra vez')) },
     ] },
     { t: 'Avance', sub: `vas en el mundo ${w + 1}`, items: [
@@ -355,15 +384,16 @@ export function openDevMenu({ onGallery, onRefresh }) {
     ] },
     { t: 'Evento del mes', sub: evNow ? `${evNow.name} · nivel ${Math.min(evNow.state.k + 1, EVENT_LEVELS)} de ${EVENT_LEVELS} · ${evNow.state.tk ? 'con boleto' : 'sin boleto'}` : 'no hay este mes', items: [
       { l: evNow ? 'Siguiente evento' : 'Ir al próximo', fn: () => ((save.devDay = (save.devDay || 0) + daysToNextEvent()), persist(), onRefresh()) },
+      { l: 'Día antes del próximo', title: 'Mueve el reloj al último día del mes anterior: su botón sale gris con candado y la cuenta regresiva', fn: () => ((save.devDay = (save.devDay || 0) + daysToNextEvent() - 1), persist(), onRefresh()) },
       evNow && { l: 'Boleto ya', title: 'Da el boleto sin esperar las 24 horas', fn: () => evSet({}) },
       evNow && { l: 'Ir al jefe del planeta', fn: () => evSet({ k: Math.min(EVENT_LEVELS - 1, Math.floor(evNow.state.k / EVENT_PER_PLANET) * EVENT_PER_PLANET + EVENT_PER_PLANET - 1) }) },
       evNow && { l: 'Siguiente planeta', fn: () => evSet({ k: Math.min(EVENT_LEVELS - 1, (Math.floor(evNow.state.k / EVENT_PER_PLANET) + 1) * EVENT_PER_PLANET) }) },
       evNow && { l: 'Ganar todo hasta el último jefe', title: 'Gana los niveles que faltan (con sus premios) y te deja en el jefe del último planeta', fn: () => (ev().state.tk = 1, ev().state.run = null, winTo(ev, evEnter, evWin, EVENT_LEVELS - 1)) },
       evNow && { l: 'Empezar de cero', fn: () => ((save.ev = null), persist(), onRefresh()) },
     ] },
-    { t: 'Festividad', sub: `${fiNow ? `${fiNow.name} · ${fiNow.soon ? 'mañana' : `nivel ${Math.min(fiNow.state.k + 1, FIESTA_LEVELS)} de ${FIESTA_LEVELS}`}` : fiNext ? `próxima: ${fiNext.name} en ${fiNext.days} días` : 'ninguna lista'}${isOn('fiesta') ? '' : ` · se abre en el nivel ${UNLOCK.fiesta}`}`, items: [
-      fiNext && { l: `Día antes de: ${fiNext.name}`, title: 'Mueve el reloj al día anterior de la siguiente fiesta: su botón sale gris con la cuenta regresiva', fn: () => toDay(fiNext.days - 1) },
-      fiNow?.soon && { l: 'Que empiece ya', title: 'Mueve el reloj al día de la fiesta', fn: () => toDay(1) },
+    { t: 'Festividad', sub: `${fiNow ? `${fiNow.name} · ${fiNow.soon ? (fiNow.inDays > 1 ? `en ${fiNow.inDays} días` : 'mañana') : `nivel ${Math.min(fiNow.state.k + 1, FIESTA_LEVELS)} de ${FIESTA_LEVELS}`}` : fiNext ? `próxima: ${fiNext.name} en ${fiNext.days} días` : 'ninguna lista'}${isOn('fiesta') ? '' : ` · se abre en el nivel ${UNLOCK.fiesta}`}`, items: [
+      fiNext && fiNext.days > 3 && { l: `3 días antes de: ${fiNext.name}`, title: 'Mueve el reloj a 3 días de la siguiente fiesta: su botón sale gris con la cuenta regresiva', fn: () => toDay(fiNext.days - 3) },
+      fiNow?.soon && { l: 'Que empiece ya', title: 'Mueve el reloj al día de la fiesta', fn: () => toDay(fiNow.inDays) },
       fiOn && { l: 'Ir al jefe del planeta', fn: () => fiSet({ k: Math.min(FIESTA_LEVELS - 1, Math.floor(fiNow.state.k / FIESTA_PER_PLANET) * FIESTA_PER_PLANET + FIESTA_PER_PLANET - 1) }) },
       fiOn && { l: 'Siguiente planeta', fn: () => fiSet({ k: Math.min(FIESTA_LEVELS - 1, (Math.floor(fiNow.state.k / FIESTA_PER_PLANET) + 1) * FIESTA_PER_PLANET) }) },
       fiOn && { l: 'Ganar todo hasta el último jefe', title: 'Gana los niveles que faltan (con sus premios) y te deja en el jefe del último planeta', fn: () => ((fiesta().state.run = null), winTo(fiesta, fiEnter, fiWin, FIESTA_LEVELS - 1)) },
@@ -376,12 +406,21 @@ export function openDevMenu({ onGallery, onRefresh }) {
     title: 'Modo dev',
     cls: 'devmenu',
     wide: true,
-    body: `<p class="note">Todo lo que hagas aquí es de prueba: al salir del modo dev vuelve tu partida.</p>
-      ${S.map((sec) => `<section class="dsec"><h4>${sec.t}${sec.sub ? `<small>${sec.sub}</small>` : ''}</h4><div class="dbtns">${sec.items.map((it) => `<button class="btn ${it.cls || 'ghost'}" data-i="${all.indexOf(it)}"${it.title ? ` title="${it.title}"` : ''}>${it.l}</button>`).join('')}</div></section>`).join('')}`,
+    // Dos pestañas: los botones primero (lo que más se usa) y el recuento aparte.
+    body: `<div class="dtabs"><button class="dtab on" data-tab="btns">Pruebas</button><button class="dtab" data-tab="count">Recuento</button></div>
+      <div class="dpane" data-pane="count" hidden><section class="dsec">${recuento}</section></div>
+      <div class="dpane" data-pane="btns"><p class="note">Todo lo que hagas aquí es de prueba: al salir del modo dev vuelve tu partida.</p>
+      ${S.map((sec) => `<section class="dsec"><h4>${sec.t}${sec.sub ? `<small>${sec.sub}</small>` : ''}</h4>${sec.html || ''}<div class="dbtns">${sec.items.map((it) => `<button class="btn ${it.cls || 'ghost'}" data-i="${all.indexOf(it)}"${it.title ? ` title="${it.title}"` : ''}>${it.l}</button>`).join('')}</div></section>`).join('')}</div>`,
     buttons: [
       { label: 'Empezar de cero las pruebas', cls: 'green', onClick: () => { restoreBackup(); backupOnce(); toast('Tu partida volvió a como estaba'); onRefresh(); } },
       { label: 'Salir del modo dev', cls: 'pink', onClick: () => (setDev(false), document.documentElement.classList.remove('dev-on'), toast('Tu partida volvió a como estaba'), onRefresh()) },
     ],
+  });
+  m.el.querySelector('.dtabs').addEventListener('click', (e) => {
+    const t = e.target.closest('[data-tab]');
+    if (!t) return;
+    m.el.querySelectorAll('.dtab').forEach((b) => b.classList.toggle('on', b === t));
+    m.el.querySelectorAll('.dpane').forEach((p) => (p.hidden = p.dataset.pane !== t.dataset.tab));
   });
   m.el.querySelectorAll('.dsec [data-i]').forEach((b) => b.addEventListener('click', () => { m.close(); all[+b.dataset.i].fn(); }));
 }

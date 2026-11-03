@@ -209,6 +209,22 @@ setPlaceColors((place) => BIOMES[biomeKey(place)].emblem);
 // Más oscuras que la escena para que cartas y botones resalten; sin animación.
 // ======================================================================
 const enc = (s) => `url('data:image/svg+xml,${encodeURIComponent(s)}')`;
+// Cuadro del mantel que se repite sin costuras: las figuras se ponen también corridas un cuadro hacia cada lado,
+// así lo que se sale por una orilla (una nube, un pétalo) sigue por la de enfrente y no se ve cortado.
+// El fondo (primer rectángulo del tamaño del cuadro) va una vez abajo y el tinte (último, con opacidad) una vez
+// arriba, para que las copias no los tapen ni se queden sin oscurecer.
+const tileOut = (W, H, s) => {
+  const full = `<rect width="${W}" height="${H}" fill="`;
+  let base = '', tint = '';
+  if (s.startsWith(full)) { const e = s.indexOf('/>') + 2; base = s.slice(0, e); s = s.slice(e); }
+  const t = s.lastIndexOf(full);
+  if (t >= 0 && s.endsWith('/>') && s.indexOf('/>', t) + 2 === s.length) { tint = s.slice(t); s = s.slice(0, t); }
+  const at = [[0, 0], ...[-1, 0, 1].flatMap((i) => [-1, 0, 1].map((j) => [i, j])).filter(([i, j]) => i || j)];
+  return {
+    url: enc(`<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${W}" height="${H}">${base}<defs><g id="t">${s}</g></defs>${at.map(([i, j]) => `<use href="#t" xlink:href="#t" x="${i * W}" y="${j * H}"/>`).join('')}${tint}</svg>`),
+    w: W, h: H,
+  };
+};
 function rng(seed) { return () => { seed |= 0; seed = (seed + 0x6d2b79f5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 
 function planksTile({ colors, seam, hl, grain, nails, W = 800, h = 68 }) {
@@ -224,7 +240,7 @@ function planksTile({ colors, seam, hl, grain, nails, W = 800, h = 68 }) {
     if (nails) for (const [dx, dy] of [[-12, 12], [-12, h - 12], [12, 12], [12, h - 12]]) s += `<circle cx="${cut + dx}" cy="${y + dy}" r="2.6" fill="${seam}"/>`;
     s += `<rect y="${y + h - 3}" width="${W}" height="${nails ? 5 : 3}" fill="${seam}"/>`;
   }
-  return { url: enc(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">${s}</svg>`), w: W, h: H };
+  return tileOut(W, H, s);
 }
 function sandTile({ cols, grout, line, crack }) {
   const W = 392, H = 208, r = rng(5);
@@ -234,7 +250,7 @@ function sandTile({ cols, grout, line, crack }) {
     s += `<rect x="${x}" y="${y}" width="188" height="96" rx="12" fill="${col}"/><rect x="${x + 4}" y="${y + 3}" width="180" height="5" rx="2.5" fill="#fff3d0" opacity=".5"/><path d="M${x + 8} ${y + 92}h172" stroke="${line}" stroke-width="5" stroke-linecap="round"/>`;
     if (r() > 0.45) { const cx = x + 30 + r() * 110, cy = y + 30 + r() * 40; s += `<path d="M${cx} ${cy}l10 6 6 -4 12 8" stroke="${crack}" stroke-width="2.2" fill="none" stroke-linecap="round"/>`; }
   }
-  return { url: enc(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">${s}</svg>`), w: W, h: H };
+  return tileOut(W, H, s);
 }
 function stoneTile({ tones, seam, lava }) {
   const W = 600, H = 400;
@@ -243,13 +259,13 @@ function stoneTile({ tones, seam, lava }) {
   const r = rng(9);
   for (let i = 0; i < 26; i++) s += `<circle cx="${r() * W}" cy="${r() * H}" r="${1 + r() * 2.5}" fill="#000" opacity=".12"/>`;
   if (lava) s += ['M300 0 292 40 304 70 286 130', 'M0 290 60 286 90 300 140 284'].map((d) => `<path d="${d}" fill="none" stroke="#ff6a1f" stroke-width="3" stroke-linecap="round"/><path d="${d}" fill="none" stroke="#ffd36b" stroke-width="1.2" stroke-linecap="round"/>`).join('');
-  return { url: enc(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">${s}</svg>`), w: W, h: H };
+  return tileOut(W, H, s);
 }
 function cloudTile() {
   const W = 420, H = 300, r = rng(3);
   let s = `<rect width="${W}" height="${H}" fill="#b9c8f2"/>`;
   for (let i = 0; i < 7; i++) { const x = r() * W, y = r() * H, w = 50 + r() * 60; s += `<g opacity=".55"><ellipse cx="${x}" cy="${y}" rx="${w}" ry="${w * 0.32}" fill="#d9e2ff"/><ellipse cx="${x + w * 0.3}" cy="${y - w * 0.15}" rx="${w * 0.5}" ry="${w * 0.3}" fill="#d9e2ff"/></g>`; }
-  return { url: enc(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">${s}</svg>`), w: W, h: H };
+  return tileOut(W, H, s);
 }
 // Mantel de ofrenda (evento de Día de Muertos): morado oscuro con bordado de florecitas y pétalos de cempasúchil sueltos.
 function mantelTile() {
@@ -261,7 +277,7 @@ function mantelTile() {
     s += `<g transform="translate(${x} ${y})" opacity=".55">${[0, 90, 180, 270].map((a) => `<ellipse cx="0" cy="-6" rx="3.2" ry="5.5" fill="${c}" transform="rotate(${a})"/>`).join('')}<circle r="2.4" fill="#fff3d6"/></g>`;
   }
   for (let i = 0; i < 14; i++) s += `<ellipse cx="${(r() * W).toFixed(1)}" cy="${(r() * H).toFixed(1)}" rx="4" ry="2.6" fill="#ff9c1a" opacity=".7" transform="rotate(${(r() * 180).toFixed(0)} ${(r() * W).toFixed(1)} ${(r() * H).toFixed(1)})"/>`;
-  return { url: enc(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">${s}</svg>`), w: W, h: H };
+  return tileOut(W, H, s);
 }
 // Mantel de Navidad: rojo tejido, con filas de pinitos y copos (como suéter navideño).
 function mantelNavidadTile() {
@@ -273,7 +289,7 @@ function mantelNavidadTile() {
     const cx = x + 30 + dx;
     s += `<g stroke="#fff3d6" stroke-width="3" stroke-linecap="round" opacity=".5">${[0, 60, 120].map((a) => `<path d="M${cx} ${y - 11}v22" transform="rotate(${a} ${cx} ${y})"/>`).join('')}</g>`;
   }
-  return { url: enc(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">${s}</svg>`), w: W, h: H };
+  return tileOut(W, H, s);
 }
 // Mantel de Día de Reyes: terciopelo morado con estrellitas doradas y una greca dorada.
 function mantelReyesTile() {
@@ -282,7 +298,7 @@ function mantelReyesTile() {
   for (let y = 0; y < H; y += 50) s += `<path d="M0 ${y + 25}h${W}" stroke="#42207a" stroke-width="14"/>`;
   for (let y = 0; y < H; y += 75) for (let x = (y / 75) % 2 ? 37 : 0; x < W; x += 75) s += `<path d="${starPath(x + 18, y + 18, 7, 3)}" fill="#ffc83d" opacity=".45"/>`;
   s += `<path d="M0 150h${W}" stroke="#ffc83d" stroke-width="3" stroke-dasharray="10 6" opacity=".35"/>`;
-  return { url: enc(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">${s}</svg>`), w: W, h: H };
+  return tileOut(W, H, s);
 }
 // Mantel de Amor y Amistad: rosa con corazoncitos de encaje blanco y una orilla de puntitos.
 function mantelAmorTile() {
@@ -290,7 +306,7 @@ function mantelAmorTile() {
   let s = `<rect width="${W}" height="${H}" fill="#e8559a"/>`;
   for (let y = 0; y < H; y += 60) for (let x = (y / 60) % 2 ? 30 : 0; x < W; x += 60) s += `<path d="${hrt(x + 15, y + 15, 1.1)}" fill="none" stroke="#fff0f6" stroke-width="2.4" opacity=".5"/><circle cx="${x + 15}" cy="${y + 15}" r="2" fill="#fff0f6" opacity=".5"/>`;
   s += `<path d="M0 120h${W}" stroke="#fff0f6" stroke-width="3" stroke-dasharray="2 8" stroke-linecap="round" opacity=".45"/>`;
-  return { url: enc(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">${s}</svg>`), w: W, h: H };
+  return tileOut(W, H, s);
 }
 // Mantel de Primavera: cuadros de picnic verde y blanco, con florecitas.
 function mantelPrimaveraTile() {
@@ -299,7 +315,7 @@ function mantelPrimaveraTile() {
   for (let x = 0; x < W; x += 40) s += `<rect x="${x}" y="0" width="20" height="${H}" fill="#7cc04f" opacity=".45"/>`;
   for (let y = 0; y < H; y += 40) s += `<rect x="0" y="${y}" width="${W}" height="20" fill="#7cc04f" opacity=".45"/>`;
   for (const [x, y, c] of [[30, 30, '#ff7ab8'], [150, 110, '#ffc83d'], [90, 190, '#b36bff'], [210, 30, '#fff']]) s += `<g opacity=".8">${[0, 72, 144, 216, 288].map((a) => `<ellipse cx="${x}" cy="${y - 5}" rx="3.4" ry="5" fill="${c}" transform="rotate(${a} ${x} ${y})"/>`).join('')}<circle cx="${x}" cy="${y}" r="2.6" fill="#ff9c1a"/></g>`;
-  return { url: enc(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">${s}</svg>`), w: W, h: H };
+  return tileOut(W, H, s);
 }
 // Mantel de Verano: toalla de playa a rayas turquesa, blanco, amarillo y coral.
 function mantelVeranoTile() {
@@ -308,7 +324,7 @@ function mantelVeranoTile() {
   for (let i = 0; i < 6; i++) s += `<rect x="${i * 40}" width="40" height="${H}" fill="${cols[i]}" opacity="${i % 2 ? 0.9 : 1}"/>`;
   s += `<rect width="${W}" height="${H}" fill="#0a3a5a" opacity=".35"/>`;
   for (let i = 0; i < 6; i++) s += `<path d="M${i * 40 + 20} 0v${H}" stroke="#fff" stroke-width="2" stroke-dasharray="3 9" opacity=".25"/>`;
-  return { url: enc(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">${s}</svg>`), w: W, h: H };
+  return tileOut(W, H, s);
 }
 // Mantel de Fiestas Patrias: sarape de rayas de colores con líneas finas y una franja de rombos.
 function mantelPatriasTile() {
@@ -317,7 +333,7 @@ function mantelPatriasTile() {
   for (const [c, h] of bands) (s += `<rect y="${y}" width="${W}" height="${h}" fill="${c}"/><rect y="${y + h - 1.5}" width="${W}" height="1.5" fill="#2a1f5c" opacity=".35"/>`), (y += h);
   for (let x = 0; x < W; x += 20) s += `<path d="M${x} 109l10-8 10 8-10 8z" fill="#fff6e6" opacity=".7"/>`;
   s += `<rect width="${W}" height="${H}" fill="#1a0a20" opacity=".35"/>`;
-  return { url: enc(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">${s}</svg>`), w: W, h: H };
+  return tileOut(W, H, s);
 }
 // Mantel de Halloween: morado oscuro con telarañas en las esquinas y estrellitas naranjas.
 function mantelHalloweenTile() {
@@ -331,7 +347,7 @@ function mantelHalloweenTile() {
   };
   s += web(0, 0, 0) + web(240, 240, 180) + web(240, 0, 90);
   for (const [x, y] of [[60, 150], [150, 70], [190, 180], [100, 220], [30, 90]]) s += `<path d="${starPath(x, y, 4, 1.8)}" fill="#ff8a1a" opacity=".5"/>`;
-  return { url: enc(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">${s}</svg>`), w: W, h: H };
+  return tileOut(W, H, s);
 }
 // Mantel de la Candelaria: servilleta crema bordada con florecitas rojas, verdes y amarillas en hileras.
 function mantelCandelariaTile() {
@@ -342,7 +358,7 @@ function mantelCandelariaTile() {
   [[30, 30, '#e8434f'], [90, 30, '#2f9e5c'], [60, 90, '#e8434f'], [0, 90, '#ff9c1a'], [120, 90, '#ff9c1a']].forEach(([x, y, c]) => (s += flor(x, y, c)));
   s += `<path d="M30 42v10M90 42v10M60 102v10" stroke="#2f9e5c" stroke-width="2"/>`;
   s += `<rect width="${W}" height="${H}" fill="#2a1408" opacity=".38"/>`;
-  return { url: enc(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">${s}</svg>`), w: W, h: H };
+  return tileOut(W, H, s);
 }
 // Mantel del Día del Taco: hule de cuadros rojos y blancos, como en la taquería.
 function mantelTacoTile() {
@@ -351,7 +367,7 @@ function mantelTacoTile() {
   s += `<rect width="${W}" height="40" fill="#e8434f" opacity=".55"/><rect width="40" height="${H}" fill="#e8434f" opacity=".55"/>`;
   s += `<path d="M0 20h${W}M0 60h${W}M20 0v${H}M60 0v${H}" stroke="#fff" stroke-width="2" opacity=".35"/>`;
   s += `<rect width="${W}" height="${H}" fill="#2a0a08" opacity=".4"/>`;
-  return { url: enc(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">${s}</svg>`), w: W, h: H };
+  return tileOut(W, H, s);
 }
 // Mantel del Día de la Tierra: pasto con florecitas y tréboles.
 function mantelTierraTile() {
@@ -361,7 +377,7 @@ function mantelTierraTile() {
   const flor = (x, y, c) => `${[0, 72, 144, 216, 288].map((a) => `<ellipse cx="${x}" cy="${y - 4}" rx="2.4" ry="3.8" fill="${c}" transform="rotate(${a} ${x} ${y})"/>`).join('')}<circle cx="${x}" cy="${y}" r="2" fill="#ffc83d"/>`;
   [[30, 40, '#fff6ee'], [90, 70, '#ff9cc8'], [56, 20, '#fff6ee'], [14, 104, '#ff9cc8'], [104, 112, '#fff6ee']].forEach(([x, y, c]) => (s += flor(x, y, c)));
   s += `<rect width="${W}" height="${H}" fill="#06200a" opacity=".42"/>`;
-  return { url: enc(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">${s}</svg>`), w: W, h: H };
+  return tileOut(W, H, s);
 }
 // Mantel del Día del Niño: azul clarito de fiesta con confeti de colores y serpentinas.
 function mantelNinoTile() {
@@ -370,7 +386,7 @@ function mantelNinoTile() {
   [[12, 18, 20], [44, 8, -30], [80, 22, 45], [104, 6, 10], [24, 50, -15], [62, 44, 60], [96, 58, -40], [10, 86, 30], [48, 80, -60], [84, 92, 15], [30, 110, 50], [70, 112, -20], [110, 100, 70]].forEach(([x, y, a], i) => (s += `<rect x="${x - 3}" y="${y - 1.6}" width="6" height="3.2" rx="1" fill="${C[i % C.length]}" transform="rotate(${a} ${x} ${y})"/>`));
   s += `<path d="M0 66q15-10 30 0t30 0 30 0 30 0" fill="none" stroke="#ff7ab8" stroke-width="2.4" opacity=".7"/>`;
   s += `<rect width="${W}" height="${H}" fill="#0a1030" opacity=".45"/>`;
-  return { url: enc(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">${s}</svg>`), w: W, h: H };
+  return tileOut(W, H, s);
 }
 // Mantel del Día del Padre: cuadros azules de día de campo.
 function mantelPadreTile() {
@@ -379,7 +395,7 @@ function mantelPadreTile() {
   [10, 50, 90].forEach((v) => (s += `<rect x="${v}" width="20" height="${H}" fill="#4a8fd0" opacity=".55"/><rect y="${v}" width="${W}" height="20" fill="#4a8fd0" opacity=".55"/>`));
   s += `<path d="M0 60h120M60 0v120" stroke="#fff" stroke-width="1.4" stroke-dasharray="3 4" opacity=".7"/>`;
   s += `<rect width="${W}" height="${H}" fill="#06122a" opacity=".55"/>`;
-  return { url: enc(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">${s}</svg>`), w: W, h: H };
+  return tileOut(W, H, s);
 }
 // Mantel del Día del Gato: cojín lila con huellitas.
 function mantelGatoTile() {
@@ -388,7 +404,7 @@ function mantelGatoTile() {
   const paw = (x, y, a) => `<g transform="translate(${x} ${y}) rotate(${a})" fill="#a98ae0"><ellipse cy="3" rx="5" ry="4.2"/>${[[-5.4, -3.4], [-1.8, -6.2], [1.8, -6.2], [5.4, -3.4]].map(([a2, b]) => `<circle cx="${a2}" cy="${b}" r="1.9"/>`).join('')}</g>`;
   [[24, 26, -20], [42, 50, -10], [84, 80, 15], [100, 104, 25], [90, 20, 40], [20, 92, -35]].forEach(([x, y, a]) => (s += paw(x, y, a)));
   s += `<rect width="${W}" height="${H}" fill="#140a2a" opacity=".55"/>`;
-  return { url: enc(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">${s}</svg>`), w: W, h: H };
+  return tileOut(W, H, s);
 }
 // Mantel del Día del Perro: cobija naranja a rayas con huesitos.
 function mantelPerroTile() {
@@ -398,7 +414,7 @@ function mantelPerroTile() {
   const bone = (x, y, a) => `<g transform="translate(${x} ${y}) rotate(${a})" fill="#fff6e6"><rect x="-7" y="-2" width="14" height="4" rx="1"/>${[[-7, -2.4], [-7, 2.4], [7, -2.4], [7, 2.4]].map(([a2, b]) => `<circle cx="${a2}" cy="${b}" r="2.6"/>`).join('')}</g>`;
   [[30, 10, -20], [90, 50, 25], [30, 70, 15], [90, 110, -30]].forEach(([x, y, a]) => (s += bone(x, y, a)));
   s += `<rect width="${W}" height="${H}" fill="#1a0c04" opacity=".55"/>`;
-  return { url: enc(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">${s}</svg>`), w: W, h: H };
+  return tileOut(W, H, s);
 }
 // Mantel del Día del Gamer: tapete morado de cuadritos con corazones de píxeles.
 function mantelGamerTile() {
@@ -408,7 +424,7 @@ function mantelGamerTile() {
   const heart = (x, y, c) => ['.XX.XX.', 'XXXXXXX', '.XXXXX.', '..XXX..', '...X...'].map((r, j) => [...r].map((ch, i) => (ch === 'X' ? `<rect x="${x + i * 3}" y="${y + j * 3}" width="3" height="3" fill="${c}"/>` : '')).join('')).join('');
   s += heart(14, 16, '#ff5f7e') + heart(76, 70, '#5ff0ff') + heart(78, 14, '#ffc83d') + heart(16, 82, '#7fd36a');
   s += `<rect width="${W}" height="${H}" fill="#0a0620" opacity=".55"/>`;
-  return { url: enc(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">${s}</svg>`), w: W, h: H };
+  return tileOut(W, H, s);
 }
 // Mantel del Día del Programador: tablero verde de circuito con ceros y unos.
 function mantelProgramadorTile() {
@@ -418,7 +434,7 @@ function mantelProgramadorTile() {
   [[40, 30], [52, 42], [30, 90], [80, 78], [60, 20], [30, 100]].forEach(([x, y]) => (s += `<circle cx="${x}" cy="${y}" r="3" fill="#7fe8a0" opacity=".7"/>`));
   [[14, 56, '1'], [72, 60, '0'], [100, 16, '1'], [96, 108, '0']].forEach(([x, y, t]) => (s += `<text x="${x}" y="${y}" font-family="monospace" font-weight="700" font-size="14" fill="#a8f0c0" opacity=".55">${t}</text>`));
   s += `<rect width="${W}" height="${H}" fill="#04140a" opacity=".55"/>`;
-  return { url: enc(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">${s}</svg>`), w: W, h: H };
+  return tileOut(W, H, s);
 }
 // Mantel del Día de los Inocentes: rombos de arlequín rojos y dorados.
 function mantelInocentesTile() {
@@ -427,7 +443,7 @@ function mantelInocentesTile() {
   for (let j = 0; j < 4; j++) for (let i = 0; i < 4; i++) if ((i + j) % 2 === 0) s += `<path d="M${i * 30 + 15} ${j * 30}l15 15-15 15-15-15z" fill="#ffc83d" opacity=".75"/>`;
   for (let j = 0; j < 4; j++) for (let i = 0; i < 4; i++) if ((i + j) % 2) s += `<path d="M${i * 30 + 15} ${j * 30}l15 15-15 15-15-15z" fill="#8a5cf0" opacity=".55"/>`;
   s += `<rect width="${W}" height="${H}" fill="#14040a" opacity=".55"/>`;
-  return { url: enc(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">${s}</svg>`), w: W, h: H };
+  return tileOut(W, H, s);
 }
 // Mantel de Año Nuevo: terciopelo morado con confeti dorado y serpentinas.
 function mantelAnioNuevoTile() {
@@ -436,7 +452,7 @@ function mantelAnioNuevoTile() {
   s += `<path d="M0 40q15-12 30 0t30 0 30 0 30 0M0 100q15-12 30 0t30 0 30 0 30 0" fill="none" stroke="#ff7ab8" stroke-width="2.4" opacity=".55"/>`;
   [[20, 16, '#ffc83d'], [70, 24, '#5ff0ff'], [100, 62, '#ffc83d'], [44, 70, '#ff7ab8'], [16, 84, '#ffe27a'], [86, 108, '#5ff0ff']].forEach(([x, y, c], i) => (s += `<rect x="${x}" y="${y}" width="6" height="3.4" fill="${c}" transform="rotate(${i * 37} ${x + 3} ${y + 1.7})"/>`));
   s += `<rect width="${W}" height="${H}" fill="#0a0420" opacity=".55"/>`;
-  return { url: enc(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">${s}</svg>`), w: W, h: H };
+  return tileOut(W, H, s);
 }
 // Mantel del Día de las Madres: rosa clarito con florecitas y su orilla de encaje.
 function mantelMadresTile() {
@@ -447,7 +463,7 @@ function mantelMadresTile() {
   [[30, 30, '#ff5f8f'], [90, 90, '#ff5f8f'], [90, 30, '#fff6ee'], [30, 90, '#fff6ee']].forEach(([x, y, c]) => (s += flor(x, y, c)));
   [[60, 60], [0, 0], [120, 0], [0, 120], [120, 120]].forEach(([x, y]) => (s += `<circle cx="${x}" cy="${y}" r="6" fill="none" stroke="#fff0f6" stroke-width="1.6"/><circle cx="${x}" cy="${y}" r="2" fill="#fff0f6"/>`));
   s += `<rect width="${W}" height="${H}" fill="#2a0618" opacity=".5"/>`;
-  return { url: enc(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">${s}</svg>`), w: W, h: H };
+  return tileOut(W, H, s);
 }
 const TILE_CACHE = {};
 function tableTile(key) {

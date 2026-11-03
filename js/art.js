@@ -190,6 +190,13 @@ const ICONS = {
   uvas: () => `<path d="M16 9.4V5.2" stroke="${K}" stroke-width="3.6" stroke-linecap="round"/><path d="M16 9.4V5.2" stroke="#8a5a3a" stroke-width="1.6" stroke-linecap="round"/>`
     + tshape('M16 6.2c2-3 6-3.4 8.6-2-1.6 3-5 4.4-8.6 2z', '#7fc46a', '#5fae5a', '', 1.6)
     + [[9.6, 12.6], [16, 12.4], [22.4, 12.6], [12.8, 18.2], [19.2, 18.2], [16, 23.8]].map(([x, y]) => tshape(CIRCLE(x, y, 3.8), '#b06ce0', '#7b3fb8', `<circle cx="${x - 1.2}" cy="${y - 1.3}" r="1" fill="#f0dcff"/>`, 1.8)).join(''),
+  // Fichas de las colecciones del nivel 150: gota de pintura (arte), nota (música) y claqueta (cine).
+  gota: () => tshape('M16 3C12 10 6.6 15 6.6 20.4a9.4 9.4 0 0 0 18.8 0C25.4 15 20 10 16 3z', '#ff5f7e', '#d63d5f', '<path d="M4 19h24v4.4H4z" fill="#ffc83d"/><path d="M4 23.4h24V28H4z" fill="#4aa8de"/><ellipse cx="12.4" cy="14" rx="1.8" ry="3" fill="#fff" opacity=".7" transform="rotate(25 12.4 14)"/>', 2.2),
+  nota: () => tshape('M14 9.4h2.6V24H14zM25.4 5.4H28V20h-2.6z', '#6c3fd4', '#4a2a9a', '', 1.8) + tshape('M14 8.6 28 4.6v5.2L14 13.8z', '#8a5cf0', '#6c3fd4', '', 2)
+    + tshape('M5 24.4a5.6 4.4 0 1 0 11.2 0a5.6 4.4 0 1 0-11.2 0z', '#8a5cf0', '#6c3fd4', '<ellipse cx="9" cy="23" rx="1.6" ry="1" fill="#c9b4ff"/>', 2) + tshape('M16.4 20.4a5.6 4.4 0 1 0 11.2 0a5.6 4.4 0 1 0-11.2 0z', '#8a5cf0', '#6c3fd4', '<ellipse cx="20.4" cy="19" rx="1.6" ry="1" fill="#c9b4ff"/>', 2),
+  claqueta: () => tshape('M4 14h24v12.4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z', '#4a4560', '#36324a', '<path d="M8 19.6h16M8 23.6h10" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/>', 2.2)
+    + tshape('M3.6 12.6 25.6 4.4l1.8 4.8-22 8.2z', '#4a4560', '#36324a', '<path d="M8.4 11.6l4-6M14.4 9.4l4-6M20.4 7.2l4-6M5.4 14.2l3-4.6" stroke="#fff" stroke-width="2.2"/>', 2)
+    + `<circle cx="5" cy="14.6" r="1.4" fill="#ffc83d" stroke="${K}" stroke-width="1"/>`,
   // Fichas de la colección (una por temática).
   concha: () => tshape('M16 27.5 4.5 14.5C5 7.5 10 4 16 4s11 3.5 11.5 10.5z', '#ffb3c7', '#f28aa5', ['M16 27V6', 'M16 27 9.5 7.5', 'M16 27 22.5 7.5', 'M16 27 5.5 12', 'M16 27 26.5 12'].map((d) => `<path d="${d}" stroke="#e0607f" stroke-width="1.6" fill="none"/>`).join(''))
     + tshape('M11 26.5h10l-1.5 3h-7z', '#ffb3c7', '#f28aa5', '', 1.8),
@@ -325,6 +332,25 @@ export const BACKS = {
     art: () => `<g fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><rect x="32" y="40" width="36" height="28" rx="6"/><path d="M50 40v-10"/><circle cx="50" cy="27" r="3"/><circle cx="42" cy="53" r="4"/><circle cx="58" cy="53" r="4"/><path d="M42 62h16"/><rect x="28" y="72" width="44" height="34" rx="6"/><path d="M28 80H18v16M72 80h10v16M38 106v14M62 106v14"/><path d="M40 84h20M40 92h12" stroke-dasharray="3 3"/></g>`
       + `<path d="M14 22h10M19 17v10" stroke="#fff" stroke-width="1.6"/>`
       + [[20, 116, 0.55], [80, 30, 0.5]].map(([x, y, k]) => `<g transform="translate(${x - 16 * k} ${y - 16 * k}) scale(${k})">${ICONS.tuerca()}</g>`).join('') },
+  // Exclusivo de la colección: Taller de arte. El caballete con su cuadro a medio pintar, la paleta y salpicones.
+  lienzo: { a: '#fff1dc', b: '#ffe2bc', dots: '#ff9c5b',
+    art: () => [[14, 30, '#4aa8de', 5], [86, 26, '#ff5f7e', 4], [16, 118, '#7fd36a', 4.4], [84, 112, '#ffc83d', 5]].map(([x, y, c, r]) => `<circle cx="${x}" cy="${y}" r="${r}" fill="${c}"/><circle cx="${x + r + 2}" cy="${y - 3}" r="1.6" fill="${c}"/><circle cx="${x - r}" cy="${y + r}" r="1.2" fill="${c}"/>`).join('')
+      + `<path d="M34 112 46 40M66 112 54 40M50 40v74" stroke="${K}" stroke-width="6" stroke-linecap="round"/><path d="M34 112 46 40M66 112 54 40M50 40v74" stroke="#c98a3a" stroke-width="3" stroke-linecap="round"/>`
+      + `<rect x="24" y="34" width="52" height="42" rx="2" fill="#fff" stroke="${K}" stroke-width="3"/><path d="M27 70q10-14 20-6t26-10V73H27z" fill="#7fd36a"/><circle cx="62" cy="46" r="6" fill="#ffc83d"/><path d="M27 58q8-6 14 0" stroke="#4aa8de" stroke-width="3" fill="none" stroke-linecap="round"/>`
+      + tshape('M22 80h56v4H22z', '#c98a3a', '#a86a22', '', 2.4) },
+  // Exclusivo de la colección: Banda musical. Un tocadiscos con su disco y notas que salen volando.
+  partitura: { a: '#efe6ff', b: '#e0d2ff', dots: '#8a5cf0',
+    bg: () => [20, 116].map((y) => [0, 4, 8, 12, 16].map((d) => `<path d="M8 ${y + d}h84" stroke="#c9b4ff" stroke-width="1"/>`).join('')).join(''),
+    art: () => tshape('M14 74h72v34H14z', '#c98a5a', '#a86a3a', '<circle cx="76" cy="100" r="2.6" fill="#ffc83d"/><circle cx="68" cy="100" r="2.6" fill="#ffc83d"/>', 3)
+      + `<ellipse cx="44" cy="76" rx="27" ry="10" fill="#2a2540" stroke="${K}" stroke-width="2.6"/><ellipse cx="44" cy="76" rx="18" ry="6.6" fill="none" stroke="#4a4560" stroke-width="1.4"/><ellipse cx="44" cy="76" rx="7" ry="2.6" fill="#ff5f7e" stroke="${K}" stroke-width="1.4"/>`
+      + `<path d="M80 70 70 64 56 74" fill="none" stroke="${K}" stroke-width="4.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M80 70 70 64 56 74" fill="none" stroke="#dfe6f2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`
+      + [[30, 52, 0.6, -14], [52, 38, 0.7, 10], [74, 50, 0.5, 18], [40, 26, 0.45, -8]].map(([x, y, k, r]) => `<g transform="translate(${x} ${y}) rotate(${r}) scale(${k}) translate(-16 -16)">${ICONS.nota()}</g>`).join('') },
+  // Exclusivo de la colección: Estudio de cine. Letrero de estreno con focos y la cubeta de palomitas.
+  peliculas: { a: '#fff0c8', b: '#ffe08a', dots: '#e8434f', flat: true,
+    bg: () => `<g transform="rotate(-28 50 70)"><rect x="-20" y="58" width="140" height="24" fill="#2a2540"/>${Array.from({ length: 14 }, (_, i) => `<rect x="${-18 + i * 10}" y="61" width="5" height="3.4" fill="#fff0c8"/><rect x="${-18 + i * 10}" y="76" width="5" height="3.4" fill="#fff0c8"/>`).join('')}</g>`,
+    art: () => `<rect x="16" y="14" width="68" height="26" rx="5" fill="#e8434f" stroke="${K}" stroke-width="3"/>${Array.from({ length: 12 }, (_, i) => `<circle cx="${21 + i * 5.3}" cy="18" r="1.6" fill="#fff6c8"/><circle cx="${21 + i * 5.3}" cy="36" r="1.6" fill="#fff6c8"/>`).join('')}<path d="${starPath(50, 27, 7, 3)}" fill="#ffc83d" stroke="${K}" stroke-width="1.6" stroke-linejoin="round"/>`
+      + Array.from({ length: 9 }, (_, i) => `<circle cx="${34 + (i % 5) * 8 + (i > 4 ? 4 : 0)}" cy="${72 - (i > 4 ? 7 : 0)}" r="6" fill="#fff6e6" stroke="${K}" stroke-width="1.6"/>`).join('')
+      + tshape('M28 76h44l-6 46H34z', '#fff', '#e8e0d0', '<path d="M36 76l3 46M46 76l1 46M56 76l-1 46M66 76l-3 46" stroke="#e8434f" stroke-width="5"/>', 3) },
   // Exclusivo de la festividad: Candelaria. La vaporera llena de tamales echando vapor.
   tamales: { a: '#fff1c9', b: '#ecd98e', dots: '#d9b060',
     art: () => [30, 50, 70].map((x, i) => `<path d="M${x} ${44 - (i % 2) * 6}q-6-8 0-14t0-14" fill="none" stroke="#c9a65a" stroke-width="3.4" stroke-linecap="round" opacity=".55"/>`).join('')
@@ -719,6 +745,26 @@ export const AVATARS = {
     + P('M56 30Q68 18 80 24Q72 36 56 30z', '#7fc46a', '#5fae5a', `<path d="M58 29q10-2 18-4" stroke="#4a8a3a" stroke-width="1.6" fill="none"/>`)
     + `<g transform="rotate(-14 44 20)">${P('M44 4 56 30H32z', '#ff5fa8', '#e0408a', `<path d="M38 18h12M35 25h18" stroke="#ffe27a" stroke-width="3"/>`)}${P(CIRCLE(44, 4, 4.6), '#ffe27a', '#ec9a17')}</g>`
     + eyes(56, 11, 4.6) + smile(66, 6) + blush(64, 20),
+  // Pincelín (Taller de arte): pulpo pintor con boina roja, salpicado de pintura, con su pincel en un tentáculo.
+  pulpopintor: () => mirror(`<path d="M30 76Q18 86 22 100M40 80q-4 12 0 22" fill="none" stroke="${K}" stroke-width="10" stroke-linecap="round"/><path d="M30 76Q18 86 22 100M40 80q-4 12 0 22" fill="none" stroke="#ff8fb8" stroke-width="6" stroke-linecap="round"/>`)
+    + `<path d="M74 78Q90 72 88 58" fill="none" stroke="${K}" stroke-width="10" stroke-linecap="round"/><path d="M74 78Q90 72 88 58" fill="none" stroke="#ff8fb8" stroke-width="6" stroke-linecap="round"/><path d="M88 60 96 30" stroke="${K}" stroke-width="5.4" stroke-linecap="round"/><path d="M88 60 96 30" stroke="#c98a3a" stroke-width="2.6" stroke-linecap="round"/><path d="M94 34l4-10 3 2-3 10z" fill="#4aa8de" stroke="${K}" stroke-width="2"/>`
+    + P(ELL(50, 54, 30, 28), '#ff8fb8', '#e86a9a', `<circle cx="66" cy="70" r="4" fill="#4aa8de"/><circle cx="32" cy="38" r="3" fill="#ffc83d"/><circle cx="70" cy="44" r="2.4" fill="#7fd36a"/><circle cx="36" cy="72" r="2.6" fill="#e86a9a"/>`)
+    + eyes(56, 11, 5) + smile(68, 6) + blush(64, 20)
+    + P('M24 34Q26 16 50 15Q74 16 78 32Q50 40 24 34z', '#e8434f', '#c22c3c') + P(CIRCLE(52, 14, 4), '#e8434f', '#c22c3c'),
+  // Ranita (Banda musical): rana verde de ojos saltones, sonrisa grande y su guitarra.
+  ranita: () => shoulders('#5fae5a', '#3f8a3a')
+    + P(ELL(50, 62, 33, 24), '#7fd36a', '#5fae5a', '<ellipse cx="50" cy="76" rx="18" ry="6" fill="#c8f0a8"/>')
+    + mirror(P(CIRCLE(33, 40, 12), '#7fd36a', '#5fae5a', `<circle cx="33" cy="40" r="7.6" fill="#fff"/><circle cx="34" cy="41" r="4.4" fill="${K}"/><circle cx="32.4" cy="39" r="1.6" fill="#fff"/>`))
+    + `<path d="M30 64q20 16 40 0" fill="#e8434f" stroke="${K}" stroke-width="3" stroke-linejoin="round"/>` + blush(62, 24)
+    + `<g transform="rotate(-30 66 90)">${P(ELL(64, 92, 13, 10), '#ff9c3d', '#e2753a', `<circle cx="64" cy="92" r="4" fill="${K}"/>`)}${P('M74 89h22v6H74z', '#8a5a3a', '#6e4026')}<path d="M76 92h18" stroke="#fff6e6" stroke-width="1"/></g>`,
+  // Mapache director (Estudio de cine): con su antifaz, boina negra, chaqueta roja y el megáfono.
+  mapache: () => shoulders('#e8434f', '#c22c3c') + `<path d="M40 80 50 90 60 80" fill="#fff6ee" stroke="${K}" stroke-width="2.4" stroke-linejoin="round"/>`
+    + mirror(P('M26 46 22 22 40 34z', '#a9b0c8', '#868ea8', '<path d="M27 40 25 28 34 35z" fill="#4a4560"/>'))
+    + P(ELL(50, 58, 28, 23), '#a9b0c8', '#868ea8', '<path d="M50 62q-10 16-20 6M50 62q10 16 20 6" fill="#fff6ee"/>')
+    + `<path d="M22 54Q30 44 44 52Q50 56 56 52Q70 44 78 54Q70 64 58 60Q50 56 42 60Q30 64 22 54z" fill="#3a3550"/>` + eyes(54, 11, 4.4)
+    + `<ellipse cx="50" cy="66" rx="4.4" ry="3.2" fill="${K}"/><path d="M50 69v3M46 74q4 3 8 0" fill="none" stroke="${K}" stroke-width="2" stroke-linecap="round"/>`
+    + P('M28 36Q30 22 50 21Q70 22 74 34Q50 42 28 36z', '#2a2540', '#1a1530') + P(CIRCLE(50, 21, 3.4), '#2a2540', '#1a1530')
+    + `<g transform="rotate(-20 82 86)">${P('M70 82h8l14-8v26l-14-8h-8z', '#ffc83d', '#ec9a17')}</g>`,
   // Exclusivo del evento: Día de Muertos.
   xolo: () => mirror(P('M26 46 16 10 42 30z', '#4a4560', '#36324a', '<path d="M25 37 21 18 35 30z" fill="#ff9cb0"/>'))
     + shoulders('#4a4560', '#36324a')
@@ -842,6 +888,19 @@ export const RINGS = {
   tuercas: () => { const d = Array.from({ length: 24 }, (_, i) => { const a1 = (i * 15 - 4) * Math.PI / 180, a2 = (i * 15 + 4) * Math.PI / 180, r = i % 2 ? 54 : 61; return `${i ? 'L' : 'M'}${(70 + Math.cos(a1) * r).toFixed(1)} ${(70 + Math.sin(a1) * r).toFixed(1)}L${(70 + Math.cos(a2) * r).toFixed(1)} ${(70 + Math.sin(a2) * r).toFixed(1)}`; }).join('') + 'z';
     return `<g class="r-spin"><path d="${d}" fill="none" stroke="${K}" stroke-width="7" stroke-linejoin="round"/><path d="${d}" fill="none" stroke="#9aa7cf" stroke-width="3.6" stroke-linejoin="round"/>${Array.from({ length: 6 }, (_, i) => { const [x, y] = at(i * 60 + 30, 52); return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2.2" fill="#dfe6f2" stroke="${K}" stroke-width="1.2"/>`; }).join('')}</g>`
       + `<circle cx="70" cy="9" r="6" fill="#5f6a9a" stroke="${K}" stroke-width="2"/><circle class="r-tw" cx="70" cy="9" r="3.4" fill="#ff5f7e"/>`; },
+  // Paleta de pintor (Taller de arte): aro de madera con manchas de pintura que laten una tras otra y su pincel.
+  pinceles: () => band(55, '#e0b07a', 9)
+    + Array.from({ length: 8 }, (_, i) => { const [x, y] = at(i * 45 - 70, 55), c = ['#ff5f7e', '#ffc83d', '#7fd36a', '#4aa8de', '#b48cff', '#ff9c5b', '#fff', '#2a2540'][i]; return `<g class="r-tw" style="animation-delay:${(i * 0.22).toFixed(2)}s"><path d="M${(x - 5).toFixed(1)} ${y.toFixed(1)}q0-6 5-6 6 0 6 5 0 4-3 5 1 3-2 3-6 0-6-7z" fill="${c}" stroke="${K}" stroke-width="1.6" stroke-linejoin="round"/></g>`; }).join('')
+    + (() => { const [x, y] = at(40, 58); return `<g transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(-50)"><path d="M0 0v20" stroke="${K}" stroke-width="6" stroke-linecap="round"/><path d="M0 0v20" stroke="#c98a3a" stroke-width="3" stroke-linecap="round"/><path d="M-3-1h6v-5h-6z" fill="#dfe6f2" stroke="${K}" stroke-width="1.6"/><path d="M-3-6q3-8 3-8 3 4 3 8z" fill="#ff5f7e" stroke="${K}" stroke-width="1.6" stroke-linejoin="round"/></g>`; })(),
+  // Pentagrama (Banda musical): las cinco líneas dan la vuelta con sus notas, que giran como un disco.
+  pentagrama: () => `<circle cx="70" cy="70" r="55" fill="none" stroke="#fff" stroke-width="14"/><circle cx="70" cy="70" r="62" fill="none" stroke="${K}" stroke-width="2"/><circle cx="70" cy="70" r="48" fill="none" stroke="${K}" stroke-width="2"/>`
+    + [51.5, 55, 58.5].map((r) => `<circle cx="70" cy="70" r="${r}" fill="none" stroke="#8a5cf0" stroke-width="1.2"/>`).join('')
+    + `<g class="r-spin">${Array.from({ length: 9 }, (_, i) => { const d = i * 40, [x, y] = at(d, [50, 53.5, 57, 60.5, 55][i % 5]); return `<g transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${d + 90})"><ellipse rx="3.4" ry="2.4" fill="${K}" transform="rotate(-20)"/><path d="M3 -1v-9" stroke="${K}" stroke-width="1.4"/></g>`; }).join('')}</g>`
+    + (() => { const [x, y] = at(-135, 58), k = 0.62; return `<g transform="translate(${x - 16 * k} ${y - 16 * k}) scale(${k})">${ICONS.nota()}</g>`; })(),
+  // Rollo de película (Estudio de cine): tira de película con sus agujeritos que gira, y la claqueta en la diagonal.
+  rollo: () => `<circle cx="70" cy="70" r="55" fill="none" stroke="${K}" stroke-width="16"/><circle cx="70" cy="70" r="55" fill="none" stroke="#3a3550" stroke-width="12"/>`
+    + `<g class="r-spin">${[50.6, 59.4].map((r) => `<circle cx="70" cy="70" r="${r}" fill="none" stroke="#fff6e6" stroke-width="2.4" stroke-dasharray="2.6 4.2"/>`).join('')}${Array.from({ length: 12 }, (_, i) => { const [x, y] = at(i * 30, 55); return `<rect x="${(x - 3.6).toFixed(1)}" y="${(y - 2.6).toFixed(1)}" width="7.2" height="5.2" rx="1" fill="${['#ffc83d', '#8fe8ff', '#ff9cc8'][i % 3]}" opacity=".85" transform="rotate(${i * 30 + 90} ${x.toFixed(1)} ${y.toFixed(1)})"/>`; }).join('')}</g>`
+    + (() => { const [x, y] = at(45, 58), k = 0.72; return `<g transform="translate(${x - 16 * k} ${y - 16 * k}) scale(${k})">${ICONS.claqueta()}</g>`; })(),
   // Tamalitos (Candelaria): una mazorca hecha aro, granos amarillos sobre hoja de maíz, con hojas abajo y un tamalito.
   tamalitos: () => band(55, '#8aa83a', 10)
     + Array.from({ length: 32 }, (_, i) => { const [x, y] = at(i * 11.25, i % 2 ? 52.6 : 57.4).map((v) => v.toFixed(1)); return `<ellipse cx="${x}" cy="${y}" rx="2.9" ry="2.2" fill="${i % 4 < 2 ? '#ffd84a' : '#ffe98a'}" stroke="${K}" stroke-width="1" transform="rotate(${i * 11.25} ${x} ${y})"/>`; }).join('')
