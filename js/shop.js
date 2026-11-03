@@ -66,6 +66,10 @@ export const ITEMS = {
     { k: 'bigoton', name: 'Bigotón', text: 'El tazón favorito de papá', ev: 'padre', mes: 1 },
     { k: 'atigrado', name: 'Michi atigrado', text: 'Con su cascabel', ev: 'gato', mes: 1 },
     { k: 'dalmata', name: 'Manchitas', text: 'Dálmata con su placa', ev: 'perro', mes: 1 },
+    { k: 'audifonos', name: 'Gamer pro', text: 'Con sus audífonos', ev: 'gamer', mes: 1 },
+    { k: 'bichito', name: 'Bichito', text: 'El bug más simpático', ev: 'programador', mes: 1 },
+    { k: 'bufoncito', name: 'Bufoncito', text: 'Con su gorro de cascabeles', ev: 'inocentes', mes: 1 },
+    { k: 'uvita', name: 'Uvita', text: 'Una de las doce uvas', ev: 'anionuevo', mes: 1 },
     // Exclusivos del evento del mes (mes: la temática que lo da).
     { k: 'xolo', name: 'Xólotl', text: 'Xoloitzcuintle', ev: 'muertos', mes: 1 },
     { k: 'reno', name: 'Reno', text: 'Con su nariz roja', ev: 'navidad', mes: 1 },
@@ -98,6 +102,10 @@ export const ITEMS = {
     { k: 'corbatas', name: 'Corbatas', ev: 'padre', mes: 1 },
     { k: 'estambres', name: 'Estambres', ev: 'gato', mes: 1 },
     { k: 'huesos', name: 'Huesos', ev: 'perro', mes: 1 },
+    { k: 'pixelado', name: 'Pixelado', ev: 'gamer', mes: 1 },
+    { k: 'llavecitas', name: 'Llaves de código', ev: 'programador', mes: 1 },
+    { k: 'cascabeles', name: 'Cascabeles', ev: 'inocentes', mes: 1 },
+    { k: 'chispas', name: 'Chispitas', ev: 'anionuevo', mes: 1 },
     { k: 'cempasuchil', name: 'Cempasúchil', ev: 'muertos', mes: 1 },
     { k: 'acebo', name: 'Acebo', ev: 'navidad', mes: 1 },
     { k: 'corona', name: 'Corona real', ev: 'reyes', mes: 1 },
@@ -129,6 +137,10 @@ export const ITEMS = {
     { k: 'orgullo', name: 'Orgullo de papá', ev: 'padre', mes: 1 },
     { k: 'amigomichi', name: 'Amigo de los michis', ev: 'gato', mes: 1 },
     { k: 'mejoramigo', name: 'Mejor amigo', ev: 'perro', mes: 1 },
+    { k: 'jefefinal', name: 'Vencedor del jefe final', ev: 'gamer', mes: 1 },
+    { k: 'cerobugs', name: 'Cero bugs', ev: 'programador', mes: 1 },
+    { k: 'bromista', name: 'Gran bromista', ev: 'inocentes', mes: 1 },
+    { k: 'propositos', name: 'Lleno de propósitos', ev: 'anionuevo', mes: 1 },
     { k: 'catrin', name: 'Catrín del Mictlán', ev: 'muertos', mes: 1 },
     { k: 'duende', name: 'Duende del Polo Norte', ev: 'navidad', mes: 1 },
     { k: 'buscador', name: 'Buscador de la Estrella', ev: 'reyes', mes: 1 },
@@ -169,6 +181,10 @@ export const ITEMS = {
     { k: 'bigotes', name: 'Bigotes', ev: 'padre', mes: 1 },
     { k: 'michis', name: 'Michis', ev: 'gato', mes: 1 },
     { k: 'cachorros', name: 'Cachorros', ev: 'perro', mes: 1 },
+    { k: 'controles', name: 'Controles', ev: 'gamer', mes: 1 },
+    { k: 'binario', name: 'Binario', ev: 'programador', mes: 1 },
+    { k: 'arlequin', name: 'Arlequín', ev: 'inocentes', mes: 1 },
+    { k: 'medianoche', name: 'Medianoche', ev: 'anionuevo', mes: 1 },
     { k: 'calaverita', name: 'Calaverita', ev: 'muertos', mes: 1 },
     { k: 'esferas', name: 'Esferas', ev: 'navidad', mes: 1 },
     { k: 'rosca', name: 'Rosca de Reyes', ev: 'reyes', mes: 1 },
@@ -221,6 +237,10 @@ export const ITEMS = {
     { k: 'asador', name: 'Asador', text: 'Echa humito y brinca su salchicha', ev: 'padre', mes: 1 },
     { k: 'cajamichi', name: 'Caja con michi', text: 'El michi se asoma al volar', ev: 'gato', mes: 1 },
     { k: 'frisbee', name: 'Disco volador', text: 'Con su perrito de lengua de fuera', ev: 'perro', mes: 1 },
+    { k: 'maquinita', name: 'Maquinita', text: 'Su pantalla brilla al volar', ev: 'gamer', mes: 1 },
+    { k: 'laptop', name: 'Laptop voladora', text: 'Teclea mientras vuela', ev: 'programador', mes: 1 },
+    { k: 'sorpresa', name: 'Caja de sorpresas', text: 'Salta el payasito al volar', ev: 'inocentes', mes: 1 },
+    { k: 'bolaluz', name: 'Bola de medianoche', text: 'Brilla y suelta chispas', ev: 'anionuevo', mes: 1 },
     { k: 'alebrije', name: 'Alebrije', text: 'Vuela con sus alas de colores', ev: 'muertos', mes: 1 },
     { k: 'trineo', name: 'Trineo', text: 'Lleva su costal de regalos', ev: 'navidad', mes: 1 },
     { k: 'camello', name: 'Camello', text: 'Carga los regalos de los Reyes', ev: 'reyes', mes: 1 },
@@ -250,6 +270,10 @@ export const ITEMS = {
     { k: 'nochepapa', name: 'Noche de pesca', ev: 'padre', mes: 1 },
     { k: 'tejados', name: 'Noche de tejados', ev: 'gato', mes: 1 },
     { k: 'parque', name: 'Noche en el parque', ev: 'perro', mes: 1 },
+    { k: 'arcade', name: 'Noche arcade', ev: 'gamer', mes: 1 },
+    { k: 'codigo', name: 'Lluvia de código', ev: 'programador', mes: 1 },
+    { k: 'bromas', name: 'Noche de bromas', ev: 'inocentes', mes: 1 },
+    { k: 'brindis', name: 'Noche de brindis', ev: 'anionuevo', mes: 1 },
     { k: 'ofrenda', name: 'Noche de ofrenda', ev: 'muertos', mes: 1 },
     { k: 'nevada', name: 'Noche nevada', ev: 'navidad', mes: 1 },
     { k: 'oriente', name: 'Estrella de Oriente', ev: 'reyes', mes: 1 },
@@ -279,6 +303,10 @@ export const ITEMS = {
     { k: 'papa', name: 'Para papá', ev: 'padre', mes: 1 },
     { k: 'gatitos', name: 'Gatitos', ev: 'gato', mes: 1 },
     { k: 'patitas', name: 'Patitas', ev: 'perro', mes: 1 },
+    { k: 'pixeles', name: 'Píxeles', ev: 'gamer', mes: 1 },
+    { k: 'terminal', name: 'Terminal', ev: 'programador', mes: 1 },
+    { k: 'inocente', name: '¡Inocente palomita!', ev: 'inocentes', mes: 1 },
+    { k: 'felizano', name: 'Feliz Año', ev: 'anionuevo', mes: 1 },
     { k: 'muertos', name: 'Papel picado', ev: 'muertos', mes: 1 },
     { k: 'navidad', name: 'Bastón de caramelo', ev: 'navidad', mes: 1 },
     { k: 'reyes', name: 'Tesoro real', ev: 'reyes', mes: 1 },
@@ -320,7 +348,7 @@ export function buy(sec, k) {
 }
 
 // Cada título se ve distinto: color, icono y forma (los más caros, más vistosos).
-const TITLE_ICO = { novato: 'star', explorador: 'flag', cazacometas: 'rocket', maestro: 'trophy', viajero: 'planet', bombas: 'bomb', leyenda: 'crown', buscaconchas: 'concha', cazagemas: 'gema', guardabosques: 'bellota', golosito: 'caramelo', paleontologo: 'fosil', inventor: 'tuerca', tamalero: 'tamal', taquero: 'taco', heroeverde: 'tierra', jugueton: 'pinata', consentido: 'clavel', orgullo: 'corbata', amigomichi: 'gatito', mejoramigo: 'hueso', catrin: 'calavera', duende: 'esfera', buscador: 'rosca', flechazo: 'corazon', jardinero: 'tulipan', olas: 'sol', mariachi: 'sombrero', hechicero: 'calabaza' };
+const TITLE_ICO = { novato: 'star', explorador: 'flag', cazacometas: 'rocket', maestro: 'trophy', viajero: 'planet', bombas: 'bomb', leyenda: 'crown', buscaconchas: 'concha', cazagemas: 'gema', guardabosques: 'bellota', golosito: 'caramelo', paleontologo: 'fosil', inventor: 'tuerca', tamalero: 'tamal', taquero: 'taco', heroeverde: 'tierra', jugueton: 'pinata', consentido: 'clavel', orgullo: 'corbata', amigomichi: 'gatito', mejoramigo: 'hueso', catrin: 'calavera', duende: 'esfera', buscador: 'rosca', flechazo: 'corazon', jardinero: 'tulipan', olas: 'sol', mariachi: 'sombrero', hechicero: 'calabaza', jefefinal: 'control', cerobugs: 'llaves', bromista: 'bufon', propositos: 'reloj' };
 export const titleName = (k = equipped('title')) => item('title', k).name;
 export const titleHTML = (k = equipped('title'), cls = '', tag = 'span', attrs = '') =>
   `<${tag} class="title-chip t-${k} ${cls}" ${attrs}>${icon(TITLE_ICO[k] || 'star')}<span>${titleName(k)}</span></${tag}>`;

@@ -1,9 +1,8 @@
-// Guardado del jugador. Hay un solo jugador por dispositivo; la estructura con `profiles`
-// se conserva para no romper partidas guardadas.
-// `save` es siempre el perfil activo: es el mismo objeto toda la vida de la página
-// (al cambiar de perfil se vacía y se rellena), así los módulos que lo importan no se quedan con uno viejo.
-const KEY = 'solitario-mundos-v2';
-const OLD_KEY = 'solitario-mundos-v1';
+// Guardado del jugador: uno solo por dispositivo.
+// `save` es el mismo objeto toda la vida de la página (al reiniciar o cargar un código se vacía y se rellena),
+// así los módulos que lo importan no se quedan con uno viejo.
+const KEY = 'solitario-mundos-v3';
+const OLD = ['solitario-mundos-v2', 'solitario-mundos-v1']; // v2: { active, profiles, prefs } · v1: una partida con prefs adentro
 
 export const START = { coins: 300, wild: 3, undo: 5, tickets: 5 };
 
@@ -34,56 +33,57 @@ const fresh = (name, avatar = 0) => ({
   equip: {}, // tienda: seccion -> clave que usa
 });
 
+const read = (k) => {
+  try {
+    return JSON.parse(localStorage.getItem(k) || 'null');
+  } catch {
+    return null; // guardado roto: empezamos de cero
+  }
+};
+// { player, prefs }. Si no hay guardado nuevo, trae el de antes (y luego se borra).
 function load() {
-  try {
-    const raw = JSON.parse(localStorage.getItem(KEY) || 'null');
-    if (raw?.profiles) return raw;
-  } catch {
-    /* guardado roto: empezamos de cero */
-  }
-  // Migra el guardado de una sola partida (v1) como primer perfil.
-  let old = {};
-  try {
-    old = JSON.parse(localStorage.getItem(OLD_KEY) || '{}');
-  } catch {
-    /* nada */
-  }
-  const { dev, devInfinite, sound, ...rest } = old;
-  return { active: 'p1', profiles: { p1: { ...fresh('Jugador 1'), ...rest } }, prefs: { dev: !!dev, devInfinite: !!devInfinite } };
+  const raw = read(KEY);
+  if (raw?.player) return raw;
+  const v2 = read(OLD[0]);
+  if (v2?.profiles) return { player: v2.profiles[v2.active] || {}, prefs: v2.prefs || {} };
+  const { dev, devInfinite, sound, ...rest } = read(OLD[1]) || {};
+  return { player: { ...fresh('Jugador 1'), ...rest }, prefs: { dev: !!dev, devInfinite: !!devInfinite } };
 }
 
 const root = load();
 root.prefs ||= {};
+const p0 = root.player;
 // Guardados de antes del boleto dorado: el mundo en el que ya estaba queda abierto.
-for (const p of Object.values(root.profiles)) if (p.open == null) p.open = Math.floor((p.next || 0) / 10);
+if (p0.open == null) p0.open = Math.floor((p0.next || 0) / 10);
 // Quien ya tenía nombre (guardados de antes de la presentación) no la vuelve a ver.
 const fixOnboard = (p) => {
   if (p.onboard == null) p.onboard = p.named ? 'done' : 'intro';
   return p;
 };
-for (const p of Object.values(root.profiles)) fixOnboard(p);
+fixOnboard(p0);
 // Astro era gratis antes de Nico y Lila: quien ya lo usaba se lo queda.
-for (const p of Object.values(root.profiles)) if (p.look === 'char' && p.char === 'astro') (p.owned ||= {})['avatar:astro'] = 1;
+if (p0.look === 'char' && p0.char === 'astro') (p0.owned ||= {})['avatar:astro'] = 1;
 
 // Preferencias del dispositivo (no del jugador): modo dev.
 export const prefs = root.prefs;
 export const save = {};
-Object.assign(save, fresh(''), root.profiles[root.active]);
+Object.assign(save, fresh(''), p0);
 
 export function persist() {
-  root.profiles[root.active] = { ...save };
+  root.player = { ...save };
   try {
     localStorage.setItem(KEY, JSON.stringify(root));
+    OLD.forEach((k) => localStorage.removeItem(k));
   } catch {
     /* modo privado o sin espacio: el juego sigue sin guardar */
   }
 }
 persist();
 
-function swapTo(id) {
-  root.active = id;
+// Cambia todo el avance por el de p.
+function replaceWith(p) {
   for (const k of Object.keys(save)) delete save[k];
-  Object.assign(save, fresh(''), root.profiles[id]);
+  Object.assign(save, fresh(''), p);
   persist();
 }
 
@@ -92,8 +92,7 @@ export function resetProfile() {
   const { name, avatar, named, look, onboard } = save;
   // Un personaje gratis (Nico o Lila) se conserva; uno comprado se pierde y vuelve a la inicial.
   const free = look === 'char' && ['nino', 'nina'].includes(save.char);
-  root.profiles[root.active] = { ...fresh(name, avatar), named, onboard, ...(free ? { look, char: save.char } : {}) };
-  swapTo(root.active);
+  replaceWith({ ...fresh(name, avatar), named, onboard, ...(free ? { look, char: save.char } : {}) });
 }
 
 // look: { look, char } del avatar (opcional).
@@ -116,7 +115,7 @@ export async function exportCode() {
   bytes.forEach((b) => (bin += String.fromCharCode(b)));
   return CODE + btoa(bin);
 }
-// Devuelve el perfil que trae el código, o null si el código no sirve.
+// Devuelve el avance que trae el código, o null si el código no sirve.
 export async function readCode(text) {
   try {
     const raw = text.replace(/\s+/g, '');
@@ -130,8 +129,7 @@ export async function readCode(text) {
 }
 // Reemplaza el avance del jugador por el del código (ya leído con readCode).
 export function loadProfile(p) {
-  root.profiles[root.active] = { ...fresh(p.name || 'Jugador 1'), ...fixOnboard({ ...p }) };
-  swapTo(root.active);
+  replaceWith({ ...fresh(p.name || 'Jugador 1'), ...fixOnboard({ ...p }) });
 }
 
 // Modo dev = caja de pruebas: al prenderlo se copia tu partida; todo lo que hagas en dev (monedas, niveles,
@@ -150,8 +148,7 @@ export function restoreBackup() {
   const raw = localStorage.getItem(BACKUP);
   if (!raw) return false;
   const b = JSON.parse(raw);
-  root.profiles[root.active] = b.v ? b.p : b;
-  swapTo(root.active);
+  replaceWith(b.v ? b.p : b);
   localStorage.removeItem(BACKUP);
   return true;
 }

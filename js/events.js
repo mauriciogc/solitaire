@@ -391,7 +391,10 @@ export { EVENT_PLANETS, EVENT_PER_PLANET, EVENT_LEVELS };
 // ready: ya tiene sus dibujos (las que no, todavía no salen).
 const nthSunday = (y, m, n) => { const d = new Date(y, m, 1); return new Date(y, m, 1 + ((7 - d.getDay()) % 7) + (n - 1) * 7); };
 export const FIESTAS = [
-  { key: 'anionuevo', name: 'Año Nuevo', date: (y) => new Date(y, 0, 1) },
+  { key: 'anionuevo', name: 'Año Nuevo', date: (y) => new Date(y, 0, 1), ready: true,
+    ico: 'reloj', deco: 'uvas', color: 'gold',
+    planets: ['Valle de las Uvas', 'Cielo de Cohetes', 'Planeta Medianoche'],
+    ex: [{ space: 'brindis', frame: 'felizano' }, { ring: 'chispas', back: 'medianoche' }, { avatar: 'uvita', title: 'propositos', traveler: 'bolaluz' }] },
   { key: 'candelaria', name: 'Día de la Candelaria', date: (y) => new Date(y, 1, 2), ready: true,
     ico: 'tamal', deco: 'atole', color: 'gold',
     planets: ['Milpa Dorada', 'Valle del Atole', 'Cerro de los Tamales'],
@@ -424,9 +427,19 @@ export const FIESTAS = [
     ico: 'cachorro', deco: 'hueso', color: 'orange',
     planets: ['Parque de los Huesos', 'Valle de las Pelotas', 'Planeta Lomito'],
     ex: [{ space: 'parque', frame: 'patitas' }, { ring: 'huesos', back: 'cachorros' }, { avatar: 'dalmata', title: 'mejoramigo', traveler: 'frisbee' }] },
-  { key: 'gamer', name: 'Día del Gamer', date: (y) => new Date(y, 7, 29) },
-  { key: 'programador', name: 'Día del Programador', date: (y) => new Date(y, 0, 256) }, // día 256: 13 sep (12 en bisiesto)
-  { key: 'inocentes', name: 'Día de los Inocentes', date: (y) => new Date(y, 11, 28) },
+  { key: 'gamer', name: 'Día del Gamer', date: (y) => new Date(y, 7, 29), ready: true,
+    ico: 'control', deco: 'pixcora', color: 'pink',
+    planets: ['Arcade de Neón', 'Valle de los Píxeles', 'Planeta Jefe Final'],
+    ex: [{ space: 'arcade', frame: 'pixeles' }, { ring: 'pixelado', back: 'controles' }, { avatar: 'audifonos', title: 'jefefinal', traveler: 'maquinita' }] },
+  // Día 256: 13 sep (12 en bisiesto).
+  { key: 'programador', name: 'Día del Programador', date: (y) => new Date(y, 0, 256), ready: true,
+    ico: 'laptop', deco: 'llaves', color: 'green',
+    planets: ['Valle del Código', 'Nube de Datos', 'Planeta Binario'],
+    ex: [{ space: 'codigo', frame: 'terminal' }, { ring: 'llavecitas', back: 'binario' }, { avatar: 'bichito', title: 'cerobugs', traveler: 'laptop' }] },
+  { key: 'inocentes', name: 'Día de los Inocentes', date: (y) => new Date(y, 11, 28), ready: true,
+    ico: 'bufon', deco: 'palomita', color: 'red',
+    planets: ['Valle de las Bromas', 'Carpa del Bufón', 'Planeta Palomita'],
+    ex: [{ space: 'bromas', frame: 'inocente' }, { ring: 'cascabeles', back: 'arlequin' }, { avatar: 'bufoncito', title: 'bromista', traveler: 'sorpresa' }] },
 ];
 export const FI_COINS = [20, 30, 40];
 export const FI_REPEAT = [{ coins: 300, undo: 2 }, { wild: 1, coins: 200 }, { wild: 2, coins: 400 }];

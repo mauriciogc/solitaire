@@ -350,7 +350,7 @@ export function openDevMenu({ onGallery, onRefresh }) {
     ] },
     { t: 'Colección', sub: colNow ? `${colNow.name} · ${colNow.state.n} fichas` : 'no hay esta semana', items: [
       { l: colNow ? 'Siguiente colección' : 'Ir a la próxima', fn: () => ((save.devDay = (save.devDay || 0) + daysToNextCol()), persist(), onRefresh()) },
-      colNow && { l: '+30 fichas', fn: () => ((col().state.n += 30), persist(), onRefresh()) },
+      colNow && { l: '+500 fichas', fn: () => ((col().state.n += 500), persist(), onRefresh()) },
       colNow && { l: 'Ver su bienvenida', fn: () => ((col().state.intro = false), persist(), onRefresh()) },
     ] },
     { t: 'Evento del mes', sub: evNow ? `${evNow.name} · nivel ${Math.min(evNow.state.k + 1, EVENT_LEVELS)} de ${EVENT_LEVELS} · ${evNow.state.tk ? 'con boleto' : 'sin boleto'}` : 'no hay este mes', items: [

@@ -1,5 +1,5 @@
 import { save, prefs, persist, resetProfile, renameProfile, exportCode, readCode, loadProfile, setDev } from './storage.js';
-import { UNLOCK, EVENTOS, FIESTAS, isOn, nextEvent, daysToNextCol, plusCols, RACHA_GOALS, RACHA_STEP, rachaGoal, nextIndex, racha, rachaTheme, rachaReady, rachaHot, rachaWin, rachaLose, rachaClaim, msToMidnight, col, colLeft, colWin, colOffers, colBuy, ev, evLeft, evTicketLeft, evPrize, evEnter, evWin, evLose, evAlbum, fiAlbum, EVENT_PLANETS, EVENT_PER_PLANET, EVENT_LEVELS, fiesta, fiestaLeft, nextFiesta, fiEnter, fiWin, fiLose, FIESTA_PLANETS, FIESTA_PER_PLANET, FIESTA_LEVELS } from './events.js';
+import { UNLOCK, EVENTOS, FIESTAS, COLECCIONES, isOn, nextEvent, daysToNextCol, plusCols, RACHA_GOALS, RACHA_STEP, rachaGoal, nextIndex, racha, rachaTheme, rachaReady, rachaHot, rachaWin, rachaLose, rachaClaim, msToMidnight, col, colLeft, colWin, colOffers, colBuy, ev, evLeft, evTicketLeft, evPrize, evEnter, evWin, evLose, evAlbum, fiAlbum, EVENT_PLANETS, EVENT_PER_PLANET, EVENT_LEVELS, fiesta, fiestaLeft, nextFiesta, fiEnter, fiWin, fiLose, FIESTA_PLANETS, FIESTA_PER_PLANET, FIESTA_LEVELS } from './events.js';
 import { WORLD_COUNT, LEVELS_PER_WORLD, TOTAL_LEVELS, worldInfo, generateLevel, variantLevel, MECH_INTRO, MECH_NAMES, secretId, isSecret, eventLevel, fiestaLevel } from './levels.js';
 import { Game, faceHTML, backHTML } from './game.js';
 import { DAILY_PATH, dailyState, starsNeeded, TICKET_PRICE, ticketCost, ticketRefund, coinsFor, bossChest, openSurprise, SECRET_MULT, SECRET_PRIZE } from './economy.js';
@@ -842,6 +842,23 @@ const SHOP_HINT = {
   space: 'El cielo de tus constelaciones y planetas.',
   frame: 'El marco de las postales de tu álbum.',
 };
+// La tienda se separa por de dónde sale cada cosa. Los exclusivos solo se ven si ya son tuyos.
+const ORIGINS = [
+  { k: 'tienda', name: 'De la tienda', ico: 'bag' },
+  { k: 'col', name: 'Colección de la semana', ico: 'gift' },
+  { k: 'mes', name: 'Evento del mes', ico: 'star' },
+  { k: 'fiesta', name: 'Festividades de un día', ico: 'flame' },
+];
+// De qué evento salió un exclusivo: { g: grupo de ORIGINS, ico, name } (o null si es de la tienda).
+function exFrom(it) {
+  if (!it.ev) return null;
+  const f = FIESTAS.find((x) => x.key === it.ev);
+  if (f) return { g: 'fiesta', ico: f.ico, name: f.name };
+  const e = Object.values(EVENTOS).find((x) => x.key === it.ev);
+  if (e) return { g: 'mes', ico: e.ico, name: e.name };
+  const c = COLECCIONES.find((x) => x.key === it.ev);
+  return c ? { g: 'col', ico: c.token, name: c.name } : null;
+}
 const inUse = (sec, k) => (sec === 'avatar' ? save.look === 'char' && save.char === k : equipped(sec) === k);
 function shopPreview(sec, k) {
   if (sec === 'avatar') return avatarHTML({ ...save, look: 'char', char: k }, 'huge');
@@ -851,7 +868,7 @@ function shopPreview(sec, k) {
   if (sec === 'face') return `<div class="face-prev face-${k}"><div class="card up">${faceHTML({ rank: 6, suit: 1 })}</div><div class="card up">${faceHTML({ rank: 12, suit: 0 })}</div></div>`;
   if (sec === 'space') return `<div class="space-prev space-${k}"><div class="space"></div>${miniPlanet(['#86cf5c', '#4d9f45', '#2f86c8', '#ffc83d'])}</div>`;
   if (sec === 'frame') return `<div class="frame-prev">${postcardHTML(0, 24, 'mini', k)}</div>`;
-  return `<div class="title-prev"><b>${esc(save.name)}</b>${titleHTML(k)}</div>`;
+  return `<div class="title-prev">${titleHTML(k)}</div>`;
 }
 let shelf = null; // vitrina 3D de los viajeros: un solo lienzo WebGL mientras se ven
 const closeShelf = () => (shelf?.dispose(), (shelf = null));
@@ -885,7 +902,8 @@ function openShop(tab = 'avatar') {
       : own ? '<span class="s-use">Usar</span>'
       : lock ? `<span class="s-lock">${icon('lock')}Mundo ${lock}</span>`
       : `<span class="s-price ${save.coins < it.price ? 'short' : ''}">${coin()}${fmt(it.price)}</span>`;
-    return `<button class="sitem ${on ? 'on' : ''} ${own ? 'own' : ''} ${lock ? 'locked' : ''}" data-k="${it.k}"><div class="s-art">${shopPreview(sec, it.k)}</div>${sec === 'title' ? '' : `<b>${it.name}</b>`}${it.text ? `<small>${it.text}</small>` : ''}${foot}</button>`;
+    const ex = exFrom(it);
+    return `<button class="sitem ${on ? 'on' : ''} ${own ? 'own' : ''} ${lock ? 'locked' : ''}" data-k="${it.k}">${ex ? `<i class="s-ev" title="${ex.name}">${icon(ex.ico)}</i>` : ''}<div class="s-art">${shopPreview(sec, it.k)}</div>${sec === 'title' ? '' : `<b>${it.name}</b>`}${it.text ? `<small>${it.text}</small>` : ''}${foot}</button>`;
   };
   const show = (sec, anim = true) => {
     const g = groupOf(sec), newGroup = groupOf(tab) !== g || !tabs.children.length;
@@ -900,7 +918,9 @@ function openShop(tab = 'avatar') {
     closeShelf();
     grid.className = `sgrid sg-${sec}`;
     m.el.querySelector('.mbody').scrollTop = 0;
-    grid.innerHTML = shopItems(sec).map((it) => card(sec, it)).join('');
+    // Un subtítulo por origen (si solo hay de la tienda, sin subtítulo).
+    const list = shopItems(sec), groups = ORIGINS.map((o) => ({ ...o, its: list.filter((it) => (exFrom(it)?.g || 'tienda') === o.k) })).filter((o) => o.its.length);
+    grid.innerHTML = groups.map((o) => (groups.length > 1 ? `<h3 class="s-sub">${icon(o.ico)}${o.name}</h3>` : '') + o.its.map((it) => card(sec, it)).join('')).join('');
     if (anim && !reduced()) [...grid.children].forEach((el, i) => el.animate([{ opacity: 0, translate: '0 16px', scale: 0.9 }, { opacity: 1, translate: '0 0', scale: 1 }], { duration: 360, delay: i * 45, easing: 'cubic-bezier(0.34, 1.45, 0.64, 1)', fill: 'backwards' }));
     if (sec === 'traveler') travShelf(grid).then(() => tab !== 'traveler' && closeShelf());
   };

@@ -523,6 +523,93 @@ const MODELS = {
       tail.rotation.x = -0.7; tail.rotation.z = Math.sin(t * 14) * 0.6;
     } };
   },
+  // Maquinita (Día del Gamer): maquinita de arcade morada; la pantalla cambia de color, la palanca se mueve y los botones se prenden.
+  maquinita(part, toon) {
+    const g = new THREE.Group(), cab = new THREE.Group(), stick = new THREE.Group();
+    cab.add(part(new THREE.BoxGeometry(0.4, 0.62, 0.32), '#5a4f8a', { ol: 0.05 }));
+    cab.add(part(new THREE.BoxGeometry(0.44, 0.12, 0.36), '#ff5f7e', { y: 0.36, ol: 0.06 }));
+    cab.add(part(new THREE.BoxGeometry(0.42, 0.06, 0.24), '#3f3570', { y: -0.02, z: 0.2, rx: 0.3, ol: 0.08 }));
+    const screen = toon({ color: '#5ff0ff' });
+    cab.add(part(new THREE.BoxGeometry(0.3, 0.22, 0.02), null, { y: 0.16, z: 0.165, ol: 0.1, mat: screen }));
+    for (const [x, y] of [[-0.06, 0.2], [0.04, 0.14], [0.08, 0.2]]) cab.add(part(new THREE.BoxGeometry(0.03, 0.03, 0.01), '#fff6ee', { x, y, z: 0.178, ol: 0 }));
+    const btn = ['#ffc83d', '#7fd36a'].map((c, k) => { const m = toon({ color: c }); cab.add(part(new THREE.CylinderGeometry(0.028, 0.028, 0.03, 12), null, { x: 0.06 + k * 0.08, y: 0.02, z: 0.22, rx: 0.3, ol: 0.2, mat: m })); return m; });
+    stick.add(part(new THREE.CylinderGeometry(0.012, 0.012, 0.1, 8), '#d8d2f0', { y: 0.05, ol: 0.2 }));
+    stick.add(part(new THREE.SphereGeometry(0.035, 12, 10), '#ff5f7e', { y: 0.11, ol: 0.12 }));
+    stick.position.set(-0.1, 0.01, 0.21); cab.add(stick);
+    cab.rotation.set(0.2, -0.5, 0);
+    g.add(cab);
+    const cols = ['#5ff0ff', '#ff7aa6', '#ffc83d', '#7fd36a'].map((c) => new THREE.Color(c)), dim = new THREE.Color('#6a5ab0');
+    return { obj: g, tick: (t) => {
+      cab.position.y = Math.sin(t * 2) * 0.05; cab.rotation.z = Math.sin(t * 1.4) * 0.08;
+      screen.color.copy(cols[Math.floor(Math.abs(t) * 2) % cols.length]); // la vitrina arranca con t un poquito negativo
+      stick.rotation.z = Math.sin(t * 5) * 0.5; stick.rotation.x = Math.cos(t * 3.4) * 0.35;
+      btn.forEach((m, k) => m.color.copy((Math.floor(Math.abs(t) * 4) + k) % 2 ? cols[2 + k] : dim));
+    } };
+  },
+  // Laptop voladora (Día del Programador): la tapa se abre y se cierra un poquito; en la pantalla parpadea el cursor.
+  laptop(part, toon) {
+    const g = new THREE.Group(), all = new THREE.Group(), lid = new THREE.Group();
+    all.add(part(new THREE.BoxGeometry(0.56, 0.04, 0.38), '#d8d2f0', { ol: 0.05 }));
+    for (let r = 0; r < 3; r++) for (let c = 0; c < 6; c++) all.add(part(new THREE.BoxGeometry(0.055, 0.012, 0.05), '#5a4f8a', { x: -0.17 + c * 0.068, y: 0.025, z: -0.1 + r * 0.068, ol: 0 }));
+    lid.add(part(new THREE.BoxGeometry(0.56, 0.36, 0.03).translate(0, 0.18, 0), '#5a4f8a', { ol: 0.05 }));
+    lid.add(part(new THREE.BoxGeometry(0.48, 0.28, 0.01).translate(0, 0.18, 0), '#163a26', { z: 0.017, ol: 0 }));
+    for (const [x, y, w] of [[-0.12, 0.27, 0.16], [-0.08, 0.22, 0.24], [-0.1, 0.17, 0.2], [-0.13, 0.12, 0.14]]) lid.add(part(new THREE.BoxGeometry(w, 0.022, 0.01), '#7fe8a0', { x: x + w / 2 - 0.06, y, z: 0.024, ol: 0 }));
+    const cursor = part(new THREE.BoxGeometry(0.022, 0.034, 0.01), '#c8f5d8', { x: 0.04, y: 0.12, z: 0.026, ol: 0 });
+    lid.add(cursor);
+    lid.position.set(0, 0.02, -0.19); all.add(lid);
+    all.rotation.set(0.35, -0.5, 0);
+    g.add(all);
+    return { obj: g, tick: (t) => {
+      all.position.y = Math.sin(t * 2) * 0.05; all.rotation.z = Math.sin(t * 1.3) * 0.08;
+      lid.rotation.x = -0.25 - (Math.sin(t * 1.6) + 1) * 0.12;
+      cursor.visible = Math.floor(t * 2.5) % 2 === 0;
+    } };
+  },
+  // Caja de sorpresas (Día de los Inocentes): caja de arlequín; se abre la tapa y salta el payasito con su resorte.
+  sorpresa(part) {
+    const g = new THREE.Group(), box = new THREE.Group(), lid = new THREE.Group(), clown = new THREE.Group(), spring = [];
+    box.add(part(new THREE.BoxGeometry(0.44, 0.4, 0.44), '#e8434f', { ol: 0.05 }));
+    for (const [x, z, ry] of [[0, 0.222, 0], [0.222, 0, Math.PI / 2]]) box.add(part(new THREE.BoxGeometry(0.12, 0.12, 0.01).rotateZ(Math.PI / 4), '#ffc83d', { x, z, ry, ol: 0 }));
+    box.add(part(new THREE.CylinderGeometry(0.02, 0.02, 0.1, 8).rotateZ(Math.PI / 2), '#ffc83d', { x: 0.27, ol: 0.2 }));
+    lid.add(part(new THREE.BoxGeometry(0.46, 0.04, 0.46).translate(0, 0, 0.23), '#8a5cf0', { ol: 0.06 }));
+    lid.position.set(0, 0.21, -0.23); box.add(lid);
+    for (let k = 0; k < 4; k++) { const r = part(new THREE.TorusGeometry(0.06, 0.014, 6, 16).rotateX(Math.PI / 2), '#c9c4e0', { ol: 0 }); box.add(r); spring.push(r); }
+    clown.add(part(new THREE.SphereGeometry(0.12, 18, 14), '#ffd3a8', { ol: 0.07 }));
+    clown.add(part(new THREE.SphereGeometry(0.035, 10, 8), '#e8434f', { z: 0.12, ol: 0.15 }));
+    for (const s of [-1, 1]) {
+      clown.add(part(new THREE.SphereGeometry(0.02, 8, 6), '#2a1f5c', { x: s * 0.045, y: 0.035, z: 0.105, ol: 0 }));
+      clown.add(part(new THREE.ConeGeometry(0.05, 0.16, 10), s < 0 ? '#e8434f' : '#ffc83d', { x: s * 0.08, y: 0.13, rz: -s * 0.6, ol: 0.1 }));
+      clown.add(part(new THREE.SphereGeometry(0.025, 8, 6), '#ffc83d', { x: s * 0.14, y: 0.19, ol: 0.15 }));
+    }
+    clown.add(part(new THREE.TorusGeometry(0.09, 0.03, 6, 14).rotateX(Math.PI / 2), '#fff6ee', { y: -0.11, ol: 0.1 }));
+    box.add(clown);
+    box.rotation.set(0.25, -0.6, 0);
+    g.add(box);
+    return { obj: g, tick: (t) => {
+      box.position.y = Math.sin(t * 2) * 0.05; box.rotation.z = Math.sin(t * 1.3) * 0.08;
+      const c = (((t * 0.5) % 1) + 1) % 1, o = c < 0.15 ? c / 0.15 : c < 0.6 ? 1 : c < 0.8 ? 1 - (c - 0.6) / 0.2 : 0;
+      const pop = o * (1 + Math.sin(t * 14) * 0.08 * o);
+      lid.rotation.x = -Math.min(1, o * 2) * 1.9;
+      spring.forEach((r, k) => { r.position.y = 0.16 + pop * 0.08 * (k + 1); r.visible = o > 0.02; });
+      clown.position.y = 0.12 + pop * 0.4; clown.rotation.z = Math.sin(t * 6) * 0.25 * o; clown.scale.setScalar(0.3 + 0.7 * Math.min(1, o * 1.5));
+    } };
+  },
+  // Bola de medianoche (Año Nuevo): bola de espejitos dorada que gira; las chispas le dan vueltas y titilan.
+  bolaluz(part) {
+    const g = new THREE.Group(), ball = new THREE.Group(), sparks = [];
+    ball.add(part(new THREE.IcosahedronGeometry(0.28, 1), '#ffc83d', { ol: 0.06 }));
+    const geo = new THREE.IcosahedronGeometry(0.28, 1), pos = geo.attributes.position, v = new THREE.Vector3();
+    for (let i = 0; i < pos.count; i += 9) { v.fromBufferAttribute(pos, i).multiplyScalar(1.01); ball.add(part(new THREE.BoxGeometry(0.05, 0.05, 0.01).lookAt(v), i % 2 ? '#fff6e6' : '#ffe27a', { x: v.x, y: v.y, z: v.z, ol: 0 })); }
+    ball.add(part(new THREE.CylinderGeometry(0.06, 0.08, 0.06, 12), '#b06ce0', { y: 0.3, ol: 0.12 }));
+    ball.add(part(new THREE.TorusGeometry(0.03, 0.012, 6, 12), '#ffc83d', { y: 0.36, ol: 0.2 }));
+    g.add(ball);
+    const cols = ['#ffe27a', '#ff7ab8', '#5ff0ff', '#ffffff'];
+    for (let k = 0; k < 6; k++) { const sp = part(new THREE.OctahedronGeometry(0.04), cols[k % 4], { ol: 0.2 }); g.add(sp); sparks.push(sp); }
+    return { obj: g, tick: (t) => {
+      ball.position.y = Math.sin(t * 2) * 0.05; ball.rotation.y = t * 1.2; ball.rotation.z = Math.sin(t * 1.3) * 0.1;
+      sparks.forEach((sp, k) => { const a = t * 1.4 + (k / 6) * Math.PI * 2, r = 0.42 + Math.sin(t * 3 + k) * 0.04; sp.position.set(Math.cos(a) * r, Math.sin(t * 2 + k * 1.7) * 0.2, Math.sin(a) * r); sp.rotation.y = t * 4; sp.scale.setScalar(0.5 + Math.abs(Math.sin(t * 5 + k)) * 0.8); });
+    } };
+  },
   alebrije(part) {
     const g = new THREE.Group(), body = new THREE.Group();
     body.add(part(new THREE.SphereGeometry(0.2, 20, 14).scale(1, 0.85, 1.35), '#ff5fa8', { ol: 0.07 }));

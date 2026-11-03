@@ -144,6 +144,34 @@ export const EVENT_BIOMES = {
     // [agua, tierra desde, cuántos árboles]
     [[0.42, 0.64, 1.2], [0.36, 0.58, 1.4], [0.3, 0.52, 1.6]],
   ),
+  // Festividad: Día del Gamer (3 planetas). Cristales de neón sobre pasto morado y lagos cian; el rosa sube en cada planeta.
+  gamer: sameLook(
+    { emblem: ['#ff5f7e', '#5ff0ff', '#5a4f8a'], colors: [['#1f6ab8', '#5ff0ff', '#e8e0ff', '#6a5ab0', '#ff5f7e', '#ff9cb8']],
+      planet: { amp: 0.15, freq: 2.0, seed: 227, outline: 0x1a0f3a, glow: 0xff7aa6, prop: 'crystal', crown: '#5ff0ff', path: '#fff6ee' } },
+    // [agua, rosa desde, cuántos cristales]
+    [[0.4, 0.62, 1.1], [0.34, 0.56, 1.3], [0.3, 0.5, 1.5]],
+  ),
+  // Festividad: Día del Programador (3 planetas). Valles verdes de circuito con cristales verdes; el verde claro sube.
+  programador: sameLook(
+    { emblem: ['#5ad68c', '#163a26', '#7fe8a0'], colors: [['#164a5a', '#2fae9a', '#d8f5e0', '#2f7a4a', '#5ad68c', '#a8f0c0']],
+      planet: { amp: 0.12, freq: 2.2, seed: 229, outline: 0x06200f, glow: 0x7fe8a0, prop: 'crystal', crown: '#c8f5d8', path: '#eafff0' } },
+    // [agua, verde claro desde, cuántos cristales]
+    [[0.42, 0.62, 1.1], [0.36, 0.56, 1.3], [0.3, 0.5, 1.5]],
+  ),
+  // Festividad: Día de los Inocentes (3 planetas). Carpas de colores: pasto morado, cerros rojos y árboles dorados.
+  inocentes: sameLook(
+    { emblem: ['#e8434f', '#ffc83d', '#8a5cf0'], colors: [['#3a5fb8', '#6f9be8', '#fff0d6', '#8a5cf0', '#e8434f', '#ff8a8f']],
+      planet: { amp: 0.14, freq: 1.8, seed: 233, outline: 0x2a0a1a, glow: 0xffc83d, prop: 'round', crown: '#ffc83d', path: '#fff6ee' } },
+    // [agua, rojo desde, cuántos árboles]
+    [[0.4, 0.62, 1.1], [0.34, 0.56, 1.3], [0.3, 0.5, 1.5]],
+  ),
+  // Festividad: Año Nuevo (3 planetas). Viñedos morados con velitas doradas; el dorado sube en cada planeta.
+  anionuevo: sameLook(
+    { emblem: ['#ffc83d', '#b06ce0', '#3a1a6a'], colors: [['#2a1a6a', '#5a3fb0', '#f6e6c8', '#7b3fb8', '#ffb13d', '#ffe27a']],
+      planet: { amp: 0.13, freq: 1.9, seed: 239, outline: 0x1a0a30, glow: 0xffd27a, prop: 'candle', crown: '#ffc83d', path: '#fff6e6' } },
+    // [agua, dorado desde, cuántas velitas]
+    [[0.42, 0.64, 1.1], [0.36, 0.58, 1.3], [0.3, 0.52, 1.5]],
+  ),
   // Halloween: mares morados, huertos de calabaza naranjas y árboles otoñales; el naranja sube en cada planeta.
   halloween: sameLook(
     { emblem: ['#5a2f9a', '#3a1a6a', '#ff8a1a'], colors: [['#3a1a6a', '#6a3fb0', '#c9b0e8', '#4a6a3a', '#ff8a1a', '#ffb13d']],
@@ -372,6 +400,44 @@ function mantelPerroTile() {
   s += `<rect width="${W}" height="${H}" fill="#1a0c04" opacity=".55"/>`;
   return { url: enc(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">${s}</svg>`), w: W, h: H };
 }
+// Mantel del Día del Gamer: tapete morado de cuadritos con corazones de píxeles.
+function mantelGamerTile() {
+  const W = 120, H = 120;
+  let s = `<rect width="${W}" height="${H}" fill="#3a2f7a"/>`;
+  for (let i = 0; i < 10; i++) s += `<path d="M${i * 12} 0V${H}M0 ${i * 12}H${W}" stroke="#5a4fb0" stroke-width="1" opacity=".6"/>`;
+  const heart = (x, y, c) => ['.XX.XX.', 'XXXXXXX', '.XXXXX.', '..XXX..', '...X...'].map((r, j) => [...r].map((ch, i) => (ch === 'X' ? `<rect x="${x + i * 3}" y="${y + j * 3}" width="3" height="3" fill="${c}"/>` : '')).join('')).join('');
+  s += heart(14, 16, '#ff5f7e') + heart(76, 70, '#5ff0ff') + heart(78, 14, '#ffc83d') + heart(16, 82, '#7fd36a');
+  s += `<rect width="${W}" height="${H}" fill="#0a0620" opacity=".55"/>`;
+  return { url: enc(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">${s}</svg>`), w: W, h: H };
+}
+// Mantel del Día del Programador: tablero verde de circuito con ceros y unos.
+function mantelProgramadorTile() {
+  const W = 120, H = 120;
+  let s = `<rect width="${W}" height="${H}" fill="#1f5a3a"/>`;
+  s += `<path d="M0 30H40L52 42H120M0 90H30L42 78H80L92 90H120M60 0V20L70 30M30 120V100" fill="none" stroke="#5ad68c" stroke-width="2" opacity=".5"/>`;
+  [[40, 30], [52, 42], [30, 90], [80, 78], [60, 20], [30, 100]].forEach(([x, y]) => (s += `<circle cx="${x}" cy="${y}" r="3" fill="#7fe8a0" opacity=".7"/>`));
+  [[14, 56, '1'], [72, 60, '0'], [100, 16, '1'], [96, 108, '0']].forEach(([x, y, t]) => (s += `<text x="${x}" y="${y}" font-family="monospace" font-weight="700" font-size="14" fill="#a8f0c0" opacity=".55">${t}</text>`));
+  s += `<rect width="${W}" height="${H}" fill="#04140a" opacity=".55"/>`;
+  return { url: enc(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">${s}</svg>`), w: W, h: H };
+}
+// Mantel del Día de los Inocentes: rombos de arlequín rojos y dorados.
+function mantelInocentesTile() {
+  const W = 120, H = 120;
+  let s = `<rect width="${W}" height="${H}" fill="#c22c3c"/>`;
+  for (let j = 0; j < 4; j++) for (let i = 0; i < 4; i++) if ((i + j) % 2 === 0) s += `<path d="M${i * 30 + 15} ${j * 30}l15 15-15 15-15-15z" fill="#ffc83d" opacity=".75"/>`;
+  for (let j = 0; j < 4; j++) for (let i = 0; i < 4; i++) if ((i + j) % 2) s += `<path d="M${i * 30 + 15} ${j * 30}l15 15-15 15-15-15z" fill="#8a5cf0" opacity=".55"/>`;
+  s += `<rect width="${W}" height="${H}" fill="#14040a" opacity=".55"/>`;
+  return { url: enc(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">${s}</svg>`), w: W, h: H };
+}
+// Mantel de Año Nuevo: terciopelo morado con confeti dorado y serpentinas.
+function mantelAnioNuevoTile() {
+  const W = 120, H = 120;
+  let s = `<rect width="${W}" height="${H}" fill="#4a2a8a"/>`;
+  s += `<path d="M0 40q15-12 30 0t30 0 30 0 30 0M0 100q15-12 30 0t30 0 30 0 30 0" fill="none" stroke="#ff7ab8" stroke-width="2.4" opacity=".55"/>`;
+  [[20, 16, '#ffc83d'], [70, 24, '#5ff0ff'], [100, 62, '#ffc83d'], [44, 70, '#ff7ab8'], [16, 84, '#ffe27a'], [86, 108, '#5ff0ff']].forEach(([x, y, c], i) => (s += `<rect x="${x}" y="${y}" width="6" height="3.4" fill="${c}" transform="rotate(${i * 37} ${x + 3} ${y + 1.7})"/>`));
+  s += `<rect width="${W}" height="${H}" fill="#0a0420" opacity=".55"/>`;
+  return { url: enc(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">${s}</svg>`), w: W, h: H };
+}
 // Mantel del Día de las Madres: rosa clarito con florecitas y su orilla de encaje.
 function mantelMadresTile() {
   const W = 120, H = 120;
@@ -482,6 +548,21 @@ const P = {
   cachorroProp: () => `<g ${T(0, 0, -12)}>${drop(circ(38))}<g transform="translate(-52 -54) scale(3.25)">${icon('cachorro').replace(/^<svg[^>]*>|<\/svg>$/g, '')}</g></g>`,
   huesos: () => [[-10, -12, -28, 2.2], [14, 18, 20, 1.7]].map(([x, y, a, k]) => `<g ${T(x, y, a)}>${drop('M-30 -6h60v12h-60z', 3, 4)}<g transform="translate(${-16 * k} ${-16 * k}) scale(${k})">${icon('hueso').replace(/^<svg[^>]*>|<\/svg>$/g, '')}</g></g>`).join(''),
   tennis: () => `${drop(circ(26))}${tt(circ(26), '#d8f05a', '#b8d03a', '<path d="M-24-10q14 10 0 22M24-12q-14 10 0 24" stroke="#fff" stroke-width="3.4" fill="none"/>')}`,
+  // Día del Gamer: el control, dos corazones de píxeles y un cartucho.
+  controlProp: () => `<g ${T(0, 0, -14)}>${drop('M-46 -24h92v52h-92z')}<g transform="translate(-52 -54) scale(3.25)">${icon('control').replace(/^<svg[^>]*>|<\/svg>$/g, '')}</g></g>`,
+  pixcoras: () => [[-14, -10, -14, 2], [18, 16, 18, 1.5]].map(([x, y, a, k]) => `<g ${T(x, y, a)}>${drop(circ(12 * k), 3, 4)}<g transform="translate(${-16 * k} ${-16 * k}) scale(${k})">${icon('pixcora').replace(/^<svg[^>]*>|<\/svg>$/g, '')}</g></g>`).join(''),
+  cartucho: () => `<g ${T(0, 0, 16)}>${drop('M-26 -32h52v64h-52z')}${tt('M-26 -32h52v58l-6 6h-46z', '#8a80c0', '#6a60a0')}${tt('M-18 -22h36v30h-36z', '#ff5f7e', '#d63d5f', '<path d="M-12 -12h20M-12 -4h14" stroke="#fff" stroke-width="3" stroke-linecap="round"/>', 2.2)}<path d="M-16 20h32" stroke="#5a5090" stroke-width="3" stroke-dasharray="3 3"/></g>`,
+  // Día del Programador: la laptop, dos llaves { } y el patito de hule que escucha los bugs.
+  laptopProp: () => `<g ${T(0, 0, -10)}>${drop('M-46 -36h92v74h-92z')}<g transform="translate(-52 -54) scale(3.25)">${icon('laptop').replace(/^<svg[^>]*>|<\/svg>$/g, '')}</g></g>`,
+  llavesProp: () => [[-12, -8, -14, 1.9], [18, 16, 16, 1.4]].map(([x, y, a, k]) => `<g ${T(x, y, a)}><g transform="translate(${-16 * k} ${-16 * k}) scale(${k})">${icon('llaves').replace(/^<svg[^>]*>|<\/svg>$/g, '')}</g></g>`).join(''),
+  patohule: () => `<g ${T(0, 0, -8)}>${drop(ELLd(0, 10, 32, 20))}${tt('M-30 10C-30-4-16-6-2-2 0-20 26-22 26 -4 26 4 22 8 18 10 22 26-30 30-30 10z', '#ffd84a', '#f0b42a')}${tt('M24 -8l14 2-12 6z', '#ff9c3d', '#e2753a', '', 2.2)}<circle cx="14" cy="-8" r="3.6" fill="${K}"/><circle cx="13" cy="-9.2" r="1.2" fill="#fff"/><path d="M-20 6q10 12 24 2" fill="none" stroke="#e0a020" stroke-width="3" stroke-linecap="round"/></g>`,
+  // Día de los Inocentes: el gorro de bufón, dos palomitas y unos cascabeles.
+  bufonProp: () => `<g ${T(0, 0, -12)}>${drop('M-44 -30h88v66h-88z')}<g transform="translate(-52 -56) scale(3.25)">${icon('bufon').replace(/^<svg[^>]*>|<\/svg>$/g, '')}</g></g>`,
+  palomitas: () => [[-12, -10, -10, 2], [18, 16, 14, 1.5]].map(([x, y, a, k]) => `<g ${T(x, y, a)}>${drop(circ(12 * k), 3, 4)}<g transform="translate(${-16 * k} ${-16 * k}) scale(${k})">${icon('palomita').replace(/^<svg[^>]*>|<\/svg>$/g, '')}</g></g>`).join(''),
+  cascabelesProp: () => [[-12, -8, -18, 1.7], [16, 14, 14, 1.4]].map(([x, y, a, k]) => `<g ${T(x, y, a)}>${drop(circ(11 * k), 3, 4)}<g transform="translate(${-16 * k} ${-17 * k}) scale(${k})">${icon('cascabel').replace(/^<svg[^>]*>|<\/svg>$/g, '')}</g></g>`).join(''),
+  // Año Nuevo: el reloj de las doce, dos racimos de uvas y estrellitas doradas.
+  relojProp: () => `<g ${T(0, 0, -10)}>${drop(circ(38))}<g transform="translate(-52 -56) scale(3.25)">${icon('reloj').replace(/^<svg[^>]*>|<\/svg>$/g, '')}</g></g>`,
+  uvasProp: () => [[-12, -8, -16, 2], [18, 16, 18, 1.5]].map(([x, y, a, k]) => `<g ${T(x, y, a)}>${drop(circ(12 * k), 3, 4)}<g transform="translate(${-16 * k} ${-16 * k}) scale(${k})">${icon('uvas').replace(/^<svg[^>]*>|<\/svg>$/g, '')}</g></g>`).join(''),
   // Halloween: calabaza tallada, murciélagos y un caldero con poción.
   pumpkin: () => `${drop(ELLd(0, 2, 48, 38))}<g transform="translate(-54 -62) scale(3.4)">${icon('calabaza').replace(/^<svg[^>]*>|<\/svg>$/g, '')}</g>`,
   bats: () => [[-14, -10, -15, 2.2], [20, 18, 20, 1.6]].map(([x, y, a, k]) => `<g ${T(x, y, a)}><g transform="translate(${-16 * k} ${-16 * k}) scale(${k})">${icon('murcielago').replace(/#5a4a8a/g, '#a890d8').replace(/#3f3270/g, '#7a62b8').replace(/^<svg[^>]*>|<\/svg>$/g, '')}</g></g>`).join(''),
@@ -522,6 +603,10 @@ const EVENT_TABLES = {
   padre: { tile: mantelPadreTile, tint: '#060e24', props: ['corbataProp', 'tools', ['mug', ['#4aa8de', '#2f86c0', '#bfe2ff']], 'letter'] },
   gato: { tile: mantelGatoTile, tint: '#0e0820', props: ['gatitoProp', 'estambres', ['mug', ['#b48cff', '#8a5cf0', '#e2d4ff']], 'pescadito'] },
   perro: { tile: mantelPerroTile, tint: '#140a04', props: ['cachorroProp', 'huesos', ['mug', ['#ff9c5b', '#e2753a', '#ffe0c4']], 'tennis'] },
+  gamer: { tile: mantelGamerTile, tint: '#0a0620', props: ['controlProp', 'pixcoras', ['mug', ['#ff5f7e', '#d63d5f', '#ffc2d0']], 'cartucho'] },
+  programador: { tile: mantelProgramadorTile, tint: '#04140a', props: ['laptopProp', 'llavesProp', ['mug', ['#5ad68c', '#2f9e5c', '#c8f5d8']], 'patohule'] },
+  inocentes: { tile: mantelInocentesTile, tint: '#14040a', props: ['bufonProp', 'palomitas', ['mug', ['#e8434f', '#c22c3c', '#ffb0b6']], 'cascabelesProp'] },
+  anionuevo: { tile: mantelAnioNuevoTile, tint: '#0a0420', props: ['relojProp', 'uvasProp', ['mug', ['#ffc83d', '#e89a17', '#fff0c0']], 'goldstars'] },
   halloween: { tile: mantelHalloweenTile, tint: '#0e0618', props: ['pumpkin', 'bats', ['mug', ['#6fd36a', '#3fae4a', '#b8f0a0']], 'cauldron'] },
 };
 // HTML del fondo de la mesa para el mundo w (o la del evento del mes: theme = su clave).

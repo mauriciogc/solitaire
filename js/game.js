@@ -1263,9 +1263,10 @@ export class Game {
         cls: 'win',
         body: `<div class="win-top"><div class="rays"></div>${ev ? `<div class="ev-win">${icon(ev.ico, 0, 0, 'big')}</div>` : `<div class="big-stars">${starsHTML(stars)}</div>`}</div>${note}`,
         // Sin las 3 estrellas puede repetirlo ahí mismo (gratis: ya lo ganó). Se queda su mejor resultado.
+        // Repetir es solo el ícono; Continuar ocupa el resto del renglón (o todo, si no hay Repetir).
         buttons: [
-          res.replay && stars < 3 && { label: `${icon('undo')} Repetir`, cls: 'ghost', onClick: () => this.opts.onReplay() },
-          { label: `Continuar ${icon('next')}`, cls: 'green wide', onClick: () => this.opts.onDone?.(res) },
+          res.replay && stars < 3 && { label: icon('replay'), cls: 'ghost sq', title: 'Repetir', onClick: () => this.opts.onReplay() },
+          { label: `Continuar ${icon('next')}`, cls: `green ${res.replay && stars < 3 ? 'grow' : 'wide'}`, onClick: () => this.opts.onDone?.(res) },
         ].filter(Boolean),
       });
       // Jefe sin cofre (el del evento o uno ya ganado): los globos salen aquí. Si hay cofre, salen en su ventana.

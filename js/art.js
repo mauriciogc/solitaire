@@ -156,6 +156,40 @@ const ICONS = {
     const sh = (g, c, t = '') => `<g fill="${c}" ${t}>${[[7.4, 11.8], [7.4, 20.2], [24.6, 11.8], [24.6, 20.2]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="${3.8 + g}"/>`).join('')}<rect x="7.4" y="${13.2 - g}" width="17.2" height="${5.6 + 2 * g}"/></g>`;
     return sh(1.1, K) + sh(0, '#e8d8b8') + sh(-0.5, '#fff6e6', 'transform="translate(-.5 -.8)"') + '<path d="M9 15h12" stroke="#fff" stroke-width="1.3" stroke-linecap="round" opacity=".9"/>';
   },
+  // Festividad: Día del Gamer (control = ícono, corazón de píxeles = adorno).
+  control: () => tshape('M10 9h12c4.2 0 6.6 2.8 7.2 6.8l.9 6c.5 3.2-2.4 5-4.6 3.1L22.2 22H9.8l-3.3 2.9c-2.2 1.9-5.1.1-4.6-3.1l.9-6C3.4 11.8 5.8 9 10 9z', '#5a4f8a', '#3f3570',
+    '<path d="M7.6 12.4h2.8V15h2.6v2.8h-2.6v2.6H7.6v-2.6H5V15h2.6z" fill="#d8d2f0"/><path d="M13.4 12.6h5.2" stroke="#8a80c0" stroke-width="1.4" stroke-linecap="round"/>', 2.2)
+    + [[22.4, 13, '#ff5f7e'], [25.4, 15.8, '#5fd1f0'], [19.4, 15.8, '#ffc83d'], [22.4, 18.6, '#7fd36a']].map(([x, y, c]) => `<circle cx="${x}" cy="${y}" r="1.7" fill="${c}" stroke="${K}" stroke-width=".9"/>`).join(''),
+  pixcora: () => {
+    const rows = ['.XX.XX.', 'XXXXXXX', 'XXXXXXX', '.XXXXX.', '..XXX..', '...X...'], c = 3.6, x0 = 3.4, y0 = 6;
+    const cells = (g, f) => rows.map((r, j) => [...r].map((ch, i) => (ch === 'X' ? `<rect x="${(x0 + i * c - g).toFixed(1)}" y="${(y0 + j * c - g).toFixed(1)}" width="${(c + 2 * g).toFixed(1)}" height="${(c + 2 * g).toFixed(1)}" fill="${f(i, j)}"/>` : '')).join('')).join('');
+    return cells(1.4, () => K) + cells(0, (i, j) => (i >= 5 - j || j >= 4 ? '#d63d5f' : '#ff5f7e')) + `<rect x="${x0 + c}" y="${y0 + c}" width="${c}" height="${c}" fill="#ffd0da"/>`;
+  },
+  // Festividad: Día del Programador (laptop = ícono, llaves { } = adorno).
+  laptop: () => tshape('M7 5.6h18a2 2 0 0 1 2 2v13.2H5V7.6a2 2 0 0 1 2-2z', '#5a4f8a', '#3f3570', '<path d="M7.8 8.2h16.4v10H7.8z" fill="#163a26"/><path d="M9.8 11h5M9.8 13.6h8.4M11.8 16.2h3.6" stroke="#7fe8a0" stroke-width="1.4" stroke-linecap="round"/><path d="M17.4 15.2h1.8v2h-1.8z" fill="#7fe8a0"/>', 2.2)
+    + tshape('M2 20.8h28l-2.2 4.4a2 2 0 0 1-1.8 1.1H6a2 2 0 0 1-1.8-1.1z', '#d8d2f0', '#a9a2cc', '<path d="M13 22.6h6" stroke="#7a72a8" stroke-width="1.4" stroke-linecap="round"/>', 2.2),
+  llaves: () => ['M12.4 5C9.4 5 8.4 6.4 8.4 9v3.4c0 2-1 3.2-3 3.6 2 .4 3 1.6 3 3.6V23c0 2.6 1 4 4 4', 'M19.6 5c3 0 4 1.4 4 4v3.4c0 2 1 3.2 3 3.6-2 .4-3 1.6-3 3.6V23c0 2.6-1 4-4 4']
+    .map((d) => `<path d="${d}" fill="none" stroke="${K}" stroke-width="5.6" stroke-linecap="round" stroke-linejoin="round"/><path d="${d}" fill="none" stroke="#5ad68c" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>`).join('')
+    + `<path d="M11.6 6.6q-1.4.4-1.6 2" fill="none" stroke="#c8f5d8" stroke-width="1.1" stroke-linecap="round"/>`,
+  // Festividad: Día de los Inocentes (gorro de bufón = ícono, palomita = adorno, cascabel para el marco).
+  bufon: () => tshape('M5.6 22C4.6 16 2.6 12.4 3.4 7.4 7 9.6 10 13.6 12 22z', '#e8434f', '#c22c3c', '', 2) + tshape('M26.4 22C27.4 16 29.4 12.4 28.6 7.4 25 9.6 22 13.6 20 22z', '#e8434f', '#c22c3c', '', 2)
+    + tshape('M10 22C11 14.4 13.6 8.4 16 4.6 18.4 8.4 21 14.4 22 22z', '#8a5cf0', '#6c3fd4', '<path d="M16 7.6 14.2 22M16 7.6 17.8 22" stroke="#a98af5" stroke-width="1.2"/>', 2)
+    + tshape('M5 21.6h22v4.4a1.6 1.6 0 0 1-1.6 1.6H6.6A1.6 1.6 0 0 1 5 26z', '#ffc83d', '#ec9a17', '<path d="M8 24.4l2-1.4 2 1.4 2-1.4 2 1.4 2-1.4 2 1.4 2-1.4 2 1.4" fill="none" stroke="#c97a10" stroke-width="1.1"/>', 2)
+    + [[3.6, 7.2], [28.4, 7.2], [16, 4.2]].map(([x, y]) => tshape(CIRCLE(x, y, 2.3), '#ffe27a', '#ec9a17', '', 1.6)).join(''),
+  palomita: () => tshape('M3.6 21C6 14.8 11 13 16 13.6 19 14 21.4 16 22.4 18.6 21 24.6 14 27.2 8 25.8L2.6 28z', '#fffaf2', '#d8d2ec', '', 2)
+    + tshape('M8.6 17.6C11.4 11 17 8.2 21.6 9 20.6 14.6 16 18.6 8.6 17.6z', '#eeeaf8', '#c4bce0', '<path d="M12 15.6q3-2 6-5.4M14.4 16.4q2.6-1.4 4.6-4" stroke="#c4bce0" stroke-width="1" fill="none"/>', 2)
+    + tshape(CIRCLE(22.6, 11.2, 4.6), '#fffaf2', '#d8d2ec', '', 2)
+    + tshape('M26.8 10.2 30.6 11.8l-3.6 1.6z', '#ffc83d', '#ec9a17', '', 1.4)
+    + `<circle cx="23.8" cy="10.4" r="1.1" fill="${K}"/><ellipse cx="24.4" cy="13.4" rx="1.4" ry=".8" fill="#ff8fa6" opacity=".7"/>`,
+  cascabel: () => tshape(CIRCLE(16, 17.6, 10.4), '#ffc83d', '#ec9a17', '<path d="M7 16h18" stroke="#c97a10" stroke-width="1.6"/><ellipse cx="12" cy="12" rx="3" ry="1.6" fill="#fff4c7" opacity=".8" transform="rotate(-30 12 12)"/>', 2.2)
+    + `<circle cx="16" cy="22" r="2" fill="${K}"/><path d="M16 22v4.4" stroke="${K}" stroke-width="1.8" stroke-linecap="round"/>` + tshape('M13.6 7.6a2.4 2.4 0 0 1 4.8 0z', '#ec9a17', '#c97a10', '', 1.6),
+  // Festividad: Año Nuevo (reloj a las doce = ícono, uvas = adorno).
+  reloj: () => [8.4, 23.6].map((x) => tshape(CIRCLE(x, 7.2, 3.4), '#ff5f7e', '#d63d5f', '', 1.8)).join('')
+    + tshape(CIRCLE(16, 17.6, 11.4), '#ffc83d', '#ec9a17', `<circle cx="15" cy="16.6" r="8.4" fill="#fff6e6"/>`, 2.2)
+    + `<path d="M15 9.6v1.6M15 22v1.6M8 16.6h1.6M20.4 16.6H22" stroke="${K}" stroke-width="1.4" stroke-linecap="round"/><path d="M15 16.6V10.8M15 16.6V12.4" stroke="${K}" stroke-width="2" stroke-linecap="round"/><circle cx="15" cy="16.6" r="1.5" fill="#ff5f7e" stroke="${K}" stroke-width=".9"/>`,
+  uvas: () => `<path d="M16 9.4V5.2" stroke="${K}" stroke-width="3.6" stroke-linecap="round"/><path d="M16 9.4V5.2" stroke="#8a5a3a" stroke-width="1.6" stroke-linecap="round"/>`
+    + tshape('M16 6.2c2-3 6-3.4 8.6-2-1.6 3-5 4.4-8.6 2z', '#7fc46a', '#5fae5a', '', 1.6)
+    + [[9.6, 12.6], [16, 12.4], [22.4, 12.6], [12.8, 18.2], [19.2, 18.2], [16, 23.8]].map(([x, y]) => tshape(CIRCLE(x, y, 3.8), '#b06ce0', '#7b3fb8', `<circle cx="${x - 1.2}" cy="${y - 1.3}" r="1" fill="#f0dcff"/>`, 1.8)).join(''),
   // Fichas de la colección (una por temática).
   concha: () => tshape('M16 27.5 4.5 14.5C5 7.5 10 4 16 4s11 3.5 11.5 10.5z', '#ffb3c7', '#f28aa5', ['M16 27V6', 'M16 27 9.5 7.5', 'M16 27 22.5 7.5', 'M16 27 5.5 12', 'M16 27 26.5 12'].map((d) => `<path d="${d}" stroke="#e0607f" stroke-width="1.6" fill="none"/>`).join(''))
     + tshape('M11 26.5h10l-1.5 3h-7z', '#ffb3c7', '#f28aa5', '', 1.8),
@@ -258,40 +292,154 @@ export const BACKS = {
   flores: { a: '#ff9cc8', b: '#f27aad', dots: '#fff6fb', art: () => { const f = (x, y, r, c) => `${Array.from({ length: 5 }, (_, i) => { const a = (i * 2 * Math.PI) / 5 - Math.PI / 2; return `<circle cx="${(x + Math.cos(a) * r).toFixed(1)}" cy="${(y + Math.sin(a) * r).toFixed(1)}" r="${r * 0.75}" fill="${c}" stroke="${K}" stroke-width="2.6"/>`; }).join('')}<circle cx="${x}" cy="${y}" r="${r * 0.6}" fill="#ffc83d" stroke="${K}" stroke-width="2.6"/>`; return f(50, 70, 13, '#fff6fb') + f(26, 34, 6, '#c9a6ff') + f(76, 108, 6, '#c9a6ff'); } },
   fuegos: { a: '#1d2060', b: '#151850', dots: '#c9bff0', art: () => [[50, 62, 24, '#ffc83d'], [28, 100, 13, '#ff7aa2'], [74, 34, 12, '#5ff0ff']].map(([x, y, r, c]) => Array.from({ length: 10 }, (_, i) => { const a = (i * Math.PI) / 5; return `<path d="M${(x + Math.cos(a) * r * 0.35).toFixed(1)} ${(y + Math.sin(a) * r * 0.35).toFixed(1)}L${(x + Math.cos(a) * r).toFixed(1)} ${(y + Math.sin(a) * r).toFixed(1)}" stroke="${c}" stroke-width="3.4" stroke-linecap="round"/><circle cx="${(x + Math.cos(a) * r * 1.15).toFixed(1)}" cy="${(y + Math.sin(a) * r * 1.15).toFixed(1)}" r="1.6" fill="${c}"/>`; }).join('') + `<circle cx="${x}" cy="${y}" r="${r * 0.18}" fill="#fff"/>`).join('') },
   papel: { a: '#c23a8f', b: '#a82a78', flat: true, dots: '#ffd6ec', bg: () => [[18, '#ffc83d'], [56, '#5fd1c5'], [94, '#ff9c5b']].map(([y, c]) => `<path d="M8 ${y}Q50 ${y + 6} 92 ${y}" fill="none" stroke="${K}" stroke-width="1.6"/>${Array.from({ length: 5 }, (_, i) => { const x = 12 + i * 16; return `<path d="M${x} ${y + 1}h13v18l-6.5-4-6.5 4z" fill="${c}" stroke="${K}" stroke-width="1.8" stroke-linejoin="round"/><circle cx="${x + 6.5}" cy="${y + 8}" r="2.4" fill="${'#c23a8f'}"/>`; }).join('')}`).join('') },
-  // Exclusivos de la colección: la ficha de la temática en grande, con adornos.
-  arrecife: { a: '#2f86c8', b: '#226aa8', dots: '#d8f0ff', art: () => `<g transform="translate(19 37) scale(1.95)">${ICONS.concha()}</g>${[[24, 36, 5], [32, 22, 3.4], [78, 104, 4.5], [70, 118, 3]].map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r}" fill="#d8f0ff" opacity=".9" stroke="${K}" stroke-width="2"/><circle cx="${x - r * 0.35}" cy="${y - r * 0.35}" r="${r * 0.3}" fill="#fff"/>`).join('')}` },
-  cristales: { a: '#5a3d99', b: '#47307d', dots: '#e3d8ff', art: () => `<g transform="translate(14 22) scale(1.1)">${ICONS.gema()}</g><g transform="translate(52 84) scale(1)">${ICONS.gema()}</g><g transform="translate(22 42) scale(1.75)">${ICONS.gema()}</g>` },
-  hojas: { a: '#3f9a4a', b: '#2f7a3a', dots: '#d9f5c8', art: () => `${[[22, 30, -30], [78, 110, 150], [80, 34, 40]].map(([x, y, r]) => `<g transform="translate(${x} ${y}) rotate(${r})">${tshape('M0 -12Q10 0 0 12Q-10 0 0 -12z', '#8fd46a', '#5fb04a', '<path d="M0 -10V10" stroke="#3f8a3a" stroke-width="1.6"/>', 2)}</g>`).join('')}<g transform="translate(19 39) scale(1.95)">${ICONS.bellota()}</g>` },
-  caramelos: { a: '#ffd6e8', b: '#ffbcd9', dots: '#ff7aa2', art: () => `<g transform="translate(12 18) rotate(-20 16 16) scale(.9)">${ICONS.caramelo()}</g><g transform="translate(58 96) rotate(25 16 16) scale(.8)">${ICONS.caramelo()}</g><g transform="translate(19 39) scale(1.95)">${ICONS.caramelo()}</g>` },
-  huellas: { a: '#e8853e', b: '#c9692a', dots: '#ffe0b8', art: () => `${[[22, 26, -20, 1], [78, 114, 160, 1.1], [80, 28, 20, 0.8], [22, 112, 200, 0.8]].map(([x, y, r, k]) => `<g transform="translate(${x} ${y}) rotate(${r}) scale(${k})" fill="#a8521c"><path d="M16.4 24.6Q12.4 24 12.6 19.6L7.6 10.4Q7.6 8.6 9.4 9.4L14.6 15.4 15.4 6.2Q16.4 4.4 17.4 6.2L18.2 15.4 23.4 9.4Q25.2 8.6 25.2 10.4L20.2 19.6Q20.4 24 16.4 24.6z" transform="translate(-16.4 -15)"/></g>`).join('')}<g transform="translate(14 36) scale(2.25)">${ICONS.fosil()}</g>` },
-  circuitos: { a: '#2d3f75', b: '#24335f', nodots: true, bg: () => `<g fill="none" stroke="#5ff0ff" stroke-width="2" opacity=".55" stroke-linejoin="round">${['M8 24H30L38 32V50', 'M92 30H70L62 22V8', 'M8 96H24L32 104V132', 'M92 110H74L66 118V132', 'M20 8V16H44', 'M80 132V122H56'].map((d) => `<path d="${d}"/>`).join('')}</g>${[[38, 50], [62, 8], [32, 104], [66, 118], [44, 16], [56, 122]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="3.2" fill="#2d3f75" stroke="#5ff0ff" stroke-width="2"/>`).join('')}${[[22, 40], [80, 56], [20, 76], [82, 90]].map(([x, y]) => `<rect x="${x - 7}" y="${y - 5}" width="14" height="10" rx="2" fill="#1d2a52" stroke="#7f8ab8" stroke-width="1.6"/>`).join('')}`,
-    art: () => `<g transform="translate(14 34) scale(2.25)">${ICONS.tuerca()}</g>` },
-  // Exclusivo de la festividad: Día de la Candelaria.
-  tamales: { a: '#5a8f3a', b: '#4a7a2f', dots: '#f2e2a0', art: () => `${[[20, 26, 0.42], [80, 114, 0.46], [80, 26, 0.34], [22, 114, 0.34]].map(([x, y, k]) => `<g transform="translate(${x - 16 * k} ${y - 16 * k}) scale(${k})">${ICONS.atole()}</g>`).join('')}<g transform="translate(14 34) scale(2.25)">${ICONS.tamal()}</g>` },
-  // Exclusivo de la festividad: Día del Taco.
-  tacos: { a: '#e8853e', b: '#c9692a', dots: '#ffe0b8', art: () => `${[[20, 26, 0.44], [80, 114, 0.48], [80, 26, 0.36], [22, 114, 0.36]].map(([x, y, k]) => `<g transform="translate(${x - 16 * k} ${y - 16 * k}) scale(${k})">${ICONS.limon()}</g>`).join('')}<g transform="translate(14 34) scale(2.25)">${ICONS.taco()}</g>` },
-  // Exclusivo de la festividad: Día de la Tierra.
-  planetaverde: { a: '#3f9a4a', b: '#2f7a3a', dots: '#d9f5c8', art: () => `${[[20, 26, 0.44], [80, 114, 0.48], [80, 26, 0.36], [22, 114, 0.36]].map(([x, y, k]) => `<g transform="translate(${x - 16 * k} ${y - 16 * k}) scale(${k})">${ICONS.brote()}</g>`).join('')}<g transform="translate(14 36) scale(2.25)">${ICONS.tierra()}</g>` },
-  // Exclusivo de la festividad: Día del Niño.
-  pinata: { a: '#ff7ab8', b: '#e8559a', dots: '#fff0f6', art: () => `${[[20, 26, 0.5, '#4aa8de'], [80, 114, 0.54, '#ffc83d'], [80, 24, 0.42, '#47c27a'], [22, 114, 0.42, '#b36bff']].map(([x, y, k, c]) => `<g transform="translate(${x - 16 * k} ${y - 16 * k}) scale(${k})">${ICONS.globito().replace(/#ff5f7e/g, c).replace(/#d63d5f/g, '#00000033')}</g>`).join('')}<g transform="translate(14 34) scale(2.25)">${ICONS.pinata()}</g>` },
-  // Exclusivo de la festividad: Día de las Madres.
-  regalos: { a: '#c22c5c', b: '#a51f4a', dots: '#ffd6e4', art: () => `${[[20, 26, 0.5], [80, 114, 0.54], [80, 26, 0.4], [22, 114, 0.4]].map(([x, y, k]) => `<g transform="translate(${x - 16 * k} ${y - 16 * k}) scale(${k})">${ICONS.regalito()}</g>`).join('')}<g transform="translate(14 34) scale(2.25)">${ICONS.clavel()}</g>` },
-  // Exclusivo de la festividad: Día del Padre.
-  bigotes: { a: '#2a6fb8', b: '#1f5a9a', dots: '#d6ecff', art: () => `${[[20, 26, 0.56], [80, 114, 0.6], [80, 26, 0.44], [22, 114, 0.44]].map(([x, y, k]) => `<g transform="translate(${x - 16 * k} ${y - 16 * k}) scale(${k})">${ICONS.bigote()}</g>`).join('')}<g transform="translate(14 34) scale(2.25)">${ICONS.corbata()}</g>` },
-  // Exclusivo de la festividad: Día del Gato.
-  michis: { a: '#6c3fd4', b: '#5a2fbf', dots: '#e2d4ff', art: () => `${[[20, 26, 0.5], [80, 114, 0.56], [80, 26, 0.4], [22, 114, 0.4]].map(([x, y, k]) => `<g transform="translate(${x - 16 * k} ${y - 16 * k}) scale(${k})">${ICONS.estambre()}</g>`).join('')}<g transform="translate(14 34) scale(2.25)">${ICONS.gatito()}</g>` },
-  // Exclusivo de la festividad: Día del Perro.
-  cachorros: { a: '#e2753a', b: '#c45e2a', dots: '#ffe0c4', art: () => `${[[20, 26, 0.5], [80, 114, 0.56], [80, 26, 0.42], [22, 114, 0.42]].map(([x, y, k]) => `<g transform="translate(${x - 16 * k} ${y - 16 * k}) rotate(-25 ${16 * k} ${16 * k}) scale(${k})">${ICONS.hueso()}</g>`).join('')}<g transform="translate(14 34) scale(2.25)">${ICONS.cachorro()}</g>` },
-  // Exclusivos del evento del mes.
-  calaverita: { a: '#7b2fbf', b: '#5e1f9a', dots: '#ffd27a', art: () => `${[[20, 26, 7], [80, 112, 8], [78, 28, 5], [24, 110, 5]].map(([x, y, r]) => marigold(x, y, r)).join('')}<g transform="translate(18 38) scale(2)">${ICONS.calavera()}</g>` },
-  esferas: { a: '#c22c3c', b: '#a51f30', dots: '#ffd6d6', art: () => `${[[20, 26, 7], [80, 112, 8], [80, 26, 5.5], [22, 112, 5.5]].map(([x, y, r]) => flake(x, y, r, '#fff6e6', 1.6)).join('')}<path d="M8 30Q50 46 92 30" fill="none" stroke="#3f9a5a" stroke-width="5" stroke-linecap="round"/><g transform="translate(18 38) scale(2)">${ICONS.esfera()}</g>` },
-  rosca: { a: '#6c3fd4', b: '#5a2fbf', dots: '#ffd27a', art: () => `${[[20, 24], [80, 114]].map(([x, y]) => `<g transform="translate(${x - 9} ${y - 9}) scale(.56)">${ICONS.crown()}</g>`).join('')}${[[80, 26, 5], [22, 114, 5]].map(([x, y, r]) => `<path d="${starPath(x, y, r, r * 0.45)}" fill="#ffd27a"/>`).join('')}<g transform="translate(14 38) scale(2.25)">${ICONS.rosca()}</g>` },
-  cartas: { a: '#ff7ab8', b: '#e8559a', dots: '#fff0f6', art: () => `${[[20, 26, 0.3], [80, 114, 0.34], [80, 26, 0.24], [22, 112, 0.24]].map(([x, y, k]) => `<g transform="translate(${x - 16 * k} ${y - 16 * k}) scale(${k})">${ICONS.corazon()}</g>`).join('')}<g transform="translate(14 36) scale(2.25)">${ICONS.sobre()}</g>` },
-  tulipanes: { a: '#47c27a', b: '#2f9e5c', dots: '#e9ffd9', art: () => `${[[20, 26, 0.32], [80, 114, 0.36], [80, 24, 0.26], [22, 114, 0.26]].map(([x, y, k]) => `<g transform="translate(${x - 16 * k} ${y - 16 * k}) scale(${k})">${ICONS.mariposa()}</g>`).join('')}<g transform="translate(14 36) scale(2.25)">${ICONS.tulipan()}</g>` },
+  // Exclusivo de la colección: Tesoros del mar. Arrecife claro: corales, la concha en la arena, pececitos y burbujas.
+  arrecife: { a: '#bfeaf5', b: '#f6dca0', dots: '#fff',
+    art: () => [[22, 58, '#ff7aa6'], [78, 66, '#ff9c5b']].map(([x, y, c]) => `<path d="M${x} 104V${y + 20}M${x} ${y + 30}l-8-12M${x} ${y + 24}l7-10M${x - 8} ${y + 18}v-8M${x + 7} ${y + 14}v-6" fill="none" stroke="${K}" stroke-width="7" stroke-linecap="round"/><path d="M${x} 104V${y + 20}M${x} ${y + 30}l-8-12M${x} ${y + 24}l7-10M${x - 8} ${y + 18}v-8M${x + 7} ${y + 14}v-6" fill="none" stroke="${c}" stroke-width="3.6" stroke-linecap="round"/>`).join('')
+      + [[40, 34, 1], [64, 46, -1]].map(([x, y, d]) => `<g transform="translate(${x} ${y}) scale(${d} 1)">${tshape('M-8 0Q0-6 8 0Q0 6-8 0zM8 0l6-5v10z', '#ffc83d', '#ec9a17', '', 1.8)}<circle cx="-4" cy="-1" r="1.2" fill="${K}"/></g>`).join('')
+      + [[50, 22, 2.4], [56, 14, 1.6], [30, 70, 2], [70, 30, 1.8]].map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r}" fill="#fff" stroke="#5fb0e0" stroke-width="1"/>`).join('')
+      + `<g transform="translate(50 108) scale(1.2) translate(-16 -16)">${ICONS.concha()}</g>` },
+  // Exclusivo de la colección: Cueva de gemas. Cueva clara con estalactitas y un racimo de gemas brillando sobre la roca.
+  cristales: { a: '#ddd0ff', b: '#a898d8', dots: '#fff', flat: true,
+    bg: () => `${[[8, 18], [22, 12], [34, 24], [50, 10], [64, 20], [78, 14], [90, 22]].map(([x, h], i) => `<path d="M${x - 8} 8h16l-8 ${h}z" fill="${i % 2 ? '#b8a8e8' : '#c8baf0'}" stroke="${K}" stroke-width="1.6" stroke-linejoin="round"/>`).join('')}`
+      + tshape('M8 108Q30 94 50 100T92 104V132H8z', '#8a7cb0', '#6a5c90', '', 2.4),
+    art: () => [[50, 84, 1.7, 0], [30, 96, 1, -20], [72, 94, 1.1, 18], [62, 108, 0.7, 30]].map(([x, y, k, r]) => `<g transform="translate(${x} ${y}) rotate(${r}) scale(${k}) translate(-16 -16)">${ICONS.gema()}</g>`).join('')
+      + [[30, 60], [74, 54], [52, 44]].map(([x, y]) => `<path d="M${x} ${y - 6}l1.6 4.4 4.4 1.6-4.4 1.6-1.6 4.4-1.6-4.4-4.4-1.6 4.4-1.6z" fill="#fff" stroke="${K}" stroke-width="1"/>`).join('') },
+  // Exclusivo de la colección: Bosque encantado. Una rama de roble con bellotas colgando y hojas que caen.
+  hojas: { a: '#e6f5d0', b: '#b8dc8a', dots: '#7fae5a',
+    art: () => `<path d="M6 20Q40 30 94 16" fill="none" stroke="${K}" stroke-width="8" stroke-linecap="round"/><path d="M6 20Q40 30 94 16" fill="none" stroke="#8a5a3a" stroke-width="4.4" stroke-linecap="round"/>`
+      + [[26, 25, 30, 1.15], [50, 26, 52, 1.5], [74, 21, 34, 1.1]].map(([x, y, l, k]) => `<path d="M${x} ${y}v${l - 14}" stroke="${K}" stroke-width="2"/><g transform="translate(${x} ${y + l}) scale(${k}) translate(-16 -16)">${ICONS.bellota()}</g>`).join('')
+      + [[20, 96, 30, '#ff9c3d'], [78, 104, -40, '#e8434f'], [40, 116, 70, '#ffc83d'], [62, 92, 10, '#7fae5a']].map(([x, y, r, c]) => `<g transform="translate(${x} ${y}) rotate(${r})">${tshape('M0-8Q7-3 0 8Q-7-3 0-8z', c, '#00000033', '<path d="M0-6v12" stroke="#0003" stroke-width="1"/>', 1.6)}</g>`).join('') },
+  // Exclusivo de la colección: Feria de dulces. El frasco de vidrio lleno de dulces, con su moño.
+  caramelos: { a: '#ffe0ee', b: '#ffe0ee', dots: '#ff7ab8', flat: true,
+    art: () => `<rect x="22" y="34" width="56" height="84" rx="14" fill="#e8f6ff" stroke="${K}" stroke-width="3"/>`
+      + [[34, 104, '#ff5f7e'], [50, 108, '#4aa8de'], [66, 104, '#ffc83d'], [42, 92, '#7fd36a'], [58, 92, '#b48cff'], [34, 80, '#ff9c5b'], [50, 78, '#ff7ab8'], [66, 80, '#5fd1c5'], [42, 66, '#ffc83d'], [58, 64, '#ff5f7e']].map(([x, y, c]) => `<circle cx="${x}" cy="${y}" r="6.4" fill="${c}" stroke="${K}" stroke-width="1.6"/><path d="M${x - 3} ${y - 2}q3-3 6 0" stroke="#fff" stroke-width="1.4" fill="none"/>`).join('')
+      + `<path d="M28 44v60" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".8"/>`
+      + tshape('M28 24h44v12H28z', '#ff7ab8', '#e0559a', '', 2.6) + `<g transform="translate(50 26) scale(.9) translate(-16 -16)">${ICONS.caramelo()}</g>` },
+  // Exclusivo de la colección: Valle de los dinosaurios. Un camino de huellas de dinosaurio en la arena y su volcán al fondo.
+  huellas: { a: '#ffe6c4', b: '#f6d098', dots: '#c9692a',
+    art: () => tshape('M54 44 66 22h8l12 22z', '#a8744a', '#8a5a3a', '<path d="M66 22q4 6 8 0" fill="#ff7a3a"/>', 2.2) + `<path d="M70 20q-4-8 2-12M70 18q6-6 4-12" fill="none" stroke="#b8a898" stroke-width="2.4" stroke-linecap="round" opacity=".7"/>`
+      + [[28, 112, -20, 1], [56, 92, -10, 0.92], [32, 70, -20, 0.84], [58, 52, -10, 0.76]].map(([x, y, r, k]) => `<g transform="translate(${x} ${y}) rotate(${r}) scale(${k})"><path d="M0 8C-6 8-8 2-6-2L-12-12M-6-2-2-14M6-2 12-12M6-2C8 2 6 8 0 8z" fill="none" stroke="${K}" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/><path d="M0 8C-6 8-8 2-6-2L-12-12M-6-2-2-14M6-2 12-12M6-2C8 2 6 8 0 8z" fill="#c9692a" stroke="#c9692a" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/></g>`).join('') },
+  // Exclusivo de la colección: Taller de robots. Plano azul de un robot dibujado en blanco, con sus tuercas.
+  circuitos: { a: '#bcd6ff', b: '#bcd6ff', flat: true, nodots: true,
+    bg: () => Array.from({ length: 12 }, (_, i) => `<path d="M${8 + i * 8} 8v124M8 ${8 + i * 11}h84" stroke="#fff" stroke-width=".8" opacity=".55"/>`).join(''),
+    art: () => `<g fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><rect x="32" y="40" width="36" height="28" rx="6"/><path d="M50 40v-10"/><circle cx="50" cy="27" r="3"/><circle cx="42" cy="53" r="4"/><circle cx="58" cy="53" r="4"/><path d="M42 62h16"/><rect x="28" y="72" width="44" height="34" rx="6"/><path d="M28 80H18v16M72 80h10v16M38 106v14M62 106v14"/><path d="M40 84h20M40 92h12" stroke-dasharray="3 3"/></g>`
+      + `<path d="M14 22h10M19 17v10" stroke="#fff" stroke-width="1.6"/>`
+      + [[20, 116, 0.55], [80, 30, 0.5]].map(([x, y, k]) => `<g transform="translate(${x - 16 * k} ${y - 16 * k}) scale(${k})">${ICONS.tuerca()}</g>`).join('') },
+  // Exclusivo de la festividad: Candelaria. La vaporera llena de tamales echando vapor.
+  tamales: { a: '#fff1c9', b: '#ecd98e', dots: '#d9b060',
+    art: () => [30, 50, 70].map((x, i) => `<path d="M${x} ${44 - (i % 2) * 6}q-6-8 0-14t0-14" fill="none" stroke="#c9a65a" stroke-width="3.4" stroke-linecap="round" opacity=".55"/>`).join('')
+      + [[34, 62, -22], [50, 58, 0], [66, 62, 22]].map(([x, y, r]) => `<g transform="translate(${x} ${y}) rotate(${r}) scale(.95) translate(-16 -16)">${ICONS.tamal()}</g>`).join('')
+      + tshape('M18 72h64l-6 42a6 6 0 0 1-6 5H30a6 6 0 0 1-6-5z', '#b8c4d8', '#8f9bb5', '<path d="M22 86h56M24 100h52" stroke="#8f9bb5" stroke-width="2"/>', 3)
+      + tshape('M14 68h72v7H14z', '#cfd8e8', '#9aa7cf', '', 2.6) + [10, 90].map((x) => `<circle cx="${x}" cy="84" r="5" fill="none" stroke="${K}" stroke-width="4.4"/><circle cx="${x}" cy="84" r="5" fill="none" stroke="#9aa7cf" stroke-width="2"/>`).join('') },
+  // Exclusivo de la festividad: Día del Taco. El trompo al pastor con su piña arriba y un taquito al lado.
+  tacos: { a: '#ffe3b8', b: '#ffe3b8', dots: '#e2753a', flat: true,
+    art: () => `<path d="M50 14v106" stroke="${K}" stroke-width="5" stroke-linecap="round"/><path d="M50 14v106" stroke="#c9c4e0" stroke-width="2.4" stroke-linecap="round"/>`
+      + tshape('M28 44h44l-9 64H37z', '#e2603a', '#b8422a', '<path d="M29 54h42M30 64h40M31 74h38M33 84h34M34 94h32" stroke="#ff9c5b" stroke-width="3"/>', 3)
+      + tshape('M43 31 39 14 47 24 50 9 53 24 61 14 57 31z', '#5fae5a', '#3f8a3a', '', 2.4)
+      + tshape('M38 40a12 10 0 0 1 24 0z', '#ffc83d', '#ec9a17', '<path d="M41 36l6-6M47 38l8-8M53 38l5-5" stroke="#c97a10" stroke-width="1.4"/>', 2.4)
+      + tshape('M32 110h36v8H32z', '#9aa2ba', '#6e7690', '', 2.4)
+      + `<g transform="translate(66 104) rotate(-10) scale(.7) translate(-16 -16)">${ICONS.taco()}</g><g transform="translate(18 110) scale(.5) translate(-16 -16)">${ICONS.limon()}</g>` },
+  // Exclusivo de la festividad: Día de la Tierra. Un árbol grande en su cerro, con brotes alrededor y el sol.
+  planetaverde: { a: '#d6f0ff', b: '#6fc25a', dots: '#fff',
+    art: () => `<g transform="translate(64 12) scale(.72)">${ICONS.sol()}</g>`
+      + tshape('M45 70h10l3 34H42z', '#8a5a3a', '#6e4026', '', 3)
+      + [[34, 62, 15], [66, 62, 15], [50, 46, 19]].map(([x, y, r]) => tshape(CIRCLE(x, y, r), '#5fae5a', '#3f8a3a', '', 3)).join('')
+      + [[40, 50], [58, 40], [64, 66], [32, 66], [50, 60]].map(([x, y], i) => `<circle cx="${x}" cy="${y}" r="2.6" fill="${i % 2 ? '#ff9cc8' : '#ffc83d'}" stroke="${K}" stroke-width="1.2"/>`).join('')
+      + [[20, 116, 0.6], [80, 118, 0.55]].map(([x, y, k]) => `<g transform="translate(${x - 16 * k} ${y - 16 * k}) scale(${k})">${ICONS.brote()}</g>`).join('') },
+  // Exclusivo de la festividad: Día del Niño. La piñata colgando de su cuerda y los dulces que van cayendo.
+  pinata: { a: '#ffe6f2', b: '#ffe6f2', dots: '#ff7ab8', flat: true,
+    art: () => `<path d="M8 12Q50 22 92 12" fill="none" stroke="${K}" stroke-width="2"/><path d="M50 17v18" stroke="${K}" stroke-width="2"/><g transform="rotate(-8 50 36) translate(14 30) scale(2.25)">${ICONS.pinata()}</g>`
+      + [[22, 108, '#ff5f7e', 20], [44, 122, '#4aa8de', -30], [66, 112, '#ffc83d', 40], [82, 124, '#7fd36a', -10], [32, 92, '#b48cff', 60]].map(([x, y, c, r]) => `<g transform="translate(${x} ${y}) rotate(${r})"><path d="M-9-4-5 0-9 4zM9-4 5 0 9 4z" fill="${c}" stroke="${K}" stroke-width="1.2" stroke-linejoin="round"/><ellipse rx="5.4" ry="3.6" fill="${c}" stroke="${K}" stroke-width="1.6"/></g>`).join('') },
+  // Exclusivo de la festividad: Día de las Madres. Un corazón hecho de claveles con el regalito en medio.
+  regalos: { a: '#ffe6ee', b: '#ffe6ee', dots: '#ff7aa6', flat: true,
+    art: () => Array.from({ length: 18 }, (_, i) => { const t = (i / 18) * Math.PI * 2, x = (50 + 2.2 * 16 * Math.sin(t) ** 3).toFixed(1), y = (64 - 2.2 * (13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t))).toFixed(1); const c = ['#ff5f8f', '#e8434f', '#ffb3cb'][i % 3];
+        return `<g transform="translate(${x} ${y})">${[0, 72, 144, 216, 288].map((d) => `<circle cx="${(Math.cos((d * Math.PI) / 180) * 3).toFixed(1)}" cy="${(Math.sin((d * Math.PI) / 180) * 3).toFixed(1)}" r="3.4" fill="${c}" stroke="${K}" stroke-width="1.2"/>`).join('')}<circle r="2.4" fill="#fff0f4"/></g>`; }).join('')
+      + `<g transform="translate(50 68) scale(1.15) translate(-16 -16)">${ICONS.regalito()}</g>` },
+  // Exclusivo de la festividad: Día del Padre. La camisa de papá: cuello, su corbata y una pluma en la bolsa.
+  bigotes: { a: '#dcecff', b: '#dcecff', flat: true, nodots: true,
+    bg: () => Array.from({ length: 9 }, (_, i) => `<path d="M${12 + i * 10} 8v124" stroke="#b8d4f5" stroke-width="2"/>`).join(''),
+    art: () => tshape('M50 34 26 8 16 24 40 44z', '#fff', '#dfe6f2', '', 2.6) + tshape('M50 34 74 8 84 24 60 44z', '#fff', '#dfe6f2', '', 2.6)
+      + `<g transform="translate(15 22) scale(2.2)">${ICONS.corbata()}</g>`
+      + tshape('M14 76h22v22H14z', '#cfe2fa', '#a8c8f0', '', 2.4) + `<path d="M20 70v12" stroke="${K}" stroke-width="4.4" stroke-linecap="round"/><path d="M20 70v12" stroke="#e8434f" stroke-width="2" stroke-linecap="round"/>`
+      + [100, 116].map((y) => `<circle cx="74" cy="${y}" r="2.6" fill="#fff" stroke="${K}" stroke-width="1.4"/>`).join('') },
+  // Exclusivo de la festividad: Día del Gato. Un michi dormido en su cojín, con sus zzz y su estambre.
+  michis: { a: '#e6dcff', b: '#d6c6ff', dots: '#b48cff',
+    art: () => tshape(ELL(50, 100, 40, 13), '#ff9cc8', '#e87aa8', '', 3)
+      + `<path d="M76 92Q94 74 80 64" fill="none" stroke="${K}" stroke-width="9" stroke-linecap="round"/><path d="M76 92Q94 74 80 64" fill="none" stroke="#a9b0c8" stroke-width="4.6" stroke-linecap="round"/>`
+      + tshape(ELL(54, 86, 28, 15), '#a9b0c8', '#868ea8', '<path d="M50 72v8M58 72v8M66 74v7" stroke="#6e7690" stroke-width="2.4" stroke-linecap="round"/>', 3)
+      + tshape('M18 76 20 60 30 68z', '#a9b0c8', '#868ea8', '', 2.4) + tshape('M38 74 40 59 30 66z', '#a9b0c8', '#868ea8', '', 2.4)
+      + tshape(CIRCLE(29, 82, 13), '#a9b0c8', '#868ea8', '', 3)
+      + `<path d="M22 82q3 3 6 0M31 82q3 3 6 0" fill="none" stroke="${K}" stroke-width="1.8" stroke-linecap="round"/><path d="M27.6 86h2.8l-1.4 1.6z" fill="#ff7a9a"/>`
+      + `<text x="42" y="54" font-family="Lilita One, sans-serif" font-size="13" fill="#8a5cf0">z</text><text x="52" y="40" font-family="Lilita One, sans-serif" font-size="18" fill="#8a5cf0">z</text>`
+      + `<g transform="translate(78 30) scale(.5) translate(-16 -16)">${ICONS.estambre()}</g>` },
+  // Exclusivo de la festividad: Día del Perro. La casita roja con el cachorro asomado y su plato con hueso.
+  cachorros: { a: '#ffe6cc', b: '#7fc46a', dots: '#fff',
+    art: () => tshape('M22 60h56v50H22z', '#ff9c5b', '#e2753a', '<path d="M22 72h56M22 86h56M22 100h56" stroke="#e2753a" stroke-width="1.6"/>', 3)
+      + tshape('M14 64 50 28 86 64z', '#e8434f', '#c22c3c', '<path d="M30 52h40M22 60h56" stroke="#c22c3c" stroke-width="1.6"/>', 3)
+      + tshape('M37 110V88a13 13 0 0 1 26 0v22z', '#5a3a2a', '#3a2418', '', 3)
+      + `<g transform="translate(50 96) scale(.85) translate(-16 -16)">${ICONS.cachorro()}</g>`
+      + tshape('M70 114h20l-3 8H73z', '#4aa8de', '#2f86c0', '', 2.2) + `<g transform="translate(80 110) rotate(-10) scale(.42) translate(-16 -16)">${ICONS.hueso()}</g>` },
+  // Exclusivo de la festividad: Día del Gamer. Pantalla de videojuego: vidas arriba, el control y el piso de bloques.
+  controles: { a: '#b9a6ff', b: '#a48ef5', dots: '#fff', flat: true,
+    bg: () => Array.from({ length: 84 }, (_, i) => { const x = i % 7, y = Math.floor(i / 7); return (x + y) % 2 ? '' : `<rect x="${8 + x * 12}" y="${8 + y * 12}" width="12" height="12" fill="#fff" opacity=".13"/>`; }).join('')
+      + Array.from({ length: 7 }, (_, i) => `<rect x="${8 + i * 12}" y="114" width="12" height="18" fill="${i % 2 ? '#5fae5a' : '#7fd36a'}" stroke="${K}" stroke-width="1.6"/>`).join(''),
+    art: () => `${[18, 30, 42].map((x) => `<g transform="translate(${x - 6} 14) scale(.38)">${ICONS.pixcora()}</g>`).join('')}<g transform="translate(70 13) scale(.4)">${ICONS.coin()}</g>`
+      + `<g transform="rotate(-12 50 70) translate(14 38) scale(2.25)">${ICONS.control()}</g>` },
+  // Exclusivo de la festividad: Día del Programador. Ventana del editor con su código de colores y las llaves abajo.
+  binario: { a: '#c8f5d8', b: '#a8ecc0', dots: '#2f9e5c',
+    art: () => `<rect x="15" y="26" width="70" height="64" rx="7" fill="#163a26" stroke="${K}" stroke-width="3"/><path d="M15 33a7 7 0 0 1 7-7h56a7 7 0 0 1 7 7v4H15z" fill="#2f5a40"/>`
+      + ['#ff5f7e', '#ffc83d', '#7fd36a'].map((c, i) => `<circle cx="${23 + i * 7}" cy="32" r="2.4" fill="${c}"/>`).join('')
+      + [[22, 46, 18, '#b48cff'], [43, 46, 22, '#7fe8a0'], [28, 54, 26, '#5ff0ff'], [28, 62, 14, '#ffc83d'], [45, 62, 24, '#ff9cc8'], [28, 70, 30, '#7fe8a0'], [22, 78, 10, '#b48cff']].map(([x, y, w, c]) => `<rect x="${x}" y="${y - 2}" width="${w}" height="4" rx="2" fill="${c}"/>`).join('')
+      + `<rect x="35" y="74" width="3.4" height="7" fill="#c8f5d8"/><g transform="translate(34 96) scale(1)">${ICONS.llaves()}</g>` },
+  // Exclusivo de la festividad: Día de los Inocentes. Rombos de arlequín claros y la palomita con su gorro de bufón.
+  arlequin: { a: '#ffe9a8', b: '#ffe9a8', flat: true, nodots: true,
+    bg: () => Array.from({ length: 48 }, (_, i) => { const c = i % 6, r = Math.floor(i / 6), x = 8 + c * 17 + (r % 2 ? 8.5 : 0), y = 8 + r * 17; return `<path d="M${x} ${y - 8.5}l8.5 8.5-8.5 8.5-8.5-8.5z" fill="${(c + r) % 2 ? '#ff8a8f' : '#b9a0f5'}" opacity=".45"/>`; }).join(''),
+    art: () => `<circle cx="50" cy="78" r="27" fill="#fff6ee" stroke="${K}" stroke-width="3"/><circle cx="50" cy="78" r="22" fill="none" stroke="#ffc83d" stroke-width="2" stroke-dasharray="3 4"/>`
+      + `<g transform="translate(26 58) scale(1.5)">${ICONS.palomita()}</g><g transform="rotate(14 60 40) translate(42 22) scale(1.05)">${ICONS.bufon()}</g>` },
+  // Exclusivo de la festividad: Año Nuevo. Serpentinas de colores, el reloj a punto de dar las doce y uvas en las esquinas.
+  medianoche: { a: '#8a7cf5', b: '#7766e8', dots: '#ffe27a',
+    bg: () => [['#ff9cc8', 22], ['#5ff0ff', 52], ['#ffe27a', 92]].map(([c, y]) => `<path d="M0 ${y}q12-12 24 0t24 0 24 0 24 0 24 0" fill="none" stroke="${c}" stroke-width="3" opacity=".75" transform="rotate(-18 50 ${y})"/>`).join('')
+      + [[20, 40, '#ffe27a'], [78, 36, '#ff9cc8'], [30, 104, '#5ff0ff'], [72, 110, '#fff'], [58, 22, '#7fd36a']].map(([x, y, c], i) => `<rect x="${x}" y="${y}" width="6" height="3.4" fill="${c}" transform="rotate(${i * 40} ${x} ${y})"/>`).join(''),
+    art: () => `<g transform="translate(16 38) scale(2.1)">${ICONS.reloj()}</g>${[[22, 114, 0.5], [78, 114, 0.5]].map(([x, y, k]) => `<g transform="translate(${x - 16 * k} ${y - 16 * k}) scale(${k})">${ICONS.uvas()}</g>`).join('')}` },
+  // Exclusivo del evento: Día de Muertos. Altar: papel picado arriba, la calaverita entre dos velas y cempasúchil en el mantel.
+  calaverita: { a: '#ffd08a', b: '#b36bff', dots: '#fff6e6', flat: true,
+    bg: () => `<path d="M6 7h88" stroke="${K}" stroke-width="1.4"/>` + [['#ff5fa8', 10], ['#5fd1c5', 36], ['#7b2fbf', 62]].map(([c, x]) => `<path d="M${x} 7h28v20l-3.5-4-3.5 4-3.5-4-3.5 4-3.5-4-3.5 4-3.5-4-3.5 4z" fill="${c}" stroke="${K}" stroke-width="1.4" stroke-linejoin="round"/><circle cx="${x + 9}" cy="15" r="2.4" fill="#ffd08a"/><circle cx="${x + 19}" cy="15" r="2.4" fill="#ffd08a"/><path d="M${x + 11} 21h6" stroke="#ffd08a" stroke-width="2"/>`).join('')
+      + `<rect x="8" y="104" width="84" height="28" fill="#b36bff"/><path d="M8 104h84" stroke="${K}" stroke-width="2.4"/>${Array.from({ length: 12 }, (_, i) => `<path d="M${9 + i * 7} 104l3.5 6 3.5-6" fill="#ff5fa8" stroke="${K}" stroke-width="1.2" stroke-linejoin="round"/>`).join('')}`,
+    art: () => [20, 80].map((x) => `${tshape(`M${x - 5} 82h10v22h-10z`, '#fff6e6', '#e8d8c0', '', 2.2)}<path d="M${x} 81q-4-6 0-11 4 5 0 11z" fill="#ffb13d" stroke="${K}" stroke-width="1.6"/>`).join('')
+      + `<g transform="translate(23 50) scale(1.7)">${ICONS.calavera()}</g>` + [[30, 120, 7], [50, 124, 8], [70, 120, 7]].map(([x, y, r]) => marigold(x, y, r)).join('') },
+  // Exclusivo del evento: Navidad. El pino con su estrella y esferas, sobre nieve, con copos cayendo.
+  esferas: { a: '#d8efff', b: '#fff', dots: '#9fd0ff',
+    art: () => [[18, 24, 4], [84, 32, 5], [18, 66, 3.6], [86, 78, 4]].map(([x, y, r]) => flake(x, y, r, '#fff', 1.6)).join('')
+      + tshape('M45 96h10v12H45z', '#8a5a3a', '#6e4026', '', 2.4)
+      + tshape('M50 30 74 64H62L80 98H20L38 64H26z', '#3f9a5a', '#2f7a46', '<path d="M30 92q20-8 42-14M34 60q14-4 28-10" stroke="#ffc83d" stroke-width="2" fill="none" stroke-dasharray="1 4" stroke-linecap="round"/>', 3)
+      + `<path d="${starPath(50, 27, 10, 4.4)}" fill="#ffc83d" stroke="${K}" stroke-width="2.4" stroke-linejoin="round"/>`
+      + [[42, 56, 0.32], [58, 74, 0.34], [38, 86, 0.3], [64, 90, 0.28]].map(([x, y, k]) => `<g transform="translate(${x - 16 * k} ${y - 16 * k}) scale(${k})">${ICONS.esfera()}</g>`).join('') },
+  // Exclusivo del evento: Día de Reyes. La rosca vista desde arriba con su fruta cristalizada, la corona y el muñequito asomado.
+  rosca: { a: '#ffe9c0', b: '#ffe9c0', dots: '#e8a94a', flat: true,
+    art: () => `<ellipse cx="50" cy="78" rx="34" ry="27" fill="none" stroke="${K}" stroke-width="24"/><ellipse cx="50" cy="78" rx="34" ry="27" fill="none" stroke="#d98a3a" stroke-width="18.5"/><ellipse cx="50" cy="75.5" rx="34" ry="27" fill="none" stroke="#f0b05a" stroke-width="10"/>`
+      + Array.from({ length: 10 }, (_, i) => { const t = (i / 10) * Math.PI * 2, x = (50 + Math.cos(t) * 34).toFixed(1), y = (75.5 + Math.sin(t) * 27).toFixed(1); return `<rect x="${x - 5}" y="${y - 2}" width="10" height="4" rx="2" fill="${['#e8434f', '#5fae5a', '#ffc83d'][i % 3]}" stroke="${K}" stroke-width="1.2" transform="rotate(${Math.round((t * 180) / Math.PI + 90)} ${x} ${y})"/>`; }).join('')
+      + `<circle cx="70" cy="101" r="5.4" fill="#ffe0c4" stroke="${K}" stroke-width="2"/><circle cx="68.4" cy="100.4" r=".9" fill="${K}"/><circle cx="71.6" cy="100.4" r=".9" fill="${K}"/>`
+      + `<g transform="translate(34 18)">${ICONS.crown()}</g>` },
+  // Exclusivo del evento: Amor y Amistad. Cartitas que vuelan por un camino de corazones.
+  cartas: { a: '#ffd9e8', b: '#ffd9e8', dots: '#ff7aa6', flat: true,
+    art: () => `<path d="M12 126Q30 100 46 94T70 58 88 18" fill="none" stroke="#ff7aa6" stroke-width="2.4" stroke-dasharray="2 5" stroke-linecap="round"/>`
+      + [[26, 104, -16, 1.05], [56, 70, 8, 1.3], [74, 30, -10, 0.9]].map(([x, y, r, k]) => `<g transform="translate(${x} ${y}) rotate(${r}) scale(${k}) translate(-16 -16)">${ICONS.sobre()}</g>`).join('')
+      + [[42, 120, 0.32], [84, 60, 0.3], [22, 42, 0.36], [46, 22, 0.26]].map(([x, y, k]) => `<g transform="translate(${x - 16 * k} ${y - 16 * k}) scale(${k})">${ICONS.corazon()}</g>`).join('') },
+  // Exclusivo del evento: Primavera. Jardín: tres tulipanes en el pasto, mariposas y el sol.
+  tulipanes: { a: '#d6f0ff', b: '#7fd36a', dots: '#fff',
+    art: () => `<g transform="translate(60 12) scale(.8)">${ICONS.sol()}</g>`
+      + [[26, 90, 0.95], [50, 80, 1.15], [74, 92, 0.95]].map(([x, y, k]) => `<g transform="translate(${x - 16 * k} ${y - 16 * k}) scale(${k})">${ICONS.tulipan()}</g>`).join('')
+      + [[22, 40, 0.55, -15], [80, 54, 0.45, 20]].map(([x, y, k, r]) => `<g transform="translate(${x - 16 * k} ${y - 16 * k}) rotate(${r} ${16 * k} ${16 * k}) scale(${k})">${ICONS.mariposa()}</g>`).join('')
+      + `<path d="M14 128l3-10 3 10M34 130l2-8 3 8M62 130l3-9 3 9M82 128l2-8 3 8" fill="#5fae5a" stroke="${K}" stroke-width="1.4" stroke-linejoin="round"/>` },
   sandias: { a: '#5fc7e8', b: '#f3d48a', dots: '#fff', art: () => `${[[20, 26, 0.48], [80, 116, 0.48], [80, 26, 0.36], [22, 116, 0.36]].map(([x, y, k]) => `<g transform="translate(${x - 16 * k} ${y - 16 * k}) scale(${k})">${ICONS.sol()}</g>`).join('')}<g transform="translate(14 36) scale(2.25)">${ICONS.sandia()}</g>` },
   vivamexico: { a: '#fff6ee', b: '#fff6ee', flat: true, dots: '#ffd27a', bg: () => `<rect x="8" y="8" width="28" height="124" fill="#2f9e5c"/><rect x="64" y="8" width="28" height="124" fill="#e8434f"/>`,
     art: () => `${[[22, 26, -20, 0.5], [78, 116, 160, 0.5], [78, 26, 20, 0.42], [22, 116, 200, 0.42]].map(([x, y, a, k]) => `<g transform="translate(${x - 16 * k} ${y - 16 * k}) rotate(${a} ${16 * k} ${16 * k}) scale(${k})">${ICONS.chile()}</g>`).join('')}<g transform="translate(14 38) scale(2.25)">${ICONS.sombrero()}</g>` },
-  calabazas: { a: '#3a1f6a', b: '#2a1650', dots: '#ffd27a', art: () => `${[[22, 24, 0.85], [78, 118, 0.85], [78, 24, 0.65], [22, 118, 0.65]].map(([x, y, k]) => `<g transform="translate(${x - 16 * k} ${y - 16 * k}) scale(${k})">${ICONS.murcielago().replace(/#5a4a8a/g, '#b9a6e8').replace(/#3f3270/g, '#8a74c8')}</g>`).join('')}<g transform="translate(14 37) scale(2.25)">${ICONS.calabaza()}</g>` },
+  // Exclusivo del evento: Halloween. Huerto de calabazas bajo la luna llena, con murciélagos (más claro, para que no se pierda).
+  calabazas: { a: '#a890f0', b: '#6a4fc0', dots: '#fff3c4',
+    art: () => `<circle cx="68" cy="32" r="17" fill="#fff3c4" stroke="${K}" stroke-width="2.6"/><circle cx="62" cy="28" r="3" fill="#efdca0"/><circle cx="73" cy="38" r="2.2" fill="#efdca0"/>`
+      + [[28, 30, 0.45], [42, 48, 0.34]].map(([x, y, k]) => `<g transform="translate(${x - 16 * k} ${y - 16 * k}) scale(${k})">${ICONS.murcielago()}</g>`).join('')
+      + `<path d="M14 112q12-10 22 0t22 0 22 0" fill="none" stroke="#3f8a3a" stroke-width="2.6" stroke-linecap="round"/>`
+      + [[70, 102, 0.8], [30, 100, 0.95], [52, 116, 0.7]].map(([x, y, k]) => `<g transform="translate(${x - 16 * k} ${y - 16 * k}) scale(${k})">${ICONS.calabaza()}</g>`).join('') },
   regalo: { a: '#7b4ee6', b: '#6438c8', star: ['#fff6e6', '#e3d3ff'] },
   comodin: { a: '#ffc83d', b: '#eca21f', star: ['#ff9c2b', '#e8761a'], dots: '#fff4c7' },
 };
@@ -537,6 +685,40 @@ export const AVATARS = {
     + eyes(53, 12, 4.6) + `<ellipse cx="50" cy="63" rx="6" ry="4.4" fill="${K}"/>` + P('M45 68h10v8a5 5 0 0 1-10 0z', '#ff7a9a', '#e0507e', '<path d="M50 69v6" stroke="#e0507e" stroke-width="1.6"/>', 2.6) + blush(64, 21)
     + P('M28 80Q50 89 72 80l1 6Q50 95 27 86z', '#e8434f', '#c22c3c')
     + P('M44 88h12v6a6 6 0 0 1-12 0z', '#ffc83d', '#ec9a17', `<path d="M47 92h6" stroke="#ec9a17" stroke-width="1.6" stroke-linecap="round"/>`),
+  // Gamer pro (Día del Gamer): con sus audífonos rosas, micrófono y un corazón de píxeles en la playera.
+  audifonos: () => shoulders('#5a4f8a', '#3f3570') + `<g transform="translate(41 84) scale(.56)">${ICONS.pixcora()}</g>`
+    + mirror(P(CIRCLE(23, 55, 6), '#ffc596', '#eda06c'))
+    + P(CIRCLE(50, 53, 27), '#ffd3a8', '#f2b07c')
+    + P('M23 50Q19 23 50 22Q81 23 77 50Q71 37 58 35Q52 42 44 36Q33 40 23 50z', '#2a2540', '#1a1530')
+    + `<path d="M21 52Q19 15 50 15Q81 15 79 52" fill="none" stroke="${K}" stroke-width="10" stroke-linecap="round"/><path d="M21 52Q19 15 50 15Q81 15 79 52" fill="none" stroke="#ff5f7e" stroke-width="5" stroke-linecap="round"/>`
+    + `<path d="M22 62Q24 74 38 72" fill="none" stroke="${K}" stroke-width="5.4" stroke-linecap="round"/><path d="M22 62Q24 74 38 72" fill="none" stroke="#9aa2ba" stroke-width="2.4" stroke-linecap="round"/>`
+    + mirror(P(ELL(21, 55, 7, 10), '#ff5f7e', '#d63d5f', `<ellipse cx="20" cy="55" rx="3" ry="5" fill="#5fd1f0"/>`))
+    + P(CIRCLE(39, 72, 3.6), '#4a4560', '#36324a')
+    + kidFace(),
+  // Bichito (Día del Programador): el bug más simpático, verde con sus lentes redondos y antenas.
+  bichito: () => mirror(`<path d="M24 58 12 52M23 70 10 72M28 82 18 92" stroke="${K}" stroke-width="4" stroke-linecap="round"/>`)
+    + mirror(`<path d="M44 28Q38 12 28 12" fill="none" stroke="${K}" stroke-width="3.6" stroke-linecap="round"/>` + P(CIRCLE(27, 12, 5), '#ffc83d', '#ec9a17'))
+    + P(ELL(50, 66, 28, 28), '#5ad68c', '#2f9e5c', `<path d="M50 40v56" stroke="${K}" stroke-width="3"/><circle cx="36" cy="70" r="5" fill="#2f9e5c"/><circle cx="64" cy="76" r="6" fill="#2f9e5c"/><circle cx="62" cy="58" r="3.6" fill="#2f9e5c"/><circle cx="38" cy="86" r="3.4" fill="#2f9e5c"/>`)
+    + P(ELL(50, 40, 22, 17), '#4a4560', '#36324a')
+    + [-9, 9].map((x) => `<circle cx="${50 + x}" cy="40" r="6.6" fill="#fff"/><circle cx="${50 + x}" cy="41" r="3.4" fill="${K}"/><circle cx="${48.8 + x}" cy="39.4" r="1.3" fill="#fff"/>`).join('')
+    + `<circle cx="41" cy="40" r="8" fill="none" stroke="#ffc83d" stroke-width="2.6"/><circle cx="59" cy="40" r="8" fill="none" stroke="#ffc83d" stroke-width="2.6"/><path d="M49 39h2" stroke="#ffc83d" stroke-width="2.6"/>`
+    + `<path d="M45 50q5 4 10 0" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/>`,
+  // Bufoncito (Día de los Inocentes): con su gorro de tres puntas, cascabeles y su cuello de olanes.
+  bufoncito: () => shoulders('#8a5cf0', '#6c3fd4')
+    + P('M18 80h64l-5 11-5.4-8-5.4 8-5.4-8-5.4 8-5.4-8-5.4 8-5.4-8-5.4 8-5.4-8-5.4 8z', '#fff6ee', '#e3d8ff')
+    + mirror(P(CIRCLE(23, 57, 6), '#ffc596', '#eda06c'))
+    + P(CIRCLE(50, 55, 26), '#ffd3a8', '#f2b07c')
+    + P('M26 44Q14 32 13 14Q28 18 40 34z', '#e8434f', '#c22c3c') + P('M74 44Q86 32 87 14Q72 18 60 34z', '#e8434f', '#c22c3c')
+    + P('M34 38Q40 16 50 6Q60 16 66 38z', '#ffc83d', '#ec9a17')
+    + P('M22 46Q50 30 78 46l-2 9Q50 40 24 55z', '#8a5cf0', '#6c3fd4', `<path d="M30 48l4 4 4-5 4 4 4-5 4 4 4-5 4 4 4-5 4 4" fill="none" stroke="#c9b4ff" stroke-width="2"/>`)
+    + [[13, 14], [87, 14], [50, 7]].map(([x, y]) => P(CIRCLE(x, y, 5.4), '#ffe27a', '#ec9a17')).join('')
+    + eyes(59, 11, 4.4) + `<path d="M41 68q9 9 18 0" fill="#c22c3c" stroke="${K}" stroke-width="3" stroke-linejoin="round"/>` + blush(66, 19),
+  // Uvita (Año Nuevo): una de las doce uvas, con su hojita y gorrito de fiesta.
+  uvita: () => shoulders('#ffc83d', '#ec9a17') + `<circle cx="30" cy="94" r="2.6" fill="#ff5f7e"/><circle cx="50" cy="90" r="2.6" fill="#5fd1f0"/><circle cx="70" cy="95" r="2.6" fill="#7fd36a"/>`
+    + P(CIRCLE(50, 56, 29), '#b06ce0', '#7b3fb8', `<ellipse cx="36" cy="42" rx="7" ry="4" fill="#f0dcff" opacity=".7" transform="rotate(-35 36 42)"/>`)
+    + P('M56 30Q68 18 80 24Q72 36 56 30z', '#7fc46a', '#5fae5a', `<path d="M58 29q10-2 18-4" stroke="#4a8a3a" stroke-width="1.6" fill="none"/>`)
+    + `<g transform="rotate(-14 44 20)">${P('M44 4 56 30H32z', '#ff5fa8', '#e0408a', `<path d="M38 18h12M35 25h18" stroke="#ffe27a" stroke-width="3"/>`)}${P(CIRCLE(44, 4, 4.6), '#ffe27a', '#ec9a17')}</g>`
+    + eyes(56, 11, 4.6) + smile(66, 6) + blush(64, 20),
   // Exclusivo del evento: Día de Muertos.
   xolo: () => mirror(P('M26 46 16 10 42 30z', '#4a4560', '#36324a', '<path d="M25 37 21 18 35 30z" fill="#ff9cb0"/>'))
     + shoulders('#4a4560', '#36324a')
@@ -554,18 +736,24 @@ export const AVATARS = {
     + P('M24 80Q50 90 76 80l3 9Q50 100 21 89z', '#e8434f', '#c22c3c', '<path d="M33 83v12M44 86v12M56 86v12M67 83v12" stroke="#fff" stroke-width="4"/>')
     + P(ELL(50, 68, 14, 9.5), '#ecc79e', '#d4a676') + eyes(52, 11, 4.6)
     + P(CIRCLE(50, 63, 5.6), '#ff4a5a', '#d62a3c', '<circle cx="48.3" cy="61.3" r="1.7" fill="#fff"/>') + smile(71, 5) + blush(64, 19),
-  // Exclusivo del evento: Día de Reyes. Rey Mago: capa morada con cuello dorado y su corona.
-  reymago: () => kid('#8a5cf0', '#6c3fd4')
-    + P('M28 81Q50 93 72 81l2 7Q50 101 26 88z', '#ffc83d', '#ec9a17', '<circle cx="50" cy="92" r="3" fill="#e8434f"/><circle cx="38" cy="89" r="2.2" fill="#3fa0e0"/><circle cx="62" cy="89" r="2.2" fill="#4fb85e"/>')
-    + P('M24 52Q22 31 50 30Q78 31 76 52Q70 43 50 42Q30 43 24 52z', '#3a2418', '#2a180e')
-    + P('M29 36 27 11l10 9 13-13 13 13 10-9-2 25z', '#ffc83d', '#ec9a17', '<circle cx="50" cy="27" r="3.4" fill="#e8434f"/><circle cx="36" cy="30" r="2.4" fill="#3fa0e0"/><circle cx="64" cy="30" r="2.4" fill="#4fb85e"/><path d="M30 33h40" stroke="#fff3b8" stroke-width="2" opacity=".7"/>')
-    + kidFace(),
-  // Exclusivo del evento: Amor y Amistad. Cupido: rizos dorados, alitas y diadema con corazón.
-  cupido: () => mirror(P('M24 84Q4 80 6 62Q16 70 22 66Q12 58 18 50Q28 62 34 80z', '#fff6ee', '#e3d6ee', '<path d="M12 64q6 4 12 2M16 54q6 6 12 10" stroke="#cfc0e0" stroke-width="1.6" fill="none"/>'))
-    + kid('#ff7ab8', '#e8559a')
-    + P('M24 50Q20 26 50 26Q80 26 76 50Q72 40 66 38Q62 44 56 40Q50 46 44 40Q38 44 34 38Q28 40 24 50z', '#ffc83d', '#ec9a17', '<circle cx="34" cy="34" r="3" fill="#ffe08a"/><circle cx="50" cy="31" r="3" fill="#ffe08a"/><circle cx="66" cy="34" r="3" fill="#ffe08a"/>')
-    + `<g transform="translate(41 14) scale(.56)">${ICONS.corazon()}</g>`
-    + kidFace(),
+  // Exclusivo del evento: Día de Reyes. Rey Mago: barba blanca, capa con cuello de armiño y su corona alta con joyas.
+  reymago: () => shoulders('#8a5cf0', '#6c3fd4')
+    + P('M24 84Q50 98 76 84l3 10Q50 108 21 94z', '#fff6ee', '#e3d8ff', `${[30, 42, 54, 66].map((x, i) => `<path d="M${x} ${90 + (i % 2) * 2}v4" stroke="${K}" stroke-width="2.4" stroke-linecap="round"/>`).join('')}`)
+    + mirror(P(CIRCLE(25, 52, 5.6), '#e8b48a', '#d4966a'))
+    + P(CIRCLE(50, 50, 24), '#f0c49a', '#dca47a')
+    + P('M27 54Q28 86 50 88Q72 86 73 54Q66 64 50 63Q34 64 27 54z', '#f4f1ff', '#d3cdea', '<path d="M40 70q2 8 4 12M50 68v14M60 70q-2 8-4 12" stroke="#d3cdea" stroke-width="1.8" fill="none"/>')
+    + P('M50 60Q42 56 36 62Q44 66 50 63Q56 66 64 62Q58 56 50 60z', '#f4f1ff', '#d3cdea')
+    + eyes(48, 10, 4.2) + blush(54, 17)
+    + P('M28 36 25 6l9 10 8-13 8 13 8-13 8 13 9-10-3 30z', '#ffc83d', '#ec9a17', '<circle cx="34" cy="16" r="2.4" fill="#e8434f"/><circle cx="50" cy="12" r="2.6" fill="#3fa0e0"/><circle cx="66" cy="16" r="2.4" fill="#5fae5a"/>')
+    + P('M26 30h48v8H26z', '#ffc83d', '#ec9a17', '<circle cx="50" cy="34" r="2.8" fill="#e8434f"/><circle cx="36" cy="34" r="2" fill="#3fa0e0"/><circle cx="64" cy="34" r="2" fill="#3fa0e0"/>'),
+  // Exclusivo del evento: Amor y Amistad. Cupido: querubín cachetón de rizos dorados, alas grandes y su arco con flecha de corazón.
+  cupido: () => mirror(P('M28 74Q2 70 4 42Q14 54 22 52Q12 40 20 30Q32 48 36 70z', '#fff6ee', '#e3d6ee', '<path d="M10 48q6 6 14 6M16 36q6 8 14 14" stroke="#cfc0e0" stroke-width="1.8" fill="none"/>'))
+    + shoulders('#fff6ee', '#e3d6ee') + P('M28 82Q50 92 74 80l2 6Q50 100 26 88z', '#ff7ab8', '#e8559a')
+    + P(CIRCLE(50, 54, 28), '#ffdcc4', '#f4bc9e')
+    + [[30, 32, 8], [41, 26, 8.4], [53, 24, 8.4], [65, 28, 8], [73, 38, 6.4], [26, 42, 6]].map(([x, y, r]) => P(CIRCLE(x, y, r), '#ffc83d', '#ec9a17', `<path d="M${x - r * 0.4} ${y}a${r * 0.4} ${r * 0.4} 0 1 1 ${r * 0.5} ${r * 0.3}" fill="none" stroke="#e89a17" stroke-width="1.6"/>`)).join('')
+    + eyes(56, 11, 4.8) + `<ellipse cx="50" cy="68" rx="3.6" ry="3" fill="#c22c5c"/>` + `<ellipse cx="29" cy="64" rx="7" ry="4.4" fill="#ff6f8e" opacity=".6"/><ellipse cx="71" cy="64" rx="7" ry="4.4" fill="#ff6f8e" opacity=".6"/>`
+    + `<path d="M70 66Q94 80 74 100" fill="none" stroke="${K}" stroke-width="5.4" stroke-linecap="round"/><path d="M70 66Q94 80 74 100" fill="none" stroke="#c98a3a" stroke-width="2.6" stroke-linecap="round"/><path d="M70 66L74 100" stroke="${K}" stroke-width="1.2"/>`
+    + `<path d="M58 96 92 70" stroke="${K}" stroke-width="2.4"/>` + `<g transform="translate(84 60) rotate(50) scale(.5)">${ICONS.corazon()}</g>`,
   // Exclusivo del evento: Primavera. Catarina: carita oscura, caparazón rojo con puntos y antenas.
   catarina: () => mirror(`<path d="M42 33Q37 19 30 14" fill="none" stroke="${K}" stroke-width="3.4" stroke-linecap="round"/><circle cx="30" cy="14" r="4.4" fill="#3a3550" stroke="${K}" stroke-width="2.4"/>`)
     + shoulders('#ff4f5a', '#d63040') + `${[[28, 94], [72, 94], [42, 100], [58, 100]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="3.6" fill="${K}"/>`).join('')}`
@@ -582,9 +770,11 @@ export const AVATARS = {
     + `<path d="M45 50h10" stroke="${K}" stroke-width="3"/>` + blush(62, 26),
   // Exclusivo del evento: Fiestas Patrias. Chihuahua con orejotas, sombrero de charro y sarape.
   chihuahua: () => P('M10 104Q12 80 50 78Q88 80 90 104z', '#e8438f', '#c22c70', `${[['#ffc83d', 86], ['#2f9e5c', 92], ['#1fa6c9', 98]].map(([c, y]) => `<path d="M8 ${y}h84" stroke="${c}" stroke-width="3.6"/>`).join('')}`)
-    + mirror(P('M33 47Q14 44 3 56Q14 66 31 64z', '#e8b878', '#cf9a5a', '<path d="M29 51Q17 50 10 56Q18 61 28 60z" fill="#ffb3c0"/>'))
-    + P(ELL(50, 61, 22, 21), '#e8b878', '#cf9a5a') + P(ELL(50, 71, 10, 7.4), '#f6dcb0', '#e8c48e')
-    + `<ellipse cx="50" cy="67.4" rx="4" ry="2.8" fill="${K}"/><path d="M50 70v2.6M46.8 74q3.2 2.4 6.4 0" fill="none" stroke="${K}" stroke-width="2.2" stroke-linecap="round"/>` + eyes(59, 10, 5.6) + blush(67, 16)
+    + mirror(P('M34 52Q16 34 4 40Q6 60 30 66z', '#e8b878', '#cf9a5a', '<path d="M30 55Q18 42 10 44Q12 56 27 61z" fill="#f2c9a8"/>'))
+    + P('M27 60Q27 44 50 44Q73 44 73 60Q73 76 58 82Q50 85 42 82Q27 76 27 60z', '#e8b878', '#cf9a5a', '<path d="M50 46q-6 8-4 18h8q2-10-4-18z" fill="#f6dcb0"/>')
+    + P(ELL(50, 74, 8.4, 6), '#f6dcb0', '#e8c48e')
+    + `<path d="M46.4 70.4h7.2L50 74.6z" fill="${K}" stroke="${K}" stroke-width="1.6" stroke-linejoin="round"/><path d="M50 74.6v2M47 78q3 2 6 0" fill="none" stroke="${K}" stroke-width="2" stroke-linecap="round"/>`
+    + [-12, 12].map((x) => `<circle cx="${50 + x}" cy="61" r="7.2" fill="${K}"/><circle cx="${47.6 + x}" cy="58.4" r="2.6" fill="#fff"/><circle cx="${52.6 + x}" cy="63.6" r="1.2" fill="#fff"/>`).join('') + blush(70, 21)
     + P(ELL(50, 40, 40, 8.5), '#f2d38a', '#d9b060', `<path d="M12 41a38 6.6 0 0 0 76 0" fill="none" stroke="#e8434f" stroke-width="2.4"/>`)
     + P('M36 40c0-14 6-24 14-24s14 10 14 24q-14 4-28 0z', '#f2d38a', '#d9b060', `<path d="M36 33q14 4 28 0" stroke="#e8434f" stroke-width="4" fill="none"/><path d="M37 29q13 3.6 26 0" stroke="#2f9e5c" stroke-width="2" fill="none"/>`),
   // Exclusivo del evento: Halloween. Gato negro con sombrero de bruja, ojos verdes y capa morada.
@@ -630,52 +820,88 @@ export const RINGS = {
   estrellas: () => `<g class="r-spin">${band(55, '#b9a6ff', 4)}${[0, 60, 120, 180, 240, 300].map((d, i) => tshape(starPath(...at(d, 57), i % 2 ? 7 : 10, i % 2 ? 3.2 : 4.4), '#ffc83d', '#ec9a17', '', 2.2)).join('')}</g>`,
   orbita: () => `<g transform="rotate(-18 70 70)"><path d="M3 70A67 22 0 0 0 137 70" fill="none" stroke="${K}" stroke-width="10" stroke-linecap="round"/><path d="M3 70A67 22 0 0 0 137 70" fill="none" stroke="#ffb13d" stroke-width="5" stroke-linecap="round"/></g>`
     + `<g class="r-moon">${tshape(CIRCLE(70, 8, 9), '#9ad9ff', '#5fb0e0', '<circle cx="67" cy="6" r="2.4" fill="#fff" opacity=".8"/>', 2.4)}</g>`,
-  // Exclusivos de la colección.
-  burbujas: () => band(55, '#5fc7e8', 5) + [[-100, 9], [-60, 6], [-20, 8], [40, 5], [110, 7], [160, 9], [210, 6]].map(([d, r]) => { const [x, y] = at(d, 57); return `<circle cx="${x}" cy="${y}" r="${r}" fill="#d8f0ff" stroke="${K}" stroke-width="2.4"/><circle cx="${x - r * 0.35}" cy="${y - r * 0.35}" r="${r * 0.3}" fill="#fff"/>`; }).join(''),
-  gemas: () => band(55, '#b36bff', 5) + [-90, -18, 54, 126, 198].map((d) => { const [x, y] = at(d, 56); return tshape(`M${x - 7} ${y - 2}l3-5h8l3 5-7 9z`, '#7fe0ff', '#3fb6e0', '', 2.2); }).join(''),
-  hojas: () => band(55, '#5fb04a', 5) + [-100, -30, 40, 110, 180, 250].map((d) => { const [x, y] = at(d, 56); return `<g transform="translate(${x} ${y}) rotate(${d + 45})">${tshape('M0 -10Q8 0 0 10Q-8 0 0 -10z', '#8fd46a', '#5fb04a', '<path d="M0 -8V8" stroke="#3f8a3a" stroke-width="1.4"/>', 2.2)}</g>`; }).join(''),
-  caramelos: () => band(55, '#ff9cc8', 6) + `<circle cx="70" cy="70" r="55" fill="none" stroke="#fff" stroke-width="3" stroke-dasharray="6 8"/>`
-    + [-90, 30, 150].map((d) => { const [x, y] = at(d, 56); return `<g transform="translate(${x - 9} ${y - 9}) rotate(${d + 90} 9 9) scale(.56)">${ICONS.caramelo()}</g>`; }).join(''),
-  // Huesitos (Valle de los dinosaurios): banda de piedra con huesos y la amonita arriba.
-  huesitos: () => band(55, '#e8a35a', 6) + `<circle cx="70" cy="70" r="55" fill="none" stroke="#fff1d6" stroke-width="2" stroke-dasharray="2 9" stroke-linecap="round"/>`
-    + [-30, 30, 90, 150, 210].map((d) => { const [x, y] = at(d, 56), b = (w, r, c) => `<path d="M-6 0H6" stroke="${c}" stroke-width="${w}" stroke-linecap="round"/>${[[-7, -2.6], [-7, 2.6], [7, -2.6], [7, 2.6]].map(([a, e]) => `<circle cx="${a}" cy="${e}" r="${r}" fill="${c}"/>`).join('')}`; return `<g transform="translate(${x} ${y}) rotate(${d + 90})">${b(7.6, 3.8, K)}${b(4, 2.4, '#fff1d6')}</g>`; }).join('')
-    + (() => { const [x, y] = at(-90, 56), k = 0.85; return `<g transform="translate(${x - 16 * k} ${y - 16 * k}) scale(${k})">${ICONS.fosil()}</g>`; })(),
-  // Tuercas (Taller de robots): banda de metal con remaches, tuercas y un foquito que parpadea.
-  tuercas: () => band(55, '#9aa7cf', 7) + Array.from({ length: 16 }, (_, i) => { const [x, y] = at(i * 22.5 + 11.25, 55); return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="1.5" fill="#5f6a9a"/>`; }).join('')
-    + [-30, 30, 150, 210].map((d, i) => { const [x, y] = at(d, 56), k = i % 2 ? 0.5 : 0.6; return `<g transform="translate(${x - 16 * k} ${y - 16 * k}) rotate(${d} ${16 * k} ${16 * k}) scale(${k})">${ICONS.tuerca()}</g>`; }).join('')
-    + (() => { const [x, y] = at(-90, 56); return `<rect x="${x - 6}" y="${y - 2}" width="12" height="8" rx="2" fill="#7f8ab8" stroke="${K}" stroke-width="2"/><g class="r-tw">${tshape(CIRCLE(x, y - 6, 7), '#ffe58a', '#ffc83d', `<circle cx="${x - 2.4}" cy="${y - 8.4}" r="2" fill="#fff"/>`, 2.2)}</g>`; })(),
-  // Tamalitos (Candelaria): banda de hoja de maíz con tamalitos y el jarrito de atole arriba.
-  tamalitos: () => band(55, '#c8d86a', 7) + `<circle cx="70" cy="70" r="55" fill="none" stroke="#98ac3e" stroke-width="1.6" stroke-dasharray="10 6"/>`
-    + [-25, 35, 95, 155, 215].map((d, i) => { const [x, y] = at(d, 56), k = i % 2 ? 0.55 : 0.68; return `<g transform="translate(${x - 16 * k} ${y - 16 * k}) rotate(${d + 90} ${16 * k} ${16 * k}) scale(${k})">${ICONS.tamal()}</g>`; }).join('')
-    + (() => { const [x, y] = at(-90, 56), k = 0.85; return `<g transform="translate(${x - 16 * k} ${y - 18 * k}) scale(${k})">${ICONS.atole()}</g>`; })(),
-  // Salsas (Día del Taco): banda roja de salsa con taquitos, limones y un taco más grande arriba.
-  salsas: () => band(55, '#e8434f', 7) + `<circle cx="70" cy="70" r="55" fill="none" stroke="#6fc25a" stroke-width="2" stroke-dasharray="2 9" stroke-linecap="round"/>`
-    + [[-25, 'taco', 0.56], [35, 'limon', 0.52], [95, 'taco', 0.56], [155, 'limon', 0.52], [215, 'taco', 0.56]].map(([d, k, z]) => { const [x, y] = at(d, 56); return `<g transform="translate(${x - 16 * z} ${y - 16 * z}) rotate(${d + 90} ${16 * z} ${16 * z}) scale(${z})">${ICONS[k]()}</g>`; }).join('')
-    + (() => { const [x, y] = at(-90, 56), k = 0.95; return `<g transform="translate(${x - 16 * k} ${y - 18 * k}) scale(${k})">${ICONS.taco()}</g>`; })(),
-  // Brotes (Día de la Tierra): banda verde con brotecitos alrededor y la Tierra arriba.
-  brotes: () => band(55, '#6fc25a', 7) + `<circle cx="70" cy="70" r="55" fill="none" stroke="#a86a3a" stroke-width="2" stroke-dasharray="2 9" stroke-linecap="round"/>`
-    + [-25, 35, 95, 155, 215].map((d, i) => { const [x, y] = at(d, 56), k = i % 2 ? 0.5 : 0.6; return `<g transform="translate(${x - 16 * k} ${y - 16 * k}) rotate(${d + 90} ${16 * k} ${16 * k}) scale(${k})">${ICONS.brote()}</g>`; }).join('')
-    + (() => { const [x, y] = at(-90, 56), k = 0.95; return `<g transform="translate(${x - 16 * k} ${y - 18 * k}) scale(${k})">${ICONS.tierra()}</g>`; })(),
-  // Globitos (Día del Niño): banda azul con confeti, globos de colores y la piñata arriba.
-  globitos: () => band(55, '#7fd6ff', 7) + `<circle cx="70" cy="70" r="55" fill="none" stroke="#ff7ab8" stroke-width="2.4" stroke-dasharray="2 8" stroke-linecap="round"/>`
-    + [[-25, '#ffc83d'], [35, '#47c27a'], [95, '#ff5f7e'], [155, '#b36bff'], [215, '#ff9c5b']].map(([d, c], i) => { const [x, y] = at(d, 56), k = i % 2 ? 0.5 : 0.6; return `<g transform="translate(${x - 16 * k} ${y - 16 * k}) rotate(${d + 90} ${16 * k} ${16 * k}) scale(${k})">${ICONS.globito().replace(/#ff5f7e/g, c).replace(/#d63d5f/g, '#00000033')}</g>`; }).join('')
-    + (() => { const [x, y] = at(-90, 56), k = 0.95; return `<g transform="translate(${x - 16 * k} ${y - 18 * k}) scale(${k})">${ICONS.pinata()}</g>`; })(),
-  // Claveles (Día de las Madres): banda rosa con claveles alrededor y un regalito arriba.
-  claveles: () => band(55, '#ff9cc8', 7) + `<circle cx="70" cy="70" r="55" fill="none" stroke="#fff" stroke-width="2.4" stroke-dasharray="2 8" stroke-linecap="round"/>`
-    + [-25, 35, 95, 155, 215].map((d, i) => { const [x, y] = at(d, 56), k = i % 2 ? 0.64 : 0.76; return `<g transform="translate(${x - 16 * k} ${y - 16 * k}) rotate(${d + 90} ${16 * k} ${16 * k}) scale(${k})">${ICONS.clavel()}</g>`; }).join('')
-    + (() => { const [x, y] = at(-90, 56), k = 0.9; return `<g transform="translate(${x - 16 * k} ${y - 18 * k}) scale(${k})">${ICONS.regalito()}</g>`; })(),
-  // Corbatas (Día del Padre): banda azul con corbatas alrededor y un bigote arriba.
-  corbatas: () => band(55, '#4aa8de', 7) + `<circle cx="70" cy="70" r="55" fill="none" stroke="#ffc83d" stroke-width="2.4" stroke-dasharray="2 8" stroke-linecap="round"/>`
-    + [-25, 35, 95, 155, 215].map((d, i) => { const [x, y] = at(d, 56), k = i % 2 ? 0.86 : 1; return `<g transform="translate(${x - 16 * k} ${y - 16 * k}) rotate(${d + 90} ${16 * k} ${16 * k}) scale(${k})">${ICONS.corbata()}</g>`; }).join('')
-    + (() => { const [x, y] = at(-90, 56), k = 1.35; return `<g transform="translate(${x - 16 * k} ${y - 15 * k}) scale(${k})">${ICONS.bigote()}</g>`; })(),
-  // Estambres (Día del Gato): banda lila con bolas de estambre alrededor y un gatito arriba.
-  estambres: () => band(55, '#b48cff', 7) + `<circle cx="70" cy="70" r="55" fill="none" stroke="#ff9cc8" stroke-width="2.4" stroke-dasharray="2 8" stroke-linecap="round"/>`
-    + [-25, 35, 95, 155, 215].map((d, i) => { const [x, y] = at(d, 56), k = i % 2 ? 0.8 : 0.92; return `<g transform="translate(${x - 16 * k} ${y - 16 * k}) rotate(${d + 90} ${16 * k} ${16 * k}) scale(${k})">${ICONS.estambre()}</g>`; }).join('')
-    + (() => { const [x, y] = at(-90, 56), k = 1.25; return `<g transform="translate(${x - 16 * k} ${y - 18 * k}) scale(${k})">${ICONS.gatito()}</g>`; })(),
-  // Huesos (Día del Perro): banda naranja con huesitos alrededor y el cachorro arriba.
-  huesos: () => band(55, '#ff9c5b', 7) + `<circle cx="70" cy="70" r="55" fill="none" stroke="#fff6e6" stroke-width="2.4" stroke-dasharray="2 8" stroke-linecap="round"/>`
-    + [-25, 35, 95, 155, 215].map((d, i) => { const [x, y] = at(d, 56), k = i % 2 ? 0.8 : 0.92; return `<g transform="translate(${x - 16 * k} ${y - 16 * k}) rotate(${d} ${16 * k} ${16 * k}) scale(${k})">${ICONS.hueso()}</g>`; }).join('')
-    + (() => { const [x, y] = at(-90, 56), k = 1.25; return `<g transform="translate(${x - 16 * k} ${y - 18 * k}) scale(${k})">${ICONS.cachorro()}</g>`; })(),
+  // Burbujas (Tesoros del mar): aro de agua con burbujas que titilan y un pececito que le da la vuelta.
+  burbujas: () => band(55, '#4aa8de', 7) + `<circle cx="70" cy="70" r="55" fill="none" stroke="#9fd8ff" stroke-width="2" stroke-dasharray="10 14" stroke-linecap="round"/>`
+    + Array.from({ length: 10 }, (_, i) => { const [x, y] = at(i * 36 + 10, i % 2 ? 61 : 58); return `<circle class="r-tw" style="animation-delay:${(i * 0.18).toFixed(2)}s" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${i % 3 ? 3 : 4.4}" fill="#e6f6ff" stroke="${K}" stroke-width="1.6"/>`; }).join('')
+    + `<g class="r-moon" style="animation-duration:9s">${tshape('M62 14Q70 8 78 14Q70 20 62 14zM62 14l-6-5v10z', '#ffc83d', '#ec9a17', '', 1.8)}<circle cx="74" cy="13" r="1.2" fill="${K}"/></g>`,
+  // Gemas (Cueva de gemas): aro hecho de gemas de colores pegaditas, con un brillo que le da la vuelta.
+  gemas: () => `<circle cx="70" cy="70" r="55" fill="none" stroke="${K}" stroke-width="14"/>`
+    + Array.from({ length: 18 }, (_, i) => { const d = i * 20, [x, y] = at(d, 55); return `<g transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${d + 90})"><path d="M-6-5h12l3 5-9 6-9-6z" fill="${['#b36bff', '#5ff0ff', '#ff7ab8'][i % 3]}" stroke="${K}" stroke-width="1.4" stroke-linejoin="round"/><path d="M-6-5 0 6 6-5M-9 0h18" fill="none" stroke="#fff" stroke-width=".8" opacity=".7"/></g>`; }).join('')
+    + `<circle cx="70" cy="70" r="55" fill="none" stroke="#fff" stroke-width="3" stroke-dasharray="14 160" stroke-linecap="round" class="r-shine"/>`,
+  // Hojas (Bosque encantado): corona de hojas de otoño encimadas que gira despacio, con dos bellotas abajo.
+  hojas: () => `<g class="r-spin">${Array.from({ length: 20 }, (_, i) => { const d = i * 18, [x, y] = at(d, 56); return `<g transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${d + 30})">${tshape('M0-9Q8-3 0 9Q-8-3 0-9z', ['#7fae5a', '#ff9c3d', '#ffc83d', '#e8434f'][i % 4], '#0002', '<path d="M0-7v14" stroke="#0003" stroke-width="1"/>', 1.6)}</g>`; }).join('')}</g>`
+    + [80, 100].map((d) => { const [x, y] = at(d, 58), k = 0.5; return `<g transform="translate(${x - 16 * k} ${y - 16 * k}) scale(${k})">${ICONS.bellota()}</g>`; }).join(''),
+  // Caramelos (Feria de dulces): aro de bastón de caramelo a rayas que gira, con dos dulces envueltos.
+  caramelos: () => `<circle cx="70" cy="70" r="55" fill="none" stroke="${K}" stroke-width="13"/><circle cx="70" cy="70" r="55" fill="none" stroke="#fff" stroke-width="8.4"/>`
+    + `<circle class="r-spin" cx="70" cy="70" r="55" fill="none" stroke="#ff5f8f" stroke-width="8.4" stroke-dasharray="8.6 8.6"/>`
+    + [45, 225].map((d) => { const [x, y] = at(d, 57), k = 0.62; return `<g transform="translate(${x - 16 * k} ${y - 16 * k}) rotate(${d} ${16 * k} ${16 * k}) scale(${k})">${ICONS.caramelo()}</g>`; }).join(''),
+  // Huesitos (Valle de los dinosaurios): aro verde de lomo de dinosaurio con sus placas naranjas para afuera.
+  huesitos: () => Array.from({ length: 14 }, (_, i) => { const d = i * (360 / 14), [x1, y1] = at(d - 9, 55), [x2, y2] = at(d + 9, 55), [tx, ty] = at(d, i % 2 ? 66 : 64); return `<path d="M${x1.toFixed(1)} ${y1.toFixed(1)}Q${tx.toFixed(1)} ${ty.toFixed(1)} ${x2.toFixed(1)} ${y2.toFixed(1)}z" fill="${i % 2 ? '#ff9c5b' : '#ffc83d'}" stroke="${K}" stroke-width="2.2" stroke-linejoin="round"/>`; }).join('')
+    + band(54, '#6fae4a', 7) + Array.from({ length: 14 }, (_, i) => { const [x, y] = at(i * (360 / 14) + 12.8, 54); return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="1.6" fill="#4a8a3a"/>`; }).join(''),
+  // Tuercas (Taller de robots): un engrane que gira con sus dientes y un foquito que parpadea arriba.
+  tuercas: () => { const d = Array.from({ length: 24 }, (_, i) => { const a1 = (i * 15 - 4) * Math.PI / 180, a2 = (i * 15 + 4) * Math.PI / 180, r = i % 2 ? 54 : 61; return `${i ? 'L' : 'M'}${(70 + Math.cos(a1) * r).toFixed(1)} ${(70 + Math.sin(a1) * r).toFixed(1)}L${(70 + Math.cos(a2) * r).toFixed(1)} ${(70 + Math.sin(a2) * r).toFixed(1)}`; }).join('') + 'z';
+    return `<g class="r-spin"><path d="${d}" fill="none" stroke="${K}" stroke-width="7" stroke-linejoin="round"/><path d="${d}" fill="none" stroke="#9aa7cf" stroke-width="3.6" stroke-linejoin="round"/>${Array.from({ length: 6 }, (_, i) => { const [x, y] = at(i * 60 + 30, 52); return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2.2" fill="#dfe6f2" stroke="${K}" stroke-width="1.2"/>`; }).join('')}</g>`
+      + `<circle cx="70" cy="9" r="6" fill="#5f6a9a" stroke="${K}" stroke-width="2"/><circle class="r-tw" cx="70" cy="9" r="3.4" fill="#ff5f7e"/>`; },
+  // Tamalitos (Candelaria): una mazorca hecha aro, granos amarillos sobre hoja de maíz, con hojas abajo y un tamalito.
+  tamalitos: () => band(55, '#8aa83a', 10)
+    + Array.from({ length: 32 }, (_, i) => { const [x, y] = at(i * 11.25, i % 2 ? 52.6 : 57.4).map((v) => v.toFixed(1)); return `<ellipse cx="${x}" cy="${y}" rx="2.9" ry="2.2" fill="${i % 4 < 2 ? '#ffd84a' : '#ffe98a'}" stroke="${K}" stroke-width="1" transform="rotate(${i * 11.25} ${x} ${y})"/>`; }).join('')
+    + [[118, 1], [62, -1]].map(([d, s]) => { const [x, y] = at(d, 60); return `<g transform="translate(${x} ${y}) rotate(${d + 90 * s})">${tshape('M0 0Q8-6 20 2Q8 6 0 0z', '#c8d86a', '#98ac3e', '<path d="M2 0q8-1 16 1" stroke="#98ac3e" stroke-width="1.2" fill="none"/>', 1.8)}</g>`; }).join('')
+    + (() => { const [x, y] = at(90, 57), k = 0.62; return `<g transform="translate(${x - 16 * k} ${y - 16 * k}) scale(${k})">${ICONS.tamal()}</g>`; })(),
+  // Salsas (Día del Taco): gotas de salsa roja, verde y de mango dando vueltas; un limón en la diagonal.
+  salsas: () => band(55, '#ff9c5b', 6)
+    + `<g class="r-spin">${Array.from({ length: 12 }, (_, i) => { const d = i * 30, [x, y] = at(d, 56); return `<path d="M0-7C3-3 5 0 5 2.6A5 5 0 0 1-5 2.6C-5 0-3-3 0-7z" fill="${['#e8434f', '#6fc25a', '#ffc83d'][i % 3]}" stroke="${K}" stroke-width="2" stroke-linejoin="round" transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${d + 90})"/>`; }).join('')}</g>`
+    + (() => { const [x, y] = at(135, 57), k = 0.6; return `<g transform="translate(${x - 16 * k} ${y - 16 * k}) scale(${k})">${ICONS.limon()}</g>`; })(),
+  // Brotes (Día de la Tierra): corona de hojas sobre un aro de mar, y la Tierra que le da la vuelta como luna.
+  brotes: () => `<circle cx="70" cy="70" r="56" fill="none" stroke="${K}" stroke-width="9"/><circle cx="70" cy="70" r="56" fill="none" stroke="#4aa8de" stroke-width="4.4"/>`
+    + Array.from({ length: 16 }, (_, i) => { const d = i * 22.5, [x, y] = at(d, 56); return `<g transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${d + (i % 2 ? 60 : 120)})">${tshape('M0 0Q5-6 12-1Q6 5 0 0z', i % 3 ? '#6fc25a' : '#9ad46a', '#3f9a4a', '', 1.6)}</g>`; }).join('')
+    + `<g class="r-moon">${tshape(CIRCLE(70, 13, 7.6), '#4aa8de', '#2f86c0', '<path d="M64 12c2-2 4 0 6-1s2-3 4-2 1 4-1 5-4 0-5 2" fill="#6fc25a"/>', 2)}</g>`,
+  // Globitos (Día del Niño): ocho globos amarrados al aro que se mecen cada uno a su ritmo.
+  globitos: () => band(51, '#4aa8de', 4)
+    + Array.from({ length: 8 }, (_, i) => { const d = i * 45 - 67.5, [x, y] = at(d, 60), [sx, sy] = at(d, 51), c = ['#ff5f7e', '#ffc83d', '#7fd36a', '#b48cff'][i % 4];
+      return `<g class="r-bob" style="animation-delay:${(i * 0.31).toFixed(2)}s"><path d="M${sx.toFixed(1)} ${sy.toFixed(1)}L${x.toFixed(1)} ${y.toFixed(1)}" stroke="${K}" stroke-width="1.2"/><g transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${d + 90})"><path d="M-1.6 5.4h3.2L0 3z" fill="${c}" stroke="${K}" stroke-width="1"/><ellipse cy="-2" rx="5.2" ry="6.4" fill="${c}" stroke="${K}" stroke-width="2"/><ellipse cx="-1.8" cy="-4.4" rx="1.4" ry="2" fill="#fff" opacity=".7"/></g></g>`; }).join(''),
+  // Claveles (Día de las Madres): corona de claveles de tres colores entre hojas, que gira despacito.
+  claveles: () => band(55, '#7fc46a', 5)
+    + Array.from({ length: 10 }, (_, i) => { const d = i * 36 + 18, [x, y] = at(d, 57); return `<g transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${d})">${tshape('M0 0Q4-5 10-1Q5 4 0 0z', '#7fc46a', '#4f9a3a', '', 1.4)}</g>`; }).join('')
+    + `<g class="r-spin">${Array.from({ length: 10 }, (_, i) => { const [x, y] = at(i * 36, 56), c = ['#ff5f8f', '#e8434f', '#fff0f4'][i % 3]; return `<g transform="translate(${x.toFixed(1)} ${y.toFixed(1)})">${[0, 60, 120, 180, 240, 300].map((d) => `<circle cx="${(Math.cos((d * Math.PI) / 180) * 3.6).toFixed(1)}" cy="${(Math.sin((d * Math.PI) / 180) * 3.6).toFixed(1)}" r="3.4" fill="${c}" stroke="${K}" stroke-width="1.4"/>`).join('')}<circle r="2.8" fill="${c === '#fff0f4' ? '#ffb3cb' : '#fff0f4'}"/></g>`; }).join('')}</g>`,
+  // Cinta métrica (Día del Padre): aro amarillo de cinta de medir con sus rayitas y números, su estuche y la corbata.
+  corbatas: () => `<circle cx="70" cy="70" r="56" fill="none" stroke="${K}" stroke-width="14"/><circle cx="70" cy="70" r="56" fill="none" stroke="#ffd84a" stroke-width="9.4"/>`
+    + Array.from({ length: 72 }, (_, i) => { const [x1, y1] = at(i * 5, 51.6), [x2, y2] = at(i * 5, i % 6 ? 54.4 : 57.4); return `<path d="M${x1.toFixed(1)} ${y1.toFixed(1)}L${x2.toFixed(1)} ${y2.toFixed(1)}" stroke="${K}" stroke-width="${i % 6 ? 0.9 : 1.4}"/>`; }).join('')
+    + [1, 2, 3, 4, 5].map((n) => { const d = -90 + n * 60, [x, y] = at(d, 58); return `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" font-family="Lilita One, sans-serif" font-size="6.4" fill="${K}" text-anchor="middle" dominant-baseline="middle" transform="rotate(${d + 90} ${x.toFixed(1)} ${y.toFixed(1)})">${n * 10}</text>`; }).join('')
+    + (() => { const [x, y] = at(-40, 58); return `<rect x="${(x - 9).toFixed(1)}" y="${(y - 9).toFixed(1)}" width="18" height="18" rx="5" fill="#9aa2ba" stroke="${K}" stroke-width="2.4"/><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="4" fill="#cfd8e8" stroke="${K}" stroke-width="1.6"/>`; })()
+    + (() => { const [x, y] = at(90, 56), k = 0.6; return `<g transform="translate(${x - 16 * k} ${y - 16 * k}) scale(${k})">${ICONS.corbata()}</g>`; })(),
+  // Estambres (Día del Gato): hilos de estambre rosa y lila enredados alrededor que giran, y la bola de estambre en la diagonal.
+  estambres: () => [['#ff7ab8', 0], ['#b48cff', Math.PI / 2]].map(([c, ph]) => { const d = Array.from({ length: 97 }, (_, i) => { const t = (i / 96) * Math.PI * 2, r = 55 + 3.6 * Math.sin(9 * t + ph); return `${i ? 'L' : 'M'}${(70 + Math.cos(t) * r).toFixed(1)} ${(70 + Math.sin(t) * r).toFixed(1)}`; }).join('') + 'z';
+      return `<g class="r-spin"><path d="${d}" fill="none" stroke="${K}" stroke-width="6"/><path d="${d}" fill="none" stroke="${c}" stroke-width="3"/></g>`; }).join('')
+    + (() => { const [x, y] = at(45, 57), k = 0.78; return `<g transform="translate(${x - 16 * k} ${y - 16 * k}) scale(${k})">${ICONS.estambre()}</g>`; })()
+    + (() => { const [x, y] = at(-135, 57), k = 0.6; return `<g transform="translate(${x - 16 * k} ${y - 16 * k}) scale(${k})">${ICONS.gatito()}</g>`; })(),
+  // Collar (Día del Perro): collar rojo con estoperoles y su placa de hueso que se columpia abajo.
+  huesos: () => `<circle cx="70" cy="70" r="56" fill="none" stroke="${K}" stroke-width="14"/><circle cx="70" cy="70" r="56" fill="none" stroke="#e8434f" stroke-width="9"/><circle cx="70" cy="70" r="56" fill="none" stroke="#ff7a84" stroke-width="2" stroke-dasharray="40 300" transform="rotate(200 70 70)"/>`
+    + Array.from({ length: 11 }, (_, i) => { const [x, y] = at(i * 30 - 60, 56); return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2.6" fill="#dfe6f2" stroke="${K}" stroke-width="1.4"/>`; }).join('')
+    + `<g class="r-swing"><circle cx="70" cy="125" r="3.2" fill="none" stroke="${K}" stroke-width="3.6"/><circle cx="70" cy="125" r="3.2" fill="none" stroke="#ffc83d" stroke-width="1.6"/><g transform="translate(70 132) scale(.46) translate(-16 -16)">${ICONS.hueso().replace(/#e8d8b8/g, '#ec9a17').replace(/#fff6e6/g, '#ffc83d')}</g></g>`,
+  // Pixelado (Día del Gamer): aro de focos de colores que se prenden en cadena, como marquesina de arcade; vida y control en las diagonales.
+  pixelado: () => `<circle cx="70" cy="70" r="56" fill="none" stroke="${K}" stroke-width="14"/><circle cx="70" cy="70" r="56" fill="none" stroke="#3f3570" stroke-width="9"/>`
+    + Array.from({ length: 24 }, (_, i) => { const [x, y] = at(i * 15, 56).map((v) => v.toFixed(1)); return `<rect class="r-tw" style="animation-delay:${(i % 4) * 0.45}s" x="${x - 3}" y="${y - 3}" width="6" height="6" rx="1" fill="${['#ff5f7e', '#5ff0ff', '#ffc83d', '#7fd36a'][i % 4]}" transform="rotate(${i * 15} ${x} ${y})"/>`; }).join('')
+    + (() => { const [x, y] = at(-135, 57), k = 0.62; return `<g transform="translate(${x - 16 * k} ${y - 16 * k}) scale(${k})">${ICONS.pixcora()}</g>`; })()
+    + (() => { const [x, y] = at(45, 57), k = 0.78; return `<g transform="translate(${x - 16 * k} ${y - 16 * k}) rotate(-20 ${16 * k} ${16 * k}) scale(${k})">${ICONS.control()}</g>`; })(),
+  // Llaves de código (Día del Programador): banda de terminal con código verde que gira; el cursor parpadea arriba.
+  llavecitas: () => `<defs><path id="rg-code" d="M70 70m-55 0a55 55 0 1 1 110 0a55 55 0 1 1-110 0"/></defs>` + band(55, '#163a26', 12)
+    + `<g class="r-spin"><text font-family="ui-monospace, monospace" font-weight="700" font-size="9.4" fill="#7fe8a0" dy="3.2" letter-spacing=".4"><textPath href="#rg-code">${'{ } 01 &lt;/&gt; ; '.repeat(4)}{ } 01</textPath></text></g>`
+    + (() => { const [x, y] = at(-90, 55); return `<rect x="${x - 6}" y="${y - 7}" width="12" height="14" rx="2" fill="#163a26" stroke="${K}" stroke-width="2.4"/><rect class="r-tw" x="${x - 3}" y="${y - 4.5}" width="6" height="9" fill="#c8f5d8"/>`; })()
+    + (() => { const [x, y] = at(135, 57), k = 0.8; return `<g transform="translate(${x - 16 * k} ${y - 16 * k}) scale(${k})">${ICONS.laptop()}</g>`; })(),
+  // Cascabeles (Día de los Inocentes): cuello de bufón de picos rojos y morados con cascabel en las puntas; gira despacio.
+  cascabeles: () => `<g class="r-spin">${Array.from({ length: 16 }, (_, i) => {
+      const a = i * 22.5, [x1, y1] = at(a - 11.25, 51), [x2, y2] = at(a + 11.25, 51), [tx, ty] = at(a, 62);
+      const bell = i % 2 ? '' : (() => { const [bx, by] = at(a, 63), k = 0.36; return `<g transform="translate(${bx - 16 * k} ${by - 17 * k}) scale(${k})">${ICONS.cascabel()}</g>`; })();
+      return `<path d="M${x1} ${y1}L${tx} ${ty}L${x2} ${y2}z" fill="${i % 2 ? '#8a5cf0' : '#e8434f'}" stroke="${K}" stroke-width="2.4" stroke-linejoin="round"/>${bell}`;
+    }).join('')}</g>` + band(52, '#ffc83d', 5),
+  // Chispitas (Año Nuevo): las doce uvas acomodadas como las horas de un reloj; titilan una tras otra, como la cuenta regresiva.
+  chispas: () => band(55, '#3a1a6a', 7) + `<circle cx="70" cy="70" r="55" fill="none" stroke="#ffc83d" stroke-width="2.2" stroke-dasharray="1 7.6" stroke-linecap="round"/>`
+    + Array.from({ length: 12 }, (_, i) => {
+      const [x, y] = at(i * 30 - 90, 56), d = (i * 0.15).toFixed(2);
+      if (!i) return `<g class="r-tw" style="animation-delay:${d}s"><g transform="translate(${x - 9.6} ${y - 9.6}) scale(.6)">${ICONS.reloj()}</g></g>`;
+      // Uva sencilla (sin sombreado): son once en cada avatar.
+      return `<g class="r-tw" style="animation-delay:${d}s"><circle cx="${x}" cy="${y}" r="5.4" fill="#b06ce0" stroke="${K}" stroke-width="2.2"/><circle cx="${x - 1.6}" cy="${y - 1.8}" r="1.4" fill="#f0dcff"/></g>`;
+    }).join(''),
   // Exclusivo del evento: Día de Muertos.
   cempasuchil: () => band(55, '#ff9c1a', 6) + `<circle cx="70" cy="70" r="55" fill="none" stroke="#b36bff" stroke-width="2.4" stroke-dasharray="3 9" stroke-linecap="round"/>`
     + [-90, -30, 30, 90, 150, 210].map((d, i) => marigold(...at(d, 56), i % 2 ? 8 : 10.5)).join(''),
