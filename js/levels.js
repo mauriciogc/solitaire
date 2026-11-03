@@ -674,12 +674,14 @@ export function specialLevel(i) {
 export const FIESTA_PLANETS = 3;
 export const FIESTA_PER_PLANET = 3;
 export const FIESTA_LEVELS = FIESTA_PLANETS * FIESTA_PER_PLANET;
-export const FIESTA_HELP = [2, 2, 3];
-export function fiestaLevel(seed, k, world) {
-  const j = k % FIESTA_PER_PLANET, boss = j === FIESTA_PER_PLANET - 1;
-  const pool = specials(FIESTA_HELP[j], eventGroup(world)).filter((i) => (i % 4 === 3) === boss);
-  const i = pool[(hash(seed) + k * 7) % pool.length];
-  return { ...specialLevel(i), k, planet: Math.floor(k / FIESTA_PER_PLANET), boss };
+// Algunas festividades largas traen más (n: niveles por planeta); los que no son jefe piden 2 ayudas y el jefe 3.
+export function fiestaLevel(seed, k, world, n = FIESTA_PER_PLANET) {
+  const j = k % n, p = Math.floor(k / n), boss = j === n - 1;
+  const pool = specials(boss ? 3 : 2, eventGroup(world)).filter((i) => (i % 4 === 3) === boss);
+  // Las de 3×3 siguen como siempre; las más largas cuentan jefes y no jefes por separado para no repetir tablero.
+  const step = n === FIESTA_PER_PLANET ? k : boss ? p : p * (n - 1) + j;
+  const i = pool[(hash(seed) + step * 7) % pool.length];
+  return { ...specialLevel(i), k, planet: p, boss };
 }
 
 // ---------- Mecánicas por mundo ----------

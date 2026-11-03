@@ -172,6 +172,37 @@ export const EVENT_BIOMES = {
     // [agua, dorado desde, cuántas velitas]
     [[0.42, 0.64, 1.1], [0.36, 0.58, 1.3], [0.3, 0.52, 1.5]],
   ),
+  // Festividades de leyendas mexicanas (nivel 200), 3 planetas cada una.
+  // Nahual y Chaneques (4 planetas): selva espesa de noche con cristales verdes; la selva sube en cada planeta.
+  nahual: sameLook(
+    { emblem: ['#3f9a4a', '#ffc24d', '#2a3a6a'], colors: [['#1f4a7a', '#3f7ab8', '#d8e8c0', '#3f9a4a', '#2f7a3a', '#9ad46a']],
+      planet: { amp: 0.15, freq: 2.0, seed: 241, outline: 0x0a2010, glow: 0xffd84a, prop: 'round', crown: '#2f7a3a', path: '#fff6c8' } },
+    [[0.4, 0.58, 1.3], [0.36, 0.54, 1.4], [0.32, 0.5, 1.6], [0.28, 0.46, 1.8]],
+  ),
+  // Día del Xoloitzcuintle: senderos de cempasúchil sobre tierra morada; el naranja sube en cada planeta.
+  xolo: sameLook(
+    { emblem: ['#ff9c1a', '#4a4560', '#b36bff'], colors: [['#3a2a6a', '#6a4fb0', '#f0dcc4', '#8a6a9a', '#ff9c1a', '#ffc24d']],
+      planet: { amp: 0.13, freq: 1.8, seed: 251, outline: 0x2a1030, glow: 0xffb13d, prop: 'round', crown: '#ff9c1a', path: '#fff3d6' } },
+    [[0.42, 0.62, 1.1], [0.36, 0.56, 1.3], [0.3, 0.5, 1.5]],
+  ),
+  // La Llorona: ríos y lagos azules de noche con velitas; el agua crece en cada planeta.
+  llorona: sameLook(
+    { emblem: ['#4a6ad8', '#fff6c8', '#2a2540'], colors: [['#1a2a6a', '#4a6ad8', '#d6e2ff', '#3a4a7a', '#6a7ab0', '#a8bff0']],
+      planet: { amp: 0.12, freq: 1.7, seed: 257, outline: 0x0a0a2a, glow: 0xa8bff0, prop: 'candle', crown: '#ffc83d', path: '#fff6c8' } },
+    [[0.46, 0.66, 1.1], [0.52, 0.7, 1.2], [0.58, 0.74, 1.3]],
+  ),
+  // La Catrina: jardines de dalias rosas sobre pasto morado; el rosa sube en cada planeta.
+  catrina: sameLook(
+    { emblem: ['#ff5fa8', '#8a5cf0', '#fff6ee'], colors: [['#4a2a8a', '#8a5cf0', '#ffe0ee', '#6c3fd4', '#ff5fa8', '#ff9cc8']],
+      planet: { amp: 0.13, freq: 1.9, seed: 263, outline: 0x2a0a3a, glow: 0xff9cc8, prop: 'round', crown: '#ff5fa8', path: '#fff6ee' } },
+    [[0.4, 0.62, 1.1], [0.34, 0.56, 1.3], [0.3, 0.5, 1.5]],
+  ),
+  // Día de la Revolución: llanos de tierra con magueyes; lo seco sube en cada planeta.
+  revolucion: sameLook(
+    { emblem: ['#e8a35a', '#7fae5a', '#e8434f'], colors: [['#2f6aa8', '#5fa0d8', '#f6dcb0', '#9ab85a', '#e8a35a', '#f6c890']],
+      planet: { amp: 0.12, freq: 1.6, seed: 269, outline: 0x3a1a0a, glow: 0xffc890, prop: 'cactus', crown: '#7fae5a', path: '#fff6e6' } },
+    [[0.38, 0.6, 1.0], [0.32, 0.54, 1.2], [0.26, 0.48, 1.4]],
+  ),
   // Halloween: mares morados, huertos de calabaza naranjas y árboles otoñales; el naranja sube en cada planeta.
   halloween: sameLook(
     { emblem: ['#5a2f9a', '#3a1a6a', '#ff8a1a'], colors: [['#3a1a6a', '#6a3fb0', '#c9b0e8', '#4a6a3a', '#ff8a1a', '#ffb13d']],
@@ -454,6 +485,45 @@ function mantelAnioNuevoTile() {
   s += `<rect width="${W}" height="${H}" fill="#0a0420" opacity=".55"/>`;
   return tileOut(W, H, s);
 }
+// Manteles de las festividades de leyendas mexicanas.
+function mantelNahualTile() {
+  const W = 120, H = 120;
+  let s = `<rect width="${W}" height="${H}" fill="#2f6a3a"/>`;
+  [[20, 24, 30], [80, 70, -20], [30, 90, 60], [96, 18, 110]].forEach(([x, y, a]) => (s += `<path d="M${x} ${y}q14-16 30-4-14 16-30 4z" fill="#3f8a4a" transform="rotate(${a} ${x} ${y})"/>`));
+  [[60, 40], [14, 60], [90, 104]].forEach(([x, y]) => (s += `<circle cx="${x}" cy="${y}" r="5" fill="none" stroke="#ffc24d" stroke-width="2" stroke-dasharray="4 3" opacity=".6"/>`));
+  s += `<rect width="${W}" height="${H}" fill="#041208" opacity=".55"/>`;
+  return tileOut(W, H, s);
+}
+function mantelXoloTile() {
+  const W = 120, H = 120;
+  let s = `<rect width="${W}" height="${H}" fill="#5a3a8a"/>`;
+  [[20, 20], [50, 34], [80, 48], [110, 62], [30, 80], [60, 94], [90, 108]].forEach(([x, y], i) => (s += `<g transform="translate(${x} ${y}) rotate(${i * 25})" fill="#ffb13d"><ellipse cy="2.4" rx="4" ry="3.4"/>${[[-4.4, -2.8], [-1.5, -5], [1.5, -5], [4.4, -2.8]].map(([a2, b]) => `<circle cx="${a2}" cy="${b}" r="1.5"/>`).join('')}</g>`));
+  s += `<rect width="${W}" height="${H}" fill="#14061e" opacity=".55"/>`;
+  return tileOut(W, H, s);
+}
+function mantelLloronaTile() {
+  const W = 120, H = 120;
+  let s = `<rect width="${W}" height="${H}" fill="#2a3a8a"/>`;
+  for (let y = 10; y < H; y += 30) s += `<path d="M0 ${y}q15-8 30 0t30 0 30 0 30 0" fill="none" stroke="#4a6ad8" stroke-width="3"/>`;
+  [[30, 40], [90, 90], [70, 20]].forEach(([x, y]) => (s += `<rect x="${x - 3}" y="${y - 6}" width="6" height="8" fill="#fff6e6"/><path d="M${x} ${y - 7}q-3-4 0-8 3 4 0 8z" fill="#ffc83d"/>`));
+  s += `<rect width="${W}" height="${H}" fill="#060a24" opacity=".55"/>`;
+  return tileOut(W, H, s);
+}
+function mantelCatrinaTile() {
+  const W = 120, H = 120;
+  let s = `<rect width="${W}" height="${H}" fill="#8a3a8a"/>`;
+  [[30, 30, '#ff5fa8'], [90, 90, '#ffc83d'], [90, 30, '#ff7a3a'], [30, 90, '#ff9cc8']].forEach(([x, y, c]) => (s += `<g transform="translate(${x} ${y})">${Array.from({ length: 8 }, (_, j) => `<ellipse cy="-7" rx="3.4" ry="7" fill="${c}" transform="rotate(${j * 45})"/>`).join('')}<circle r="3.4" fill="#fff6c8"/></g>`));
+  s += `<path d="M0 60h120M60 0v120" stroke="#ffc83d" stroke-width="1.4" stroke-dasharray="2 5" opacity=".6"/>`;
+  s += `<rect width="${W}" height="${H}" fill="#1a041a" opacity=".55"/>`;
+  return tileOut(W, H, s);
+}
+function mantelRevolucionTile() {
+  const W = 120, H = 120;
+  let s = `<rect width="${W}" height="${H}" fill="#c98a4a"/>`;
+  [0, 40, 80].forEach((y) => (s += `<rect y="${y}" width="${W}" height="14" fill="#e8434f" opacity=".55"/><rect y="${y + 16}" width="${W}" height="4" fill="#2f9e5c" opacity=".55"/><rect y="${y + 22}" width="${W}" height="3" fill="#fff6e6" opacity=".5"/>`));
+  s += `<rect width="${W}" height="${H}" fill="#1a0a04" opacity=".55"/>`;
+  return tileOut(W, H, s);
+}
 // Mantel del Día de las Madres: rosa clarito con florecitas y su orilla de encaje.
 function mantelMadresTile() {
   const W = 120, H = 120;
@@ -579,6 +649,9 @@ const P = {
   // Año Nuevo: el reloj de las doce, dos racimos de uvas y estrellitas doradas.
   relojProp: () => `<g ${T(0, 0, -10)}>${drop(circ(38))}<g transform="translate(-52 -56) scale(3.25)">${icon('reloj').replace(/^<svg[^>]*>|<\/svg>$/g, '')}</g></g>`,
   uvasProp: () => [[-12, -8, -16, 2], [18, 16, 18, 1.5]].map(([x, y, a, k]) => `<g ${T(x, y, a)}>${drop(circ(12 * k), 3, 4)}<g transform="translate(${-16 * k} ${-16 * k}) scale(${k})">${icon('uvas').replace(/^<svg[^>]*>|<\/svg>$/g, '')}</g></g>`).join(''),
+  // Objetos genéricos para las mesas nuevas: un ícono grande y un par de íconos chicos.
+  bigIco: (n) => `<g ${T(0, 0, -12)}>${drop(circ(38))}<g transform="translate(-52 -54) scale(3.25)">${icon(n).replace(/^<svg[^>]*>|<\/svg>$/g, '')}</g></g>`,
+  pairIco: (n) => [[-12, -10, -14, 2], [18, 16, 18, 1.5]].map(([x, y, a, k]) => `<g ${T(x, y, a)}>${drop(circ(12 * k), 3, 4)}<g transform="translate(${-16 * k} ${-16 * k}) scale(${k})">${icon(n).replace(/^<svg[^>]*>|<\/svg>$/g, '')}</g></g>`).join(''),
   // Halloween: calabaza tallada, murciélagos y un caldero con poción.
   pumpkin: () => `${drop(ELLd(0, 2, 48, 38))}<g transform="translate(-54 -62) scale(3.4)">${icon('calabaza').replace(/^<svg[^>]*>|<\/svg>$/g, '')}</g>`,
   bats: () => [[-14, -10, -15, 2.2], [20, 18, 20, 1.6]].map(([x, y, a, k]) => `<g ${T(x, y, a)}><g transform="translate(${-16 * k} ${-16 * k}) scale(${k})">${icon('murcielago').replace(/#5a4a8a/g, '#a890d8').replace(/#3f3270/g, '#7a62b8').replace(/^<svg[^>]*>|<\/svg>$/g, '')}</g></g>`).join(''),
@@ -623,6 +696,11 @@ const EVENT_TABLES = {
   programador: { tile: mantelProgramadorTile, tint: '#04140a', props: ['laptopProp', 'llavesProp', ['mug', ['#5ad68c', '#2f9e5c', '#c8f5d8']], 'patohule'] },
   inocentes: { tile: mantelInocentesTile, tint: '#14040a', props: ['bufonProp', 'palomitas', ['mug', ['#e8434f', '#c22c3c', '#ffb0b6']], 'cascabelesProp'] },
   anionuevo: { tile: mantelAnioNuevoTile, tint: '#0a0420', props: ['relojProp', 'uvasProp', ['mug', ['#ffc83d', '#e89a17', '#fff0c0']], 'goldstars'] },
+  nahual: { tile: mantelNahualTile, tint: '#041208', props: [['bigIco', 'nahual'], ['pairIco', 'chaneque'], ['mug', ['#5fae5a', '#3f8a3a', '#c8f0a8']], ['pairIco', 'brote']] },
+  xolo: { tile: mantelXoloTile, tint: '#14061e', props: [['bigIco', 'xolito'], ['pairIco', 'farolito'], ['mug', ['#ff9c1a', '#e0700a', '#ffd27a']], ['pairIco', 'hueso']] },
+  llorona: { tile: mantelLloronaTile, tint: '#060a24', props: [['bigIco', 'llorona'], ['pairIco', 'velita'], ['mug', ['#4a6ad8', '#3a52b0', '#d6e2ff']], 'goldstars'] },
+  catrina: { tile: mantelCatrinaTile, tint: '#1a041a', props: [['bigIco', 'catrina'], ['pairIco', 'pluma'], ['mug', ['#ff5fa8', '#e0408a', '#ffc2dc']], ['pairIco', 'calavera']] },
+  revolucion: { tile: mantelRevolucionTile, tint: '#1a0a04', props: [['bigIco', 'locomotora'], ['pairIco', 'herradura'], ['mug', ['#e8434f', '#c22c3c', '#ffb0b6']], ['pairIco', 'sombrero']] },
   halloween: { tile: mantelHalloweenTile, tint: '#0e0618', props: ['pumpkin', 'bats', ['mug', ['#6fd36a', '#3fae4a', '#b8f0a0']], 'cauldron'] },
 };
 // HTML del fondo de la mesa para el mundo w (o la del evento del mes: theme = su clave).

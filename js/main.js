@@ -1,5 +1,5 @@
 import { save, prefs, persist, resetProfile, renameProfile, exportCode, readCode, loadProfile, setDev } from './storage.js';
-import { UNLOCK, EVENTOS, FIESTAS, COLECCIONES, evSoon, isOn, nextEvent, daysToNextCol, plusCols, RACHA_GOALS, RACHA_STEP, rachaGoal, nextIndex, racha, rachaTheme, rachaReady, rachaHot, rachaWin, rachaLose, rachaClaim, msToMidnight, col, colLeft, colWin, colOffers, colBuy, ev, evLeft, evTicketLeft, evPrize, evEnter, evWin, evLose, evAlbum, fiAlbum, EVENT_PLANETS, EVENT_PER_PLANET, EVENT_LEVELS, fiesta, fiestaLeft, nextFiesta, fiEnter, fiWin, fiLose, FIESTA_PLANETS, FIESTA_PER_PLANET, FIESTA_LEVELS } from './events.js';
+import { UNLOCK, EVENTOS, FIESTAS, COLECCIONES, evSoon, isOn, nextEvent, daysToNextCol, plusCols, RACHA_GOALS, RACHA_STEP, rachaGoal, nextIndex, racha, rachaTheme, rachaReady, rachaHot, rachaWin, rachaLose, rachaClaim, msToMidnight, col, colLeft, colWin, colOffers, colBuy, ev, evLeft, evTicketLeft, evPrize, evEnter, evWin, evLose, evAlbum, fiAlbum, EVENT_PLANETS, EVENT_PER_PLANET, EVENT_LEVELS, fiesta, fiestaLeft, nextFiesta, fiEnter, fiWin, fiLose, fiShape } from './events.js';
 import { WORLD_COUNT, LEVELS_PER_WORLD, TOTAL_LEVELS, worldInfo, generateLevel, variantLevel, MECH_INTRO, MECH_NAMES, secretId, isSecret, eventLevel, fiestaLevel } from './levels.js';
 import { Game, faceHTML, backHTML } from './game.js';
 import { DAILY_PATH, dailyState, starsNeeded, TICKET_PRICE, ticketCost, ticketRefund, coinsFor, bossChest, openSurprise, SECRET_MULT, SECRET_PRIZE } from './economy.js';
@@ -1213,8 +1213,11 @@ const EV_NODES = [0, 2, 5, 7, 9]; // dónde van sus 5 insignias en el camino del
 const EVK = {
   mes: { get: () => ev(), enter: evEnter, win: evWin, lose: evLose, P: EVENT_PLANETS, N: EVENT_PER_PLANET, L: EVENT_LEVELS, W: EV_W, nodes: EV_NODES, tk: true,
     level: (e, k) => eventLevel(e.id, k, e.state.world), left: () => evLeft() },
-  fiesta: { get: () => { const f = fiesta(); return f && !f.soon ? f : null; }, enter: fiEnter, win: fiWin, lose: fiLose, P: FIESTA_PLANETS, N: FIESTA_PER_PLANET, L: FIESTA_LEVELS, W: 950, nodes: [0, 4, 9], tk: false,
-    level: (e, k) => fiestaLevel(e.day, k, e.state.world), left: () => fiestaLeft() },
+  // P, N y L dependen de la festividad (el Nahual trae 4 planetas de 4).
+  fiesta: { get: () => { const f = fiesta(); return f && !f.soon ? f : null; }, enter: fiEnter, win: fiWin, lose: fiLose, W: 950, tk: false,
+    get P() { return fiShape(fiesta()).P; }, get N() { return fiShape(fiesta()).N; }, get L() { return fiShape(fiesta()).L; },
+    get nodes() { return this.N === 4 ? [0, 3, 6, 9] : [0, 4, 9]; },
+    level: (e, k) => fiestaLevel(e.day, k, e.state.world, fiShape(e).N), left: () => fiestaLeft() },
 };
 let EVS = EVK.mes;
 const kindOf = (e) => (e.date ? 'fiesta' : 'mes');
@@ -1263,7 +1266,7 @@ function openFiesta() {
     color: f.color,
     cls: 'fi-soon',
     body: `<div class="dticket wait"><div class="rays"></div><span style="--i:0">${icon(f.ico, 0, 0, 'big')}</span></div><p class="tk-clock">${clock(fiestaLeft())}</p>
-      <p class="note">Solo por 24 horas: <b>${FIESTA_PLANETS} planetas</b>, ${FIESTA_LEVELS} niveles y premios <b>exclusivos</b>.<br>No necesitas <b>boletos</b>: juega y reintenta las veces que quieras.</p>`,
+      <p class="note">Solo por ${f.days > 1 ? `${f.days} días` : '24 horas'}: <b>${fiShape(f).P} planetas</b>, ${fiShape(f).L} niveles y premios <b>exclusivos</b>.<br>No necesitas <b>boletos</b>: juega y reintenta las veces que quieras.</p>`,
     buttons: [{ label: '¡Ahí estaré!', cls: 'gold wide' }],
   });
   const c = m.el.querySelector('.tk-clock');
@@ -1448,12 +1451,12 @@ function openEvIntro(e, go = false) {
     wide: true,
     cls: 'ev-intro',
     body: `<div class="evi-hero"><div class="rays"></div>${EVENT_BIOMES[e.key].map((b, p, all) => `<span class="evi-pl" style="--i:${all.length === 3 ? [-2, -1, 1][p] : p - (all.length - 1) / 2}">${miniPlanet(b.emblem)}</span>`).join('')}${EVENT_BIOMES[e.key].length === 3 ? `<span class="evi-pl" style="--i:2">${icon(e.deco)}</span>` : ''}<span class="evi-ico">${icon(e.ico, 0, 0, 'big')}</span></div>
-      ${kind === 'fiesta' ? `<p class="lead">¡Hoy es <b>${e.name}</b>! Solo por hoy: viaja por <b>${K.P} planetas</b> y gana premios <b>exclusivos</b> que no salen en ningún otro lado.</p>
+      ${kind === 'fiesta' ? `<p class="lead">¡Hoy es <b>${e.name}</b>! ${e.days > 1 ? `Solo por ${e.days} días` : 'Solo por hoy'}: viaja por <b>${K.P} planetas</b> y gana premios <b>exclusivos</b> que no salen en ningún otro lado.</p>
       <ul class="evi-rules">
         ${rule('ticket', `<b>Sin boletos</b>: entra y reintenta las veces que quieras.`)}
         ${rule('flame', `${K.L} niveles <b>difíciles</b>. Aquí no cuentan las estrellas: solo ganar.`)}
         ${rule('gift', `Gana el <b>nivel ${K.N}</b> de cada planeta y abre su <b>regalo sorpresa</b>. Es tuyo para siempre.`)}
-        ${rule('flag', `Termina hoy a la medianoche: te quedan <b>${evDaysOf(K)}</b>.`)}
+        ${rule('flag', `${K.left() > 864e5 ? 'Termina en unos días' : 'Termina hoy a la medianoche'}: te quedan <b>${evDaysOf(K)}</b>.`)}
       </ul>` : `<p class="lead">¡Llegó el evento del mes! Viaja por <b>${EVENT_PLANETS} planetas</b> y gana premios <b>exclusivos</b> que solo salen ahora: avatares, marcos, reversos, postales, fondos, títulos y naves.</p>
       <ul class="evi-rules">
         ${rule(e.tk, `Entras con <b>1 boleto</b>. Si ganas, lo conservas; si pierdes, el siguiente llega en <b>24 horas</b>.`)}
@@ -1633,7 +1636,7 @@ async function calm(gen) {
 async function notices() {
   const gen = ++noticeGen;
   if (tourStep() || save.onboard !== 'done') return;
-  for (const k of ['racha', 'col', 'mes', 'col2', 'fiesta', 'col3']) {
+  for (const k of ['racha', 'col', 'mes', 'col2', 'fiesta', 'col3', 'fiesta2']) {
     if (!isOn(k) || save.intro?.[k]) continue;
     if (!(await calm(gen))) return;
     await openUnlock(k);
@@ -1712,6 +1715,22 @@ const UNLOCK_INFO = {
       ],
     };
   },
+  // Nivel 200: festividades de leyendas mexicanas. Igual que la de las festividades (nivel 120), con sus iconos
+  // arriba y solo cuáles son.
+  fiesta2: () => {
+    const nuevas = FIESTAS.filter((f) => f.local && f.ready), f = fiesta(), nx = nextFiesta(), mid = nuevas[Math.floor(nuevas.length / 2)];
+    const nombres = nuevas.map((x) => `<b>${x.name}</b>`), lista = `${nombres.slice(0, -1).join(', ')} y ${nombres.at(-1)}`;
+    return {
+      title: '¡Nuevas: Leyendas de México!', ico: mid.ico, color: mid.color, hero: nuevas.map((x) => icon(x.ico, 0, 0, x === mid ? 'main' : '')).join(''),
+      lead: `Llegaste al <b>nivel ${UNLOCK.fiesta2}</b>: se suman <b>${nuevas.length} festividades</b> nuevas: ${lista}.`,
+      rules: [
+        ['ticket', '<b>Sin boletos</b>: entra y reintenta las veces que quieras.'],
+        ['flame', 'Niveles <b>difíciles</b>. Aquí no cuentan las estrellas: solo ganar.'],
+        ['flag', '3 días antes aparece su botón junto a <b>Jugar</b>, con la cuenta regresiva.'],
+        ['gift', f ? (f.soon ? `${f.inDays > 1 ? `En ${f.inDays} días` : 'Mañana'} es <b>${f.name}</b>. ¡No te lo pierdas!` : `¡Hoy es <b>${f.name}</b>! Búscalo junto a <b>Jugar</b>.`) : nx ? `La próxima, <b>${nx.name}</b>, llega en <b>${nx.days} ${nx.days === 1 ? 'día' : 'días'}</b>.` : 'Pronto llega la primera.'],
+      ],
+    };
+  },
   // Nivel 120: festividades de 24 h.
   fiesta: () => {
     const f = fiesta(), nx = nextFiesta();
@@ -1749,7 +1768,7 @@ function evHeroIcons(main, list = Object.keys(EVENTOS).map(Number).sort((a, b) =
   return [at(-1), at(0), at(1)].map((x, k) => icon(x, 0, 0, k === 1 ? 'main' : '')).join('');
 }
 async function openUnlock(k) {
-  const sel = k === 'fiesta' ? '.cta [data-a="fiesta"]' : `.side.r [data-a="${{ racha: 'racha', col: 'col', mes: 'evento', col2: 'col', col3: 'col' }[k]}"]`;
+  const sel = k === 'fiesta' || k === 'fiesta2' ? '.cta [data-a="fiesta"]' : `.side.r [data-a="${{ racha: 'racha', col: 'col', mes: 'evento', col2: 'col', col3: 'col' }[k]}"]`;
   const btn = document.querySelector(sel);
   revealed.add(k);
   if (btn) {
@@ -1917,7 +1936,7 @@ function postcardHTML(w, stars, cls = '', frame = equipped('frame')) {
 const EV_HUE = { orange: 30, red: 355, violet: 268, pink: 330, green: 120, blue: 205, gold: 45 };
 // Las de festividades (x.e.date) son iguales, con su último planeta (el 3.º) y "Festividad" en el sello.
 const evPcPlanet = (x) => EVENT_BIOMES[x.e.key].at(-1);
-const pcKind = (x) => (x.e.date ? { won: '¡Festividad ganada!', stamp: 'Fiesta', W: EVK.fiesta.W + FIESTA_PLANETS - 1 } : { won: '¡Evento ganado!', stamp: 'Evento', W: EV_W + EVENT_PLANETS - 1 });
+const pcKind = (x) => (x.e.date ? { won: '¡Festividad ganada!', stamp: 'Fiesta', W: EVK.fiesta.W + x.e.planets.length - 1 } : { won: '¡Evento ganado!', stamp: 'Evento', W: EV_W + EVENT_PLANETS - 1 });
 function evPostcardHTML(x, cls = '', frame = equipped('frame')) {
   return `<div class="postcard tier-oro ev-pc fr-${frame} ${cls}" style="--h:${EV_HUE[x.e.color] ?? 45}">
     <div class="pc-art">${miniPlanet(evPcPlanet(x).emblem, 'pc-planet')}</div>

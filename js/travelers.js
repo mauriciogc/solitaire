@@ -682,6 +682,119 @@ const MODELS = {
       beam.material.opacity = 0.18 + (Math.floor(Math.abs(t) * 12) % 2) * 0.1;
     } };
   },
+  // Nahual jaguar (Nahual y Chaneques): jaguar con sus manchas y ojos verdes que brinca entre la neblina y mueve la cola.
+  nahualito(part) {
+    const g = new THREE.Group(), all = new THREE.Group(), tail = new THREE.Group(), mist = [];
+    all.add(part(new THREE.SphereGeometry(0.2, 20, 14).scale(1.4, 0.85, 0.9), '#ffc24d', { ol: 0.06 }));
+    const head = new THREE.Group();
+    head.add(part(new THREE.SphereGeometry(0.15, 20, 14), '#ffc24d', { ol: 0.07 }));
+    head.add(part(new THREE.SphereGeometry(0.07, 12, 10).scale(1, 0.8, 0.8), '#fff6e6', { y: -0.04, z: 0.12, ol: 0.1 }));
+    head.add(part(new THREE.SphereGeometry(0.02, 8, 6), '#2a1f5c', { y: -0.01, z: 0.18, ol: 0 }));
+    for (const sx of [-1, 1]) {
+      head.add(part(new THREE.SphereGeometry(0.03, 10, 8).scale(1.2, 0.8, 0.6), '#7fd36a', { x: sx * 0.06, y: 0.04, z: 0.125, ol: 0.2 }));
+      head.add(part(new THREE.ConeGeometry(0.045, 0.07, 8), '#ffb13d', { x: sx * 0.1, y: 0.13, ol: 0.15 }));
+    }
+    head.position.set(0.25, 0.08, 0); head.rotation.y = Math.PI / 2; all.add(head);
+    for (const [x, y, z] of [[-0.1, 0.12, 0.08], [0.05, 0.15, -0.06], [-0.15, 0.05, -0.12], [0.1, 0.05, 0.14], [-0.05, 0.02, 0.17]]) all.add(part(new THREE.SphereGeometry(0.028, 8, 6), '#8a4a10', { x, y, z, ol: 0 }));
+    tail.add(part(new THREE.CylinderGeometry(0.02, 0.03, 0.3, 8).translate(0, 0.15, 0), '#ffc24d', { ol: 0.15 }));
+    tail.position.set(-0.26, 0.04, 0); all.add(tail);
+    for (const [x, z] of [[0.15, 0.09], [0.15, -0.09], [-0.15, 0.09], [-0.15, -0.09]]) all.add(part(new THREE.CylinderGeometry(0.035, 0.03, 0.14, 8), '#ffc24d', { x, y: -0.16, z, ol: 0.12 }));
+    for (let k = 0; k < 3; k++) { const m = new THREE.Mesh(new THREE.SphereGeometry(0.12, 12, 8), glow('#e8f5e0', 0.4)); g.add(m); mist.push(m); }
+    all.rotation.y = -0.6; g.add(all);
+    return { obj: g, tick: (t) => {
+      const hop = Math.abs(Math.sin(t * 2.4)); all.position.y = hop * 0.12 - 0.04; all.rotation.z = Math.sin(t * 2.4) * 0.12;
+      tail.rotation.z = 0.8 + Math.sin(t * 4) * 0.4; head.rotation.x = Math.sin(t * 1.6) * 0.15;
+      mist.forEach((m, k) => { const p = (((t * 0.3 + k / 3) % 1) + 1) % 1; m.position.set(-0.3 + p * 0.6, -0.25, Math.sin(k * 2) * 0.15); m.scale.setScalar(0.6 + p); m.material.opacity = 0.35 * Math.sin(p * Math.PI); });
+    } };
+  },
+  // Xolo volador (Día del Xoloitzcuintle): el xolo gris flota con su collar de cempasúchil, mueve las orejas y las patitas.
+  xolovuela(part) {
+    const g = new THREE.Group(), all = new THREE.Group(), ears = [], legs = [];
+    all.add(part(new THREE.SphereGeometry(0.17, 20, 14).scale(1.5, 0.85, 0.85), '#4a4560', { ol: 0.06 }));
+    const head = new THREE.Group();
+    head.add(part(new THREE.SphereGeometry(0.14, 20, 14).scale(1, 1, 1.1), '#4a4560', { ol: 0.07 }));
+    head.add(part(new THREE.SphereGeometry(0.05, 10, 8), '#1a1530', { z: 0.15, y: -0.02, ol: 0.1 }));
+    head.add(part(new THREE.SphereGeometry(0.03, 8, 6).scale(1, 0.4, 1), '#ff7a9a', { z: 0.13, y: -0.07, ol: 0.15 }));
+    head.add(part(new THREE.SphereGeometry(0.04, 10, 8), '#7a7290', { y: 0.14, ol: 0.15 }));
+    for (const sx of [-1, 1]) {
+      head.add(part(new THREE.SphereGeometry(0.025, 8, 6), '#fff6e6', { x: sx * 0.06, y: 0.03, z: 0.12, ol: 0.15 }));
+      const ear = new THREE.Group();
+      ear.add(part(new THREE.ConeGeometry(0.05, 0.16, 4).translate(0, 0.08, 0), '#4a4560', { ol: 0.12 }));
+      ear.position.set(sx * 0.08, 0.1, 0); ear.rotation.z = -sx * 0.4; head.add(ear); ears.push(ear);
+    }
+    for (let k = 0; k < 7; k++) { const a = (k / 7) * Math.PI * 2; head.add(part(new THREE.SphereGeometry(0.032, 8, 6), k % 2 ? '#ffb13d' : '#ff8a1a', { x: Math.cos(a) * 0.12, y: -0.13, z: Math.sin(a) * 0.12, ol: 0.15 })); }
+    head.position.set(0.24, 0.1, 0); head.rotation.y = Math.PI / 2; all.add(head);
+    for (const [x, z] of [[0.13, 0.08], [0.13, -0.08], [-0.13, 0.08], [-0.13, -0.08]]) { const l = part(new THREE.CylinderGeometry(0.03, 0.025, 0.12, 8).translate(0, -0.06, 0), '#4a4560', { x, y: -0.1, z, ol: 0.12 }); all.add(l); legs.push(l); }
+    all.add(part(new THREE.CylinderGeometry(0.012, 0.02, 0.18, 6).rotateZ(1.2), '#4a4560', { x: -0.3, y: 0.06, ol: 0.15 }));
+    all.rotation.y = -0.6; g.add(all);
+    return { obj: g, tick: (t) => {
+      all.position.y = Math.sin(t * 2) * 0.06; all.rotation.z = Math.sin(t * 1.4) * 0.1;
+      ears.forEach((e, k) => (e.rotation.x = Math.sin(t * 5 + k) * 0.3));
+      legs.forEach((l, k) => (l.rotation.z = Math.sin(t * 7 + k * 1.6) * 0.5));
+    } };
+  },
+  // Trajinera (La Llorona): lanchita de colores con su arco pintado; las velitas del borde titilan y se mece en el agua.
+  trajinera(part, toon) {
+    const g = new THREE.Group(), boat = new THREE.Group(), flames = [];
+    boat.add(part(new THREE.BoxGeometry(0.62, 0.1, 0.3), '#3fae6a', { ol: 0.05 }));
+    boat.add(part(new THREE.BoxGeometry(0.64, 0.04, 0.32), '#ffc83d', { y: 0.06, ol: 0.04 }));
+    boat.add(part(new THREE.BoxGeometry(0.66, 0.04, 0.34), '#e8434f', { y: -0.06, ol: 0.04 }));
+    const arch = new THREE.Group();
+    arch.add(part(new THREE.BoxGeometry(0.5, 0.1, 0.02), '#ff5fa8', { y: 0.28, ol: 0.1 }));
+    for (const x of [-0.24, 0.24]) arch.add(part(new THREE.BoxGeometry(0.03, 0.22, 0.03), '#ffc83d', { x, y: 0.16, ol: 0.15 }));
+    for (let k = 0; k < 4; k++) arch.add(part(new THREE.SphereGeometry(0.02, 8, 6), ['#ffc83d', '#4a6ad8', '#3fae6a', '#fff'][k], { x: -0.15 + k * 0.1, y: 0.28, z: 0.015, ol: 0 }));
+    boat.add(arch);
+    for (const [x, z] of [[-0.25, 0.12], [-0.08, 0.13], [0.09, 0.13], [0.26, 0.12], [-0.25, -0.12], [0.26, -0.12]]) {
+      boat.add(part(new THREE.CylinderGeometry(0.018, 0.018, 0.06, 8), '#fff6e6', { x, y: 0.11, z, ol: 0.15 }));
+      const f = new THREE.Mesh(new THREE.SphereGeometry(0.018, 8, 6).scale(1, 1.6, 1), glow('#ffc83d', 0.95)); f.position.set(x, 0.16, z); boat.add(f); flames.push(f);
+    }
+    boat.rotation.set(0.25, -0.5, 0);
+    g.add(boat);
+    return { obj: g, tick: (t) => {
+      boat.position.y = Math.sin(t * 1.6) * 0.04; boat.rotation.z = Math.sin(t * 1.3) * 0.08; boat.rotation.x = 0.25 + Math.sin(t * 1.1) * 0.05;
+      flames.forEach((f, k) => f.scale.set(1, 1.4 + Math.sin(t * 9 + k * 2) * 0.4, 1));
+    } };
+  },
+  // Sombrero de Catrina: ala ancha morada con flores de colores y una pluma que se mece; gira despacito.
+  sombrerote(part) {
+    const g = new THREE.Group(), hat = new THREE.Group(), feather = new THREE.Group();
+    hat.add(part(new THREE.CylinderGeometry(0.4, 0.4, 0.03, 32), '#6c3fd4', { ol: 0.04 }));
+    hat.add(part(new THREE.CylinderGeometry(0.15, 0.17, 0.18, 24), '#8a5cf0', { y: 0.1, ol: 0.06 }));
+    hat.add(part(new THREE.CylinderGeometry(0.172, 0.172, 0.04, 24), '#ff5fa8', { y: 0.04, ol: 0 }));
+    for (let k = 0; k < 6; k++) {
+      const a = (k / 6) * Math.PI * 2, c = ['#ff5fa8', '#ffc83d', '#ff7a3a'][k % 3];
+      hat.add(part(new THREE.SphereGeometry(0.05, 12, 8).scale(1, 0.6, 1), c, { x: Math.cos(a) * 0.22, y: 0.04, z: Math.sin(a) * 0.22, ol: 0.12 }));
+      hat.add(part(new THREE.SphereGeometry(0.02, 8, 6), '#fff6c8', { x: Math.cos(a) * 0.22, y: 0.07, z: Math.sin(a) * 0.22, ol: 0 }));
+    }
+    feather.add(part(new THREE.SphereGeometry(0.06, 12, 8).scale(0.6, 2.6, 0.3).translate(0, 0.15, 0), '#ff9cc8', { ol: 0.1 }));
+    feather.position.set(0.1, 0.16, 0.06); feather.rotation.z = -0.5; hat.add(feather);
+    hat.rotation.x = 0.4;
+    g.add(hat);
+    return { obj: g, tick: (t) => {
+      hat.position.y = Math.sin(t * 2) * 0.05; hat.rotation.y = t * 0.8; hat.rotation.z = Math.sin(t * 1.3) * 0.08;
+      feather.rotation.z = -0.5 + Math.sin(t * 3) * 0.25;
+    } };
+  },
+  // Tren (Día de la Revolución): locomotora negra con cabina roja; las ruedas giran y echa humito por la chimenea.
+  tren(part) {
+    const g = new THREE.Group(), all = new THREE.Group(), wheels = [], smoke = [];
+    all.add(part(new THREE.CylinderGeometry(0.11, 0.11, 0.38, 20).rotateZ(Math.PI / 2), '#4a4560', { x: 0.04, y: 0.04, ol: 0.05 }));
+    all.add(part(new THREE.CylinderGeometry(0.115, 0.115, 0.03, 20).rotateZ(Math.PI / 2), '#ffc83d', { x: -0.06, y: 0.04, ol: 0 }));
+    all.add(part(new THREE.BoxGeometry(0.18, 0.26, 0.24), '#e8434f', { x: -0.22, y: 0.09, ol: 0.05 }));
+    all.add(part(new THREE.BoxGeometry(0.22, 0.03, 0.28), '#4a4560', { x: -0.22, y: 0.23, ol: 0.08 }));
+    all.add(part(new THREE.BoxGeometry(0.1, 0.08, 0.01), '#ffe27a', { x: -0.22, y: 0.13, z: 0.125, ol: 0 }));
+    all.add(part(new THREE.CylinderGeometry(0.05, 0.035, 0.12, 12), '#4a4560', { x: 0.14, y: 0.19, ol: 0.1 }));
+    all.add(part(new THREE.ConeGeometry(0.12, 0.1, 4).rotateZ(-Math.PI / 2), '#9aa2ba', { x: 0.27, y: -0.06, ol: 0.1 }));
+    for (const x of [-0.22, -0.02, 0.14]) for (const z of [0.13, -0.13]) { const w = part(new THREE.CylinderGeometry(0.06, 0.06, 0.03, 16).rotateX(Math.PI / 2), '#e8434f', { x, y: -0.08, z, ol: 0.12 }); all.add(w); wheels.push(w); }
+    for (let k = 0; k < 4; k++) { const m = part(new THREE.SphereGeometry(0.05, 10, 8), '#f4f1ff', { ol: 0.12 }); all.add(m); smoke.push(m); }
+    all.rotation.set(0.25, -0.6, 0);
+    g.add(all);
+    return { obj: g, tick: (t) => {
+      all.position.y = Math.sin(t * 2) * 0.04 + Math.abs(Math.sin(t * 10)) * 0.008; all.rotation.z = Math.sin(t * 1.3) * 0.05;
+      wheels.forEach((w) => (w.rotation.z = -t * 6));
+      smoke.forEach((m, k) => { const p = (((t * 0.5 + k / 4) % 1) + 1) % 1; m.position.set(0.14 - p * 0.15, 0.28 + p * 0.4, 0); m.scale.setScalar(0.4 + p * 1.2); });
+    } };
+  },
   alebrije(part) {
     const g = new THREE.Group(), body = new THREE.Group();
     body.add(part(new THREE.SphereGeometry(0.2, 20, 14).scale(1, 0.85, 1.35), '#ff5fa8', { ol: 0.07 }));

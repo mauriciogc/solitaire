@@ -808,7 +808,8 @@ export class PlanetView {
     const dt = Math.min(0.05, (now - this.last) / 1000), o = this.o; this.last = now;
     o.spin.rotation.y += 0.35 * dt;
     if (o.orbit) o.orbit.rotation.y += dt * 0.35;
-    if (!mapCovered()) this.renderer.render(this.scene, this.camera);
+    // Siempre se dibuja: la postal se abre encima del álbum, que sí pausa el mapa (mapCovered).
+    this.renderer.render(this.scene, this.camera);
     this.raf = requestAnimationFrame((t) => this.frame(t));
   }
   // El lienzo con el planeta tal como se ve ahora (para la foto).

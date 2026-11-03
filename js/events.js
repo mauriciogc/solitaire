@@ -11,8 +11,9 @@ import { EVENT_LEVELS, EVENT_PER_PLANET, EVENT_PLANETS, FIESTA_LEVELS, FIESTA_PE
 // y al final el evento del mes (el más difícil: pide comodines). Cada uno se presenta una vez (save.intro).
 // col2: al nivel 100 se suman las colecciones nuevas y hay colección 3 semanas al mes (ver weekInfo).
 // col3: al nivel 150 se suman 3 más (arte, música y cine) y hay colección todas las semanas.
+// fiesta2: al nivel 200 se suman las festividades de leyendas mexicanas (local: true).
 // fiesta: festividades de 24 h (ver más abajo).
-export const UNLOCK = { racha: 20, col: 50, mes: 80, col2: 100, fiesta: 120, col3: 150 };
+export const UNLOCK = { racha: 20, col: 50, mes: 80, col2: 100, fiesta: 120, col3: 150, fiesta2: 200 };
 export const isOn = (k) => (save.next || 0) >= UNLOCK[k];
 
 // Primera fila: 3/5/10/15/20/30. Luego una fila sin fin cada 50 (50, 100, 150…): se turnan comodín y deshacer,
@@ -453,18 +454,42 @@ export const FIESTAS = [
     ico: 'laptop', deco: 'llaves', color: 'green',
     planets: ['Valle del Código', 'Nube de Datos', 'Planeta Binario'],
     ex: [{ space: 'codigo', frame: 'terminal' }, { ring: 'llavecitas', back: 'binario' }, { avatar: 'bichito', title: 'cerobugs', traveler: 'laptop' }] },
+  // Desde el nivel 200 (local): leyendas y fechas mexicanas. days: cuántos días dura (si no, 1).
+  // p y n: planetas y niveles por planeta si no son los de siempre (3 y 3). El Nahual dura 3 días: 4 planetas de 4.
+  { key: 'nahual', name: 'Nahual y Chaneques', date: (y) => new Date(y, 8, 21), days: 3, p: 4, n: 4, ready: true, local: true,
+    ico: 'nahual', deco: 'chaneque', color: 'green',
+    planets: ['Selva de los Chaneques', 'Cueva del Nahual', 'Templo del Jaguar', 'Planeta de la Luna Llena'],
+    ex: [{ space: 'lunallena', frame: 'selva' }, { ring: 'enredadera', back: 'jaguar' }, { title: 'nahual', traveler: 'nahualito' }, { avatar: 'chaneque' }] },
+  { key: 'xolo', name: 'Día del Xoloitzcuintle', date: (y) => new Date(y, 9, 27), ready: true, local: true,
+    ico: 'xolito', deco: 'farolito', color: 'orange',
+    planets: ['Sendero de Cempasúchil', 'Valle de las Huellitas', 'Planeta Xólotl'],
+    ex: [{ space: 'sendero', frame: 'farolitos' }, { ring: 'collarxolo', back: 'xolos' }, { avatar: 'xologuia', title: 'guiaalmas', traveler: 'xolovuela' }] },
+  { key: 'llorona', name: 'La Llorona', date: (y) => new Date(y, 10, 1), ready: true, local: true,
+    ico: 'llorona', deco: 'velita', color: 'violet',
+    planets: ['Río de la Luna', 'Lago de las Velitas', 'Planeta del Rebozo'],
+    ex: [{ space: 'riodeluna', frame: 'rebozo' }, { ring: 'velitas', back: 'rebozos' }, { avatar: 'lloronita', title: 'almadelrio', traveler: 'trajinera' }] },
+  { key: 'catrina', name: 'La Catrina', date: (y) => new Date(y, 10, 2), ready: true, local: true,
+    ico: 'catrina', deco: 'pluma', color: 'pink',
+    planets: ['Paseo de las Catrinas', 'Jardín de Dalias', 'Planeta Garbancera'],
+    ex: [{ space: 'paseo', frame: 'catrina' }, { ring: 'dalias', back: 'elegante' }, { avatar: 'catrinita', title: 'elegancia', traveler: 'sombrerote' }] },
+  { key: 'revolucion', name: 'Día de la Revolución', date: (y) => new Date(y, 10, 20), ready: true, local: true,
+    ico: 'locomotora', deco: 'herradura', color: 'red',
+    planets: ['Vías del Norte', 'Llanos del Caballo', 'Planeta Adelita'],
+    ex: [{ space: 'llanura', frame: 'boleto' }, { ring: 'vias', back: 'locomotora' }, { avatar: 'revolucionario', title: 'valiente', traveler: 'tren' }] },
   { key: 'inocentes', name: 'Día de los Inocentes', date: (y) => new Date(y, 11, 28), ready: true,
     ico: 'bufon', deco: 'palomita', color: 'red',
     planets: ['Valle de las Bromas', 'Carpa del Bufón', 'Planeta Palomita'],
     ex: [{ space: 'bromas', frame: 'inocente' }, { ring: 'cascabeles', back: 'arlequin' }, { avatar: 'bufoncito', title: 'bromista', traveler: 'sorpresa' }] },
 ];
-export const FI_COINS = [20, 30, 40];
+export const FI_COINS = [20, 30, 40, 50];
 export const FI_REPEAT = [{ coins: 300, undo: 2 }, { wild: 1, coins: 200 }, { wild: 2, coins: 400 }];
+// Planetas (P), niveles por planeta (N) y niveles en total (L) de una festividad.
+export const fiShape = (f) => { const P = f?.p || FIESTA_PLANETS, N = f?.n || FIESTA_PER_PLANET; return { P, N, L: P * N }; };
 const dayOf = (d) => Math.floor((d.getTime() - d.getTimezoneOffset() * 6e4) / DAY);
 // Las fiestas listas de un año, con su día (local) ya recorrido si chocan: [{ f, day }].
 function fiestaDays(y) {
   const out = [];
-  for (const f of FIESTAS.filter((x) => x.ready).map((x) => ({ f: x, day: dayOf(x.date(y)) })).sort((a, b) => a.day - b.day)) {
+  for (const f of FIESTAS.filter((x) => x.ready && (!x.local || isOn('fiesta2'))).map((x) => ({ f: x, day: dayOf(x.date(y)) })).sort((a, b) => a.day - b.day)) {
     while (out.some((o) => o.day === f.day)) f.day++;
     out.push(f);
   }
@@ -476,8 +501,9 @@ export const FIESTA_SOON = 3;
 function fiestaNow() {
   const day = today(), y = new Date((day + FIESTA_SOON) * DAY).getUTCFullYear();
   const all = [...fiestaDays(y - 1), ...fiestaDays(y)];
-  const hoy = all.find((x) => x.day === day);
-  if (hoy) return { ...hoy, soon: false, inDays: 0 };
+  // Las de varios días (days) siguen abiertas hasta su último día; endIn = días que le quedan después de hoy.
+  const hoy = all.find((x) => day >= x.day && day < x.day + (x.f.days || 1));
+  if (hoy) return { ...hoy, soon: false, inDays: 0, endIn: hoy.day + (hoy.f.days || 1) - 1 - day };
   const next = all.filter((x) => x.day > day && x.day <= day + FIESTA_SOON).sort((a, b) => a.day - b.day)[0];
   return next ? { ...next, soon: true, inDays: next.day - day } : null;
 }
@@ -493,15 +519,21 @@ export function fiesta() {
     save.fi = { id, k: 0, world: save.open || 0, run: null, tries: {} };
     persist();
   }
-  return { ...base, state: save.fi, done: save.fi.k >= FIESTA_LEVELS };
+  return { ...base, state: save.fi, done: save.fi.k >= fiShape(x.f).L };
 }
 // Cuánto falta para que empiece (si todavía no) o para que termine (hoy).
-export const fiestaLeft = () => msToMidnight() + Math.max(0, (fiestaNow()?.inDays || 0) - 1) * DAY;
+export const fiestaLeft = () => { const x = fiestaNow(); return msToMidnight() + (x?.soon ? Math.max(0, x.inDays - 1) : x?.endIn || 0) * DAY; };
 // Días para la siguiente fiesta (modo dev: saltar al día de antes).
 export function daysToNextFiesta() {
   const day = today(), y = new Date(day * DAY).getUTCFullYear();
   const next = [...fiestaDays(y), ...fiestaDays(y + 1)].find((x) => x.day > day);
   return next ? next.day - day : 0;
+}
+// Modo dev: cuántos días mover el reloj para caer en el día en que empieza esa festividad (la de este año).
+export function daysToFiesta(key) {
+  const day = today(), y = new Date(day * DAY).getUTCFullYear(), f = FIESTAS.find((x) => x.key === key);
+  const at = fiestaDays(y).find((x) => x.f === f)?.day ?? dayOf(f.date(y));
+  return at - day;
 }
 // La siguiente festividad lista (para decir cuándo llega): { name, ico, days } o null.
 // skip: días que se saltan (modo dev: con 1, si mañana hay fiesta, da la que sigue).
@@ -511,10 +543,11 @@ export function nextFiesta(skip = 0) {
   return next ? { ...next.f, days: next.day - day } : null;
 }
 export function fiPrize(f, k) {
-  const p = Math.floor(k / FIESTA_PER_PLANET);
-  if (k % FIESTA_PER_PLANET !== FIESTA_PER_PLANET - 1) return { coins: FI_COINS[p], items: [] };
+  const { P, N } = fiShape(f), p = Math.floor(k / N);
+  if (k % N !== N - 1) return { coins: FI_COINS[p], items: [] };
   const items = Object.entries(f.ex[p]).filter(([sec, it]) => !save.owned[`${sec}:${it}`]).map(([sec, it]) => ({ sec, k: it }));
-  return items.length ? { items } : { ...FI_REPEAT[p], items: [], repeat: true };
+  // Repetida: el último planeta da el premio grande; los de en medio, el del 2.º.
+  return items.length ? { items } : { ...FI_REPEAT[p === P - 1 ? 2 : Math.min(p, 1)], items: [], repeat: true };
 }
 // Entrar al nivel que sigue (sin boleto): cada intento cambia las cartas.
 export function fiEnter() {
@@ -541,14 +574,16 @@ export function fiWin() {
   }
   fiRecord();
   persist();
-  return { ...prize, k, planet: Math.floor(k / FIESTA_PER_PLANET), last: k === FIESTA_LEVELS - 1 };
+  const { N, L } = fiShape(f);
+  return { ...prize, k, planet: Math.floor(k / N), last: k === L - 1 };
 }
-// Álbum: ganar los 9 niveles de una festividad deja su postal para siempre, con el año en el sello
+// Álbum: ganar todos los niveles de una festividad deja su postal para siempre, con el año en el sello
 // (save.fiAlbum: 'clave-año' → 1).
 function fiRecord() {
   const s = save.fi;
-  if (!s?.id || s.k < FIESTA_LEVELS) return;
+  if (!s?.id) return;
   const [key, day] = s.id.split('-');
+  if (s.k < fiShape(FIESTAS.find((f) => f.key === key)).L) return;
   save.fiAlbum[`${key}-${new Date(day * DAY).getUTCFullYear()}`] = 1;
 }
 // Las postales de festividades, de la más nueva a la más vieja: [{ id, year, e }].
@@ -557,7 +592,7 @@ export function fiAlbum() {
   // Las ganadas antes de que hubiera álbum: si tiene el avatar del último jefe, la terminó (año de su última fecha).
   const day = today(), y = new Date(day * DAY).getUTCFullYear();
   for (const f of FIESTAS) {
-    if (!f.ready || !save.owned[`avatar:${f.ex[2].avatar}`] || Object.keys(save.fiAlbum).some((id) => id.startsWith(`${f.key}-`))) continue;
+    if (!f.ready || !save.owned[`avatar:${f.ex.find((x) => x.avatar).avatar}`] || Object.keys(save.fiAlbum).some((id) => id.startsWith(`${f.key}-`))) continue;
     const last = [...fiestaDays(y - 1), ...fiestaDays(y)].filter((x) => x.f === f && x.day <= day).pop();
     if (last) save.fiAlbum[`${f.key}-${new Date(last.day * DAY).getUTCFullYear()}`] = 1;
   }

@@ -1,7 +1,7 @@
 // Modo dev: probar niveles rápido sin jugarlos a mano.
 // Se activa con ?dev en la URL (y se apaga con ?dev=0). Queda guardado en el navegador.
 import { save, prefs, persist, resetProfile, backupOnce, restoreBackup, setDev } from './storage.js';
-import { rachaWin, rachaLose, racha, nextGoal, col, daysToNextCol, ev, daysToNextEvent, evEnter, evWin, EVENT_PER_PLANET, EVENT_LEVELS, fiesta, fiEnter, fiWin, nextFiesta, daysToNextFiesta, isOn, UNLOCK, FIESTA_PER_PLANET, FIESTA_LEVELS } from './events.js';
+import { rachaWin, rachaLose, racha, nextGoal, col, daysToNextCol, ev, daysToNextEvent, evEnter, evWin, EVENT_PER_PLANET, EVENT_LEVELS, fiesta, fiEnter, fiWin, nextFiesta, daysToNextFiesta, daysToFiesta, fiShape, isOn, UNLOCK } from './events.js';
 import { generateLevel, packGroups, worldInfo, specials, specialGroup, SPECIAL_ID, TOTAL_LEVELS, LEVELS_PER_WORLD, MECH_NAMES, MECHANICS } from './levels.js';
 import { playCasual, solve, initState } from './engine.js';
 import { openModal, toast, updateCoins, popGoal } from './ui.js';
@@ -283,6 +283,7 @@ export function openDevMenu({ onGallery, onRefresh }) {
   const evSet = (patch) => { Object.assign(ev().state, { run: null, tk: 1, at: 0, ...patch }); persist(); onRefresh(); };
   // fiNext: la siguiente fiesta que no es la de hoy ni la de mañana (para brincar al día antes de ella).
   const fiNow = fiesta(), fiNext = nextFiesta(fiNow?.soon ? fiNow.inDays : 0), fiOn = fiNow && !fiNow.soon;
+  const { N: FN, L: FL } = fiShape(fiNow);
   const fiSet = (patch) => { Object.assign(fiesta().state, { run: null, ...patch }); persist(); onRefresh(); };
   // Deja la cuenta a 1 del premio: el siguiente globo (jefe) o burbuja (cofre) que truene lo da.
   const popNear = (k) => { const p = ((save.pops ||= {})[k] ||= { n: 0, lvl: 0 }); p.n = popGoal(k, p.lvl) - 1; persist(); onRefresh(); };
@@ -312,7 +313,7 @@ export function openDevMenu({ onGallery, onRefresh }) {
   // Desde qué nivel ganado se abre cada cosa, y si tú ya llegaste.
   const won = save.next || 0;
   const opens = (lvl) => (won >= lvl ? `<em class="d-ok">abierto</em>` : `<em class="d-no">faltan ${lvl - won}</em>`);
-  const UN = [['Racha', UNLOCK.racha], ['Colección (4 temáticas)', UNLOCK.col], ['Evento del mes', UNLOCK.mes], ['Colección: Dinos y Robots y 3.ª semana', UNLOCK.col2], ['Festividades de un día', UNLOCK.fiesta], ['Colección: Arte, Música y Cine, todas las semanas', UNLOCK.col3]];
+  const UN = [['Racha', UNLOCK.racha], ['Colección (4 temáticas)', UNLOCK.col], ['Evento del mes', UNLOCK.mes], ['Colección: Dinos y Robots y 3.ª semana', UNLOCK.col2], ['Festividades de un día', UNLOCK.fiesta], ['Colección: Arte, Música y Cine, todas las semanas', UNLOCK.col3], ['Festividades de leyendas mexicanas', UNLOCK.fiesta2]];
   const lastNeed = Math.max(...Object.values(ITEMS).flat().map((it) => it.need || 0));
   const shopLocked = sum((k) => ITEMS[k].filter((it) => lockedUntil(k, it.k)).length);
   const chips = (list) => `<div class="dcount">${list.map(([ico, txt]) => `<span>${icon(ico)}${txt}</span>`).join('')}</div>`;
@@ -391,15 +392,21 @@ export function openDevMenu({ onGallery, onRefresh }) {
       evNow && { l: 'Ganar todo hasta el último jefe', title: 'Gana los niveles que faltan (con sus premios) y te deja en el jefe del último planeta', fn: () => (ev().state.tk = 1, ev().state.run = null, winTo(ev, evEnter, evWin, EVENT_LEVELS - 1)) },
       evNow && { l: 'Empezar de cero', fn: () => ((save.ev = null), persist(), onRefresh()) },
     ] },
-    { t: 'Festividad', sub: `${fiNow ? `${fiNow.name} · ${fiNow.soon ? (fiNow.inDays > 1 ? `en ${fiNow.inDays} días` : 'mañana') : `nivel ${Math.min(fiNow.state.k + 1, FIESTA_LEVELS)} de ${FIESTA_LEVELS}`}` : fiNext ? `próxima: ${fiNext.name} en ${fiNext.days} días` : 'ninguna lista'}${isOn('fiesta') ? '' : ` · se abre en el nivel ${UNLOCK.fiesta}`}`, items: [
+    { t: 'Festividad', sub: `${fiNow ? `${fiNow.name} · ${fiNow.soon ? (fiNow.inDays > 1 ? `en ${fiNow.inDays} días` : 'mañana') : `nivel ${Math.min(fiNow.state.k + 1, FL)} de ${FL}`}` : fiNext ? `próxima: ${fiNext.name} en ${fiNext.days} días` : 'ninguna lista'}${isOn('fiesta') ? '' : ` · se abre en el nivel ${UNLOCK.fiesta}`}`, items: [
       fiNext && fiNext.days > 3 && { l: `3 días antes de: ${fiNext.name}`, title: 'Mueve el reloj a 3 días de la siguiente fiesta: su botón sale gris con la cuenta regresiva', fn: () => toDay(fiNext.days - 3) },
       fiNow?.soon && { l: 'Que empiece ya', title: 'Mueve el reloj al día de la fiesta', fn: () => toDay(fiNow.inDays) },
-      fiOn && { l: 'Ir al jefe del planeta', fn: () => fiSet({ k: Math.min(FIESTA_LEVELS - 1, Math.floor(fiNow.state.k / FIESTA_PER_PLANET) * FIESTA_PER_PLANET + FIESTA_PER_PLANET - 1) }) },
-      fiOn && { l: 'Siguiente planeta', fn: () => fiSet({ k: Math.min(FIESTA_LEVELS - 1, (Math.floor(fiNow.state.k / FIESTA_PER_PLANET) + 1) * FIESTA_PER_PLANET) }) },
-      fiOn && { l: 'Ganar todo hasta el último jefe', title: 'Gana los niveles que faltan (con sus premios) y te deja en el jefe del último planeta', fn: () => ((fiesta().state.run = null), winTo(fiesta, fiEnter, fiWin, FIESTA_LEVELS - 1)) },
+      fiOn && { l: 'Ir al jefe del planeta', fn: () => fiSet({ k: Math.min(FL - 1, Math.floor(fiNow.state.k / FN) * FN + FN - 1) }) },
+      fiOn && { l: 'Siguiente planeta', fn: () => fiSet({ k: Math.min(FL - 1, (Math.floor(fiNow.state.k / FN) + 1) * FN) }) },
+      fiOn && { l: 'Ganar todo hasta el último jefe', title: 'Gana los niveles que faltan (con sus premios) y te deja en el jefe del último planeta', fn: () => ((fiesta().state.run = null), winTo(fiesta, fiEnter, fiWin, FL - 1)) },
       fiOn && { l: 'Empezar de cero', fn: () => ((save.fi = null), persist(), onRefresh()) },
       { l: 'Ver el aviso de Festividades', title: 'La ventana que sale al desbloquearlas (nivel 120), con 3 iconos', fn: () => (save.intro && delete save.intro.fiesta, persist(), onRefresh()) },
+      { l: 'Ver el aviso de Leyendas', title: `La ventana que sale al llegar al nivel ${UNLOCK.fiesta2}, con las festividades nuevas`, fn: () => (save.intro && delete save.intro.fiesta2, persist(), onRefresh()) },
     ] },
+    // Una por festividad: mueve el reloj al día en que empieza (la de este año). Las de leyendas, solo desde el nivel 200.
+    { t: 'Ir al día de una festividad', sub: isOn('fiesta2') ? 'el reloj cae en su primer día' : `las de leyendas (⚑) se abren en el nivel ${UNLOCK.fiesta2}`, items: fis.map((f) => {
+      const d = f.date(y);
+      return { l: `${f.local && !isOn('fiesta2') ? '⚑ ' : ''}${f.name} · ${d.getDate()} ${MES[d.getMonth()]}`, title: `Mueve el reloj al ${d.getDate()} de ${MES[d.getMonth()]}, cuando empieza`, fn: () => toDay(daysToFiesta(f.key)) };
+    }) },
   ].map((sec) => ({ ...sec, items: sec.items.filter(Boolean) }));
   const all = S.flatMap((sec) => sec.items);
   const m = openModal({
