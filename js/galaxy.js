@@ -54,6 +54,9 @@ function merge(g) {
 
 const texCache = {};
 
+// Modo dev: ver con colores los planetas cerrados (sección Planetas del menú dev).
+export const peek = { on: false };
+
 export class Galaxy {
   // worlds: [{ w, state: 'done'|'current'|'gate'|'locked', stars, done, need, pin, levels: [{ kind, stars, paused }], secret: { open, stars, fresh } }]
   // on: { planet(w), level(w, i), mode(m, w), relayout(), region(±1) } · player: { traveler } (el viajero 3D que marca dónde vas)
@@ -133,7 +136,8 @@ export class Galaxy {
   setCam() { this.camera.position.x = this.port ? 0 : this.cam; this.camera.position.y = this.port ? 0.6 - this.cam : 0; this.camera.updateMatrixWorld(); }
 
   // Los planetas del evento se ven con su temática aunque estén cerrados (apagados y con candado).
-  theme(wd) { return wd.theme || (wd.state === 'locked' || wd.state === 'gate' ? LOCKED : BIOMES[biomeKey(wd.place)].planet); }
+  // En el modo dev (peek) los cerrados también se ven con sus colores, para revisar cada tipo de planeta.
+  theme(wd) { return wd.theme || (!peek.on && (wd.state === 'locked' || wd.state === 'gate') ? LOCKED : BIOMES[biomeKey(wd.place)].planet); }
   // Evento del mes: planetas de 5 niveles. nodes = en qué puntos del camino van sus insignias (el último es el jefe).
   nodes(o) { return o.wd.nodes || [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]; }
   dirOf(o, i) { return NODE_DIRS[i >= this.nodes(o).length ? 10 : this.nodes(o)[i]]; }
@@ -204,9 +208,36 @@ export class Galaxy {
     if (t.prop === 'crystal') { trunkG = new THREE.OctahedronGeometry(0.35); crownG = new THREE.OctahedronGeometry(0.22); crownC = '#ff7ab8'; trunkC = '#b48cff'; }
     // Vela de ofrenda: cirio color crema y su llamita.
     if (t.prop === 'candle') { trunkG = new THREE.CylinderGeometry(0.16, 0.18, 0.8, 8); crownG = new THREE.SphereGeometry(0.16, 8, 6).scale(1, 1.6, 1); crownC = '#ffb13d'; trunkC = '#fff1d6'; }
+    // Casita (pueblo, granja): paredes crema y techo de teja.
+    if (t.prop === 'house') { trunkG = new THREE.BoxGeometry(0.7, 0.8, 0.7); crownG = new THREE.ConeGeometry(0.62, 0.6, 4).rotateY(Math.PI / 4); crownC = '#e2603a'; trunkC = '#fff1d6'; }
+    // Torre de castillo: piedra con techo picudo.
+    if (t.prop === 'tower') { trunkG = new THREE.CylinderGeometry(0.26, 0.3, 1.3, 8); crownG = new THREE.ConeGeometry(0.38, 0.75, 8); crownC = '#8a5cf0'; trunkC = '#c9c4d8'; }
+    // Edificio de ciudad: bloque alto con su azotea iluminada.
+    if (t.prop === 'building') { trunkG = new THREE.BoxGeometry(0.5, 1.7, 0.5); crownG = new THREE.BoxGeometry(0.34, 0.22, 0.34); crownC = '#ffd36b'; trunkC = '#8fa3c8'; }
+    // Flor grande (jardín): tallo y su botón.
+    if (t.prop === 'flower') { trunkG = new THREE.CylinderGeometry(0.06, 0.08, 0.9, 6); crownG = new THREE.SphereGeometry(0.4, 10, 8).scale(1, 0.7, 1); crownC = '#ff7ab8'; trunkC = '#4fa04a'; }
+    // Paleta de feria: palito blanco y dulce redondo.
+    if (t.prop === 'lollipop') { trunkG = new THREE.CylinderGeometry(0.05, 0.05, 1, 6); crownG = new THREE.SphereGeometry(0.36, 10, 8); crownC = '#ff5fa8'; trunkC = '#fff6ee'; }
+    // Espiga de trigo (granja): tallo dorado y espiga alargada.
+    if (t.prop === 'wheat') { trunkG = new THREE.CylinderGeometry(0.05, 0.07, 0.9, 5); crownG = new THREE.SphereGeometry(0.2, 8, 6).scale(1, 2.2, 1); crownC = '#ffc83d'; trunkC = '#d9a23a'; }
+    // Pirámide (desierto antiguo): bloque dorado y su punta clara.
+    if (t.prop === 'pyramid') { trunkG = new THREE.ConeGeometry(0.75, 0.9, 4).rotateY(Math.PI / 4); crownG = new THREE.ConeGeometry(0.2, 0.24, 4).rotateY(Math.PI / 4); crownC = '#fff3b0'; trunkC = '#e8b04a'; }
+    // Coral (bahía): rama rosa con su bolita.
+    if (t.prop === 'coral') { trunkG = new THREE.CylinderGeometry(0.1, 0.16, 0.8, 6); crownG = new THREE.IcosahedronGeometry(0.34); crownC = '#ff7a9a'; trunkC = '#ff9cb4'; }
+    // Hongo (arboleda): tallo blanco y sombrero rojo.
+    if (t.prop === 'mushroom') { trunkG = new THREE.CylinderGeometry(0.14, 0.18, 0.7, 8); crownG = new THREE.SphereGeometry(0.5, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 0.75, 1); crownC = '#e8434f'; trunkC = '#fff6ee'; }
+    // Bambú: caña alta verde con un penacho de hojas.
+    if (t.prop === 'bamboo') { trunkG = new THREE.CylinderGeometry(0.07, 0.08, 1.8, 6); crownG = new THREE.SphereGeometry(0.3, 8, 6).scale(1.2, 0.5, 1.2); crownC = '#6fc25a'; trunkC = '#a8d45a'; }
+    // Muñeco de nieve (tundra): dos bolas.
+    if (t.prop === 'snowman') { trunkG = new THREE.SphereGeometry(0.4, 10, 8); crownG = new THREE.SphereGeometry(0.27, 10, 8); crownC = '#ffffff'; trunkC = '#f4fbff'; }
+    // Acacia (sabana): tronco delgado y copa plana y ancha.
+    if (t.prop === 'acacia') { trunkG = new THREE.CylinderGeometry(0.07, 0.11, 1.1, 6); crownG = new THREE.SphereGeometry(0.62, 10, 6).scale(1.5, 0.3, 1.5); crownC = '#8fae3a'; trunkC = '#7a5030'; }
+    // Roca (luna): piedras grises sueltas.
+    if (t.prop === 'rock') { trunkG = new THREE.DodecahedronGeometry(0.38); crownG = new THREE.DodecahedronGeometry(0.18); crownC = '#c9c6d8'; trunkC = '#a7a3b8'; }
     if (t.crown) crownC = t.crown;
-    trunkG.translate(0, t.prop === 'cactus' ? 0.45 : 0.4, 0);
-    crownG.translate(0, { palm: 1.4, pine: 1.2, cactus: 0.9, crystal: 0.75, candle: 1.05 }[t.prop] ?? 1.05, 0);
+    if (t.trunk) trunkC = t.trunk;
+    trunkG.translate(0, { cactus: 0.45, tower: 0.6, building: 0.85, flower: 0.45, lollipop: 0.5, wheat: 0.45, pyramid: 0.4, bamboo: 0.9, snowman: 0.36, acacia: 0.55, rock: 0.2 }[t.prop] ?? 0.4, 0);
+    crownG.translate(0, { palm: 1.4, pine: 1.2, cactus: 0.9, crystal: 0.75, candle: 1.05, house: 1.1, tower: 1.6, building: 1.8, flower: 0.95, lollipop: 1.1, wheat: 1.2, pyramid: 0.9, coral: 0.95, mushroom: 0.7, bamboo: 1.8, snowman: 0.95, acacia: 1.15, rock: 0.25 }[t.prop] ?? 1.05, 0);
     const C = new THREE.Color();
     const trunks = new THREE.InstancedMesh(trunkG, this.toon({ color: this.desat(C.set(trunkC), alive).clone() }), n);
     const crowns = new THREE.InstancedMesh(crownG, this.toon({ color: this.desat(C.set(crownC), alive).clone() }), n);

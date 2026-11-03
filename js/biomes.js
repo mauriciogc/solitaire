@@ -31,6 +31,55 @@ export const BIOMES = {
     planet: { sea: 0.4, amp: 0.3, freq: 1.8, seed: 25, outline: 0x22263a, glow: 0xdfe8ff, prop: 'pine', dense: 0.6, path: '#fff3d6', bands: [[0, '#2f86c8'], [0.38, '#4fb6e0'], [0.41, '#86cf5c'], [0.55, '#8a8a9e'], [0.68, '#a9a9bc'], [0.76, '#ffffff']] } },
   cielo: { emblem: ['#ffe3f1', '#c9ebff', '#fff4c9'], table: 'cloud', tint: '#1a2a5a',
     planet: { sea: 0.5, amp: 0.1, freq: 1.4, seed: 51, outline: 0x3a4a8a, glow: 0xffd0f0, prop: null, clouds: 9, path: '#fff3d6', bands: [[0, '#9fd8ff'], [0.48, '#c9ebff'], [0.52, '#ffffff'], [0.62, '#ffe3f1'], [0.72, '#fff4c9']] } },
+  // Los de abajo: un tipo propio para cada lugar que antes compartía planeta y mesa.
+  valle: { emblem: ['#ff9c3d', '#e2603a', '#ffd36b'], table: 'wood', tint: '#1a0a04',
+    planet: { sea: 0.38, amp: 0.12, freq: 1.6, seed: 81, outline: 0x4a2010, glow: 0xffc08a, prop: 'round', crown: '#ff8a2a', dense: 0.9, path: '#fff3d6', bands: [[0, '#2f86c8'], [0.36, '#4fb6e0'], [0.39, '#f3dc94'], [0.42, '#c9b04a'], [0.56, '#d9893a'], [0.7, '#b85a2a']] } },
+  isla: { emblem: ['#5fe0d0', '#1fb0c8', '#ffe8a8'], table: 'straw', tint: '#00303a',
+    planet: { sea: 0.6, amp: 0.1, freq: 1.3, seed: 85, outline: 0x0f4a5a, glow: 0x9ffff0, prop: 'palm', dense: 0.5, path: '#fff8e0', bands: [[0, '#1f8fc8'], [0.5, '#2fc0d8'], [0.58, '#7ff0e8'], [0.6, '#fff0b8'], [0.66, '#ffe8a8'], [0.7, '#6fd36a']] } },
+  castillo: { emblem: ['#b9a6ff', '#8a5cf0', '#ffc83d'], table: 'royal', tint: '#0e0620',
+    planet: { sea: 0.4, amp: 0.18, freq: 1.7, seed: 89, outline: 0x2a1650, glow: 0xd0b8ff, prop: 'tower', dense: 0.35, path: '#fff3d6', bands: [[0, '#3a6ad8'], [0.38, '#5f8ae8'], [0.41, '#7cc04f'], [0.55, '#4d9f45'], [0.68, '#9a96b0'], [0.78, '#c9c4d8']] } },
+  jardin: { emblem: ['#ffb0d4', '#ff7ab8', '#7cc04f'], table: 'garden', tint: '#140a10',
+    planet: { sea: 0.42, amp: 0.09, freq: 1.5, seed: 93, outline: 0x3a1a3a, glow: 0xffc2e0, prop: 'flower', dense: 0.8, path: '#fff3d6', bands: [[0, '#4aa8de'], [0.4, '#7fc8ee'], [0.43, '#c9f0a0'], [0.47, '#8fd45a'], [0.62, '#ffb0d4'], [0.72, '#ffe0ee']] } },
+  puerto: { emblem: ['#4a7ad8', '#2a4aa8', '#e8434f'], table: 'pier', tint: '#020a24',
+    planet: { sea: 0.58, amp: 0.14, freq: 1.8, seed: 97, outline: 0x0a1a4a, glow: 0x8fb8ff, prop: 'house', crown: '#4a7ad8', dense: 0.3, path: '#fff3d6', bands: [[0, '#1a3a8a'], [0.5, '#2a5ab8'], [0.56, '#4a8ae0'], [0.585, '#e0d0a8'], [0.62, '#8a8a9e'], [0.74, '#6fae5a']] } },
+  lago: { emblem: ['#6fd6c8', '#2f9e8a', '#ffffff'], table: 'birch', tint: '#04141a',
+    planet: { sea: 0.56, amp: 0.1, freq: 2.0, seed: 101, outline: 0x0f3a3a, glow: 0xb0fff0, prop: 'pine', dense: 0.8, path: '#ffffff', bands: [[0, '#1f8aa8'], [0.52, '#3fb8c8'], [0.56, '#d8f0d0'], [0.59, '#6fc28a'], [0.7, '#3f9a6a'], [0.8, '#2f7a5a']] } },
+  ciudad: { emblem: ['#8fa3c8', '#5a6a98', '#ffd36b'], table: 'city', tint: '#060a1a',
+    planet: { sea: 0.4, amp: 0.06, freq: 1.4, seed: 105, outline: 0x1a2040, glow: 0xffe08a, prop: 'building', dense: 0.6, path: '#ffd36b', bands: [[0, '#2a5ab8'], [0.38, '#4a7ad8'], [0.41, '#9aa4b8'], [0.55, '#7a849a'], [0.7, '#5f6a80']] } },
+  granja: { emblem: ['#ffd36b', '#e8b040', '#e8434f'], table: 'barn', tint: '#1a0804',
+    planet: { sea: 0.36, amp: 0.08, freq: 1.4, seed: 109, outline: 0x4a3010, glow: 0xffe8a0, prop: 'wheat', dense: 1, path: '#fff3d6', bands: [[0, '#3a9ad8'], [0.34, '#62c0ea'], [0.37, '#8fd45a'], [0.48, '#ffd36b'], [0.6, '#e8b040'], [0.72, '#8fd45a']] } },
+  pueblo: { emblem: ['#ff9c6a', '#d9603a', '#fff1d6'], table: 'tile', tint: '#1a0604',
+    planet: { sea: 0.4, amp: 0.11, freq: 1.7, seed: 113, outline: 0x4a1a0a, glow: 0xffc8a0, prop: 'house', dense: 0.7, path: '#fff3d6', bands: [[0, '#2f86c8'], [0.38, '#4fb6e0'], [0.41, '#f3dc94'], [0.45, '#9ad45a'], [0.6, '#d9a060'], [0.74, '#c4703a']] } },
+  templo: { emblem: ['#ffb0c8', '#e8434f', '#5fae5a'], table: 'tatami', tint: '#140408',
+    planet: { sea: 0.44, amp: 0.15, freq: 1.9, seed: 117, outline: 0x3a0a14, glow: 0xffc2d6, prop: 'round', crown: '#ffb0c8', dense: 0.9, path: '#fff3d6', bands: [[0, '#2a7ab0'], [0.42, '#4aa0d0'], [0.45, '#e9d58a'], [0.48, '#5fae5a'], [0.62, '#3f8a4a'], [0.76, '#a8a0a0']] } },
+  mina: { emblem: ['#a8743a', '#6e4a2a', '#ffd36b'], table: 'ore', tint: '#0a0604',
+    planet: { sea: -1, amp: 0.16, freq: 2.2, seed: 121, outline: 0x2a1408, glow: 0xffd36b, prop: 'crystal', crown: '#fff3b0', trunk: '#ffc83d', dense: 0.7, path: '#ffe8b0', bands: [[0, '#4a2f1a'], [0.42, '#6e4a2a'], [0.56, '#8a5f36'], [0.7, '#a8743a']] } },
+  feria: { emblem: ['#ff7ab8', '#5fd1e8', '#ffe27a'], table: 'tent', tint: '#14041a',
+    planet: { sea: 0.42, amp: 0.1, freq: 1.5, seed: 125, outline: 0x3a1050, glow: 0xffb0e0, prop: 'lollipop', dense: 0.6, path: '#fff3d6', bands: [[0, '#5fa8f0'], [0.4, '#8fd0ff'], [0.43, '#fff0c0'], [0.46, '#ffc2e0'], [0.6, '#c9a6ff'], [0.72, '#a8f0e0']] } },
+  piramide: { emblem: ['#ffd36b', '#e8a23a', '#4fb6e0'], table: 'sandstone', tint: '#2a1400',
+    planet: { sea: 0.28, amp: 0.12, freq: 1.6, seed: 129, outline: 0x5a3010, glow: 0xffe08a, prop: 'pyramid', dense: 0.25, path: '#fff3d6', bands: [[0, '#2aa6c9'], [0.27, '#6fd6dc'], [0.3, '#ffe8a8'], [0.45, '#ffd36b'], [0.6, '#f2bd6a'], [0.72, '#e8a23a']] } },
+  bahia: { emblem: ['#ffb0c8', '#38c2dd', '#fff0d0'], table: 'ripple', tint: '#04243a',
+    planet: { sea: 0.66, amp: 0.1, freq: 1.5, seed: 133, outline: 0x1a4a6a, glow: 0xffc8d8, prop: 'coral', dense: 0.5, path: '#fff8e8', bands: [[0, '#1f8fc8'], [0.55, '#38c2dd'], [0.64, '#8fe8ee'], [0.665, '#ffe0d0'], [0.72, '#ffc8b8']] } },
+  arboleda: { emblem: ['#8a6ad8', '#5a3aa8', '#ff5f6e'], table: 'moss', tint: '#0a0618',
+    planet: { sea: 0.4, amp: 0.13, freq: 2.0, seed: 137, outline: 0x1a0f3a, glow: 0xd0a8ff, prop: 'mushroom', dense: 0.7, path: '#f0e6ff', bands: [[0, '#3a4ab8'], [0.38, '#5a6ad8'], [0.41, '#6fae8a'], [0.52, '#5a8a6a'], [0.65, '#6a5aa0'], [0.78, '#8a6ad8']] } },
+  bambu: { emblem: ['#a8d45a', '#5fa83a', '#e8f4b0'], table: 'bamboo', tint: '#081408',
+    planet: { sea: 0.4, amp: 0.15, freq: 1.8, seed: 141, outline: 0x1a3a10, glow: 0xd8ffa0, prop: 'bamboo', dense: 1.3, path: '#fff8e0', bands: [[0, '#2f9ab0'], [0.38, '#4fc0c8'], [0.41, '#d8e8a0'], [0.45, '#8fc84a'], [0.6, '#6fae3a'], [0.75, '#4f8a2a']] } },
+  tundra: { emblem: ['#ffffff', '#d8e8f4', '#e8434f'], table: 'wool', tint: '#0a1428',
+    planet: { sea: 0.36, amp: 0.08, freq: 1.5, seed: 145, outline: 0x2a3a5a, glow: 0xffffff, prop: 'snowman', dense: 0.35, path: '#cfe6ff', bands: [[0, '#4a7ab0'], [0.34, '#7aaad8'], [0.37, '#e8f4ff'], [0.55, '#ffffff'], [0.7, '#e0ecf8']] } },
+  sabana: { emblem: ['#e8c25a', '#c9983a', '#8fae3a'], table: 'basket', tint: '#1a0e02',
+    planet: { sea: 0.32, amp: 0.09, freq: 1.4, seed: 149, outline: 0x4a3010, glow: 0xffe0a0, prop: 'acacia', dense: 0.45, path: '#fff3d6', bands: [[0, '#3a9ab0'], [0.3, '#6fc8c8'], [0.33, '#d8b860'], [0.45, '#e8c25a'], [0.62, '#d9a84a'], [0.74, '#b88a3a']] } },
+  luna: { emblem: ['#c9c6d8', '#8a87a8', '#ffe8a0'], table: 'moon', tint: '#04041a',
+    planet: { sea: -1, amp: 0.1, freq: 2.6, seed: 153, outline: 0x1a1a3a, glow: 0xe8e8ff, prop: 'rock', dense: 0.4, path: '#ffe8a0', bands: [[0, '#6a6788'], [0.42, '#8a87a8'], [0.55, '#a7a3c0'], [0.68, '#c9c6d8']] } },
+  vinedo: { emblem: ['#9a5ac8', '#6a3a98', '#8fc84a'], table: 'barrel', tint: '#12041a',
+    planet: { sea: 0.38, amp: 0.12, freq: 1.7, seed: 157, outline: 0x2a0f3a, glow: 0xe0b0ff, prop: 'round', crown: '#8a4ab8', dense: 1.1, path: '#fff3d6', bands: [[0, '#3a7ac8'], [0.36, '#5aa0e0'], [0.39, '#d8c890'], [0.43, '#8fc84a'], [0.58, '#6fa83a'], [0.72, '#a8885a']] } },
+  cascada: { emblem: ['#5fd8e8', '#2f9ec8', '#6fc25a'], table: 'pebble', tint: '#021a1a',
+    planet: { sea: 0.5, amp: 0.24, freq: 1.9, seed: 161, outline: 0x0a3a3a, glow: 0xa0f8ff, prop: 'round', crown: '#3fae6a', dense: 1, path: '#ffffff', bands: [[0, '#1f8ab8'], [0.46, '#3fc0e0'], [0.5, '#c8f0f0'], [0.53, '#6fc25a'], [0.66, '#4f9a4a'], [0.8, '#9a9aa8']] } },
+  oasis: { emblem: ['#f2d08a', '#3fc0c8', '#4fae4a'], table: 'mosaic', tint: '#2a1004',
+    planet: { sea: 0.33, amp: 0.13, freq: 2.4, seed: 165, outline: 0x4a2a10, glow: 0xa8fff0, prop: 'palm', dense: 0.35, path: '#fff3d6', bands: [[0, '#1fa6b8'], [0.31, '#5fe0d8'], [0.335, '#6fc25a'], [0.37, '#f2d08a'], [0.55, '#e8b870'], [0.7, '#d99a50']] } },
+  colmena: { emblem: ['#ffc83d', '#e89a17', '#4a2a10'], table: 'honey', tint: '#1a0c00',
+    planet: { sea: 0.4, amp: 0.1, freq: 1.6, seed: 169, outline: 0x4a2a00, glow: 0xffe27a, prop: 'flower', crown: '#ffe27a', dense: 0.7, path: '#fff8e0', bands: [[0, '#3a9ad8'], [0.38, '#62c0ea'], [0.41, '#a8e06a'], [0.5, '#ffd36b'], [0.64, '#ffc83d'], [0.76, '#e89a17']] } },
+  aurora: { emblem: ['#3a4a8a', '#1a2a5a', '#5ff0c8'], table: 'aurora', tint: '#020a1a',
+    planet: { sea: 0.42, amp: 0.15, freq: 1.8, seed: 173, outline: 0x0a1030, glow: 0x5ff0c8, prop: 'pine', crown: '#2f6a6a', dense: 0.6, path: '#cff8ff', bands: [[0, '#1a3a7a'], [0.4, '#2a5a9a'], [0.43, '#d0e8f8'], [0.56, '#a8c8e0'], [0.7, '#e8f4ff']] } },
 };
 // Planetas del evento del mes: los 5 son el mismo planeta (misma forma, colores y lo que crece) y solo cambia
 // cuánta agua tiene (sea) y desde qué altura se pinta de naranja (orange): así se ven hermanos pero distintos.
@@ -226,10 +275,12 @@ export const SPARE_BIOMES = {
 export const LOCKED = { sea: -1, amp: 0.1, freq: 2.6, seed: 5, outline: 0x2a1f5c, glow: null, prop: null, bands: [[0, '#6f6c80'], [0.4, '#8a879a'], [0.55, '#a3a0b2'], [0.7, '#b9b6c6']] };
 
 const PLACE_BIOME = {
-  Bosque: 'bosque', Valle: 'pradera', Isla: 'arrecife', Castillo: 'montana', Pantano: 'pantano', Desierto: 'desierto',
-  Arrecife: 'arrecife', Montaña: 'montana', Pradera: 'pradera', Cueva: 'cueva', Jardín: 'pradera', Puerto: 'arrecife',
-  Glaciar: 'glaciar', Volcán: 'volcan', Lago: 'bosque', Ciudad: 'cielo', Selva: 'selva', Cañón: 'canon',
-  Cielo: 'cielo', Granja: 'pradera', Pueblo: 'bosque', Templo: 'selva', Mina: 'cueva', Feria: 'cielo',
+  Bosque: 'bosque', Valle: 'valle', Isla: 'isla', Castillo: 'castillo', Pantano: 'pantano', Desierto: 'desierto',
+  Arrecife: 'arrecife', Montaña: 'montana', Pradera: 'pradera', Cueva: 'cueva', Jardín: 'jardin', Puerto: 'puerto',
+  Glaciar: 'glaciar', Volcán: 'volcan', Lago: 'lago', Ciudad: 'ciudad', Selva: 'selva', Cañón: 'canon',
+  Cielo: 'cielo', Granja: 'granja', Pueblo: 'pueblo', Templo: 'templo', Mina: 'mina', Feria: 'feria',
+  Pirámide: 'piramide', Bahía: 'bahia', Arboleda: 'arboleda', Bambú: 'bambu', Tundra: 'tundra', Sabana: 'sabana',
+  Luna: 'luna', Viñedo: 'vinedo', Cascada: 'cascada', Oasis: 'oasis', Colmena: 'colmena', Aurora: 'aurora',
 };
 export const biomeKey = (place) => PLACE_BIOME[place] || 'bosque';
 export const biomeOf = (w) => BIOMES[biomeKey(worldInfo(w).place)];
@@ -283,12 +334,16 @@ function sandTile({ cols, grout, line, crack }) {
   }
   return tileOut(W, H, s);
 }
-function stoneTile({ tones, seam, lava }) {
+function stoneTile({ tones, seam, lava, gold }) {
   const W = 600, H = 400;
   const slabs = ['M0 0H300L280 130 0 150z', 'M300 0H600V140L280 130z', 'M0 150 280 130 300 270 0 290z', 'M280 130 600 140V280L300 270z', 'M0 290 300 270 310 400H0z', 'M300 270 600 280V400H310z'];
   let s = slabs.map((d, i) => `<path d="${d}" fill="${tones[i % tones.length]}" stroke="${seam}" stroke-width="5" stroke-linejoin="round"/><path d="${d}" fill="none" stroke="#fff" stroke-opacity=".07" stroke-width="2" transform="translate(1.5 1.5)"/>`).join('');
   const r = rng(9);
   for (let i = 0; i < 26; i++) s += `<circle cx="${r() * W}" cy="${r() * H}" r="${1 + r() * 2.5}" fill="#000" opacity=".12"/>`;
+  if (gold) {
+    s += ['M0 60 70 80 120 66 200 90', 'M330 200 400 214 470 196 560 220', 'M120 330 180 350 240 340'].map((d) => `<path d="${d}" fill="none" stroke="#ffc83d" stroke-width="3" stroke-linecap="round" opacity=".7"/>`).join('');
+    for (const [x, y] of [[90, 200], [450, 70], [380, 370]]) s += `<path d="M${x} ${y - 9}l7 9-7 9-7-9z" fill="#ffd36b" stroke="${seam}" stroke-width="2"/>`;
+  }
   if (lava) s += ['M300 0 292 40 304 70 286 130', 'M0 290 60 286 90 300 140 284'].map((d) => `<path d="${d}" fill="none" stroke="#ff6a1f" stroke-width="3" stroke-linecap="round"/><path d="${d}" fill="none" stroke="#ffd36b" stroke-width="1.2" stroke-linecap="round"/>`).join('');
   return tileOut(W, H, s);
 }
@@ -535,6 +590,155 @@ function mantelMadresTile() {
   s += `<rect width="${W}" height="${H}" fill="#2a0618" opacity=".5"/>`;
   return tileOut(W, H, s);
 }
+// Mesas de los tipos de mundo nuevos.
+// Petate de palma (isla): tejido de tiras cruzadas.
+function strawTile() {
+  const W = 120, H = 120;
+  let s = `<rect width="${W}" height="${H}" fill="#d9b06a"/>`;
+  for (let j = 0; j < 6; j++) for (let i = 0; i < 6; i++) {
+    const x = i * 20, y = j * 20, h = (i + j) % 2;
+    s += h ? `<rect x="${x + 1}" y="${y + 3}" width="18" height="14" rx="3" fill="#e8c27e"/><path d="M${x + 3} ${y + 10}h14" stroke="#c9984a" stroke-width="1.4"/>`
+      : `<rect x="${x + 3}" y="${y + 1}" width="14" height="18" rx="3" fill="#cfa25a"/><path d="M${x + 10} ${y + 3}v14" stroke="#b8873f" stroke-width="1.4"/>`;
+  }
+  s += `<rect width="${W}" height="${H}" fill="#06303a" opacity=".42"/>`;
+  return tileOut(W, H, s);
+}
+// Piso de palacio (castillo): rombos morados con orillas doradas.
+function royalTile() {
+  const W = 120, H = 120;
+  let s = `<rect width="${W}" height="${H}" fill="#3a2470"/>`;
+  for (const [x, y] of [[60, 0], [0, 60], [120, 60], [60, 120]]) s += `<path d="M${x} ${y - 30}l30 30-30 30-30-30z" fill="#5a3aa0" stroke="#ffc83d" stroke-width="2" stroke-opacity=".55"/>`;
+  s += `<rect width="${W}" height="${H}" fill="#0e0620" opacity=".38"/>`;
+  return tileOut(W, H, s);
+}
+// Pasto con piedritas de camino (jardín).
+function gardenTile() {
+  const W = 160, H = 160;
+  let s = `<rect width="${W}" height="${H}" fill="#6fbf5a"/>`;
+  for (const [x, y] of [[14, 20], [120, 30], [30, 90], [140, 140], [70, 60]]) s += `<path d="M${x} ${y}l-3-8M${x} ${y}l1-9M${x} ${y}l4-7" stroke="#4f9f45" stroke-width="2" stroke-linecap="round"/>`;
+  for (const [x, y, rx] of [[40, 40, 18], [110, 100, 20]]) s += `<ellipse cx="${x}" cy="${y}" rx="${rx}" ry="${rx * 0.7}" fill="#d8cdb8" stroke="#8a7a62" stroke-width="2"/><ellipse cx="${x - 3}" cy="${y - 3}" rx="${rx * 0.6}" ry="${rx * 0.3}" fill="#ece4d4" opacity=".7"/>`;
+  s += `<rect width="${W}" height="${H}" fill="#140a10" opacity=".42"/>`;
+  return tileOut(W, H, s);
+}
+// Banqueta de losas grises con su raya amarilla (ciudad).
+function cityTile() {
+  const W = 160, H = 160;
+  let s = `<rect width="${W}" height="${H}" fill="#3a4258"/>`;
+  for (const [x, y] of [[0, 0], [80, 0], [0, 80], [80, 80]]) s += `<rect x="${x + 3}" y="${y + 3}" width="74" height="74" rx="6" fill="${(x + y) % 160 ? '#525c76' : '#4a536c'}"/><rect x="${x + 7}" y="${y + 6}" width="66" height="3" rx="1.5" fill="#fff" opacity=".1"/>`;
+  s += `<path d="M0 80h${W}" stroke="#ffd36b" stroke-width="3" stroke-dasharray="14 10" opacity=".55"/>`;
+  s += `<rect width="${W}" height="${H}" fill="#060a1a" opacity=".3"/>`;
+  return tileOut(W, H, s);
+}
+// Tatami (templo): paja verdosa con su orilla oscura.
+function tatamiTile() {
+  const W = 240, H = 120;
+  let s = `<rect width="${W}" height="${H}" fill="#2a3a20"/>`;
+  for (const [x, y, w, h] of [[0, 0, 120, 60], [120, 0, 120, 60], [60, 60, 120, 60], [-60, 60, 120, 60], [180, 60, 120, 60]]) {
+    s += `<rect x="${x + 2}" y="${y + 2}" width="${w - 4}" height="${h - 4}" fill="#b8b06a"/>`;
+    for (let k = 6; k < h - 4; k += 4) s += `<path d="M${x + 4} ${y + k}h${w - 8}" stroke="#a09a58" stroke-width="1.2"/>`;
+    s += `<rect x="${x + 2}" y="${y + 2}" width="${w - 4}" height="5" fill="#2a3a20"/><rect x="${x + 2}" y="${y + h - 7}" width="${w - 4}" height="5" fill="#2a3a20"/>`;
+  }
+  s += `<rect width="${W}" height="${H}" fill="#140408" opacity=".4"/>`;
+  return tileOut(W, H, s);
+}
+// Lona de carpa de circo a rayas (feria).
+function tentTile() {
+  const W = 120, H = 120;
+  let s = `<rect width="${W}" height="${H}" fill="#fff0f6"/>`;
+  for (let x = 0; x < W; x += 40) s += `<rect x="${x}" width="20" height="${H}" fill="#ff5f8f"/>`;
+  s += `<rect width="${W}" height="${H}" fill="#14041a" opacity=".5"/>`;
+  return tileOut(W, H, s);
+}
+// Arena mojada con olitas (bahía).
+function rippleTile() {
+  const W = 160, H = 120;
+  let s = `<rect width="${W}" height="${H}" fill="#e8c8a8"/>`;
+  for (let y = 15; y < H; y += 30) s += `<path d="M0 ${y}q20-8 40 0t40 0 40 0 40 0" fill="none" stroke="#d0a888" stroke-width="3"/>`;
+  for (const [x, y] of [[30, 50], [120, 100]]) s += `<path d="M${x} ${y}a7 7 0 0 1 14 0z" fill="#ffd0dc" stroke="#c98a9a" stroke-width="1.6"/>`;
+  s += `<rect width="${W}" height="${H}" fill="#04243a" opacity=".45"/>`;
+  return tileOut(W, H, s);
+}
+// Musgo con puntitos de luz (arboleda de hongos).
+function mossTile() {
+  const W = 120, H = 120;
+  let s = `<rect width="${W}" height="${H}" fill="#4a6a5a"/>`;
+  for (const [x, y, r] of [[20, 30, 18], [80, 20, 14], [60, 80, 20], [110, 100, 12], [10, 100, 10]]) s += `<circle cx="${x}" cy="${y}" r="${r}" fill="#5a7f68"/>`;
+  for (const [x, y] of [[44, 50], [96, 64], [24, 76]]) s += `<circle cx="${x}" cy="${y}" r="2.4" fill="#d0a8ff" opacity=".8"/>`;
+  s += `<rect width="${W}" height="${H}" fill="#0a0618" opacity=".45"/>`;
+  return tileOut(W, H, s);
+}
+// Tapete de cañas de bambú con sus nudos.
+function bambooTile() {
+  const W = 120, H = 160;
+  let s = `<rect width="${W}" height="${H}" fill="#5a6a2a"/>`;
+  for (let i = 0; i < 6; i++) {
+    const x = i * 20, ny = (i % 2) * 40 + 30;
+    s += `<rect x="${x + 1.5}" width="17" height="${H}" rx="4" fill="${i % 2 ? '#c9d47a' : '#bcc86c'}"/>`;
+    for (const y of [ny, ny + 80]) s += `<rect x="${x + 1.5}" y="${y}" width="17" height="4" fill="#8a9a3a"/>`;
+  }
+  s += `<rect width="${W}" height="${H}" fill="#081408" opacity=".45"/>`;
+  return tileOut(W, H, s);
+}
+// Cobija de lana crema con zigzag rojo (tundra).
+function woolTile() {
+  const W = 120, H = 120;
+  let s = `<rect width="${W}" height="${H}" fill="#f0e8dc"/>`;
+  for (const y of [30, 90]) s += `<path d="M0 ${y}l15-10 15 10 15-10 15 10 15-10 15 10 15-10 15 10" fill="none" stroke="#d9434f" stroke-width="5"/>`;
+  s += `<path d="M0 60h${W}" stroke="#c9d8e8" stroke-width="3" stroke-dasharray="6 6"/>`;
+  s += `<rect width="${W}" height="${H}" fill="#0a1428" opacity=".5"/>`;
+  return tileOut(W, H, s);
+}
+// Canasta tejida color paja con franja café (sabana).
+function basketTile() {
+  const W = 80, H = 80;
+  let s = `<rect width="${W}" height="${H}" fill="#c99a4a"/>`;
+  for (let j = 0; j < 4; j++) for (let i = 0; i < 4; i++) s += `<path d="M${i * 20 + 2} ${j * 20 + 10}q8-8 16 0" fill="none" stroke="${(i + j) % 2 ? '#e0b860' : '#a87a30'}" stroke-width="5" stroke-linecap="round"/>`;
+  s += `<rect width="${W}" height="${H}" fill="#1a0e02" opacity=".45"/>`;
+  return tileOut(W, H, s);
+}
+// Suelo lunar: gris azulado con cráteres y alguna estrellita.
+function moonTile() {
+  const W = 160, H = 160;
+  let s = `<rect width="${W}" height="${H}" fill="#5a587a"/>`;
+  for (const [x, y, r] of [[40, 40, 16], [120, 90, 22], [50, 130, 10]]) s += `<circle cx="${x}" cy="${y}" r="${r}" fill="#4a4868" stroke="#6e6c90" stroke-width="3"/>`;
+  for (const [x, y] of [[110, 24], [20, 96]]) s += `<path d="${starPath(x, y, 4, 1.6)}" fill="#ffe8a0" opacity=".7"/>`;
+  s += `<rect width="${W}" height="${H}" fill="#04041a" opacity=".4"/>`;
+  return tileOut(W, H, s);
+}
+// Piedritas de río bajo el agua (cascada).
+function pebbleTile() {
+  const W = 120, H = 120;
+  let s = `<rect width="${W}" height="${H}" fill="#3a8a98"/>`;
+  for (const [x, y, rx, c] of [[24, 24, 16, '#8aa0a8'], [84, 40, 20, '#a0b0b0'], [40, 90, 18, '#98a8a0'], [100, 100, 12, '#8a9aa0']]) s += `<ellipse cx="${x}" cy="${y}" rx="${rx}" ry="${rx * 0.7}" fill="${c}"/>`;
+  s += `<path d="M0 64q30-8 60 0t60 0" fill="none" stroke="#a8f0f8" stroke-width="2" opacity=".5"/>`;
+  s += `<rect width="${W}" height="${H}" fill="#021a1a" opacity=".42"/>`;
+  return tileOut(W, H, s);
+}
+// Mosaico de azulejo turquesa y crema (oasis).
+function mosaicTile() {
+  const W = 80, H = 80;
+  let s = `<rect width="${W}" height="${H}" fill="#f0dcb0"/>`;
+  for (const [x, y] of [[0, 0], [40, 40]]) s += `<rect x="${x + 3}" y="${y + 3}" width="34" height="34" rx="3" fill="#2f9ea8"/><path d="M${x + 20} ${y + 9}l11 11-11 11-11-11z" fill="#f0dcb0"/>`;
+  s += `<rect width="${W}" height="${H}" fill="#2a1004" opacity=".45"/>`;
+  return tileOut(W, H, s);
+}
+// Panal de miel (colmena).
+function honeyTile() {
+  const W = 60, H = 104, hex = (x, y) => `M${x - 15} ${y}l7.5-13h15l7.5 13-7.5 13h-15z`;
+  let s = `<rect width="${W}" height="${H}" fill="#b8700a"/>`;
+  for (const [x, y] of [[15, 0], [15, 52], [15, 104], [45, 26], [45, 78], [-15, 26], [-15, 78], [75, 26], [75, 78]]) s += `<path d="${hex(x, y)}" fill="#ffc83d" stroke="#8a5000" stroke-width="3"/>`;
+  s += `<rect width="${W}" height="${H}" fill="#1a0c00" opacity=".45"/>`;
+  return tileOut(W, H, s);
+}
+// Noche azul con franjas de aurora verde y lila.
+function auroraTile() {
+  const W = 240, H = 160;
+  let s = `<rect width="${W}" height="${H}" fill="#1a2a5a"/>`;
+  s += `<path d="M0 50q60-30 120 0t120 0" fill="none" stroke="#5ff0c8" stroke-width="14" opacity=".35"/><path d="M0 110q60-30 120 0t120 0" fill="none" stroke="#b48cff" stroke-width="10" opacity=".3"/>`;
+  for (const [x, y] of [[30, 20], [180, 80], [100, 140]]) s += `<circle cx="${x}" cy="${y}" r="1.8" fill="#fff" opacity=".7"/>`;
+  s += `<rect width="${W}" height="${H}" fill="#020a1a" opacity=".3"/>`;
+  return tileOut(W, H, s);
+}
 const TILE_CACHE = {};
 function tableTile(key) {
   if (TILE_CACHE[key]) return TILE_CACHE[key];
@@ -544,6 +748,32 @@ function tableTile(key) {
   else if (b.table === 'dock') t = planksTile({ colors: ['#7fb6c2', '#73aab7', '#86bdc8', '#79b0bd'], seam: '#1d5878', hl: '#b5e0e8', grain: '#5f97a6', nails: true });
   else if (b.table === 'stone') t = stoneTile(key === 'cueva' ? { tones: ['#463d5e', '#4f466a', '#423958'], seam: '#231c33' } : { tones: ['#4a4152', '#544a5c', '#463d4e', '#504656'], seam: '#2a2230', lava: true });
   else if (b.table === 'cloud') t = cloudTile();
+  else if (b.table === 'straw') t = strawTile();
+  else if (b.table === 'royal') t = royalTile();
+  else if (b.table === 'garden') t = gardenTile();
+  else if (b.table === 'city') t = cityTile();
+  else if (b.table === 'tatami') t = tatamiTile();
+  else if (b.table === 'tent') t = tentTile();
+  else if (b.table === 'ripple') t = rippleTile();
+  else if (b.table === 'moss') t = mossTile();
+  else if (b.table === 'bamboo') t = bambooTile();
+  else if (b.table === 'wool') t = woolTile();
+  else if (b.table === 'basket') t = basketTile();
+  else if (b.table === 'moon') t = moonTile();
+  else if (b.table === 'pebble') t = pebbleTile();
+  else if (b.table === 'mosaic') t = mosaicTile();
+  else if (b.table === 'honey') t = honeyTile();
+  else if (b.table === 'aurora') t = auroraTile();
+  else if (b.table === 'sandstone') t = sandTile({ cols: ['#f2cf7a', '#e8c06a', '#f6d88a'], grout: '#9a6a20', line: '#d0a04a', crack: '#b8862f' });
+  else if (b.table === 'barrel') t = planksTile({ colors: ['#6a3a4a', '#603444', '#724252'], seam: '#2a0f1a', hl: '#9a6a78', grain: '#4a2232', nails: true });
+  else if (b.table === 'ore') t = stoneTile({ tones: ['#5a3f2a', '#644830', '#523a26'], seam: '#2a1a0e', gold: true });
+  else if (b.table === 'tile') t = sandTile({ cols: ['#d9784a', '#cf6c40', '#e0855a', '#d27248'], grout: '#7a3a1a', line: '#b85a30', crack: '#a84f28' });
+  else if (b.table === 'pier') t = planksTile({ colors: ['#5a6a8a', '#52627f', '#62728f', '#566683'], seam: '#1a2240', hl: '#8a9ab8', grain: '#46546f', nails: true });
+  else if (b.table === 'birch') t = planksTile({ colors: ['#e0d0b0', '#d6c6a4', '#e6d8ba'], seam: '#6a5a40', hl: '#f4ead4', grain: '#3a3428' });
+  else if (b.table === 'barn') t = planksTile({ colors: ['#b8432f', '#ac3a28', '#c04a34', '#b23f2c'], seam: '#4a140a', hl: '#e07a5a', grain: '#8a2a1a', nails: true });
+  else if (key === 'valle') t = planksTile({ colors: ['#a8683a', '#9c5e32', '#b07040'], seam: '#4a2410', hl: '#d09060', grain: '#7a4422' });
+  else if (key === 'selva') t = planksTile({ colors: ['#a8a04a', '#9c9440', '#b0a852'], seam: '#3a3a10', hl: '#d0c870', grain: '#7a7428', h: 48 });
+  else if (key === 'pradera') t = planksTile({ colors: ['#d0a070', '#c69666', '#d6a878'], seam: '#5a3a1a', hl: '#ecc090', grain: '#a87a4a' });
   else if (key === 'pantano') t = planksTile({ colors: ['#8a7a52', '#7f704a', '#938357'], seam: '#3a3018', hl: '#b0a070', grain: '#6a5c38' });
   else if (key === 'glaciar' || key === 'montana') t = planksTile({ colors: ['#c98a57', '#bf7e4b', '#d0935f', '#c4834f', '#cb8c58', '#bd7c49'], seam: '#5c2f1c', hl: '#e3a874', grain: '#a86a40' });
   else t = planksTile({ colors: ['#b97a48', '#ad6f3f', '#c08250', '#b4764a'], seam: '#4f2816', hl: '#d8996a', grain: '#94582f' });
@@ -665,7 +895,31 @@ const PROPS = {
   pantano: ['lily', 'acorns', ['mug', ['#7a8f4a', '#5f7a3a', '#a0b070']]],
   arrecife: ['shells', 'starfish', 'ring'],
   desierto: ['map', 'compass', 'cactus'],
-  canon: ['map', 'compass', 'cactus'],
+  canon: [['crystals', ['#e98a5a', '#ffc83d', '#c4532f']], 'jarro', 'compass'],
+  valle: [['leaves', ['#ff8a2a', '#ffc83d', '#e2603a']], 'acorns', ['mug', ['#ff9c3d', '#e2753a', '#ffc794']]],
+  isla: ['beachball', 'sunglasses', 'watermelons'],
+  castillo: ['crown', 'goldstars', ['mug', ['#8a5cf0', '#6c3fd4', '#b9a6ff']]],
+  jardin: ['tulips', 'butterflies', 'maceta'],
+  puerto: ['ring', 'map', ['mug', ['#4a7ad8', '#2a5ab8', '#8fb8ff']]],
+  lago: ['lily', ['leaves', ['#4f9f45', '#6fc28a', '#2f7a5a']], ['mug', ['#6fd6c8', '#2f9e8a', '#b0fff0']]],
+  ciudad: ['plane', 'map', ['mug', ['#ffd36b', '#e8a23a', '#fff0b0']]],
+  granja: ['elotes', 'flowers', ['mug', ['#e8434f', '#c22c3c', '#ff9aa2']]],
+  pueblo: ['pan', 'jarro', 'flowers'],
+  templo: ['flowers', 'candle', ['mug', ['#5fae5a', '#3f8a4a', '#a8e8a0']]],
+  mina: [['crystals', ['#ffc83d', '#ffe27a', '#ff9c3d']], 'tools', 'candle'],
+  feria: ['globos', 'palomitas', ['mug', ['#ff7ab8', '#e8559a', '#ffc2dc']]],
+  piramide: ['map', 'goldstars', 'jarro'],
+  bahia: ['shells', 'sunglasses', 'starfish'],
+  arboleda: ['acorns', ['leaves', ['#8a6ad8', '#6fae8a', '#ff5f6e']], ['mug', ['#8a6ad8', '#5a3aa8', '#d0b8ff']]],
+  bambu: [['leaves', ['#a8d45a', '#6fc25a', '#4f9a3a']], 'candle', ['mug', ['#a8d45a', '#6fae3a', '#e0f4b0']]],
+  tundra: ['cookies', 'compass', ['mug', ['#e8434f', '#c22c3c', '#ff9aa2']]],
+  sabana: [['leaves', ['#e8c25a', '#c9983a', '#8fae3a']], 'compass', 'jarro'],
+  luna: ['goldstars', 'plane', ['mug', ['#c9c6d8', '#8a87a8', '#ecebf4']]],
+  vinedo: ['pan', 'flowers', ['mug', ['#9a5ac8', '#6a3a98', '#d8b8f0']]],
+  cascada: ['lily', 'shells', ['mug', ['#5fd8e8', '#2f9ec8', '#b8f4ff']]],
+  oasis: ['cactus', 'watermelons', ['mug', ['#3fc0c8', '#2f9ea8', '#b0f0f0']]],
+  colmena: ['flowers', 'butterflies', ['mug', ['#ffc83d', '#e89a17', '#ffe8a0']]],
+  aurora: ['mittens', 'goldstars', ['mug', ['#5ff0c8', '#2fae8a', '#c8fff0']]],
   volcan: ['crystals', 'candle', 'candle'],
   cueva: [['crystals', ['#b48cff', '#8fd2ef', '#ff7ab8']], 'candle', 'candle'],
   glaciar: ['mittens', 'cookies', 'mug'],

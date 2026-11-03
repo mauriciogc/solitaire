@@ -7,7 +7,7 @@ import { pauseOffscreen, openModal, toast, updateCoins, money, esc, reduced, wai
 import { icon, star, coin, miniPlanet, avatarHTML, AVATAR_COLORS, cardBackURL, setDeck, lockIcon, chestBody, chestLid, boxBody, boxLid } from './art.js';
 import { GROUPS, SECTIONS, ITEMS, shopItems, groupOf, owns, equipped, equip, buy, item, lockedUntil, titleHTML } from './shop.js';
 import { BIOMES, biomeKey, EVENT_BIOMES } from './biomes.js';
-import { dev, gallery, initDevFromUrl, attachDevBar, galleryScreen, openDevMenu } from './dev.js';
+import { dev, gallery, initDevFromUrl, attachDevBar, galleryScreen, openDevMenu, planetGal, planetsScreen } from './dev.js';
 
 initDevFromUrl();
 document.documentElement.classList.toggle('dev-on', !!prefs.dev);
@@ -523,7 +523,7 @@ const colBtn = () => {
 const eventButtons = (res) => rachaBtn(res?.racha ? res.racha - 1 : null) + colBtn() + evBtn();
 const sideButtons = () => `${ibtn('gift', 'Regalo diario', 'daily', !dailyState(save.daily).claimed)}${ticketBtn()}${ibtn('bag', 'Tienda', 'shop')}${ibtn('album', 'Álbum de postales', 'album')}${ibtn('gear', 'Ajustes', 'settings')}`;
 function sideAction(a) {
-  const act = { me: () => !tourStep() && openProfile(), shop: () => openShop(), daily: openDaily, dticket: openDailyTicket, racha: openRacha, col: openCol, evento: openEvento, fiesta: openFiesta, album: openAlbum, settings: openSettings, dev: () => openDevMenu({ onGallery: () => showGallery(save.next), onRefresh: boot }) }[a];
+  const act = { me: () => !tourStep() && openProfile(), shop: () => openShop(), daily: openDaily, dticket: openDailyTicket, racha: openRacha, col: openCol, evento: openEvento, fiesta: openFiesta, album: openAlbum, settings: openSettings, dev: () => openDevMenu({ onGallery: () => showGallery(save.next), onPlanets: showPlanets, onRefresh: boot }) }[a];
   act?.();
   return !!act;
 }
@@ -821,12 +821,20 @@ function startLevel(g, { resume = false, free = false, anim = 'up' } = {}) {
 
 // ---------- Galería (modo dev) ----------
 function showGallery(start) {
+  // Se jugó una mesa desde la galería de planetas: se vuelve a esa.
+  if (start == null && planetGal.active) return showPlanets();
+  planetGal.active = false;
   current = () => showGallery();
   if (start != null) {
     gallery.start = Math.max(0, start - (start % 24));
     if (gallery.help[0] === 's') gallery.help = ''; // ir a un nivel del camino: deja la lista de especiales
   }
   mount(galleryScreen({ onPlay: (g) => startLevel(g, save.run?.g === g ? { resume: true, anim: null } : { free: true, anim: null }), onBack: () => showMap() }));
+}
+// Galería de planetas (modo dev): al volver de su mesa o de su planeta se regresa aquí.
+function showPlanets() {
+  current = () => showPlanets();
+  mount(planetsScreen({ onWorld: (w) => showWorld(w, null), onPlay: (g) => (gallery.active = true, startLevel(g, { free: true, anim: null })), onBack: () => showMap() }));
 }
 
 // ---------- Tienda ----------

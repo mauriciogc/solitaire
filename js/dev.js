@@ -6,7 +6,9 @@ import { generateLevel, packGroups, worldInfo, specials, specialGroup, SPECIAL_I
 import { playCasual, solve, initState } from './engine.js';
 import { openModal, toast, updateCoins, popGoal } from './ui.js';
 import { mulberry32 } from './rng.js';
-import { icon } from './art.js';
+import { icon, miniPlanet } from './art.js';
+import { tableHTML, BIOMES, biomeKey } from './biomes.js';
+import { peek } from './galaxy.js';
 import { EVENTOS, COLECCIONES, FIESTAS } from './events.js';
 import { ITEMS, SECTIONS, owns, lockedUntil } from './shop.js';
 
@@ -265,10 +267,53 @@ export function galleryScreen({ onPlay, onBack }) {
   return el;
 }
 
+// ---------- Galería de planetas: cada tipo de planeta con su mesa ----------
+// Tocar el planeta lo abre en el mapa (con colores aunque esté cerrado); tocar la mesa juega su primer nivel.
+export const planetGal = { active: false, scroll: 0 };
+export function planetsScreen({ onWorld, onPlay, onBack }) {
+  const el = document.createElement('div');
+  el.className = 'screen gallery';
+  el.innerHTML = `
+    <header class="top">
+      <button class="icon-btn" data-g="back" aria-label="Volver">${icon('close')}</button>
+      <b>Planetas dev</b>
+      <span></span>
+    </header>
+    <div class="g-grid">${firstWorlds().map(([place, w]) => `<div class="tile ptile">
+      <button class="pt-table" data-mesa="${w}" style="--k:.42;--sl:0px;--sr:0px;--st:0px;--sb:0px">${tableHTML(w)}<span class="pt-pl" data-world="${w}">${miniPlanet(BIOMES[biomeKey(place)].emblem)}</span></button>
+      <div class="tl"><b>${place}</b> · mundo ${w + 1}</div>
+      <div class="pt-btns"><button data-world="${w}">Planeta</button><button data-mesa="${w}">Mesa</button></div>
+    </div>`).join('')}</div>`;
+  const grid = el.querySelector('.g-grid');
+  requestAnimationFrame(() => (grid.scrollTop = planetGal.scroll));
+  el.addEventListener('click', (e) => {
+    const t = e.target.closest('[data-world], [data-mesa], [data-g]');
+    if (!t) return;
+    planetGal.scroll = grid.scrollTop;
+    if (t.dataset.g === 'back') return (planetGal.active = false), onBack();
+    planetGal.active = true;
+    if (t.dataset.world != null) return (peek.on = true), onWorld(+t.dataset.world);
+    onPlay(+t.dataset.mesa * LEVELS_PER_WORLD);
+  });
+  return el;
+}
+
 // ---------- Menú dev (desde el mapa) ----------
 // Botones chicos en dos columnas (solo son de prueba). Todo se hace sobre la copia del modo dev:
 // al salir del modo dev tu partida vuelve como estaba.
 const REGION = 10;
+// Días que hay que mover el reloj (del modo dev) para caer en el 1 del mes m: este año, o el que sigue si ya pasó.
+function daysToMonth(m) {
+  const d = new Date(Date.now() + (save.devDay || 0) * 864e5), day0 = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const t = new Date(d.getFullYear() + (m < d.getMonth() ? 1 : 0), m, 1);
+  return Math.round((t - day0) / 864e5);
+}
+// Primer mundo de cada lugar (Bosque, Isla…), en el orden en que salen.
+function firstWorlds() {
+  const seen = new Map();
+  for (let w = 0; w < TOTAL_LEVELS / LEVELS_PER_WORLD; w++) { const { place } = worldInfo(w); if (!seen.has(place)) seen.set(place, w); }
+  return [...seen];
+}
 function completeWorlds(from, to) {
   for (let w = from; w <= to; w++) for (let l = 0; l < LEVELS_PER_WORLD; l++) save.stars[w * LEVELS_PER_WORLD + l] = 3;
   save.next = Math.max(save.next, Math.min(TOTAL_LEVELS - 1, (to + 1) * LEVELS_PER_WORLD));
@@ -276,7 +321,7 @@ function completeWorlds(from, to) {
   save.run = null;
   persist();
 }
-export function openDevMenu({ onGallery, onRefresh }) {
+export function openDevMenu({ onGallery, onPlanets, onRefresh }) {
   const w = Math.min(Math.floor(save.next / LEVELS_PER_WORLD), save.open);
   const r = Math.floor(w / REGION);
   const evNow = ev(), colNow = col();
@@ -330,6 +375,7 @@ export function openDevMenu({ onGallery, onRefresh }) {
   const S = [
     { t: 'General', items: [
       { l: 'Galería de niveles', cls: 'gold', fn: onGallery },
+      { l: 'Galería de planetas', cls: 'gold', title: 'Cada tipo de planeta: verlo en el mapa o jugar en su mesa', fn: onPlanets },
       { l: `Boosters infinitos: ${prefs.devInfinite ? 'sí' : 'no'}`, fn: () => { prefs.devInfinite = !prefs.devInfinite; persist(); toast(`Boosters infinitos: ${prefs.devInfinite ? 'sí' : 'no'}`); } },
       { l: '+1000 monedas', fn: () => ((save.coins += 1000), persist(), updateCoins()) },
       { l: '+20,000 monedas', fn: () => ((save.coins += 20000), persist(), updateCoins()) },
@@ -403,24 +449,30 @@ export function openDevMenu({ onGallery, onRefresh }) {
       { l: 'Ver el aviso de Leyendas', title: `La ventana que sale al llegar al nivel ${UNLOCK.fiesta2}, con las festividades nuevas`, fn: () => (save.intro && delete save.intro.fiesta2, persist(), onRefresh()) },
     ] },
     // Una por festividad: mueve el reloj al día en que empieza (la de este año). Las de leyendas, solo desde el nivel 200.
-    { t: 'Ir al día de una festividad', sub: isOn('fiesta2') ? 'el reloj cae en su primer día' : `las de leyendas (⚑) se abren en el nivel ${UNLOCK.fiesta2}`, items: fis.map((f) => {
+  ].map((sec) => ({ ...sec, items: sec.items.filter(Boolean) }));
+  // Pestaña Fechas: mover el reloj al primer día de un evento del mes o al día de una festividad.
+  const F = [
+    { t: 'Eventos del mes', sub: isOn('mes') ? 'el reloj cae en el día 1 del mes' : `se abren en el nivel ${UNLOCK.mes}`, items: evs.map(([m, e]) => ({ l: `${e.name} · ${MES[m]}`, title: `Mueve el reloj al 1 de ${MES[m]}`, fn: () => toDay(daysToMonth(+m)) })) },
+    { t: 'Festividades', sub: isOn('fiesta2') ? 'el reloj cae en su primer día' : `las de leyendas (⚑) se abren en el nivel ${UNLOCK.fiesta2}`, items: fis.map((f) => {
       const d = f.date(y);
       return { l: `${f.local && !isOn('fiesta2') ? '⚑ ' : ''}${f.name} · ${d.getDate()} ${MES[d.getMonth()]}`, title: `Mueve el reloj al ${d.getDate()} de ${MES[d.getMonth()]}, cuando empieza`, fn: () => toDay(daysToFiesta(f.key)) };
-    }) },
-  ].map((sec) => ({ ...sec, items: sec.items.filter(Boolean) }));
-  const all = S.flatMap((sec) => sec.items);
+    }) }
+  ];
+  const all = [...S, ...F].flatMap((sec) => sec.items);
+  const secHTML = (sec) => `<section class="dsec"><h4>${sec.t}${sec.sub ? `<small>${sec.sub}</small>` : ''}</h4>${sec.html || ''}<div class="dbtns">${sec.items.map((it) => `<button class="btn ${it.cls || 'ghost'}" data-i="${all.indexOf(it)}"${it.title ? ` title="${it.title}"` : ''}>${it.l}</button>`).join('')}</div></section>`;
   const m = openModal({
     title: 'Modo dev',
     cls: 'devmenu',
     wide: true,
     // Dos pestañas: los botones primero (lo que más se usa) y el recuento aparte.
-    body: `<div class="dtabs"><button class="dtab on" data-tab="btns">Pruebas</button><button class="dtab" data-tab="count">Recuento</button></div>
+    body: `<div class="dtabs"><button class="dtab on" data-tab="btns">Pruebas</button><button class="dtab" data-tab="dates">Fechas</button><button class="dtab" data-tab="count">Recuento</button></div>
+      <div class="dpane" data-pane="dates" hidden>${F.map(secHTML).join('')}</div>
       <div class="dpane" data-pane="count" hidden><section class="dsec">${recuento}</section></div>
       <div class="dpane" data-pane="btns"><p class="note">Todo lo que hagas aquí es de prueba: al salir del modo dev vuelve tu partida.</p>
-      ${S.map((sec) => `<section class="dsec"><h4>${sec.t}${sec.sub ? `<small>${sec.sub}</small>` : ''}</h4>${sec.html || ''}<div class="dbtns">${sec.items.map((it) => `<button class="btn ${it.cls || 'ghost'}" data-i="${all.indexOf(it)}"${it.title ? ` title="${it.title}"` : ''}>${it.l}</button>`).join('')}</div></section>`).join('')}</div>`,
+      ${S.map(secHTML).join('')}</div>`,
     buttons: [
       { label: 'Empezar de cero las pruebas', cls: 'green', onClick: () => { restoreBackup(); backupOnce(); toast('Tu partida volvió a como estaba'); onRefresh(); } },
-      { label: 'Salir del modo dev', cls: 'pink', onClick: () => (setDev(false), document.documentElement.classList.remove('dev-on'), toast('Tu partida volvió a como estaba'), onRefresh()) },
+      { label: 'Salir del modo dev', cls: 'pink', onClick: () => ((peek.on = false), setDev(false), document.documentElement.classList.remove('dev-on'), toast('Tu partida volvió a como estaba'), onRefresh()) },
     ],
   });
   m.el.querySelector('.dtabs').addEventListener('click', (e) => {

@@ -23,27 +23,79 @@ const PLACES = [
   ['Ciudad', 'f', '🏙️', 240], ['Selva', 'f', '🦜', 120], ['Cañón', 'm', '🌵', 25],
   ['Cielo', 'm', '☁️', 205], ['Granja', 'f', '🐄', 60], ['Pueblo', 'm', '🏘️', 30],
   ['Templo', 'm', '⛩️', 350], ['Mina', 'f', '⛏️', 40], ['Feria', 'f', '🎡', 300],
+  ['Pirámide', 'f', '🔺', 45], ['Bahía', 'f', '🐚', 340], ['Arboleda', 'f', '🍄', 285],
+  ['Bambú', 'm', '🎋', 140], ['Tundra', 'f', '⛄', 200], ['Sabana', 'f', '🦒', 40],
+  ['Luna', 'f', '🌙', 250], ['Viñedo', 'm', '🍇', 300], ['Cascada', 'f', '💧', 175],
+  ['Oasis', 'm', '🌴', 55], ['Colmena', 'f', '🐝', 48], ['Aurora', 'f', '🌌', 165],
 ];
-const ADJ = [
-  ['Encantado', 'Encantada'], ['Dorado', 'Dorada'], ['Brumoso', 'Brumosa'],
-  ['Estrellado', 'Estrellada'], ['Helado', 'Helada'], ['Florido', 'Florida'],
-  ['Lunar', 'Lunar'], ['Escondido', 'Escondida'], ['Mágico', 'Mágica'],
-  ['Soleado', 'Soleada'], ['Dulce', 'Dulce'], ['Salvaje', 'Salvaje'],
-  ['Antiguo', 'Antigua'], ['Brillante', 'Brillante'], ['Secreto', 'Secreta'],
-  ['Tranquilo', 'Tranquila'], ['Esmeralda', 'Esmeralda'], ['Carmesí', 'Carmesí'],
-  ['Plateado', 'Plateada'], ['Eterno', 'Eterna'], ['Risueño', 'Risueña'],
-  ['Perdido', 'Perdida'], ['Celeste', 'Celeste'], ['Otoñal', 'Otoñal'],
+// Nombres que le quedan a cada lugar (ya con su género). Se usan en orden barajado fijo: la vuelta k del lugar toma el k-ésimo.
+const NAMES = {
+  Bosque: ['Frondoso', 'Verde', 'Susurrante', 'Musgoso', 'del Búho', 'de los Duendes', 'de las Ardillas', 'Esmeralda'],
+  Valle: ['Otoñal', 'Dorado', 'Ventoso', 'de los Arces', 'Ámbar', 'Cobrizo', 'del Atardecer', 'Rojizo'],
+  Isla: ['Tropical', 'Soleada', 'Turquesa', 'de las Palmeras', 'del Coco', 'Paradisíaca', 'de los Loros', 'Arenosa'],
+  Castillo: ['Real', 'Imperial', 'de las Torres', 'del Rey', 'de Cristal', 'Majestuoso', 'del Dragón', 'de la Princesa'],
+  Pantano: ['Brumoso', 'Burbujeante', 'de las Ranas', 'del Sapo', 'Verdoso', 'Neblinoso', 'de los Juncos', 'de las Luciérnagas'],
+  Desierto: ['Ardiente', 'de las Dunas', 'Soleado', 'del Escorpión', 'Infinito', 'Caluroso', 'del Espejismo', 'Dorado'],
+  Arrecife: ['Coralino', 'Turquesa', 'de los Peces', 'Multicolor', 'Sumergido', 'de las Perlas', 'Marino', 'del Delfín'],
+  Montaña: ['Nevada', 'Altiva', 'de las Águilas', 'Rocosa', 'Escarpada', 'del Eco', 'Gigante', 'de las Nubes'],
+  Pradera: ['Florida', 'Verde', 'de las Margaritas', 'Soleada', 'Ventosa', 'de los Conejos', 'Primaveral', 'Dulce'],
+  Cueva: ['Profunda', 'de Cristal', 'de los Murciélagos', 'Amatista', 'del Eco', 'Resplandeciente', 'Subterránea', 'de las Gemas'],
+  Jardín: ['Florido', 'de las Rosas', 'Perfumado', 'Secreto', 'de los Tulipanes', 'Primaveral', 'de las Mariposas', 'Rosado'],
+  Puerto: ['Marinero', 'del Faro', 'Azul', 'de las Gaviotas', 'Pesquero', 'del Ancla', 'Bullicioso', 'de los Barcos'],
+  Glaciar: ['Helado', 'Cristalino', 'Polar', 'Azul', 'de Hielo', 'del Pingüino', 'Congelado', 'Invernal'],
+  Volcán: ['Ardiente', 'de Fuego', 'Rugiente', 'Carmesí', 'de Lava', 'Humeante', 'Furioso', 'Dormido'],
+  Lago: ['Sereno', 'de los Cisnes', 'Espejo', 'Cristalino', 'Tranquilo', 'de los Nenúfares', 'Azul', 'de la Bruma'],
+  Ciudad: ['Brillante', 'de Neón', 'Moderna', 'Nocturna', 'de las Torres', 'Bulliciosa', 'Luminosa', 'del Futuro'],
+  Selva: ['Salvaje', 'Tropical', 'de los Jaguares', 'Esmeralda', 'Húmeda', 'de los Monos', 'Frondosa', 'de las Lianas'],
+  Cañón: ['Rojo', 'Profundo', 'del Eco', 'Escarpado', 'del Halcón', 'Cobrizo', 'Ventoso', 'Carmesí'],
+  Cielo: ['Celeste', 'de Algodón', 'Rosado', 'de las Nubes', 'Infinito', 'del Arcoíris', 'Alado', 'Azul'],
+  Granja: ['Feliz', 'de las Vacas', 'Dorada', 'del Molino', 'de los Pollitos', 'Campestre', 'Risueña', 'de Trigo'],
+  Pueblo: ['Pintoresco', 'de Colores', 'Tranquilo', 'de las Campanas', 'Alegre', 'del Río', 'Rústico', 'de los Faroles'],
+  Templo: ['de Jade', 'del Sol', 'de los Cerezos', 'Sagrado', 'de la Luna', 'Dorado', 'del Dragón', 'de las Linternas'],
+  Mina: ['Dorada', 'de Oro', 'Profunda', 'de las Gemas', 'de Diamantes', 'Brillante', 'del Minero', 'de Rubíes'],
+  Feria: ['Alegre', 'de Colores', 'de los Globos', 'Dulce', 'Risueña', 'de las Luces', 'del Carrusel', 'de Algodón'],
+  Pirámide: ['Dorada', 'del Faraón', 'Antigua', 'del Sol', 'de Arena', 'Misteriosa', 'Perdida', 'de la Esfinge'],
+  Bahía: ['Rosada', 'de los Corales', 'Turquesa', 'Serena', 'de las Conchas', 'Escondida', 'Soleada', 'de las Sirenas'],
+  Arboleda: ['de los Hongos', 'Mágica', 'Encantada', 'Morada', 'Brumosa', 'de las Hadas', 'Luminosa', 'de los Gnomos'],
+  Bambú: ['Verde', 'Susurrante', 'del Panda', 'Sereno', 'Esmeralda', 'del Viento', 'Tranquilo', 'Dorado'],
+  Tundra: ['Nevada', 'Helada', 'Blanca', 'Polar', 'del Reno', 'Invernal', 'Silenciosa', 'Ventosa'],
+  Sabana: ['Dorada', 'Salvaje', 'del León', 'de las Jirafas', 'Soleada', 'Infinita', 'Ámbar', 'del Atardecer'],
+  Luna: ['Plateada', 'Llena', 'Creciente', 'Menguante', 'Nueva', 'de Queso', 'Brillante', 'Silenciosa'],
+  Viñedo: ['Morado', 'de las Uvas', 'Soleado', 'Dulce', 'del Atardecer', 'Dorado', 'Otoñal', 'de las Colinas'],
+  Cascada: ['Cristalina', 'Rugiente', 'Esmeralda', 'del Arcoíris', 'Escondida', 'Brumosa', 'Azul', 'Eterna'],
+  Oasis: ['Escondido', 'Fresco', 'de las Palmeras', 'Turquesa', 'del Desierto', 'Dorado', 'Secreto', 'Soñado'],
+  Colmena: ['Dorada', 'de Miel', 'Dulce', 'Zumbadora', 'de las Abejas', 'Ámbar', 'Florida', 'Risueña'],
+  Aurora: ['Boreal', 'Austral', 'Brillante', 'Danzante', 'Verde', 'Mágica', 'Polar', 'Estrellada'],
+};
+// Para completar la lista de cada lugar: adjetivos que le quedan a cualquiera.
+const ANY = [
+  ['Encantado', 'Encantada'], ['Escondido', 'Escondida'], ['Secreto', 'Secreta'], ['Mágico', 'Mágica'],
+  ['Antiguo', 'Antigua'], ['Perdido', 'Perdida'], ['Eterno', 'Eterna'], ['Brillante', 'Brillante'],
+  ['Lejano', 'Lejana'], ['Risueño', 'Risueña'], ['Estrellado', 'Estrellada'], ['Plateado', 'Plateada'],
+  ['Soñado', 'Soñada'], ['Legendario', 'Legendaria'], ['Misterioso', 'Misteriosa'], ['Celeste', 'Celeste'],
 ];
-// 24 lugares × 24 adjetivos = 576 nombres únicos, en orden barajado fijo.
-const COMBOS = shuffle(mulberry32(777), [...Array(PLACES.length * ADJ.length).keys()]);
+// Orden de los mundos: cada vuelta de 36 trae los 36 lugares una vez, barajados (la primera empieza en el Bosque),
+// sin repetir lugar entre el final de una vuelta y el inicio de la siguiente.
+const LAPS = Math.ceil(520 / PLACES.length);
+const ORDER = [];
+for (let k = 0; k < LAPS; k++) {
+  const lap = shuffle(mulberry32(777 + k), [...PLACES.keys()]);
+  if (k === 0) lap.unshift(...lap.splice(lap.indexOf(0), 1));
+  else if (lap[0] === ORDER.at(-1)) [lap[0], lap[1]] = [lap[1], lap[0]];
+  ORDER.push(...lap);
+}
+const NAME_LIST = PLACES.map(([place, gender], i) => {
+  const own = shuffle(mulberry32(31 + i), [...NAMES[place]]);
+  const rest = ANY.map((a) => a[gender === 'm' ? 0 : 1]).filter((a) => !own.includes(a));
+  return [...own, ...shuffle(mulberry32(91 + i), rest)];
+});
 
 export function worldInfo(w) {
-  const c = COMBOS[w % COMBOS.length];
-  const [place, gender, emoji, hue] = PLACES[c % PLACES.length];
-  const adj = ADJ[Math.floor(c / PLACES.length)][gender === 'm' ? 0 : 1];
+  const p = ORDER[w % ORDER.length], [place, , emoji, hue] = PLACES[p];
+  const list = NAME_LIST[p];
   return {
     index: w,
-    name: `${place} ${adj}`,
+    name: `${place} ${list[Math.floor(w / PLACES.length) % list.length]}`,
     place,
     emoji,
     hue: (hue + ((w * 37) % 40) - 20 + 360) % 360,
