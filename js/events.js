@@ -412,7 +412,10 @@ export const FIESTAS = [
     ico: 'clavel', deco: 'regalito', color: 'red',
     planets: ['Jardín de Claveles', 'Valle de los Abrazos', 'Planeta Mamá'],
     ex: [{ space: 'jardinmama', frame: 'mama' }, { ring: 'claveles', back: 'regalos' }, { avatar: 'clavelito', title: 'consentido', traveler: 'regalito' }] },
-  { key: 'padre', name: 'Día del Padre', date: (y) => nthSunday(y, 5, 3) },
+  { key: 'padre', name: 'Día del Padre', date: (y) => nthSunday(y, 5, 3), ready: true,
+    ico: 'corbata', deco: 'bigote', color: 'blue',
+    planets: ['Lago de Pesca', 'Bosque del Asador', 'Planeta Papá'],
+    ex: [{ space: 'nochepapa', frame: 'papa' }, { ring: 'corbatas', back: 'bigotes' }, { avatar: 'bigoton', title: 'orgullo', traveler: 'asador' }] },
   { key: 'gato', name: 'Día del Gato', date: (y) => new Date(y, 7, 8) },
   { key: 'perro', name: 'Día del Perro', date: (y) => new Date(y, 7, 26) },
   { key: 'gamer', name: 'Día del Gamer', date: (y) => new Date(y, 7, 29) },
@@ -448,6 +451,7 @@ export function fiesta() {
   const id = `${x.f.key}-${x.day}`, base = { ...x.f, id, day: x.day, year: new Date(x.day * DAY).getUTCFullYear(), soon: x.soon };
   if (x.soon) return base;
   if (save.fi?.id !== id) {
+    fiRecord(); // la de antes, si se ganó completa, se queda en el álbum
     save.fi = { id, k: 0, world: save.open || 0, run: null, tries: {} };
     persist();
   }
@@ -497,8 +501,33 @@ export function fiWin() {
     save.owned[`${it.sec}:${it.k}`] = 1;
     equip(it.sec, it.k);
   }
+  fiRecord();
   persist();
   return { ...prize, k, planet: Math.floor(k / FIESTA_PER_PLANET), last: k === FIESTA_LEVELS - 1 };
+}
+// Álbum: ganar los 9 niveles de una festividad deja su postal para siempre, con el año en el sello
+// (save.fiAlbum: 'clave-año' → 1).
+function fiRecord() {
+  const s = save.fi;
+  if (!s?.id || s.k < FIESTA_LEVELS) return;
+  const [key, day] = s.id.split('-');
+  save.fiAlbum[`${key}-${new Date(day * DAY).getUTCFullYear()}`] = 1;
+}
+// Las postales de festividades, de la más nueva a la más vieja: [{ id, year, e }].
+export function fiAlbum() {
+  fiRecord(); // festividades ganadas antes de que existiera su postal
+  // Las ganadas antes de que hubiera álbum: si tiene el avatar del último jefe, la terminó (año de su última fecha).
+  const day = today(), y = new Date(day * DAY).getUTCFullYear();
+  for (const f of FIESTAS) {
+    if (!f.ready || !save.owned[`avatar:${f.ex[2].avatar}`] || Object.keys(save.fiAlbum).some((id) => id.startsWith(`${f.key}-`))) continue;
+    const last = [...fiestaDays(y - 1), ...fiestaDays(y)].filter((x) => x.f === f && x.day <= day).pop();
+    if (last) save.fiAlbum[`${f.key}-${new Date(last.day * DAY).getUTCFullYear()}`] = 1;
+  }
+  const order = (x) => x.year * 100 + FIESTAS.indexOf(x.e);
+  return Object.keys(save.fiAlbum)
+    .map((id) => { const [key, year] = id.split('-'); return { id, year: +year, e: FIESTAS.find((f) => f.key === key) }; })
+    .filter((x) => x.e?.ready)
+    .sort((a, b) => order(b) - order(a));
 }
 // Perdió, abandonó o pidió reintentar: solo se cierra la partida (se puede volver a entrar cuando quiera).
 export function fiLose() {

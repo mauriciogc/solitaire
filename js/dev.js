@@ -351,6 +351,7 @@ export function openDevMenu({ onGallery, onRefresh }) {
     { t: 'Colección', sub: colNow ? `${colNow.name} · ${colNow.state.n} fichas` : 'no hay esta semana', items: [
       { l: colNow ? 'Siguiente colección' : 'Ir a la próxima', fn: () => ((save.devDay = (save.devDay || 0) + daysToNextCol()), persist(), onRefresh()) },
       colNow && { l: '+30 fichas', fn: () => ((col().state.n += 30), persist(), onRefresh()) },
+      colNow && { l: 'Ver su bienvenida', fn: () => ((col().state.intro = false), persist(), onRefresh()) },
     ] },
     { t: 'Evento del mes', sub: evNow ? `${evNow.name} · nivel ${Math.min(evNow.state.k + 1, EVENT_LEVELS)} de ${EVENT_LEVELS} · ${evNow.state.tk ? 'con boleto' : 'sin boleto'}` : 'no hay este mes', items: [
       { l: evNow ? 'Siguiente evento' : 'Ir al próximo', fn: () => ((save.devDay = (save.devDay || 0) + daysToNextEvent()), persist(), onRefresh()) },
@@ -369,6 +370,7 @@ export function openDevMenu({ onGallery, onRefresh }) {
       fiOn && { l: 'Ganar todo hasta el último jefe', title: 'Gana los niveles que faltan (con sus premios) y te deja en el jefe del último planeta', fn: () => ((fiesta().state.run = null), winTo(fiesta, fiEnter, fiWin, FIESTA_LEVELS - 1)) },
       fiOn && { l: 'Ir al último jefe del último planeta', title: 'Ganarlo termina la festividad', fn: () => fiSet({ k: FIESTA_LEVELS - 1 }) },
       fiOn && { l: 'Empezar de cero', fn: () => ((save.fi = null), persist(), onRefresh()) },
+      { l: 'Ver el aviso de Festividades', title: 'La ventana que sale al desbloquearlas (nivel 120), con 3 iconos', fn: () => (save.intro && delete save.intro.fiesta, persist(), onRefresh()) },
     ] },
   ].map((sec) => ({ ...sec, items: sec.items.filter(Boolean) }));
   const all = S.flatMap((sec) => sec.items);

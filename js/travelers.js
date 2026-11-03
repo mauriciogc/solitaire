@@ -437,6 +437,33 @@ const MODELS = {
   },
   // ---------- Exclusivos del evento del mes ----------
   // Alebrije (Día de Muertos): jaguar-dragón de colores con manchas, alas de mariposa y cola enroscada.
+  // Asador (Día del Padre): asador de bola con sus patas; la tapa se levanta, la salchicha brinca y sale humito.
+  asador(part) {
+    const g = new THREE.Group(), grill = new THREE.Group(), lid = new THREE.Group();
+    grill.add(part(new THREE.SphereGeometry(0.3, 24, 12, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), '#3a3f5a', { ol: 0.05 }));
+    grill.add(part(new THREE.TorusGeometry(0.3, 0.02, 8, 32).rotateX(Math.PI / 2), '#9aa7cf', { ol: 0 }));
+    for (let k = 0; k < 3; k++) {
+      const a = (k / 3) * Math.PI * 2;
+      grill.add(part(new THREE.CylinderGeometry(0.018, 0.018, 0.42, 6), '#9aa7cf', { x: Math.cos(a) * 0.17, z: Math.sin(a) * 0.17, y: -0.38, rx: -Math.sin(a) * 0.35, rz: Math.cos(a) * 0.35, ol: 0.2 }));
+    }
+    for (const x of [-0.12, 0, 0.12]) grill.add(part(new THREE.CylinderGeometry(0.008, 0.008, 0.56, 6).rotateX(Math.PI / 2), '#cfd8e8', { x, y: 0.01, ol: 0 }));
+    lid.add(part(new THREE.SphereGeometry(0.31, 24, 10, 0, Math.PI * 2, 0, Math.PI / 2), '#3f8ad8', { ol: 0.05 }));
+    lid.add(part(new THREE.CylinderGeometry(0.035, 0.05, 0.06, 12), '#c98a3a', { y: 0.33, ol: 0.15 }));
+    lid.position.set(0, 0.02, -0.3); grill.add(lid);
+    const sausage = part(new THREE.CapsuleGeometry(0.045, 0.2, 6, 12).rotateZ(Math.PI / 2), '#d9583a', { ol: 0.12 });
+    grill.add(sausage);
+    const smoke = [];
+    for (let k = 0; k < 4; k++) { const m = new THREE.Mesh(new THREE.SphereGeometry(0.06, 10, 8), glow('#e6e9f5', 0.7)); grill.add(m); smoke.push(m); }
+    grill.rotation.x = 0.35;
+    g.add(grill);
+    return { obj: g, tick: (t) => {
+      grill.position.y = Math.sin(t * 2) * 0.05; grill.rotation.z = Math.sin(t * 1.4) * 0.08; grill.rotation.y = Math.sin(t * 0.6) * 0.4;
+      const o = Math.max(0, Math.sin(t * 1.1)); lid.position.z = -0.3 * o; lid.position.y = 0.02 + o * 0.1; lid.rotation.x = -o * 1.3;
+      const j = (t * 1.1) % (Math.PI * 2), hop = Math.max(0, Math.sin(j * 2)) * o;
+      sausage.position.set(0, 0.06 + hop * 0.22, 0.02); sausage.rotation.x = hop * Math.PI;
+      smoke.forEach((m, k) => { const p = (t * 0.45 + k / 4) % 1; m.position.set(Math.sin(p * 6 + k) * 0.08, 0.12 + p * 0.6, Math.cos(k * 2) * 0.06); m.scale.setScalar((0.5 + p * 1.3) * (0.3 + o * 0.7)); m.material.opacity = 0.7 * (1 - p); });
+    } };
+  },
   alebrije(part) {
     const g = new THREE.Group(), body = new THREE.Group();
     body.add(part(new THREE.SphereGeometry(0.2, 20, 14).scale(1, 0.85, 1.35), '#ff5fa8', { ol: 0.07 }));

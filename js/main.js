@@ -1,5 +1,5 @@
 import { save, prefs, persist, resetProfile, renameProfile, exportCode, readCode, loadProfile, setDev } from './storage.js';
-import { UNLOCK, EVENTOS, isOn, nextEvent, daysToNextCol, plusCols, RACHA_GOALS, RACHA_STEP, rachaGoal, nextIndex, racha, rachaTheme, rachaReady, rachaHot, rachaWin, rachaLose, rachaClaim, msToMidnight, col, colLeft, colWin, colOffers, colBuy, ev, evLeft, evTicketLeft, evPrize, evEnter, evWin, evLose, evAlbum, EVENT_PLANETS, EVENT_PER_PLANET, EVENT_LEVELS, fiesta, fiestaLeft, nextFiesta, fiEnter, fiWin, fiLose, FIESTA_PLANETS, FIESTA_PER_PLANET, FIESTA_LEVELS } from './events.js';
+import { UNLOCK, EVENTOS, FIESTAS, isOn, nextEvent, daysToNextCol, plusCols, RACHA_GOALS, RACHA_STEP, rachaGoal, nextIndex, racha, rachaTheme, rachaReady, rachaHot, rachaWin, rachaLose, rachaClaim, msToMidnight, col, colLeft, colWin, colOffers, colBuy, ev, evLeft, evTicketLeft, evPrize, evEnter, evWin, evLose, evAlbum, fiAlbum, EVENT_PLANETS, EVENT_PER_PLANET, EVENT_LEVELS, fiesta, fiestaLeft, nextFiesta, fiEnter, fiWin, fiLose, FIESTA_PLANETS, FIESTA_PER_PLANET, FIESTA_LEVELS } from './events.js';
 import { WORLD_COUNT, LEVELS_PER_WORLD, TOTAL_LEVELS, worldInfo, generateLevel, variantLevel, MECH_INTRO, MECH_NAMES, secretId, isSecret, eventLevel, fiestaLevel } from './levels.js';
 import { Game, faceHTML, backHTML } from './game.js';
 import { DAILY_PATH, dailyState, starsNeeded, TICKET_PRICE, ticketCost, ticketRefund, coinsFor, bossChest, openSurprise, SECRET_MULT, SECRET_PRIZE } from './economy.js';
@@ -1439,7 +1439,7 @@ function openEvIntro(e, go = false) {
 }
 // Evento terminado: el show (confeti, rayos, el ícono del evento) y Finalizar, que regresa al mapa.
 function openEvDone(e) {
-  const pcHere = e.state && !e.date ? evAlbum().find((x) => x.id === e.state.id) : null; // la postal del álbum, con el año
+  const pcHere = !e.state ? null : e.date ? fiAlbum().find((x) => x.id === `${e.key}-${e.year}`) : evAlbum().find((x) => x.id === e.state.id); // la postal del álbum, con el año
   confetti(120);
   buzz(30);
   const m = openModal({
@@ -1450,7 +1450,7 @@ function openEvDone(e) {
     cls: 'win ev-done',
     body: `<div class="win-top"><div class="rays"></div><div class="ev-win">${icon(e.ico, 0, 0, 'big')}</div></div>
       <p class="lead">Recorriste los ${EVS.P} planetas y ganaste los ${EVS.L} niveles. Todos los premios ya son tuyos.</p>
-      ${pcHere ? `${evPostcardHTML(pcHere, 'mini ev-done-pc')}<p class="note">Su postal ya está en tu álbum, en <b>Eventos</b>.</p>` : `<p class="note">${e.date ? 'La próxima festividad trae otra temática. ¡Te esperamos!' : 'El próximo evento trae una temática nueva. ¡Te esperamos!'}</p>`}`,
+      ${pcHere ? `${evPostcardHTML(pcHere, 'mini ev-done-pc')}<p class="note">Su postal ya está en tu álbum, en <b>${e.date ? 'Especiales' : 'Eventos'}</b>.</p>` : `<p class="note">${e.date ? 'La próxima festividad trae otra temática. ¡Te esperamos!' : 'El próximo evento trae una temática nueva. ¡Te esperamos!'}</p>`}`,
     // Un solo botón: se sale del evento y vuelves a tu mapa, donde ibas.
     buttons: [{ label: 'Finalizar', cls: `wide ev-go ev-go-${e.key || 'muertos'}`, onClick: () => warp(() => showMap(), { out: true }) }],
   });
@@ -1665,7 +1665,7 @@ const UNLOCK_INFO = {
   fiesta: () => {
     const f = fiesta(), nx = nextFiesta();
     return {
-      title: '¡Nuevo: Festividades!', ico: f?.ico || nx?.ico || 'tamal', color: 'gold', hero: icon(f?.ico || nx?.ico || 'tamal', 0, 0, 'big'),
+      title: '¡Nuevo: Festividades!', ico: f?.ico || nx?.ico || 'tamal', color: 'gold', hero: evHeroIcons(f?.ico || nx?.ico, FIESTAS),
       lead: 'Los días de fiesta llega un <b>evento especial de 24 horas</b>: 3 planetas, 9 niveles y premios <b>exclusivos</b>.',
       rules: [
         ['ticket', '<b>Sin boletos</b>: entra y reintenta las veces que quieras.'],
@@ -1690,9 +1690,10 @@ const UNLOCK_INFO = {
     };
   },
 };
-// Solo 3: el evento anterior, el de este mes (o el próximo) al centro y más grande, y el siguiente (en orden del año).
-function evHeroIcons(main) {
-  const all = Object.keys(EVENTOS).map(Number).sort((a, b) => a - b).map((m) => EVENTOS[m]).filter((x) => x.ready).map((x) => x.ico);
+// Solo 3: el evento anterior, el de ahora (o el próximo) al centro y más grande, y el siguiente (en orden del año).
+// list: los eventos del mes (por omisión) o las festividades.
+function evHeroIcons(main, list = Object.keys(EVENTOS).map(Number).sort((a, b) => a - b).map((m) => EVENTOS[m])) {
+  const all = list.filter((x) => x.ready).map((x) => x.ico);
   const i = Math.max(0, all.indexOf(main)), at = (k) => all[(i + k + all.length) % all.length];
   return [at(-1), at(0), at(1)].map((x, k) => icon(x, 0, 0, k === 1 ? 'main' : '')).join('');
 }
@@ -1742,14 +1743,13 @@ async function openUnlock(k) {
 // Bienvenida de cada colección: cuál es, cómo se juntan sus fichas y qué exclusivos trae (estos sí se ven).
 function openColIntro(c) {
   return new Promise((done) => {
-    const show = ['avatar', 'back', 'ring', 'space'];
     const m = openModal({
       title: c.name,
       ico: c.token,
       color: c.color,
       wide: true,
       cls: 'ev-intro col-intro',
-      body: `<div class="evi-hero"><div class="rays"></div>${show.map((sec, i) => `<span class="ci-ex" style="--i:${i < 2 ? i - 2 : i - 1}">${shopPreview(sec, c.ex[sec])}</span>`).join('')}<span class="evi-ico">${icon(c.token, 0, 0, 'big')}</span></div>
+      body: `<div class="evi-hero"><div class="rays"></div><span class="evi-ico">${icon(c.token, 0, 0, 'big')}</span></div>
         <p class="lead">¡Llegó una colección! Junta <b>${c.tokens}</b> y cámbia${c.m ? 'los' : 'las'} por premios <b>exclusivos</b>: avatar, reverso, marco, fondo, viajero y más.</p>
         <ul class="evi-rules">
           <li>${icon('star')}<span>Cada <b>estrella nueva</b> que ganas te da <b>1 ${c.one || c.token}</b>.</span></li>
@@ -1764,7 +1764,6 @@ function openColIntro(c) {
       },
     });
     if (reduced()) return;
-    m.el.querySelectorAll('.ci-ex').forEach((el, i) => el.animate([{ opacity: 0, scale: 0.2 }, { opacity: 1, scale: 1.15, offset: 0.7 }, { opacity: 1, scale: 1 }], { duration: 460, delay: 150 + i * 90, easing: 'ease-out', fill: 'backwards' }));
     m.el.querySelectorAll('.evi-rules li').forEach((el, i) => el.animate([{ opacity: 0, translate: '-14px 0' }, { opacity: 1, translate: '0 0' }], { duration: 320, delay: 650 + i * 120, easing: 'ease-out', fill: 'backwards' }));
   });
 }
@@ -1865,12 +1864,14 @@ function postcardHTML(w, stars, cls = '', frame = equipped('frame')) {
 }
 // Postal de un evento del mes ganado completo: su último planeta y el año en el sello (para distinguir ediciones).
 const EV_HUE = { orange: 30, red: 355, violet: 268, pink: 330, green: 120, blue: 205, gold: 45 };
-const evPcPlanet = (x) => EVENT_BIOMES[x.e.key][EVENT_PLANETS - 1];
+// Las de festividades (x.e.date) son iguales, con su último planeta (el 3.º) y "Festividad" en el sello.
+const evPcPlanet = (x) => EVENT_BIOMES[x.e.key].at(-1);
+const pcKind = (x) => (x.e.date ? { won: '¡Festividad ganada!', stamp: 'Fiesta', W: EVK.fiesta.W + FIESTA_PLANETS - 1 } : { won: '¡Evento ganado!', stamp: 'Evento', W: EV_W + EVENT_PLANETS - 1 });
 function evPostcardHTML(x, cls = '', frame = equipped('frame')) {
   return `<div class="postcard tier-oro ev-pc fr-${frame} ${cls}" style="--h:${EV_HUE[x.e.color] ?? 45}">
     <div class="pc-art">${miniPlanet(evPcPlanet(x).emblem, 'pc-planet')}</div>
-    <div class="pc-txt"><small>Postal de</small><b>${esc(x.e.name)}</b><span>${icon(x.e.ico)}¡Evento ganado!</span></div>
-    <div class="stamp"><b>${x.year}</b><small>Evento</small></div>
+    <div class="pc-txt"><small>Postal de</small><b>${esc(x.e.name)}</b><span>${icon(x.e.ico)}${pcKind(x).won}</span></div>
+    <div class="stamp"><b>${x.year}</b><small>${pcKind(x).stamp}</small></div>
   </div>`;
 }
 function openBossReward(w, res) {
@@ -1967,13 +1968,20 @@ function openAlbum() {
       <b class="ae-title">Tu álbum está vacío</b>
       <p class="note">Vence al jefe de un mundo para ganar tu primera postal.<br>Entre más estrellas tenga el mundo, mejor sello.</p>
     </div>`;
-  // Pestañas Mundos / Eventos: la de eventos sale cuando ya ganó al menos un evento del mes completo.
-  const evs = evAlbum();
-  const tabs = (t) => (evs.length ? `<div class="tabs" role="tablist"><button role="tab" data-tab="mundos" aria-selected="${t === 'mundos'}">${icon('album')}Mundos</button><button role="tab" data-tab="eventos" aria-selected="${t === 'eventos'}">${icon('trophy')}Eventos</button></div>` : '');
+  // Pestañas Mundos / Eventos / Especiales: Eventos sale cuando ya ganó al menos un evento del mes completo, y
+  // Especiales, una festividad completa.
+  const evs = evAlbum(), fis = fiAlbum();
+  const tab = (k, ico, label, t) => `<button role="tab" data-tab="${k}" aria-selected="${t === k}">${icon(ico)}${label}</button>`;
+  const tabs = (t) => (evs.length || fis.length ? `<div class="tabs" role="tablist">${tab('mundos', 'album', 'Mundos', t)}${evs.length ? tab('eventos', 'trophy', 'Eventos', t) : ''}${fis.length ? tab('especiales', 'gift', 'Especiales', t) : ''}</div>` : '');
   const events = () => {
     setHead('Álbum de postales', false);
     show(`${tabs('eventos')}<p class="note">Una postal por cada evento que ganaste completo. El sello dice el año.</p>
       <div class="album">${evs.map((x, i) => `<button class="pc-btn" data-ev="${i}">${evPostcardHTML(x, 'mini')}</button>`).join('')}</div>`);
+  };
+  const specials = () => {
+    setHead('Álbum de postales', false);
+    show(`${tabs('especiales')}<p class="note">Una postal por cada festividad que ganaste completa. El sello dice el año.</p>
+      <div class="album">${fis.map((x, i) => `<button class="pc-btn" data-fi="${i}">${evPostcardHTML(x, 'mini')}</button>`).join('')}</div>`);
   };
   function regions() {
     const last = regionOf(currentWorld());
@@ -2002,15 +2010,16 @@ function openAlbum() {
     show(`<div class="album">${cards.join('')}</div>`);
   };
   body.addEventListener('click', (e) => {
-    const t = e.target.closest('[data-r], [data-w], [data-ev], [data-tab]');
+    const t = e.target.closest('[data-r], [data-w], [data-ev], [data-fi], [data-tab]');
     if (!t) return;
-    if (t.dataset.tab) return t.getAttribute('aria-selected') === 'true' ? null : t.dataset.tab === 'eventos' ? events() : regions();
+    if (t.dataset.tab) return t.getAttribute('aria-selected') === 'true' ? null : ({ eventos: events, especiales: specials }[t.dataset.tab] || regions)();
     if (t.dataset.r != null) return region(+t.dataset.r);
     if (t.dataset.ev != null) return openEvPostcard(evs[+t.dataset.ev]);
+    if (t.dataset.fi != null) return openEvPostcard(fis[+t.dataset.fi]);
     openPostcard(+t.dataset.w);
   });
-  if (!total && !evs.length) show(empty());
-  else if (!total) events();
+  if (!total && !evs.length && !fis.length) show(empty());
+  else if (!total) (evs.length ? events : specials)();
   else regions();
 }
 
@@ -2027,13 +2036,13 @@ function openPostcard(w) {
 }
 // Postal de un evento ganado: su último planeta en 3D y el año en el sello.
 function openEvPostcard(x) {
-  const B = evPcPlanet(x);
+  const B = evPcPlanet(x), K = pcKind(x);
   return showPostcard({
-    name: x.e.name, hue: EV_HUE[x.e.color] ?? 45, tier: 'oro', wd: { w: EV_W + EVENT_PLANETS - 1, theme: B.planet },
-    sub: `Evento del mes · ${x.year}`,
-    line: `<span class="pv-stars">${icon(x.e.ico)}<em>¡Evento ganado!</em></span>`,
-    stamp: [x.year, 'Evento'], seal: '',
-    photo: { kicker: `POSTAL DE · EVENTO ${x.year}`, sub: x.e.planets[EVENT_PLANETS - 1], stars: null, secret: false, file: `postal-${x.e.key}-${x.year}` },
+    name: x.e.name, hue: EV_HUE[x.e.color] ?? 45, tier: 'oro', wd: { w: K.W, theme: B.planet },
+    sub: `${x.e.date ? 'Festividad' : 'Evento del mes'} · ${x.year}`,
+    line: `<span class="pv-stars">${icon(x.e.ico)}<em>${K.won}</em></span>`,
+    stamp: [x.year, K.stamp], seal: '',
+    photo: { kicker: `POSTAL DE · ${K.stamp.toUpperCase()} ${x.year}`, sub: x.e.planets.at(-1), stars: null, secret: false, file: `postal-${x.e.key}-${x.year}` },
   });
 }
 // pc: { name, hue, tier, wd (para PlanetView), sub, line (estrellas o lo que va debajo), stamp: [grande, chico], seal, photo }
