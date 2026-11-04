@@ -443,21 +443,29 @@ const RESPITE_MIN = 10;
 // Nebulosa: se ven NEB_SLOTS tramos y los demás esperan en la nebulosa (a la derecha, o abajo con el teléfono
 // parado). Al vaciar cualquier tramo, los que quedan se recorren y de la nebulosa sale el siguiente. Para el motor:
 // las cartas del tramo k (k ≥ NEB_SLOTS) tienen neb = k − NEB_SLOTS + 1 (tramos que hay que vaciar antes).
-// Solo niveles sin ayudas, ~1 de cada 12 cada una: mesa desde el nivel 31 y nebulosa desde el 61 (no respiros ni
-// secretos; sí jefes).
-export const SCROLL_FROM = { mesa: 30, nebulosa: 60 };
+// Solo niveles sin ayudas, ~1 de cada 12 cada una: mesa desde el nivel 40, gravedad desde el 70 y nebulosa desde
+// el 100 (no respiros ni secretos; sí jefes).
+// Gravedad: 3 a 5 columnas paradas sobre la mesa, cada una en su riel. Solo se juega la de abajo; la de encima va
+// boca arriba para planear y las demás esperan apiladas arriba. Al quitar la de abajo, la columna cae un lugar.
+// Para el motor: cada carta está tapada por la de abajo de su columna. Desde el nivel 70.
+export const SCROLL_FROM = { mesa: 39, gravedad: 69, nebulosa: 99 };
+export const GRAV_SHOWN = 2; // cartas boca arriba en cada columna
 export const NEB_SLOTS = 3;
 export const SCROLL_VIEW = 8.2, SCROLL_GAP = 0.45, SCROLL_SHOW = 0.5;
 const SCROLL_SPARE = 0.2; // sobrantes extra por carta del tablero
 const SCROLL_PIECES = ['miniPyramid', 'miniInv', 'twoRows', 'twoRows', 'sandwich', 'crown', 'steps', 'stack', 'fan', 'tiltFan', 'arc', 'cross', 'rosette'];
 export function scrollKind(g) {
   if (g >= TOTAL_LEVELS) return null;
+  // Cada una se presenta justo en su nivel de inicio; después sale al azar.
+  for (const k in SCROLL_FROM) if (g === SCROLL_FROM[k]) return k;
   if (g >= SCROLL_FROM.mesa && !(hash(g * 31 + 7) % 12)) return 'mesa';
-  return g >= SCROLL_FROM.nebulosa && !((hash(g * 7919 + 1013) >>> 9) % 12) ? 'nebulosa' : null;
+  if (g >= SCROLL_FROM.nebulosa && !((hash(g * 7919 + 1013) >>> 9) % 12)) return 'nebulosa';
+  return g >= SCROLL_FROM.gravedad && !((hash(g * 104729 + 577) >>> 11) % 12) ? 'gravedad' : null;
 }
 // Lo bonito de la mesa es lo larga: el doble de cartas que un tablero normal.
 // La nebulosa, algo menos: solo se ven 3 tramos a la vez.
 function scrollTramos(r, d, kind) {
+  if (kind === 'gravedad') return gravCols(r, d);
   const want = kind === 'nebulosa' ? 32 + Math.round(d * 16) : 40 + Math.round(d * 20);
   const out = [], names = [];
   for (let n = 0; n < want; ) {
@@ -467,6 +475,13 @@ function scrollTramos(r, d, kind) {
     n += cards.length;
   }
   out.names = names;
+  return out;
+}
+// Gravedad: columnas de alto parecido (cada carta un poco más arriba que la de abajo; el juego las acomoda).
+function gravCols(r, d) {
+  const n = randInt(r, 3, 5), want = 26 + Math.round(d * 14);
+  const out = Array.from({ length: n }, () => []);
+  for (let i = 0; i < want; i++) out[i % n].push({ x: 0, y: -out[i % n].length * 0.2, z: out[i % n].length });
   return out;
 }
 // Dónde empieza cada tramo en la tira (de izquierda a derecha).
@@ -592,7 +607,9 @@ export function buildLevel(g, ev = null, t = 0) {
   const d0 = ev ? ev.d : secret ? Math.min(1, difficulty(base) + 0.05) : difficulty(base);
   // Mesa enrollada: la tira es larga y solo se ve un pedazo; el mazo va más amable (y con más sobrantes, abajo).
   // La nebulosa, algo menos (medido con el bot casual).
-  const d = respite ? Math.min(d0, 0.06 + d0 * 0.15) : scroll === 'mesa' ? d0 * 0.3 : scroll ? d0 * 0.65 : d0;
+  // El nivel donde se estrena cada mesa va amable aunque sea jefe.
+  const debut = scroll && base === SCROLL_FROM[scroll];
+  const d = respite ? Math.min(d0, 0.06 + d0 * 0.15) : debut ? d0 * (scroll === 'gravedad' ? 0.35 : 0.3) : scroll === 'mesa' ? d0 * 0.3 : scroll === 'gravedad' ? d0 * (base < 200 ? 0.35 : 0.55) : scroll ? d0 * 0.65 : d0;
   // Evento: en cada planeta salen más seguido las formas que más cuestan (medido con el bot casual).
   // Evento: en cada planeta salen más seguido las formas que más cuestan (medido con el bot casual).
   const template = ev?.template || (ev && (index === LEVELS_PER_WORLD - 1 || r() < 0.15 + ev.tight * 0.17) ? pick(r, ['peaks', 'peaks', 'scatter', 'invPyramid']) : scroll || (respite ? pick(r, RESPITE_SHAPES) : chooseTemplate(r, ev ? Math.max(3, base) : base, d, fresh)));
@@ -611,12 +628,14 @@ export function buildLevel(g, ev = null, t = 0) {
   );
   // Mesa enrollada: una carta sale completa del rollo cuando la tira ya empieza en su orilla derecha − SCROLL_VIEW
   // o más adelante; o sea, cuando ya se fueron todas las cartas que empiezan antes de eso.
-  const mesa = scroll === 'mesa', nebula = scroll === 'nebulosa';
+  const mesa = scroll === 'mesa', nebula = scroll === 'nebulosa', grav = scroll === 'gravedad';
   const under = mesa && coveredBy.map((a) => a.slice());
   if (mesa) rollCover(pos, groups, SCROLL_VIEW).forEach((a, i) => coveredBy[i].push(...a));
   // Nebulosa: tramos que hay que vaciar antes de que salga cada carta.
   const neb = nebula ? pos.map((p) => Math.max(0, p.group - NEB_SLOTS + 1)) : null;
-  const tramos = nebula && groups.map((_, gi) => pos.reduce((a, p, i) => (p.group === gi && a.push(i), a), []));
+  const tramos = (nebula || grav) && groups.map((_, gi) => pos.reduce((a, p, i) => (p.group === gi && a.push(i), a), []));
+  // Gravedad: a cada carta solo la tapa la de abajo de su columna (la primera de cada columna es la de abajo).
+  if (grav) for (const t of tramos) t.forEach((id, k) => (coveredBy[id] = k ? [t[k - 1]] : []));
 
   const removed = new Array(n).fill(false);
   const order = [];
@@ -858,7 +877,8 @@ export function buildLevel(g, ev = null, t = 0) {
   const level = {
     g, world, index, d, template, boss, secret, event: !!ev, fresh, ...(respite && { respite }), ...(scroll && { scroll }),
     ...(raw.names && { pieces: raw.names }),
-    ...(tramos && { neb: tramos }),
+    ...(nebula && { neb: tramos }),
+    ...(grav && { cols: tramos }),
     groups: groups.map(({ w, h }) => ({ w, h })),
     cards,
     keys,

@@ -130,7 +130,7 @@ const TEMPLATES = ['todas', 'clusters', 'pyramid', 'peaks', 'wall', 'diamond', '
 // Fase 7: formas y piezas nuevas (solo salen en niveles sin ayudas) y respiros.
 const PIECES = ['sandwich', 'cross', 'steps', 'rosette', 'tiltFan', 'crown'];
 const TPL_OPTS = [
-  ...[...TEMPLATES, 'butterfly', 'heart', 'spiral', 'star', 'hourglass', 'mesa', 'nebulosa'].map((t) => [t, t]),
+  ...[...TEMPLATES, 'butterfly', 'heart', 'spiral', 'star', 'hourglass', 'mesa', 'nebulosa', 'gravedad'].map((t) => [t, t]),
   ...PIECES.map((k) => [`pz:${k}`, `pieza ${k}`]),
   ['respiros', 'respiros'],
 ];
@@ -383,7 +383,7 @@ export function openDevMenu({ onGallery, onPlanets, onRefresh }) {
     <table class="dtable"><tr><th>Se abre</th><th>Nivel</th><th>Tú</th></tr>${UN.map(([n, l]) => `<tr><td>${n}</td><td>${l}</td><td>${opens(l)}</td></tr>`).join('')}</table>
     <p class="dline"><b>Cartas especiales</b> (aparecen en el primer nivel de su mundo)</p>
     <table class="dtable"><tr><th>Carta</th><th>Mundo</th><th>Nivel</th><th>Tú</th></tr>${MECHANICS.map((m) => `<tr><td>${MECH_NAMES[m]}</td><td>${MECH_INTRO[m] + 1}</td><td>${MECH_INTRO[m] * LEVELS_PER_WORLD + 1}</td><td>${opens(MECH_INTRO[m] * LEVELS_PER_WORLD)}</td></tr>`).join('')}
-    ${Object.entries(SCROLL_FROM).map(([k, g]) => `<tr><td>Tablero: ${k === 'mesa' ? 'mesa enrollada' : 'nebulosa'}</td><td>${Math.floor(g / LEVELS_PER_WORLD) + 1}</td><td>${g + 1}</td><td>${opens(g)}</td></tr>`).join('')}</table>
+    ${Object.entries(SCROLL_FROM).map(([k, g]) => `<tr><td>Tablero: ${k === 'mesa' ? 'mesa enrollada' : k}</td><td>${Math.floor(g / LEVELS_PER_WORLD) + 1}</td><td>${g + 1}</td><td>${opens(g)}</td></tr>`).join('')}</table>
     <p class="dline"><b>${evs.length + COLECCIONES.length + fis.length} eventos</b>: ${evs.length} del mes · ${COLECCIONES.length} colecciones · ${fis.length} de un día</p>
     <p class="dline"><b>Del mes (${evs.length})</b></p>${chips(evs.map(([m, e]) => [e.ico, `${MES[m]} · ${e.name}`]))}
     <p class="dline"><b>Colecciones (${COLECCIONES.length})</b></p>${chips(COLECCIONES.map((c) => [c.token, c.name]))}

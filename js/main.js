@@ -2894,6 +2894,7 @@ function openHelp(tab = 'basico', then) {
         <h3 class="help-h">Mesas que se descubren</h3>
         <div class="step"><div class="ill"><span class="h-rug"></span>${mini(2, '4', 'c')}${mini(40, '5', 'h')}<span class="h-roll"></span></div><p><b>Mesa enrollada:</b> limpia las cartas del <b>principio</b> y la mesa avanza: salen más cartas del rollo.</p></div>
         <div class="step"><div class="ill">${mini(0, '9', 's')}${mini(34, '10', 'd')}<span class="h-neb"></span></div><p><b>Nebulosa:</b> solo ves 3 grupos. Vacía <b>cualquiera</b> y de la nebulosa sale otro.</p></div>
+        <div class="step"><div class="ill"><span class="h-rail" style="left:10px"></span><span class="h-rail" style="left:58px"></span>${helpBack(14, 'top:0px')}${mini(14, '8', 'c', {}, 'h-low')}${helpBack(62, 'top:0px')}${mini(62, 'J', 'h', {}, 'h-low')}</div><p><b>Gravedad:</b> solo juegas la carta de <b>abajo</b> de cada columna. Al quitarla, la columna <b>cae</b>.</p></div>
       </div>`
         : `<div class="steps">${MECH_GROUPS.map(([h, ms]) => `<h3 class="help-h">${h}</h3>${ms.map((m) => `<div class="step"><div class="ill c${MECH_BOTH[m] ? ' pair' : ''}">${MECH_BOTH[m]?.() || mechCard(m)}</div><p><b>${MECH_NAMES[m]}:</b> ${MECH_TEXT[m]}</p></div>`).join('')}`).join('')}</div>`;
   const m = openModal({

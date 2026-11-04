@@ -1,6 +1,6 @@
 import { save, persist } from './storage.js';
 import { openModal, toast, confetti, updateCoins, money, starsHTML, reduced, buzz, sparkle, wait, spendFromWallet, balloons, lootBubbles, rachaWarnHTML } from './ui.js';
-import { worldInfo, packGroups, MECH_NAMES, LEVELS_PER_WORLD, scrollStrip, scrollSpan, scrollCover, SCROLL_VIEW, NEB_SLOTS, W } from './levels.js';
+import { worldInfo, packGroups, MECH_NAMES, LEVELS_PER_WORLD, scrollStrip, scrollSpan, scrollCover, SCROLL_VIEW, NEB_SLOTS, GRAV_SHOWN, W } from './levels.js';
 import * as E from './engine.js';
 import { price } from './economy.js';
 import { cardBackURL, icon, star, coin, lockIcon, keyIcon, arrowIcon, curtainIcon, suitSVG, avatarHTML } from './art.js';
@@ -173,6 +173,23 @@ export class Game {
         buttons: [{ label: '¡Entendido!', cls: 'green' }],
       });
     }
+    if (this.level.scroll === 'gravedad' && !save.seen.gravedad) {
+      save.seen.gravedad = true;
+      persist();
+      this.modalOpen = true;
+      return openModal({
+        title: 'Nuevo: gravedad',
+        color: 'blue',
+        closable: false,
+        body: `<p class="lead">Las cartas van en <b>columnas</b>. Solo juegas la de <b>abajo</b>; la de encima te deja ver la que sigue. Al quitar una, la columna <b>cae</b>.</p>`,
+        onClose: () => {
+          this.modalOpen = false;
+          if (!reduced()) for (const c of this.cards) if (c.el && c.gPos?.k === 0) c.el.animate([{ translate: '0 0' }, { translate: `0 ${-this.u * 0.25}px` }, { translate: '0 0' }], { duration: 420, easing: 'ease-in-out', iterations: 2 });
+          setTimeout(() => this.tips(), 300);
+        },
+        buttons: [{ label: '¡Entendido!', cls: 'green' }],
+      });
+    }
     if (this.level.scroll === 'nebulosa' && !save.seen.nebulosa) {
       save.seen.nebulosa = true;
       persist();
@@ -285,6 +302,12 @@ export class Game {
       el.classList.add('scroll-neb');
       this.boardEl.insertAdjacentHTML('afterbegin', `<div class="nebula"><div class="neb-in"><i></i><i></i><i></i></div></div>`);
       this.nebEl = this.boardEl.querySelector('.nebula');
+    }
+    // Gravedad: cada columna en su riel, sobre la mesa del planeta.
+    if (level.scroll === 'gravedad') {
+      el.classList.add('scroll-grav');
+      this.boardEl.insertAdjacentHTML('afterbegin', level.cols.map(() => `<div class="g-rail"><b class="g-n"></b></div>`).join(''));
+      this.railEls = [...this.boardEl.querySelectorAll('.g-rail')];
     }
     this.stockEl = el.querySelector('.stock');
     this.wasteEl = el.querySelector('.waste');
@@ -414,6 +437,7 @@ export class Game {
 
   place(c) {
     if (this.level.scroll === 'mesa') return this.placeScroll(c);
+    if (this.level.scroll === 'gravedad') return this.placeGrav(c);
     if (this.level.scroll) return this.placeNeb(c);
     const o = this.offsets[c.group];
     c.el.style.left = `${(o.x + c.x) * this.u}px`;
@@ -426,6 +450,7 @@ export class Game {
     if (!r.width) return;
     this.wrapSize = `${Math.round(r.width)}x${Math.round(r.height)}`;
     if (this.level.scroll === 'mesa') return this.layoutScroll(r);
+    if (this.level.scroll === 'gravedad') return this.layoutGrav(r);
     if (this.level.scroll) return this.layoutNeb(r);
     // La carta doble se ve 10% más grande: se deja un poco de aire para que no se salga del tablero.
     const room = this.cards.some((c) => c.alt != null) ? 0.93 : 1;
@@ -551,6 +576,90 @@ export class Game {
     for (const c of live) c.el.classList.remove('noflip');
   }
 
+  // ---------- Gravedad ----------
+  // Columnas en rieles: abajo la carta que se juega, encima la que sigue (boca arriba, para planear) y arriba de
+  // todo la pila con las demás boca abajo (se ven hasta 5 de canto; el número dice cuántas quedan).
+  layoutGrav(r) {
+    const n = this.level.cols.length, gap = 0.42, pad = 0.2;
+    const G = { gap, pad, pile: 0.45, row1: 0.45 + 1.4 + 0.3 };
+    G.row0 = G.row1 + 1.4 + 0.16;
+    G.bw = n + (n - 1) * gap + pad * 2;
+    G.bh = G.row0 + 1.4 + 0.32;
+    this.u = Math.max(18, Math.min((r.width - 10) / G.bw, (r.height - 10) / G.bh, 120));
+    this.gravG = G;
+    const u = this.u;
+    this.boardEl.style.width = `${G.bw * u}px`;
+    this.boardEl.style.height = `${G.bh * u}px`;
+    this.boardEl.style.setProperty('--cw', `${u}px`);
+    this.railEls.forEach((el, i) => Object.assign(el.style, { left: `${(pad + i * (1 + gap) - 0.12) * u}px`, width: `${1.24 * u}px`, top: 0, height: `${G.bh * u}px` }));
+    this.cards.forEach((c) => c.el && this.place(c));
+    this.paintGrav();
+    this.renderStock();
+    this.coach?.update();
+  }
+
+  // Lugar de la carta en su columna: 0 = abajo (la que se juega), 1 = la que sigue, 2+ = en la pila.
+  gravIndex(c) {
+    const col = this.level.cols[c.group];
+    let k = 0;
+    for (const id of col) {
+      if (id === c.id) return k;
+      if (!this.st.rem[id]) k++;
+    }
+    return k;
+  }
+
+  placeGrav(c) {
+    const G = this.gravG;
+    if (!G) return;
+    const k = this.gravIndex(c), j = k - 2, u = this.u;
+    const y = k === 0 ? G.row0 : k === 1 ? G.row1 : G.pile - Math.min(j, 4) * 0.09;
+    c.el.style.left = `${(G.pad + c.group * (1 + G.gap)) * u}px`;
+    c.el.style.top = `${y * u}px`;
+    c.el.style.rotate = '0deg';
+    c.el.style.zIndex = k === 0 ? 900 : k === 1 ? 800 : 700 - j;
+    c.el.classList.toggle('g-next', k === 1);
+    c.el.classList.toggle('g-deep', j > 4);
+    c.gPos = { y, k };
+  }
+
+  // Cuántas quedan en la pila de cada columna.
+  paintGrav() {
+    this.railEls?.forEach((el, i) => {
+      const left = this.level.cols[i].filter((id) => !this.st.rem[id]).length - 2;
+      const b = el.querySelector('.g-n');
+      b.textContent = left > 0 ? left : '';
+      b.classList.toggle('on', left > 0);
+    });
+  }
+
+  // Al quitar la de abajo, la columna cae un lugar y rebota al llegar; al deshacer, sube de regreso.
+  gravUpdate() {
+    const u = this.u;
+    let fell = 0;
+    for (const c of this.cards) {
+      if (!c.el || !c.gPos) continue;
+      const p = c.gPos;
+      this.placeGrav(c);
+      const dy = (p.y - c.gPos.y) * u;
+      if (reduced() || Math.abs(dy) < 0.5) continue;
+      if (dy < 0) {
+        fell++;
+        c.el.animate(
+          [
+            { translate: `0 ${dy}px`, scale: 1, easing: 'cubic-bezier(.5,0,.9,.6)' },
+            { translate: '0 0', scale: '1.05 .93', offset: 0.62, easing: 'cubic-bezier(.2,.8,.3,1)' },
+            { translate: `0 ${-u * 0.07}px`, scale: '.98 1.03', offset: 0.82 },
+            { translate: '0 0', scale: 1 },
+          ],
+          { duration: 470 + c.gPos.k * 30, delay: Math.min(c.gPos.k, 3) * 25 },
+        );
+      } else c.el.animate([{ translate: `0 ${dy}px` }, { translate: '0 0' }], { duration: 420, easing: 'cubic-bezier(.3,1.2,.5,1)' });
+    }
+    if (fell) setTimeout(() => buzz(8), 300);
+    this.paintGrav();
+  }
+
   // ---------- Nebulosa ----------
   // Se ven NEB_SLOTS lugares en fila (o en columna con el teléfono parado, si así salen más grandes las cartas) y al
   // final la nebulosa. Cada lugar mide lo del tramo más grande. En qué lugar va cada tramo sale del estado: los que
@@ -665,6 +774,7 @@ export class Game {
   // ¿Se ve boca arriba? En la mesa enrollada el rollo no voltea cartas: salen como van (solo cuentan las tapas de
   // otras cartas); una que asoma poco ya se ve, pero hasta que asoma media carta no se puede jugar.
   shownUp(c) {
+    if (this.level.scroll === 'gravedad') return E.faceUp(this.level, this.gravIndex(c) < GRAV_SHOWN ? { ...c, coveredBy: [] } : c, this.st);
     return E.faceUp(this.level, this.level.scroll === 'mesa' ? { ...c, coveredBy: c.under } : c, this.st);
   }
 
@@ -672,6 +782,7 @@ export class Game {
   refresh() {
     const { level, st } = this;
     if (level.scroll === 'mesa') this.scrollUpdate();
+    else if (level.scroll === 'gravedad') this.gravUpdate();
     else if (level.scroll) this.nebUpdate();
     this.updateStuck(true);
     for (const c of this.cards) {
@@ -1161,6 +1272,7 @@ export class Game {
     toss(el, { x0: ax - bx, y0: ay - by, s0: from.width / this.u }, { r1: c.rot }, 360).then(() => {
       el.style.rotate = `${c.rot}deg`;
       el.style.zIndex = c.z * 100 + c.id;
+      if (this.level.scroll === 'gravedad' && c.el === el) this.placeGrav(c);
       el.getAnimations().forEach((x) => x.cancel());
       squash(el);
     });

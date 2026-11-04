@@ -351,10 +351,21 @@ button.rg:active > i { scale: .92; }
 /* Ayuda: dibujitos de la mesa enrollada y la nebulosa. */
 .step .ill .h-roll { position: absolute; left: 82px; top: 2px; width: 14px; height: 50px; border-radius: 99px; border: 2px solid var(--ink); background: linear-gradient(90deg, #0006, #fff5 40%, #0006), #3fa0a8; }
 .step .ill .h-rug { position: absolute; left: -4px; top: 4px; width: 92px; height: 46px; border-radius: 9px; border: 2px solid var(--ink); background: #3fa0a8; }
+.step .ill .h-rail { position: absolute; top: -2px; width: 40px; height: 58px; border-radius: 9px; background: #2a1f5c22; border: 2px solid #2a1f5c55; }
+.step .ill .card.h-low { top: 14px; }
 .step .ill .h-neb { position: absolute; left: 70px; top: 9px; width: 38px; height: 38px; border-radius: 50%; animation: neb-spin 9s linear infinite;
   background: radial-gradient(circle, #fff 0 8%, #c9a5ff 22%, #7a4dffaa 45%, transparent 70%), conic-gradient(#ff9de2aa, transparent, #7fe3ffaa, transparent, #ff9de2aa); }
 @keyframes neb-spin { to { rotate: 360deg; } }
 .board .card.neb-hid { opacity: 0; pointer-events: none; }
+/* Gravedad (Fase 7): un riel por columna sobre la mesa del planeta, con su tope abajo. La que sigue (boca arriba) se
+   ve un poco apagada: se ve, pero aún no se juega. */
+.g-rail { position: absolute; z-index: 0; pointer-events: none; border-radius: 14px; background: linear-gradient(90deg, #0000 0 10%, #ffffff10 10% 90%, #0000 90%), #0b062a33; border: 2px solid #0b062a66;
+  box-shadow: inset 4px 0 0 -1px #ffffff26, inset -4px 0 0 -1px #ffffff26; }
+.g-rail::after { content: ''; position: absolute; left: 6%; right: 6%; bottom: 6px; height: 7px; border-radius: 4px; background: #ffffff55; border: 2px solid var(--ink); }
+.g-n { position: absolute; z-index: 1; top: -8px; right: -8px; min-width: 22px; height: 22px; padding: 0 5px; display: grid; place-items: center; border-radius: 11px; background: var(--cream); border: 2px solid var(--ink); font: 400 13px / 1 'Lilita One'; color: var(--ink); scale: 0; transition: scale .3s var(--spring); }
+.g-n.on { scale: 1; }
+.board .card.g-next .front { filter: brightness(.82) saturate(.9); }
+.board .card.g-deep { opacity: 0; }
 .strip { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
 .strip > .card { pointer-events: auto; }
 .hud { flex: none; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 8px; padding: calc(8px + var(--st)) calc(10px + var(--cr)) 4px calc(10px + var(--cl)); color: var(--ink); }
