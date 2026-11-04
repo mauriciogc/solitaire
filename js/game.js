@@ -1,6 +1,6 @@
 import { save, persist } from './storage.js';
 import { openModal, toast, confetti, updateCoins, money, starsHTML, reduced, buzz, sparkle, wait, spendFromWallet, balloons, lootBubbles, rachaWarnHTML } from './ui.js';
-import { worldInfo, packGroups, MECH_NAMES, LEVELS_PER_WORLD, scrollStrip, scrollSpan, scrollCover, SCROLL_VIEW, W } from './levels.js';
+import { worldInfo, packGroups, MECH_NAMES, LEVELS_PER_WORLD, scrollStrip, scrollSpan, scrollCover, SCROLL_VIEW, NEB_SLOTS, W } from './levels.js';
 import * as E from './engine.js';
 import { price } from './economy.js';
 import { cardBackURL, icon, star, coin, lockIcon, keyIcon, arrowIcon, curtainIcon, suitSVG, avatarHTML } from './art.js';
@@ -91,7 +91,7 @@ const marks = (c) =>
 export class Game {
   constructor(root, level, opts) {
     // Mesa enrollada: copia propia, porque sus tapas cambian si en la pantalla cabe más tira (scrollView).
-    this.level = level.scroll ? { ...level, cards: level.cards.map((c) => ({ ...c })) } : level;
+    this.level = level.scroll === 'mesa' ? { ...level, cards: level.cards.map((c) => ({ ...c })) } : level;
     level = this.level;
     this.opts = opts;
     this.info = worldInfo(level.world);
@@ -168,6 +168,23 @@ export class Game {
         onClose: () => {
           this.modalOpen = false;
           if (!reduced()) this.rollEl?.animate([{ scale: 1 }, { scale: 1.15 }, { scale: 1 }], { duration: 500, iterations: 2 });
+          setTimeout(() => this.tips(), 300);
+        },
+        buttons: [{ label: '¡Entendido!', cls: 'green' }],
+      });
+    }
+    if (this.level.scroll === 'nebulosa' && !save.seen.nebulosa) {
+      save.seen.nebulosa = true;
+      persist();
+      this.modalOpen = true;
+      return openModal({
+        title: 'Nuevo: nebulosa',
+        color: 'blue',
+        closable: false,
+        body: `<p class="lead">Aquí solo ves <b>3 grupos</b> de cartas. Cuando vacías <b>cualquiera</b>, los demás se recorren y de la <b>nebulosa</b> sale otro.</p>`,
+        onClose: () => {
+          this.modalOpen = false;
+          if (!reduced()) this.nebEl?.animate([{ scale: 1 }, { scale: 1.2 }, { scale: 1 }], { duration: 500, iterations: 2 });
           setTimeout(() => this.tips(), 300);
         },
         buttons: [{ label: '¡Entendido!', cls: 'green' }],
@@ -263,6 +280,12 @@ export class Game {
       // las cartas solo se deslizan y el rollo se las traga o las suelta).
       this.stripEl = this.boardEl.querySelector('.strip');
     }
+    // Nebulosa: nube que gira donde esperan los tramos que faltan.
+    if (level.scroll === 'nebulosa') {
+      el.classList.add('scroll-neb');
+      this.boardEl.insertAdjacentHTML('afterbegin', `<div class="nebula"><div class="neb-in"><i></i><i></i><i></i></div></div>`);
+      this.nebEl = this.boardEl.querySelector('.nebula');
+    }
     this.stockEl = el.querySelector('.stock');
     this.wasteEl = el.querySelector('.waste');
     this.streakEl = el.querySelector('.streak');
@@ -295,9 +318,10 @@ export class Game {
   intro() {
     // Las bombas no se reparten: se presentan aparte al final (presentBombs).
     for (const c of this.cards) if (c.bomb && c.el && !reduced()) c.el.style.opacity = 0;
-    const live = this.cards.filter((c) => c.el && !c.bomb);
+    const live = this.cards.filter((c) => c.el && !c.bomb && !c.nebPos?.hid);
     if (reduced() || !live.length) return Promise.resolve();
-    if (this.level.scroll) return this.unroll(live);
+    if (this.level.scroll === 'mesa') return this.unroll(live);
+    if (this.nebEl) this.nebEl.animate([{ scale: 0, opacity: 0, rotate: '-180deg' }, { scale: 1, opacity: 1, rotate: '0deg' }], { duration: 900, delay: 500, easing: 'cubic-bezier(.3,1.3,.5,1)', fill: 'backwards' });
     const cx = (parseFloat(this.boardEl.style.width) - this.u) / 2;
     const cy = (parseFloat(this.boardEl.style.height) - this.u * 1.4) / 2;
     const order = live.slice().sort((a, b) => a.z - b.z || a.y - b.y || a.x - b.x);
@@ -389,7 +413,8 @@ export class Game {
   }
 
   place(c) {
-    if (this.level.scroll) return this.placeScroll(c);
+    if (this.level.scroll === 'mesa') return this.placeScroll(c);
+    if (this.level.scroll) return this.placeNeb(c);
     const o = this.offsets[c.group];
     c.el.style.left = `${(o.x + c.x) * this.u}px`;
     c.el.style.top = `${(o.y + c.y) * this.u}px`;
@@ -400,7 +425,8 @@ export class Game {
     const r = this.wrapEl.getBoundingClientRect();
     if (!r.width) return;
     this.wrapSize = `${Math.round(r.width)}x${Math.round(r.height)}`;
-    if (this.level.scroll) return this.layoutScroll(r);
+    if (this.level.scroll === 'mesa') return this.layoutScroll(r);
+    if (this.level.scroll) return this.layoutNeb(r);
     // La carta doble se ve 10% más grande: se deja un poco de aire para que no se salga del tablero.
     const room = this.cards.some((c) => c.alt != null) ? 0.93 : 1;
     const { u, bw, bh, offsets } = packGroups(this.level.groups, (r.width - 10) * room, (r.height - 10) * room);
@@ -525,6 +551,87 @@ export class Game {
     for (const c of live) c.el.classList.remove('noflip');
   }
 
+  // ---------- Nebulosa ----------
+  // Se ven NEB_SLOTS lugares en fila (o en columna con el teléfono parado, si así salen más grandes las cartas) y al
+  // final la nebulosa. Cada lugar mide lo del tramo más grande. En qué lugar va cada tramo sale del estado: los que
+  // ya salieron y siguen con cartas, en orden; así deshacer los regresa solos.
+  layoutNeb(r) {
+    const gs = this.level.groups, gap = 0.35, ND = 1.9, n = NEB_SLOTS;
+    const SW = Math.max(...gs.map((g) => g.w)), SH = Math.max(...gs.map((g) => g.h));
+    const W = r.width - 10, H = r.height - 10;
+    const row = { bw: n * (SW + gap) + ND, bh: Math.max(SH, ND) }, col = { bw: Math.max(SW, ND), bh: n * (SH + gap) + ND };
+    const fit = (o) => Math.min(W / o.bw, H / o.bh, 120);
+    const across = fit(row) >= fit(col);
+    const o = across ? row : col;
+    this.u = Math.max(18, fit(o));
+    this.nebG = { across, SW, SH, gap, ND, ...o, nx: across ? n * (SW + gap) + ND / 2 : o.bw / 2, ny: across ? o.bh / 2 : n * (SH + gap) + ND / 2 };
+    this.boardEl.style.width = `${o.bw * this.u}px`;
+    this.boardEl.style.height = `${o.bh * this.u}px`;
+    this.boardEl.style.setProperty('--cw', `${this.u}px`);
+    this.paintNeb();
+    this.cards.forEach((c) => c.el && this.place(c));
+    this.renderStock();
+    this.coach?.update();
+  }
+
+  // Lugar de cada tramo (-1 = sigue en la nebulosa) y cuántos faltan por salir.
+  nebSlots() {
+    const out = E.nebOut(this.level, this.st), slot = [];
+    let k = 0;
+    this.level.neb.forEach((t, gi) => (slot[gi] = gi >= NEB_SLOTS + out ? -1 : t.every((j) => this.st.rem[j]) ? null : k++));
+    return { slot, left: Math.max(0, this.level.neb.length - NEB_SLOTS - out) };
+  }
+
+  placeNeb(c) {
+    if (!this.nebG) return; // el tablero aún no tiene tamaño: lo acomoda layoutNeb
+    const G = this.nebG, u = this.u, g = this.level.groups[c.group];
+    const k = this.nebSlots().slot[c.group];
+    let x, y;
+    if (k < 0) [x, y] = [G.nx - 0.5, G.ny - 0.7];
+    else if (G.across) [x, y] = [k * (G.SW + G.gap) + (G.SW - g.w) / 2 + c.x, (G.bh - g.h) / 2 + c.y];
+    else [x, y] = [(G.bw - g.w) / 2 + c.x, k * (G.SH + G.gap) + (G.SH - g.h) / 2 + c.y];
+    c.el.style.left = `${x * u}px`;
+    c.el.style.top = `${y * u}px`;
+    c.el.style.rotate = `${k < 0 ? c.rot + ((c.id * 47) % 90) - 45 : c.rot}deg`;
+    c.el.classList.toggle('neb-hid', k < 0);
+    c.nebPos = { x, y, hid: k < 0 };
+  }
+
+  // La nebulosa se achica mientras menos tramos le quedan y se apaga al soltar el último.
+  paintNeb() {
+    if (!this.nebEl || !this.nebG) return;
+    const G = this.nebG, u = this.u, { left } = this.nebSlots();
+    Object.assign(this.nebEl.style, { left: `${(G.nx - G.ND / 2) * u}px`, top: `${(G.ny - G.ND / 2) * u}px`, width: `${G.ND * u}px`, height: `${G.ND * u}px` });
+    this.nebEl.style.setProperty('--k', left ? 0.6 + 0.4 * Math.min(1, left / 4) : 0.25);
+    this.nebEl.classList.toggle('empty', !left);
+  }
+
+  // Tras cada jugada (o deshacer): los tramos se recorren a su nuevo lugar, el que sale gira desde la nebulosa y,
+  // al deshacer, el último que salió regresa a ella.
+  nebUpdate() {
+    const D = reduced() ? 0 : 520, ease = 'cubic-bezier(.45,0,.2,1)', u = this.u;
+    let born = 0;
+    for (const c of this.cards) {
+      if (!c.el || !c.nebPos) continue;
+      const p = c.nebPos;
+      this.placeNeb(c);
+      const q = c.nebPos;
+      if (!D || (p.x === q.x && p.y === q.y && p.hid === q.hid)) continue;
+      const tr = `${(p.x - q.x) * u}px ${(p.y - q.y) * u}px`;
+      if (p.hid && !q.hid) {
+        c.el.animate([{ translate: tr, scale: 0.15, opacity: 0, rotate: `${c.rot - 200}deg` }, { translate: '0 0', scale: 1, opacity: 1, rotate: `${c.rot}deg` }],
+          { duration: 650, delay: 180 + born++ * 45, easing: 'cubic-bezier(.3,1.25,.5,1)', fill: 'backwards' });
+      } else if (!p.hid && q.hid) {
+        c.el.animate([{ translate: tr, scale: 1, opacity: 1, rotate: `${c.rot}deg` }, { translate: '0 0', scale: 0.15, opacity: 0, rotate: `${c.rot + 200}deg` }], { duration: 480, easing: 'ease-in' });
+      } else c.el.animate([{ translate: tr }, { translate: '0 0' }], { duration: D, easing: ease });
+    }
+    if (born && this.nebEl) {
+      this.nebEl.animate([{ scale: 1 }, { scale: 1.25 }, { scale: 1 }], { duration: 600, easing: 'ease-out' });
+      buzz(12);
+    }
+    setTimeout(() => this.paintNeb(), born ? 300 : 0);
+  }
+
   // Avanza (o regresa, al deshacer) la mesa: todo se corre hacia el inicio y las cartas salen del rollo.
   scrollUpdate() {
     const o = this.scrollO();
@@ -558,13 +665,14 @@ export class Game {
   // ¿Se ve boca arriba? En la mesa enrollada el rollo no voltea cartas: salen como van (solo cuentan las tapas de
   // otras cartas); una que asoma poco ya se ve, pero hasta que asoma media carta no se puede jugar.
   shownUp(c) {
-    return E.faceUp(this.level, this.level.scroll ? { ...c, coveredBy: c.under } : c, this.st);
+    return E.faceUp(this.level, this.level.scroll === 'mesa' ? { ...c, coveredBy: c.under } : c, this.st);
   }
 
   // Pinta lo que depende del estado: boca arriba, candados, cortinas, hielo, bomba y carta viva.
   refresh() {
     const { level, st } = this;
-    if (level.scroll) this.scrollUpdate();
+    if (level.scroll === 'mesa') this.scrollUpdate();
+    else if (level.scroll) this.nebUpdate();
     this.updateStuck(true);
     for (const c of this.cards) {
       if (c.removed || !c.el) continue;

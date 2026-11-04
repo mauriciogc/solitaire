@@ -333,11 +333,28 @@ button.rg:active > i { scale: .92; }
 .rug::before { content: ''; position: absolute; inset: 11px; border: 2px dashed color-mix(in srgb, var(--rug) 35%, #fff); border-radius: 9px; opacity: .55; pointer-events: none; }
 .board .card.noflip .inner { transition: none; }
 .roll { position: absolute; z-index: 5000; pointer-events: none; border: 3px solid var(--ink); border-radius: 999px; overflow: hidden; background: color-mix(in srgb, var(--rug) 70%, #120c2e);
-  box-shadow: 0 8px 16px #0009; transition: width .5s var(--ease-out), height .5s var(--ease-out), left .5s var(--ease-out), top .5s var(--ease-out); }
+  box-shadow: 0 8px 16px #0009; transition: width .5s var(--ease-out), height .5s var(--ease-out), left .5s var(--ease-out), top .5s var(--ease-out), opacity .45s ease-in, scale .55s var(--ease-out); }
 /* La alfombra enrollada: su tejido corre al girar, con brillo de cilindro encima. */
 .roll i { position: absolute; inset: 0; background: repeating-linear-gradient(90deg, #ffffff22 0 2px, transparent 2px 7px) 0 0 / 7px 100%; }
 .roll::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, #0008, #fff4 35%, #fff1 55%, #0009); }
-.roll.empty { opacity: .85; }
+/* Al final del tapete ya no queda nada enrollado: el rollo se aplana y desaparece (deshacer lo regresa). */
+.roll.empty { opacity: 0; scale: .2 1; }
+/* Nebulosa (Fase 7): nube que gira despacio donde esperan los tramos; se achica (--k) mientras menos le quedan. */
+.nebula { position: absolute; z-index: 0; pointer-events: none; }
+.neb-in { position: absolute; inset: 0; scale: var(--k, 1); opacity: 1; transition: scale .6s var(--ease-out), opacity .6s var(--ease-out); }
+.neb-in i { position: absolute; inset: 0; border-radius: 50%; animation: neb-spin 14s linear infinite; }
+.neb-in i:nth-child(1) { background: radial-gradient(circle at 50% 50%, #fff9 0 6%, #c9a5ff99 14%, #7a4dff66 34%, transparent 66%); }
+.neb-in i:nth-child(2) { inset: -12%; background: radial-gradient(ellipse 60% 34% at 40% 46%, #ff7fd066, transparent 70%), radial-gradient(ellipse 30% 55% at 64% 58%, #5fd3ff55, transparent 70%); animation-duration: 22s; }
+.neb-in i:nth-child(3) { inset: -4%; background: conic-gradient(from 0deg, transparent, #b98cff55, transparent 30%, #ff9de255, transparent 60%, #7fe3ff44, transparent 85%); mask: radial-gradient(circle, #000 25%, transparent 68%); animation-duration: 9s; animation-direction: reverse; }
+/* Sin tramos que soltar, la nebulosa se encoge girando y desaparece (deshacer la regresa). */
+.nebula.empty .neb-in { opacity: 0; scale: 0; rotate: 180deg; transition: scale .7s ease-in, opacity .7s ease-in, rotate .7s ease-in; }
+/* Ayuda: dibujitos de la mesa enrollada y la nebulosa. */
+.step .ill .h-roll { position: absolute; left: 82px; top: 2px; width: 14px; height: 50px; border-radius: 99px; border: 2px solid var(--ink); background: linear-gradient(90deg, #0006, #fff5 40%, #0006), #3fa0a8; }
+.step .ill .h-rug { position: absolute; left: -4px; top: 4px; width: 92px; height: 46px; border-radius: 9px; border: 2px solid var(--ink); background: #3fa0a8; }
+.step .ill .h-neb { position: absolute; left: 70px; top: 9px; width: 38px; height: 38px; border-radius: 50%; animation: neb-spin 9s linear infinite;
+  background: radial-gradient(circle, #fff 0 8%, #c9a5ff 22%, #7a4dffaa 45%, transparent 70%), conic-gradient(#ff9de2aa, transparent, #7fe3ffaa, transparent, #ff9de2aa); }
+@keyframes neb-spin { to { rotate: 360deg; } }
+.board .card.neb-hid { opacity: 0; pointer-events: none; }
 .strip { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
 .strip > .card { pointer-events: auto; }
 .hud { flex: none; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 8px; padding: calc(8px + var(--st)) calc(10px + var(--cr)) 4px calc(10px + var(--cl)); color: var(--ink); }
@@ -582,6 +599,7 @@ button.rg:active > i { scale: .92; }
 .tabs { display: flex; gap: 6px; padding: 4px; margin: 0 auto 12px; width: fit-content; max-width: 100%; border-radius: 16px; background: var(--cream-d); }
 .tabs button { display: flex; align-items: center; gap: 6px; height: 38px; padding: 0 12px 0 7px; border-radius: 12px; font-weight: 800; font-size: 14.5px; color: #5d5385; white-space: nowrap; }
 .tabs button .ico { width: 24px; height: 24px; vertical-align: 0; }
+@media (max-width: 440px) { .tabs { flex-wrap: wrap; justify-content: center; } .tabs button { padding: 0 9px 0 5px; gap: 4px; font-size: 13.5px; } }
 .tabs button[aria-selected="true"] { background: var(--cream); color: var(--ink); border: 2px solid var(--ink); box-shadow: inset 0 -3px 0 var(--cream-d), 0 2px 0 var(--ink); }
 .steps { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); text-align: left; }
 .step { display: flex; align-items: center; gap: 12px; padding: 8px 12px; border-radius: 18px; background: #fffaf0; border: 2px solid #e3d3b5; }
@@ -593,11 +611,20 @@ button.rg:active > i { scale: .92; }
 .step .ill .card { top: 4px; }
 .step .ill .card.ring .front { box-shadow: inset 0 0 0 2px var(--ink), 0 0 0 4px var(--gold); }
 .step > p { margin: 0; font-size: 14.5px; font-weight: 700; line-height: 1.3; color: #3d3366; }
-.mechs { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; text-align: left; }
-.mech { display: flex; align-items: center; gap: 12px; padding: 8px 12px; border-radius: 16px; background: #fffaf0; border: 2px solid #e3d3b5; }
-.mech .ill { position: relative; flex: none; width: 40px; height: 56px; --cw: 40px; }
-.mech > div > b { display: block; font-size: 15px; line-height: 1.1; }
-.mech > div > span { display: block; font-size: 12.5px; font-weight: 600; color: #6c6290; line-height: 1.25; }
+.step > p b { color: var(--ink); }
+/* Ayuda: títulos de cada bloque (ocupan todo el ancho de la rejilla). */
+.help-h { grid-column: 1 / -1; margin: 6px 2px -2px; font: 400 17px / 1.1 'Lilita One'; color: var(--ink); letter-spacing: .01em; }
+.help-h:first-child { margin-top: 0; }
+.step .ill.dots .card { position: relative; top: 0; margin-left: 6px; --cw: 30px; rotate: 6deg; }
+.step .ill .card .front.wild { box-shadow: none; }
+.step .ill.c > .card { position: relative; top: 0; --cw: 34px; rotate: 6deg; }
+.step .ill.pair > .card { --cw: 32px; rotate: -8deg; }
+.step .ill.pair > .card + .card { rotate: 8deg; margin-left: -6px; }
+.help-btn { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 14px; background: var(--cream); border: 2.5px solid var(--ink); box-shadow: inset 0 -4px 0 var(--cream-d), 0 3px 0 var(--ink); }
+.help-btn .ico { width: 28px; height: 28px; }
+.help-five { display: grid; place-items: center; width: 36px; height: 50px; border-radius: 6px; border: 2.5px dashed var(--gold); background: #ffc83d33; }
+.help-five b { font: 400 16px / 1 'Lilita One'; color: var(--ink); }
+.step .ill.c > .i-ticket { width: 44px; height: 44px; }
 
 .rows { display: grid; gap: 8px; text-align: left; }
 .row { display: flex; align-items: center; gap: 12px; padding: 8px 12px; min-height: 58px; width: 100%; border-radius: 16px; background: #fffaf0; border: 2px solid #e3d3b5; color: var(--ink); text-align: left; }

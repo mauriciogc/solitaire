@@ -16,6 +16,8 @@
 //   curtain   cortina i: boca abajo hasta retirar su carta llave (level.curtains[i])
 //   bomb      bomba: carta especial sin número; si no la destapas antes de `bomb` acciones, explota y quema 3 cartas del mazo
 //   live      carta viva (+1 / -1): su número cambia con cada acción (jugar o robar)
+//   neb       nebulosa: la carta está en un tramo escondido que sale cuando ya se vaciaron `neb` tramos, cualesquiera
+//             (level.neb = ids de cada tramo)
 import { hash } from './rng.js';
 
 export const mod13 = (n) => ((n % 13) + 13) % 13;
@@ -52,7 +54,9 @@ export function follows(top, r) {
   return near(top.rank, r) || (top.alt != null && near(top.alt, r));
 }
 
-export const isFree = (c, s) => c.coveredBy.every((j) => s.rem[j]);
+// Tramos de la nebulosa ya vaciados.
+export const nebOut = (level, s) => (level.neb ? level.neb.reduce((n, t) => n + t.every((j) => s.rem[j]), 0) : 0);
+export const isFree = (c, s, level) => c.coveredBy.every((j) => s.rem[j]) && (!c.neb || nebOut(level, s) >= c.neb);
 export const curtainOpen = (level, c, s) => c.curtain == null || !!s.rem[level.curtains[c.curtain]];
 export const lockOpen = (level, c, s) => c.lock == null || !!s.rem[level.keys[c.lock]];
 export const iceLeft = (c, s) => (c.ice ? Math.max(0, c.ice - s.plays) : 0);
@@ -62,7 +66,7 @@ export const bombLeft = (c, s) => (c.bomb && !s.rem[c.id] ? c.bomb - s.actions :
 export const special = (c) => !!(c.pack || c.bomb);
 
 // Boca arriba: libre y sin cortina cerrada.
-export const faceUp = (level, c, s) => !s.rem[c.id] && !special(c) && isFree(c, s) && curtainOpen(level, c, s);
+export const faceUp = (level, c, s) => !s.rem[c.id] && !special(c) && isFree(c, s, level) && curtainOpen(level, c, s);
 
 // ¿Se puede tocar ya (sin mirar el número)?
 export const isOpen = (level, c, s) => faceUp(level, c, s) && lockOpen(level, c, s) && !iceLeft(c, s);
@@ -136,7 +140,7 @@ function activate(level, s) {
   const packs = [];
   const defused = [];
   for (const c of level.cards) {
-    if (!special(c) || s.rem[c.id] || !isFree(c, s)) continue;
+    if (!special(c) || s.rem[c.id] || !isFree(c, s, level)) continue;
     s.rem[c.id] = true;
     if (c.pack) {
       s.stock.push(...c.pack.map((x) => ({ ...x })));

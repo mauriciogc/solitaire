@@ -440,18 +440,25 @@ const RESPITE_MIN = 10;
 // + SCROLL_SHOW − ventana.
 // El nivel se arma y se prueba con SCROLL_VIEW; si en la pantalla cabe más tira, el juego la alarga (scrollCover):
 // con más ventana solo se quitan tapas, así que el nivel sigue teniendo solución.
-// Solo niveles sin ayudas, desde el nivel 31, ~1 de cada 12 (no respiros ni secretos; sí jefes).
-export const SCROLL_FROM = { mesa: 30 };
+// Nebulosa: se ven NEB_SLOTS tramos y los demás esperan en la nebulosa (a la derecha, o abajo con el teléfono
+// parado). Al vaciar cualquier tramo, los que quedan se recorren y de la nebulosa sale el siguiente. Para el motor:
+// las cartas del tramo k (k ≥ NEB_SLOTS) tienen neb = k − NEB_SLOTS + 1 (tramos que hay que vaciar antes).
+// Solo niveles sin ayudas, ~1 de cada 12 cada una: mesa desde el nivel 31 y nebulosa desde el 61 (no respiros ni
+// secretos; sí jefes).
+export const SCROLL_FROM = { mesa: 30, nebulosa: 60 };
+export const NEB_SLOTS = 3;
 export const SCROLL_VIEW = 8.2, SCROLL_GAP = 0.45, SCROLL_SHOW = 0.5;
 const SCROLL_SPARE = 0.2; // sobrantes extra por carta del tablero
 const SCROLL_PIECES = ['miniPyramid', 'miniInv', 'twoRows', 'twoRows', 'sandwich', 'crown', 'steps', 'stack', 'fan', 'tiltFan', 'arc', 'cross', 'rosette'];
 export function scrollKind(g) {
-  if (g < SCROLL_FROM.mesa || g >= TOTAL_LEVELS || hash(g * 31 + 7) % 12) return null;
-  return 'mesa';
+  if (g >= TOTAL_LEVELS) return null;
+  if (g >= SCROLL_FROM.mesa && !(hash(g * 31 + 7) % 12)) return 'mesa';
+  return g >= SCROLL_FROM.nebulosa && !((hash(g * 7919 + 1013) >>> 9) % 12) ? 'nebulosa' : null;
 }
 // Lo bonito de la mesa es lo larga: el doble de cartas que un tablero normal.
-function scrollTramos(r, d) {
-  const want = 40 + Math.round(d * 20);
+// La nebulosa, algo menos: solo se ven 3 tramos a la vez.
+function scrollTramos(r, d, kind) {
+  const want = kind === 'nebulosa' ? 32 + Math.round(d * 16) : 40 + Math.round(d * 20);
   const out = [], names = [];
   for (let n = 0; n < want; ) {
     const name = pick(r, SCROLL_PIECES);
@@ -584,13 +591,14 @@ export function buildLevel(g, ev = null, t = 0) {
   const scroll = fresh && !secret && !respite ? scrollKind(base) : null;
   const d0 = ev ? ev.d : secret ? Math.min(1, difficulty(base) + 0.05) : difficulty(base);
   // Mesa enrollada: la tira es larga y solo se ve un pedazo; el mazo va más amable (y con más sobrantes, abajo).
-  const d = respite ? Math.min(d0, 0.06 + d0 * 0.15) : scroll ? d0 * 0.3 : d0;
+  // La nebulosa, algo menos (medido con el bot casual).
+  const d = respite ? Math.min(d0, 0.06 + d0 * 0.15) : scroll === 'mesa' ? d0 * 0.3 : scroll ? d0 * 0.65 : d0;
   // Evento: en cada planeta salen más seguido las formas que más cuestan (medido con el bot casual).
   // Evento: en cada planeta salen más seguido las formas que más cuestan (medido con el bot casual).
   const template = ev?.template || (ev && (index === LEVELS_PER_WORLD - 1 || r() < 0.15 + ev.tight * 0.17) ? pick(r, ['peaks', 'peaks', 'scatter', 'invPyramid']) : scroll || (respite ? pick(r, RESPITE_SHAPES) : chooseTemplate(r, ev ? Math.max(3, base) : base, d, fresh)));
 
   const shape = (dd) => (template === 'clusters' ? clusters(r, dd, index === LEVELS_PER_WORLD - 1, fresh) : [TEMPLATES[template](r, dd)]);
-  let raw = scroll ? scrollTramos(r, d) : shape(d);
+  let raw = scroll ? scrollTramos(r, d, scroll) : shape(d);
   // Sin ayudas: si salió muy chico, se vuelve a armar un poco más grande.
   for (let k = 1; fresh && !scroll && k <= 12 && raw.reduce((s, gr) => s + gr.length, 0) < (respite ? RESPITE_MIN : freshMin(base)); k++) raw = shape(Math.min(1, d + k * 0.15));
   const groups = raw.map(normalizeGroup);
@@ -603,14 +611,19 @@ export function buildLevel(g, ev = null, t = 0) {
   );
   // Mesa enrollada: una carta sale completa del rollo cuando la tira ya empieza en su orilla derecha − SCROLL_VIEW
   // o más adelante; o sea, cuando ya se fueron todas las cartas que empiezan antes de eso.
-  const under = scroll && coveredBy.map((a) => a.slice());
-  if (scroll) rollCover(pos, groups, SCROLL_VIEW).forEach((a, i) => coveredBy[i].push(...a));
+  const mesa = scroll === 'mesa', nebula = scroll === 'nebulosa';
+  const under = mesa && coveredBy.map((a) => a.slice());
+  if (mesa) rollCover(pos, groups, SCROLL_VIEW).forEach((a, i) => coveredBy[i].push(...a));
+  // Nebulosa: tramos que hay que vaciar antes de que salga cada carta.
+  const neb = nebula ? pos.map((p) => Math.max(0, p.group - NEB_SLOTS + 1)) : null;
+  const tramos = nebula && groups.map((_, gi) => pos.reduce((a, p, i) => (p.group === gi && a.push(i), a), []));
 
   const removed = new Array(n).fill(false);
   const order = [];
   while (order.length < n) {
     const free = [];
-    for (let i = 0; i < n; i++) if (!removed[i] && coveredBy[i].every((j) => removed[j])) free.push(i);
+    const out = nebula ? tramos.reduce((k, t) => k + t.every((j) => removed[j]), 0) : 0;
+    for (let i = 0; i < n; i++) if (!removed[i] && coveredBy[i].every((j) => removed[j]) && (!neb || neb[i] <= out)) free.push(i);
     const i = pick(r, free);
     removed[i] = true;
     order.push(i);
@@ -620,14 +633,15 @@ export function buildLevel(g, ev = null, t = 0) {
   // Mecánicas del nivel: cada una aparece a partir de su mundo y luego se combinan (máximo 2 tipos).
   // Respiro: una sola mecánica como mucho.
   const mech = new Set(chooseMechanics(r, world, index, boss, n, ev).slice(0, respite ? 1 : 2));
-  // Mesa enrollada sin bombas: su cuenta correría con la carta todavía dentro del rollo.
+  // Mesa enrollada y nebulosa sin bombas: su cuenta correría con la carta todavía escondida.
   if (scroll) mech.delete('bomb');
 
   // Carta regalo: una carta especial (sin número) que se activa sola al quedar destapada del todo
   // y manda 2-5 cartas al final del mazo. Va tapada y en el primer 40% del orden de retirada.
   let packId = null;
   if (mech.has('pack')) {
-    const early = order.slice(0, Math.floor(n * 0.4)).filter((i) => coveredBy[i].length);
+    // (En la nebulosa, solo en los tramos que se ven al empezar: su momento de salir no depende de sus tapas.)
+    const early = order.slice(0, Math.floor(n * 0.4)).filter((i) => coveredBy[i].length && !neb?.[i]);
     if (early.length) packId = pick(r, early);
   }
   // Bombas (1-3): cartas especiales sin número, tapadas, que hay que destapar antes de que su cuenta llegue a 0.
@@ -676,13 +690,13 @@ export function buildLevel(g, ev = null, t = 0) {
   // Evento: cada planeta deja menos cartas de sobra en el mazo (ev.tight = 0 en el primero … 4 en el último).
   // Desde el tercero puede no sobrar ninguna: sigue siendo ganable, pero sin errores (o con ayudas).
   if (ev) spares = Math.max(ev.tight >= 2 ? 0 : 1, spares - ev.tight);
-  // Mesa enrollada: la tira es el doble de larga; más sobrantes para que no cueste el doble.
-  if (scroll) spares += Math.round(n * SCROLL_SPARE);
+  // Mesa enrollada: la tira es el doble de larga; más sobrantes para que no cueste el doble (nebulosa: la mitad).
+  if (scroll) spares += Math.round(n * (mesa ? SCROLL_SPARE : SCROLL_SPARE / 2));
   // En niveles fáciles las sobrantes suelen ser vecinas de alguna carta del tablero.
   const helpfulCard = (p) => card(r() < p ? (pick(r, known) + pick(r, [1, 12])) % 13 : randInt(r, 0, 12));
   for (let i = 0; i < spares; i++) stock.push(helpfulCard((1 - d) * 0.85));
 
-  const cards = pos.map((p, i) => ({ id: i, ...p, rank: ranks[i], suit: randInt(r, 0, 3), coveredBy: coveredBy[i], ...(under && { under: under[i] }) }));
+  const cards = pos.map((p, i) => ({ id: i, ...p, rank: ranks[i], suit: randInt(r, 0, 3), coveredBy: coveredBy[i], ...(under && { under: under[i] }), ...(neb?.[i] && { neb: neb[i] }) }));
   for (const id of bombIds) delete cards[id].rank;
   const SPECIAL = ['lock', 'key', 'pack', 'ice', 'alt', 'arrow', 'curtain', 'curtainKey', 'bomb', 'live'];
   const plain = (id) => SPECIAL.every((f) => cards[id][f] == null);
@@ -844,6 +858,7 @@ export function buildLevel(g, ev = null, t = 0) {
   const level = {
     g, world, index, d, template, boss, secret, event: !!ev, fresh, ...(respite && { respite }), ...(scroll && { scroll }),
     ...(raw.names && { pieces: raw.names }),
+    ...(tramos && { neb: tramos }),
     groups: groups.map(({ w, h }) => ({ w, h })),
     cards,
     keys,

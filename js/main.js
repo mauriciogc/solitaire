@@ -546,15 +546,28 @@ const R = { A: 0, J: 10, Q: 11, K: 12 };
 const rk = (r) => R[r] ?? +r - 1;
 const mini = (x, r, s, extra = {}, cls = '') => `<div class="card up ${cls}" style="left:${x}px">${faceHTML({ rank: rk(r), suit: SUITS.indexOf(s), ...extra })}${extra.marks || ''}</div>`;
 const MECH_TEXT = {
-  lock: 'Retira la llave del mismo color para abrirlo.',
-  pack: 'Al destaparla, sus cartas se van a tu mazo.',
-  ice: 'Se derrite al jugar las cartas que marca.',
-  double: 'Vale los dos números.',
-  arrow: 'La siguiente carta tiene que ir hacia donde apunta.',
-  curtain: 'Se abre al retirar su carta con telón.',
-  bomb: 'Destápala antes de que llegue a cero.',
-  live: 'Su número cambia con cada acción.',
+  lock: 'No se juega hasta que quitas la carta con la llave del mismo color.',
+  pack: 'No se juega: al destaparla, sus cartas se van al final de tu mazo.',
+  ice: 'Se derrite cuando juegas tantas cartas de la mesa como marca.',
+  double: 'Vale los dos números: se juega con cualquiera y te deja seguir desde los dos.',
+  arrow: 'Si apunta arriba, la siguiente carta tiene que ser un número más; si apunta abajo, uno menos.',
+  curtain: 'Sigue boca abajo hasta que quitas su carta con telón.',
+  bomb: 'Destápala antes de que su cuenta llegue a cero, o quema 3 cartas de tu mazo.',
+  live: 'Con la flecha arriba, su número sube cada vez que juegas o robas; con la flecha abajo, baja.',
 };
+// Flecha y carta viva: se enseñan los dos casos (arriba y abajo).
+const MECH_BOTH = {
+  arrow: () => mini(0, '6', 'd', { arrow: 1 }) + mini(0, '6', 'c', { arrow: -1 }),
+  live: () => mini(0, 'K', 's', { live: 1 }) + mini(0, '4', 'h', { live: -1 }),
+};
+// Ayuda → Cartas especiales, en bloques como "Cómo jugar".
+const MECH_GROUPS = [
+  ['Se abren después', ['lock', 'ice', 'curtain']],
+  ['Cambian el número', ['double', 'arrow', 'live']],
+  ['No se juegan', ['pack', 'bomb']],
+];
+// Reverso de la baraja del jugador, para los dibujos de la ayuda.
+const helpBack = (x, extra = '') => `<div class="card" style="left:${x}px;${extra};--back:${cardBackURL()}"><div class="inner">${backHTML({})}</div></div>`;
 function mechCard(m, x = 0) {
   const back = `--back:${cardBackURL()}`;
   if (m === 'lock') return mini(x, '9', 'd', { marks: `<span class="lock-ov">${lockIcon(350)}</span>` });
@@ -2861,20 +2874,35 @@ function openHelp(tab = 'basico', then) {
   const body = (t) =>
     t === 'basico'
       ? `<div class="steps">
-        <div class="step"><div class="ill">${mini(0, '6', 's')}${mini(37, '7', 'h', {}, 'ring')}${mini(74, '8', 'd')}</div><p>Toca una carta que sea <b>uno más o uno menos</b> que la de tu montón.</p></div>
+        <h3 class="help-h">Jugar</h3>
+        <div class="step"><div class="ill">${mini(0, '6', 's')}${mini(37, '7', 'h', {}, 'ring')}${mini(74, '8', 'd')}</div><p>Toca una carta <b>boca arriba</b> que sea <b>uno más o uno menos</b> que la de tu montón.</p></div>
         <div class="step"><div class="ill">${mini(16, 'K', 'c')}${mini(56, 'A', 'h')}</div><p>La <b>K</b> y el <b>A</b> se conectan.</p></div>
-        <div class="step"><div class="ill c">${icon('deck')}</div><p>¿Sin jugada? <b>Toca el mazo</b>. Ojo: tu racha vuelve a cero.</p></div>
-        <div class="step"><div class="ill c dots">${'<i></i>'.repeat(6)}</div><p>Racha de <b>6</b>: carta extra. De <b>9</b>: un comodín.</p></div>
-        <div class="step"><div class="ill c">${star(true)}${star(true, 'big')}${star(true)}</div><p>Termina con <b>2 cartas</b> de sobra en el mazo y ganas 3 estrellas.</p></div>
+        <div class="step"><div class="ill">${[0, 1, 2].map((i) => helpBack(14 + i * 6, `top:${8 - i * 3}px`)).join('')}${mini(70, '3', 'h')}</div><p>¿Sin jugada? <b>Toca el mazo</b> y sale otra carta. Ojo: tu racha vuelve a cero.</p></div>
+        <h3 class="help-h">Racha</h3>
+        <div class="step"><div class="ill c dots">${'<i></i>'.repeat(4)}<div class="card gift-card"><div class="inner"><div class="face back"></div></div></div></div><p>Juega cartas <b>seguidas</b> sin tocar el mazo. A las <b>6</b> te cae una carta extra al mazo y a las <b>13</b>, un comodín.</p></div>
+        <div class="step"><div class="ill c pair"><div class="card gift-card"><div class="inner"><div class="face back"></div></div></div><div class="card up"><div class="inner"><div class="face front wild"></div></div></div></div><p>Si sigues: carta extra a las <b>18</b> y <b>23</b>, y a las <b>31</b> un comodín para guardar.</p></div>
+        <h3 class="help-h">Ayudas</h3>
+        <div class="step"><div class="ill c"><div class="card up"><div class="inner"><div class="face front wild"></div></div></div></div><p><b>Comodín:</b> vale cualquier número. Úsalo cuando no tengas jugada.</p></div>
+        <div class="step"><div class="ill c"><span class="help-btn">${icon('undo')}</span></div><p><b>Deshacer:</b> regresa tu última jugada o la carta que robaste.</p></div>
+        <div class="step"><div class="ill c"><span class="help-five"><b>+5</b></span></div><p>¿Se acabó el mazo? Toca el <b>+5</b> para comprar 5 cartas. Con ellas te llevas solo 1 estrella.</p></div>
+        <h3 class="help-h">Estrellas y boletos</h3>
+        <div class="step"><div class="ill c">${star(true)}${star(true, 'big')}${star(true)}</div><p>Ganas al <b>vaciar la mesa</b>. Si te queda la <b>mitad del mazo</b> o más: 3 estrellas. Una cuarta parte: 2. Menos: 1.</p></div>
+        <div class="step"><div class="ill c">${icon('ticket')}</div><p>Un nivel nuevo cuesta <b>boletos</b>. Si lo ganas, te los regresamos; si pierdes o lo dejas, se gastan.</p></div>
       </div>`
-      : `<div class="mechs">${Object.keys(MECH_TEXT).map((m) => `<div class="mech"><div class="ill">${mechCard(m)}</div><div><b>${MECH_NAMES[m]}</b><span>${MECH_TEXT[m]}</span></div></div>`).join('')}</div>`;
+      : t === 'mesas'
+        ? `<div class="steps">
+        <h3 class="help-h">Mesas que se descubren</h3>
+        <div class="step"><div class="ill"><span class="h-rug"></span>${mini(2, '4', 'c')}${mini(40, '5', 'h')}<span class="h-roll"></span></div><p><b>Mesa enrollada:</b> limpia las cartas del <b>principio</b> y la mesa avanza: salen más cartas del rollo.</p></div>
+        <div class="step"><div class="ill">${mini(0, '9', 's')}${mini(34, '10', 'd')}<span class="h-neb"></span></div><p><b>Nebulosa:</b> solo ves 3 grupos. Vacía <b>cualquiera</b> y de la nebulosa sale otro.</p></div>
+      </div>`
+        : `<div class="steps">${MECH_GROUPS.map(([h, ms]) => `<h3 class="help-h">${h}</h3>${ms.map((m) => `<div class="step"><div class="ill c${MECH_BOTH[m] ? ' pair' : ''}">${MECH_BOTH[m]?.() || mechCard(m)}</div><p><b>${MECH_NAMES[m]}:</b> ${MECH_TEXT[m]}</p></div>`).join('')}`).join('')}</div>`;
   const m = openModal({
     title: 'Ayuda',
     ico: 'help',
     color: 'blue',
     wide: true,
     onClose: then,
-    body: `<div class="tabs" role="tablist"><button role="tab" data-t="basico" aria-selected="${tab === 'basico'}">${icon('help')}Cómo jugar</button><button role="tab" data-t="cartas" aria-selected="${tab !== 'basico'}">${icon('wild')}Cartas especiales</button></div><div class="tab-body">${body(tab)}</div>`,
+    body: `<div class="tabs" role="tablist"><button role="tab" data-t="basico" aria-selected="${tab === 'basico'}">${icon('help')}Cómo jugar</button><button role="tab" data-t="cartas" aria-selected="${tab === 'cartas'}">${icon('wild')}Cartas especiales</button><button role="tab" data-t="mesas" aria-selected="${tab === 'mesas'}">${icon('planet')}Mesas</button></div><div class="tab-body">${body(tab)}</div>`,
   });
   m.el.addEventListener('click', (e) => {
     const t = e.target.closest('[data-t]');

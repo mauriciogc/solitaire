@@ -130,7 +130,7 @@ const TEMPLATES = ['todas', 'clusters', 'pyramid', 'peaks', 'wall', 'diamond', '
 // Fase 7: formas y piezas nuevas (solo salen en niveles sin ayudas) y respiros.
 const PIECES = ['sandwich', 'cross', 'steps', 'rosette', 'tiltFan', 'crown'];
 const TPL_OPTS = [
-  ...[...TEMPLATES, 'butterfly', 'heart', 'spiral', 'star', 'hourglass', 'mesa'].map((t) => [t, t]),
+  ...[...TEMPLATES, 'butterfly', 'heart', 'spiral', 'star', 'hourglass', 'mesa', 'nebulosa'].map((t) => [t, t]),
   ...PIECES.map((k) => [`pz:${k}`, `pieza ${k}`]),
   ['respiros', 'respiros'],
 ];
