@@ -321,6 +321,25 @@ button.rg:active > i { scale: .92; }
 .frost.br { right: -4px; bottom: -4px; scale: -1 -1; }
 
 .game { color: #fff; }
+/* Mesa enrollada (Fase 7): la mesa del planeta se queda como siempre y encima va una alfombra de su color (--rug,
+   ver tableHTML) con orilla clara, tejido y sombra, para que se vea puesta encima. Las cartas que siguen en el rollo
+   no se ven. */
+.rug { --rc: color-mix(in srgb, var(--rug) 80%, #120c2e); position: absolute; z-index: 0; pointer-events: none; border: 3px solid var(--ink); border-radius: 16px; overflow: hidden;
+  background: repeating-linear-gradient(90deg, #ffffff14 0 2px, transparent 2px 10px) 0 0 / 10px 100%, var(--rc);
+  box-shadow: 0 6px 0 #0b062a66, 0 16px 30px #000a; }
+.rug::after { content: ''; position: absolute; inset: 0; border-radius: 13px; pointer-events: none;
+  box-shadow: inset 0 0 0 5px var(--rc), inset 0 0 0 8px color-mix(in srgb, var(--rug) 45%, #fff), inset 0 0 22px 8px #0004; }
+/* Puntadas de la orilla: se corren con la alfombra y se nota que avanza. */
+.rug::before { content: ''; position: absolute; inset: 11px; border: 2px dashed color-mix(in srgb, var(--rug) 35%, #fff); border-radius: 9px; opacity: .55; pointer-events: none; }
+.board .card.noflip .inner { transition: none; }
+.roll { position: absolute; z-index: 5000; pointer-events: none; border: 3px solid var(--ink); border-radius: 999px; overflow: hidden; background: color-mix(in srgb, var(--rug) 70%, #120c2e);
+  box-shadow: 0 8px 16px #0009; transition: width .5s var(--ease-out), height .5s var(--ease-out), left .5s var(--ease-out), top .5s var(--ease-out); }
+/* La alfombra enrollada: su tejido corre al girar, con brillo de cilindro encima. */
+.roll i { position: absolute; inset: 0; background: repeating-linear-gradient(90deg, #ffffff22 0 2px, transparent 2px 7px) 0 0 / 7px 100%; }
+.roll::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, #0008, #fff4 35%, #fff1 55%, #0009); }
+.roll.empty { opacity: .85; }
+.strip { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
+.strip > .card { pointer-events: auto; }
 .hud { flex: none; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 8px; padding: calc(8px + var(--st)) calc(10px + var(--cr)) 4px calc(10px + var(--cl)); color: var(--ink); }
 .hud-mid { display: flex; justify-content: center; min-width: 0; }
 .hud-r { justify-self: end; display: flex; align-items: center; gap: 6px; }
@@ -651,6 +670,13 @@ button.rg:active > i { scale: .92; }
 .stamp small { font-size: 9.5px; font-weight: 900; line-height: 1; text-transform: uppercase; }
 .boss-win .postcard { margin-right: 34px; }
 .boss-win .postcard:has(.seal-secret) + .lead { margin-top: 20px; }
+/* Teléfono acostado: postal y cofre más chicos para que el botón Continuar se vea completo. */
+@media (orientation: landscape) and (max-height: 500px) {
+  .boss-win .postcard { zoom: .78; margin-bottom: 4px; }
+  .boss-win .chest-row { margin-top: 4px; gap: 4px; }
+  .boss-win .chest { width: 62px; height: 62px; }
+  .boss-win .chest::before { inset: -24px; }
+}
 /* Sello secreto: morado con estrella, junto al sello de estrellas (nivel secreto con 3 estrellas). */
 .seal-secret { position: absolute; right: 58px; bottom: -14px; z-index: 1; width: 52px; height: 52px; border-radius: 50%; display: grid; place-content: center; justify-items: center; rotate: -10deg;
   background: #8a5cf0; border: 2.5px dashed #fff; box-shadow: 0 0 0 2.5px #8a5cf0, 0 0 0 5px var(--ink), 0 3px 0 4px var(--ink); color: #fff; }

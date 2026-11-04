@@ -2,7 +2,7 @@
 // Se activa con ?dev en la URL (y se apaga con ?dev=0). Queda guardado en el navegador.
 import { save, prefs, persist, resetProfile, backupOnce, restoreBackup, setDev } from './storage.js';
 import { rachaWin, rachaLose, racha, nextGoal, col, daysToNextCol, ev, daysToNextEvent, evEnter, evWin, EVENT_PER_PLANET, EVENT_LEVELS, fiesta, fiEnter, fiWin, nextFiesta, daysToNextFiesta, daysToFiesta, fiShape, isOn, UNLOCK } from './events.js';
-import { generateLevel, packGroups, worldInfo, specials, specialGroup, SPECIAL_ID, TOTAL_LEVELS, LEVELS_PER_WORLD, MECH_NAMES, MECHANICS } from './levels.js';
+import { generateLevel, packGroups, worldInfo, specials, specialGroup, SPECIAL_ID, TOTAL_LEVELS, LEVELS_PER_WORLD, MECH_NAMES, MECHANICS, MECH_INTRO, SCROLL_FROM } from './levels.js';
 import { playCasual, solve, initState } from './engine.js';
 import { openModal, toast, updateCoins, popGoal } from './ui.js';
 import { mulberry32 } from './rng.js';
@@ -106,7 +106,7 @@ function showInfo(L) {
   const free = L.cards.filter((c) => !c.coveredBy.length).length;
   const rows = [
     ['Nivel', `#${L.g + 1} · ${label(L.g)}${L.boss ? ' · JEFE' : ''}`],
-    ['Forma', `${L.template} (${L.groups.length} grupo${L.groups.length > 1 ? 's' : ''})`],
+    ['Forma', `${tplName(L)} (${L.groups.length} grupo${L.groups.length > 1 ? 's' : ''})`],
     ['Dificultad d', L.d.toFixed(2)],
     ['Cartas tablero', `${L.cards.length} (${free} libres al inicio)`],
     ['Mazo', `${L.stock.length} = ${L.meta.chains - 1} inicios de cadena + ${L.meta.decoys} señuelos + ${L.meta.spares} sobrantes`],
@@ -114,7 +114,7 @@ function showInfo(L) {
     ['Candados', L.meta.locks],
     ['Carta regalo', L.meta.pack ? `+${L.meta.pack} cartas al mazo` : 'no'],
     ['Ayudas', L.help ? `pide ${L.help} (comodines o compras de +5): sin ellas no hay solución` : 'no pide'],
-    ['Bot casual gana', `${casualRate(L)}%`],
+    ['Bot casual gana', ((p) => `${p}% · ${rateTag(L, p)}`)(casualRate(L))],
     ['Solucionador', sol ? `resuelve en ${sol.length} pasos${w ? ` con ${w} comodín${w > 1 ? 'es' : ''}` : ''} (${ms} ms)` : `no encontró (${ms} ms)`],
   ];
   openModal({
@@ -127,6 +127,17 @@ function showInfo(L) {
 // ---------- Galería: muchos niveles de un vistazo ----------
 const PAGE = 24;
 const TEMPLATES = ['todas', 'clusters', 'pyramid', 'peaks', 'wall', 'diamond', 'scatter', 'towers', 'layers', 'invPyramid'];
+// Fase 7: formas y piezas nuevas (solo salen en niveles sin ayudas) y respiros.
+const PIECES = ['sandwich', 'cross', 'steps', 'rosette', 'tiltFan', 'crown'];
+const TPL_OPTS = [
+  ...[...TEMPLATES, 'butterfly', 'heart', 'spiral', 'star', 'hourglass', 'mesa'].map((t) => [t, t]),
+  ...PIECES.map((k) => [`pz:${k}`, `pieza ${k}`]),
+  ['respiros', 'respiros'],
+];
+const okTpl = (L, t) => t === 'todas' || (t === 'respiros' ? !!L.respite : t.startsWith('pz:') ? !!L.pieces?.includes(t.slice(3)) : L.template === t);
+const tplName = (L) => L.template + (L.pieces ? ` (${L.pieces.join(', ')})` : '');
+// Etiqueta según el % del bot casual (ver tabla de la Fase 7): fácil ≥75, medio ≥50, difícil ≥25, muy difícil.
+const rateTag = (L, p) => (L.help ? `pide ${L.help}` : p >= 75 ? 'fácil' : p >= 50 ? 'medio' : p >= 25 ? 'difícil' : 'muy difícil');
 
 function preview(L, W = 150, H = 104) {
   const { u, bw, bh, offsets } = packGroups(L.groups, W - 8, H - 8, 0.7, 26);
@@ -156,7 +167,7 @@ export function galleryScreen({ onPlay, onBack }) {
       <button data-g="prev">◀</button>
       <button data-g="goto" class="g-range"></button>
       <button data-g="next">▶</button>
-      <select data-g="tpl">${TEMPLATES.map((t) => `<option${t === st.tpl ? ' selected' : ''}>${t}</option>`).join('')}</select>
+      <select data-g="tpl">${TPL_OPTS.map(([v, t]) => `<option value="${v}"${v === st.tpl ? ' selected' : ''}>${t}</option>`).join('')}</select>
       <label><input type="checkbox" data-g="boss"${st.boss ? ' checked' : ''}> solo jefes</label>
       ${['mA', 'mB']
         .map(
@@ -189,7 +200,7 @@ export function galleryScreen({ onPlay, onBack }) {
         const ms = L.meta.mechs;
         const okM = (m) => !m || (m === 'none' ? !ms.length : ms.includes(m));
         const okH = sp || !st.help || (st.help === 'any' ? L.help : L.help === +st.help);
-        if ((st.tpl === 'todas' || L.template === st.tpl) && okM(st.mA) && okM(st.mB) && okH && (!st.boss || L.boss)) items.push(L);
+        if (okTpl(L, st.tpl) && okM(st.mA) && okM(st.mB) && okH && (!st.boss || L.boss)) items.push(L);
       }
       g++;
       if (g - st.start > 4000) break; // filtros muy estrictos: no colgar la página
@@ -200,8 +211,8 @@ export function galleryScreen({ onPlay, onBack }) {
       .map(
         (L) => `<button class="tile" data-play="${L.g}">
           <div class="pv">${preview(L)}</div>
-          <div class="tl"><b>${L.special != null ? '' : `#${L.g + 1}`}</b> ${label(L.g)}${L.boss ? ' · jefe' : ''}${L.help ? ` · <b>pide ${L.help}</b>` : ''}</div>
-          <div class="tl">${L.template} · d ${L.d.toFixed(2)} · ${L.cards.length} cartas · mazo ${L.stock.length}</div>
+          <div class="tl"><b>${L.special != null ? '' : `#${L.g + 1}`}</b> ${label(L.g)}${L.boss ? ' · jefe' : ''}${L.respite ? ' · <b>respiro</b>' : ''}${L.help ? ` · <b>pide ${L.help}</b>` : ''}</div>
+          <div class="tl">${tplName(L)} · d ${L.d.toFixed(2)} · ${L.cards.length} cartas · mazo ${L.stock.length}</div>
           <div class="tl mechs">${L.meta.mechs.map((m) => `<i class="tag m-${m}">${MECH_NAMES[m]}</i>`).join('') || '—'}</div>
           <div class="tl rate" data-rate="${L.g}">bot …</div>
         </button>`,
@@ -213,7 +224,10 @@ export function galleryScreen({ onPlay, onBack }) {
       const L = items[i++];
       if (!L || !el.isConnected) return;
       const span = grid.querySelector(`[data-rate="${L.g}"]`);
-      if (span) span.textContent = `bot casual ${casualRate(L, 40)}%`;
+      if (span) {
+        const p = casualRate(L, 40);
+        span.textContent = `bot casual ${p}% · ${rateTag(L, p)}`;
+      }
       setTimeout(next, 0);
     };
     setTimeout(next, 30); // tras montar la pantalla
@@ -251,7 +265,10 @@ export function galleryScreen({ onPlay, onBack }) {
     }
   });
   el.addEventListener('change', (e) => {
-    if (e.target.dataset.g === 'tpl') st.tpl = e.target.value;
+    if (e.target.dataset.g === 'tpl') {
+      st.tpl = e.target.value;
+      st.start = 0;
+    }
     if (e.target.dataset.g === 'boss') st.boss = e.target.checked;
     if (e.target.dataset.g === 'help') {
       st.help = e.target.value;
@@ -364,6 +381,9 @@ export function openDevMenu({ onGallery, onPlanets, onRefresh }) {
   const chips = (list) => `<div class="dcount">${list.map(([ico, txt]) => `<span>${icon(ico)}${txt}</span>`).join('')}</div>`;
   const recuento = `<p class="dline"><b>Tú: ${won} niveles ganados</b> (mundo ${(save.open || 0) + 1})</p>
     <table class="dtable"><tr><th>Se abre</th><th>Nivel</th><th>Tú</th></tr>${UN.map(([n, l]) => `<tr><td>${n}</td><td>${l}</td><td>${opens(l)}</td></tr>`).join('')}</table>
+    <p class="dline"><b>Cartas especiales</b> (aparecen en el primer nivel de su mundo)</p>
+    <table class="dtable"><tr><th>Carta</th><th>Mundo</th><th>Nivel</th><th>Tú</th></tr>${MECHANICS.map((m) => `<tr><td>${MECH_NAMES[m]}</td><td>${MECH_INTRO[m] + 1}</td><td>${MECH_INTRO[m] * LEVELS_PER_WORLD + 1}</td><td>${opens(MECH_INTRO[m] * LEVELS_PER_WORLD)}</td></tr>`).join('')}
+    ${Object.entries(SCROLL_FROM).map(([k, g]) => `<tr><td>Tablero: ${k === 'mesa' ? 'mesa enrollada' : 'nebulosa'}</td><td>${Math.floor(g / LEVELS_PER_WORLD) + 1}</td><td>${g + 1}</td><td>${opens(g)}</td></tr>`).join('')}</table>
     <p class="dline"><b>${evs.length + COLECCIONES.length + fis.length} eventos</b>: ${evs.length} del mes · ${COLECCIONES.length} colecciones · ${fis.length} de un día</p>
     <p class="dline"><b>Del mes (${evs.length})</b></p>${chips(evs.map(([m, e]) => [e.ico, `${MES[m]} · ${e.name}`]))}
     <p class="dline"><b>Colecciones (${COLECCIONES.length})</b></p>${chips(COLECCIONES.map((c) => [c.token, c.name]))}

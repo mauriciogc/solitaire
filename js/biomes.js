@@ -962,14 +962,14 @@ export function tableHTML(w, theme) {
   const ev = EVENT_TABLES[theme];
   if (ev) {
     const t = (TILE_CACHE[`ev-${theme}`] ||= ev.tile()), [tl, tr, bl, br] = ev.props;
-    return `<div class="table t-ev t-${theme}" style="--tile:${t.url};--tw:${t.w}px;--th:${t.h}px;--tint:${ev.tint}">
+    return `<div class="table t-ev t-${theme}" style="--tile:${t.url};--tw:${t.w}px;--th:${t.h}px;--tint:${ev.tint};--rug:${ev.props[2][1]?.[1] || '#e8434f'}">
     <div class="prop tl">${propSVG(call(tl), 150)}</div><div class="prop tr">${propSVG(call(tr), 120)}</div>
     <div class="prop bl">${propSVG(call(bl), 120)}</div><div class="prop br">${propSVG(call(br), 120)}</div></div>`;
   }
   const key = biomeKey(worldInfo(w).place), b = BIOMES[key], t = tableTile(key);
   const [tl, tr, bl] = PROPS[key] || PROPS.bosque;
   const frost = b.frost ? ['tl', 'tr', 'br'].map((c) => `<svg class="frost ${c}" viewBox="0 0 150 110" aria-hidden="true"><path d="M0 0h140c-8 14-30 12-36 26s-26 6-34 22-24 10-30 30-26 18-40 18z" fill="#eaf7ff" stroke="#8cc4e6" stroke-width="2.6" stroke-linejoin="round"/></svg>`).join('') : '';
-  return `<div class="table t-${b.table}" style="--tile:${t.url};--tw:${t.w}px;--th:${t.h}px;--tint:${b.tint}">${frost}
+  return `<div class="table t-${b.table}" style="--tile:${t.url};--tw:${t.w}px;--th:${t.h}px;--tint:${b.tint};--rug:${b.emblem[1]}">${frost}
     <div class="prop tl">${propSVG(call(tl), 150)}</div><div class="prop tr">${propSVG(call(tr), 120)}</div>
     <div class="prop bl">${propSVG(call(bl), 120)}</div><div class="prop br">${propSVG(P.marble(b.emblem), 120)}</div></div>`;
 }

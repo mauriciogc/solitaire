@@ -3,6 +3,7 @@ import { follows, mod13, solve, initState } from './engine.js';
 import { EVENT_DATA } from './event-data.js';
 import { HARD_DATA } from './path-data.js';
 import { SPECIAL_DATA } from './special-data.js';
+import { SOFT_DATA } from './soft-data.js';
 
 // Unidades del tablero: una carta mide W x H. Posiciones = esquina superior izquierda.
 export const W = 1;
@@ -189,7 +190,85 @@ const TEMPLATES = {
     }
     return out;
   },
+
+  // ----- Figuras (Fase 7): solo en niveles sin ayudas (ver FRESH_UNLOCK) -----
+  // Corazón: filas de arriba abajo; las de arriba tapan a las de abajo (la punta es lo último).
+  heart(r, d) {
+    const big = d > 0.3 && r() < 0.4 + d * 0.5;
+    const rows = big
+      ? [[-2, -1, 1, 2], [-2.5, -1.5, -0.5, 0.5, 1.5, 2.5], [-2, -1, 0, 1, 2], [-1.5, -0.5, 0.5, 1.5], [-1, 0, 1], [-0.5, 0.5], [0]]
+      : [[-1.5, 1.5], [-2, -1, 0, 1, 2], [-1.5, -0.5, 0.5, 1.5], [-1, 0, 1], [-0.5, 0.5], [0]];
+    const out = [];
+    rows.forEach((xs, i) => xs.forEach((x) => out.push({ x, y: i * ROW, z: rows.length - i })));
+    return out;
+  },
+  // Estrella: 5 brazos de cartas giradas que salen del centro; las puntas quedan encima y se limpia hacia dentro.
+  star(r, d) {
+    const len = d > 0.3 ? 3 : 2;
+    const out = [cc(0, 0, 0, 0)];
+    // Con más dificultad, cartas entre los brazos, debajo de los dos vecinos.
+    if (d > 0.3) for (let k = 0; k < 5; k++) out.push(radial((-54 + 72 * k) * DEG, 1.05, 1 + k));
+    for (let j = 0; j < len; j++) for (let k = 0; k < 5; k++) out.push(radial((-90 + 72 * k) * DEG, 1.0 + j * 0.85, 6 + j * 5 + k));
+    return out;
+  },
+  // Mariposa: cuerpo al centro encima de las alas; cada ala tiene parte de arriba y de abajo.
+  butterfly(r, d) {
+    const wing = [
+      [-1.15, -0.75, -20, 3], [-2.05, -1.0, -32, 2], // arriba (de dentro hacia fuera)
+      [-1.05, 0.85, 22, 6], [-1.9, 1.15, 36, 5], // abajo
+    ];
+    if (d > 0.15) wing.push([-2.9, -1.15, -44, 1], [-2.7, 1.4, 48, 4]);
+    // Más grande: una carta acostada bajo cada ala y otra encima, entre la parte de arriba y la de abajo.
+    if (d > 0.3) wing.push([-1.55, 0.05, 90, 0], [-1.1, 0.05, 0, 7]);
+    const out = [];
+    for (const [x, y, rot, z] of wing) out.push(cc(x, y, z, rot), cc(-x, y, z, -rot));
+    const body = d > 0.15 ? 4 : 3;
+    for (let i = 0; i < body; i++) out.push(cc(0, -0.9 + i * 0.6, 10 + i, 0));
+    return out;
+  },
+  // Galaxia espiral: 2 o 3 brazos que salen del centro; las puntas de afuera quedan encima y se "desenrolla" hacia dentro.
+  spiral(r, d) {
+    const arms = d < 0.4 ? 3 : 2;
+    const per = Math.round(5 + d * 4 + (arms === 2 ? 2 : 0));
+    const out = [];
+    for (let k = 0; k < arms; k++) {
+      let th = 0;
+      let last = null;
+      for (let i = 0; i < per; i++) {
+        // Avanza por la espiral hasta quedar a ~0.8 de la carta anterior.
+        let p;
+        do {
+          th += 0.05;
+          const rad = 0.75 + 0.42 * th;
+          const a = th + (k * 2 * Math.PI) / arms;
+          p = [rad * Math.cos(a), rad * Math.sin(a), a];
+        } while (last && Math.hypot(p[0] - last[0], p[1] - last[1]) < 0.8);
+        last = p;
+        out.push(cc(p[0], p[1], 1 + i * arms + k, (p[2] * 180) / Math.PI));
+      }
+    }
+    out.push(cc(0, 0, 0, 0));
+    return out;
+  },
+  // Reloj de arena: dos triángulos punta con punta; todo pasa por la carta del cuello (difícil).
+  hourglass(r, d) {
+    const R = d > 0.55 ? 5 : 4;
+    const sizes = [...Array(R).keys()].map((i) => R - i).concat([...Array(R - 1).keys()].map((i) => i + 2));
+    const out = [];
+    sizes.forEach((s, i) => rowOf(s, i * ROW, i, out));
+    return out;
+  },
 };
+
+const DEG = Math.PI / 180;
+// Carta por su centro (las figuras se piensan así) → esquina superior izquierda.
+function cc(cx, cy, z, rot = 0) {
+  return { x: cx - W / 2, y: cy - H / 2, z, rot };
+}
+// Carta a una distancia del centro, con su lado largo apuntando hacia fuera.
+function radial(a, dist, z) {
+  return cc(dist * Math.cos(a), dist * Math.sin(a), z, a / DEG + 90);
+}
 
 // ---------- Grupos pequeños (para tableros con piezas separadas) ----------
 // Cada uno devuelve cartas locales {x, y, z, rot}. rot en grados, gira sobre el centro.
@@ -246,13 +325,67 @@ const SMALL = {
     rowOf(n - 1, ROW, 1, out);
     return out;
   },
+
+  // ----- Piezas nuevas (Fase 7): solo en niveles sin ayudas -----
+  // Sándwich: una carta escondida atrás, dos lado a lado y una encima al centro. 1 o 2 juntos.
+  sandwich(r) {
+    const k = randInt(r, 1, 2);
+    const out = [];
+    for (let u = 0; u < k; u++) {
+      const x = u * 2.35;
+      out.push(cc(x, 0, 0), cc(x - 0.6, 0.4, 1), cc(x + 0.6, 0.4, 1), cc(x, 0.7, 2));
+    }
+    return out;
+  },
+  // Cruz: una carta acostada al centro y cuatro alrededor que la tapan; a veces una más encima.
+  cross(r) {
+    const out = [cc(0, 0, 0, 90), cc(0, -1.05, 1), cc(0, 1.05, 1), cc(-1.25, 0, 1, 90), cc(1.25, 0, 1, 90)];
+    if (r() < 0.5) out.push(cc(0, 0, 2));
+    return out;
+  },
+  // Escalerita: dos escaleras de 2-3 cartas que suben una hacia la otra.
+  steps(r) {
+    const n = randInt(r, 2, 3);
+    const out = [];
+    for (let i = 0; i < n; i++) out.push({ x: i * 0.38, y: 0, z: i }, { x: (n - 1) * 0.76 + 1.08 - i * 0.38, y: 0, z: i });
+    return out;
+  },
+  // Roseta: pétalos alrededor del centro (cada uno tapa al anterior) y una carta encima en medio.
+  rosette(r) {
+    const n = pick(r, [6, 8]);
+    const out = [];
+    for (let i = 0; i < n; i++) out.push(radial((i / n) * 2 * Math.PI - Math.PI / 2, 1.0, i));
+    out.push(cc(0, 0, n));
+    return out;
+  },
+  // Abanico inclinado: dos arriba, tres abajo (la del centro encima) y dos cartas giradas que tapan las dos filas.
+  tiltFan(r) {
+    const s = r() < 0.5 ? 1 : -1;
+    return [
+      cc(0, 0, 0), cc(1.1, 0, 0),
+      cc(-0.25, 1.7, 0), cc(0.55, 1.75, 1), cc(1.35, 1.7, 0),
+      cc(0.05, 0.85, 2, -16 * s), cc(1.05, 0.85, 3, 14 * s),
+    ];
+  },
+  // Corona: 2 atrás, 3 en medio (tapan a las de atrás), 2 adelante en las orillas; a veces una escondida bajo el centro.
+  crown(r) {
+    const out = [];
+    if (r() < 0.5) out.push(cc(1.05, 0.95, 0));
+    out.push(cc(0.525, 0, 1), cc(1.575, 0, 1));
+    out.push(cc(0, ROW, 2), cc(1.05, ROW, 2), cc(2.1, ROW, 2));
+    out.push(cc(-0.3, 2 * ROW + 0.3, 3), cc(2.4, 2 * ROW + 0.3, 3));
+    return out;
+  },
 };
+// Las 7 de siempre, en su orden: los niveles con ayudas, el evento y los especiales solo usan estas.
+const SMALL_BASE = ['miniPyramid', 'miniInv', 'stack', 'arc', 'ring', 'fan', 'twoRows'];
 
 // Junta 2-4 grupos pequeños; el juego los acomoda según la pantalla.
-function clusters(r, d, boss) {
+// fresh: nivel sin ayudas, que también usa las piezas nuevas (ver buildLevel).
+function clusters(r, d, boss, fresh = false) {
   const k = Math.min(4, (d < 0.2 ? 2 : randInt(r, 2, d < 0.5 ? 3 : 4)) + (boss ? 1 : 0));
-  const big = ['arc', 'ring'];
-  const names = Object.keys(SMALL);
+  const big = ['arc', 'ring', 'rosette', 'tiltFan'];
+  const names = fresh ? Object.keys(SMALL) : SMALL_BASE;
   const chosen = [];
   for (let i = 0; i < k; i++) {
     let name = pick(r, names);
@@ -265,7 +398,15 @@ function clusters(r, d, boss) {
     chosen[2] = chosen[0];
     seeds[2] = seeds[0];
   }
-  return chosen.map((name, i) => SMALL[name](mulberry32(seeds[i])));
+  // Nuevos: con 2 o 4 grupos también salen en espejo (como los tableros por piezas de otros juegos).
+  if (fresh && k !== 3 && r() < 0.5)
+    for (let i = 0; i < k / 2; i++) {
+      chosen[k - 1 - i] = chosen[i];
+      seeds[k - 1 - i] = seeds[i];
+    }
+  const out = chosen.map((name, i) => SMALL[name](mulberry32(seeds[i])));
+  out.names = chosen;
+  return out;
 }
 
 // [nombre, dificultad mínima, peso]
@@ -274,11 +415,89 @@ const TEMPLATE_UNLOCK = [
   ['scatter', 0.18, 1], ['towers', 0.22, 1], ['layers', 0.28, 1], ['invPyramid', 0.34, 1],
 ];
 
-function chooseTemplate(r, g, d) {
+// Figuras nuevas (Fase 7): solo en niveles sin ayudas; los demás siguen con TEMPLATE_UNLOCK tal cual
+// (sus mazos ya probados dependen de la forma).
+// Corazón y reloj de arena son de los más duros (bot ~35%, como los picos): salen menos.
+const FRESH_UNLOCK = [['butterfly', 0.08, 1], ['heart', 0.12, 0.6], ['spiral', 0.15, 1], ['star', 0.2, 1], ['hourglass', 0.3, 0.5]];
+// Mínimo de cartas en niveles sin ayudas: los tableros chicos salían demasiado fáciles (bot 75-100%).
+// Desde el nivel 4, 13; desde el 11, 15.
+const freshMin = (g) => (g >= 10 ? 15 : g >= 3 ? 13 : 0);
+
+// Respiros: desde el nivel 11, en cada mundo 1 nivel al azar (fijo por mundo) del 2.º al 9.º, y en 1 de cada 3
+// mundos otro más. Nunca el jefe ni uno que pide ayudas (esos no son "fresh"). Forma fácil, dificultad baja y
+// tablero chico permitido: el bot casual los gana ~80% (como los del 1 al 10).
+const RESPITE_SHAPES = ['butterfly', 'layers', 'towers', 'clusters', 'clusters', 'pyramid'];
+const RESPITE_MIN = 10;
+
+// ---------- Tableros que se van descubriendo (Fase 7, parte 2) ----------
+// Mesa enrollada: el tablero es una tira larga de piezas chicas pegadas una tras otra, de izquierda a derecha, que
+// se ve por una ventana de SCROLL_VIEW de largo o más; lo demás sigue en el rollo (a la derecha, también con el
+// teléfono parado). Cuando se va vaciando el principio de la tira, la mesa avanza justo lo que se liberó y las cartas
+// salen del rollo de una en una (cortadas en el rollo mientras salen).
+// Fuera del rollo valen las tapas de siempre. Una carta que no tiene otra encima se abre en cuanto asoma media
+// carta (SCROLL_SHOW): ya se ve su número.
+// Para el motor es tapar: cada carta está tapada por todas las que empiezan antes de su orilla izquierda
+// + SCROLL_SHOW − ventana.
+// El nivel se arma y se prueba con SCROLL_VIEW; si en la pantalla cabe más tira, el juego la alarga (scrollCover):
+// con más ventana solo se quitan tapas, así que el nivel sigue teniendo solución.
+// Solo niveles sin ayudas, desde el nivel 31, ~1 de cada 12 (no respiros ni secretos; sí jefes).
+export const SCROLL_FROM = { mesa: 30 };
+export const SCROLL_VIEW = 8.2, SCROLL_GAP = 0.45, SCROLL_SHOW = 0.5;
+const SCROLL_SPARE = 0.2; // sobrantes extra por carta del tablero
+const SCROLL_PIECES = ['miniPyramid', 'miniInv', 'twoRows', 'twoRows', 'sandwich', 'crown', 'steps', 'stack', 'fan', 'tiltFan', 'arc', 'cross', 'rosette'];
+export function scrollKind(g) {
+  if (g < SCROLL_FROM.mesa || g >= TOTAL_LEVELS || hash(g * 31 + 7) % 12) return null;
+  return 'mesa';
+}
+// Lo bonito de la mesa es lo larga: el doble de cartas que un tablero normal.
+function scrollTramos(r, d) {
+  const want = 40 + Math.round(d * 20);
+  const out = [], names = [];
+  for (let n = 0; n < want; ) {
+    const name = pick(r, SCROLL_PIECES);
+    const cards = SMALL[name](mulberry32(randInt(r, 0, 1e9)));
+    out.push(cards), names.push(name);
+    n += cards.length;
+  }
+  out.names = names;
+  return out;
+}
+// Dónde empieza cada tramo en la tira (de izquierda a derecha).
+export function scrollStrip(groups) {
+  const at = [];
+  const end = groups.reduce((s, g, k) => ((at[k] = s), s + g.w + SCROLL_GAP), 0) - SCROLL_GAP;
+  return { at, end };
+}
+// Tapas del rollo con una ventana de view: a cada carta la tapan las que empiezan antes de su orilla izquierda
+// + SCROLL_SHOW − view (mientras no se vayan, la carta no asoma lo bastante del rollo).
+function rollCover(cards, groups, view) {
+  const { at } = scrollStrip(groups), span = cards.map((p) => scrollSpan(p, at));
+  return cards.map((p, i) => cards.reduce((acc, q, j) => (span[j][0] < span[i][0] + SCROLL_SHOW - view && acc.push(j), acc), []));
+}
+// Tapas de cada carta de una mesa enrollada con una ventana más larga (view ≥ SCROLL_VIEW).
+export function scrollCover(L, view) {
+  const roll = rollCover(L.cards, L.groups, Math.max(SCROLL_VIEW, view));
+  return L.cards.map((c, i) => [...c.under, ...roll[i]]);
+}
+// Orillas izquierda y derecha de una carta en la tira.
+export function scrollSpan(c, at) {
+  const xs = corners(c).map((p) => p[0]);
+  return [at[c.group] + Math.min(...xs), at[c.group] + Math.max(...xs)];
+}
+
+export function isRespite(g) {
+  const w = Math.floor(g / LEVELS_PER_WORLD), i = g % LEVELS_PER_WORLD;
+  if (g < LEVELS_PER_WORLD || i === LEVELS_PER_WORLD - 1) return false;
+  const h = hash(w * 7919 + 17);
+  const a = 1 + (h % 8), b = 1 + ((h >>> 8) % 8);
+  return i === a || (h >>> 16) % 3 === 0 && i === b;
+}
+
+function chooseTemplate(r, g, d, fresh = false) {
   if (g < 3) return ['pyramid', 'peaks', 'clusters'][g];
   // Jefes: las formas que más cuesta limpiar (medido con tests/difficulty.mjs).
-  if (g % LEVELS_PER_WORLD === LEVELS_PER_WORLD - 1 && d > 0.15) return pick(r, ['peaks', 'peaks', 'diamond', 'pyramid', 'wall', 'scatter']);
-  const ok = TEMPLATE_UNLOCK.filter(([, min]) => min <= d);
+  if (g % LEVELS_PER_WORLD === LEVELS_PER_WORLD - 1 && d > 0.15) return pick(r, ['peaks', 'peaks', 'diamond', 'pyramid', 'wall', 'scatter', ...(fresh ? ['star'] : [])]);
+  const ok = (fresh ? [...TEMPLATE_UNLOCK, ...FRESH_UNLOCK] : TEMPLATE_UNLOCK).filter(([, min]) => min <= d);
   let t = r() * ok.reduce((s, [, , w]) => s + w, 0);
   for (const [name, , w] of ok) if ((t -= w) < 0) return name;
   return ok[0][0];
@@ -346,7 +565,8 @@ export function generateLevel(g, ev = null) {
   if (ev) return buildLevel(g, ev);
   if (g >= SPECIAL_ID) return specialLevel(g - SPECIAL_ID);
   const h = hardHelp(g), d = h && hardData(HARD_DATA[g]);
-  return h ? hardened(buildLevel(g, null, d?.t), d, h) : buildLevel(g);
+  // Sin ayudas: si salía muy duro (bot < 15% antes del 2500), otro tablero ya probado (soft-data.js).
+  return h ? hardened(buildLevel(g, null, d?.t), d, h) : buildLevel(g, null, SOFT_DATA[g] || 0);
 }
 
 // Tablero sin endurecer. t: otro tablero para el mismo nivel (tools/hard-levels.mjs prueba varios hasta que uno se deja).
@@ -356,12 +576,23 @@ export function buildLevel(g, ev = null, t = 0) {
   const world = Math.floor(base / LEVELS_PER_WORLD);
   const index = base % LEVELS_PER_WORLD;
   const r = mulberry32(hash(ev ? ev.seed : t ? g + t * 104729 : g));
-  const d = ev ? ev.d : secret ? Math.min(1, difficulty(base) + 0.05) : difficulty(base);
+  // Nivel sin ayudas: puede salir con las formas y piezas nuevas. Los que piden ayudas, el evento y los
+  // especiales no las usan, porque sus mazos ya probados (path-data, event-data, special-data) dependen de la forma.
+  const fresh = !ev && !hardHelp(g);
+  // Respiro: en cada mundo 1 nivel (a veces 2) sale fácil, para que no todos sean cuesta arriba (ver isRespite).
+  const respite = fresh && !secret && isRespite(base);
+  const scroll = fresh && !secret && !respite ? scrollKind(base) : null;
+  const d0 = ev ? ev.d : secret ? Math.min(1, difficulty(base) + 0.05) : difficulty(base);
+  // Mesa enrollada: la tira es larga y solo se ve un pedazo; el mazo va más amable (y con más sobrantes, abajo).
+  const d = respite ? Math.min(d0, 0.06 + d0 * 0.15) : scroll ? d0 * 0.3 : d0;
   // Evento: en cada planeta salen más seguido las formas que más cuestan (medido con el bot casual).
   // Evento: en cada planeta salen más seguido las formas que más cuestan (medido con el bot casual).
-  const template = ev?.template || (ev && (index === LEVELS_PER_WORLD - 1 || r() < 0.15 + ev.tight * 0.17) ? pick(r, ['peaks', 'peaks', 'scatter', 'invPyramid']) : chooseTemplate(r, ev ? Math.max(3, base) : base, d));
+  const template = ev?.template || (ev && (index === LEVELS_PER_WORLD - 1 || r() < 0.15 + ev.tight * 0.17) ? pick(r, ['peaks', 'peaks', 'scatter', 'invPyramid']) : scroll || (respite ? pick(r, RESPITE_SHAPES) : chooseTemplate(r, ev ? Math.max(3, base) : base, d, fresh)));
 
-  const raw = template === 'clusters' ? clusters(r, d, index === LEVELS_PER_WORLD - 1) : [TEMPLATES[template](r, d)];
+  const shape = (dd) => (template === 'clusters' ? clusters(r, dd, index === LEVELS_PER_WORLD - 1, fresh) : [TEMPLATES[template](r, dd)]);
+  let raw = scroll ? scrollTramos(r, d) : shape(d);
+  // Sin ayudas: si salió muy chico, se vuelve a armar un poco más grande.
+  for (let k = 1; fresh && !scroll && k <= 12 && raw.reduce((s, gr) => s + gr.length, 0) < (respite ? RESPITE_MIN : freshMin(base)); k++) raw = shape(Math.min(1, d + k * 0.15));
   const groups = raw.map(normalizeGroup);
   const pos = groups.flatMap((gr, gi) => gr.cards.map((c) => ({ ...c, group: gi })));
   const n = pos.length;
@@ -370,6 +601,10 @@ export function buildLevel(g, ev = null, t = 0) {
   const coveredBy = pos.map((p) =>
     pos.reduce((acc, q, j) => (q.group === p.group && q.z > p.z && overlaps(p, q) ? (acc.push(j), acc) : acc), []),
   );
+  // Mesa enrollada: una carta sale completa del rollo cuando la tira ya empieza en su orilla derecha − SCROLL_VIEW
+  // o más adelante; o sea, cuando ya se fueron todas las cartas que empiezan antes de eso.
+  const under = scroll && coveredBy.map((a) => a.slice());
+  if (scroll) rollCover(pos, groups, SCROLL_VIEW).forEach((a, i) => coveredBy[i].push(...a));
 
   const removed = new Array(n).fill(false);
   const order = [];
@@ -383,7 +618,10 @@ export function buildLevel(g, ev = null, t = 0) {
 
   const boss = index === LEVELS_PER_WORLD - 1;
   // Mecánicas del nivel: cada una aparece a partir de su mundo y luego se combinan (máximo 2 tipos).
-  const mech = new Set(chooseMechanics(r, world, index, boss, n, ev));
+  // Respiro: una sola mecánica como mucho.
+  const mech = new Set(chooseMechanics(r, world, index, boss, n, ev).slice(0, respite ? 1 : 2));
+  // Mesa enrollada sin bombas: su cuenta correría con la carta todavía dentro del rollo.
+  if (scroll) mech.delete('bomb');
 
   // Carta regalo: una carta especial (sin número) que se activa sola al quedar destapada del todo
   // y manda 2-5 cartas al final del mazo. Va tapada y en el primer 40% del orden de retirada.
@@ -397,7 +635,12 @@ export function buildLevel(g, ev = null, t = 0) {
   if (mech.has('bomb')) {
     const mid = order.slice(Math.floor(n * 0.15), Math.floor(n * 0.75)).filter((i) => coveredBy[i].length && i !== packId);
     shuffle(r, mid);
-    bombIds.push(...mid.slice(0, randInt(r, 1, n >= 20 ? 3 : 2)));
+    const want = randInt(r, 1, n >= 20 ? 3 : 2);
+    // Sin ayudas: ninguna bomba tapa ni está tapada por otra especial (el motor solo activa una por jugada y
+    // la de abajo se quedaba atorada). Los demás niveles siguen igual: sus mazos probados dependen de esto.
+    const touch = (i, j) => coveredBy[i].includes(j) || coveredBy[j].includes(i);
+    if (fresh) for (const i of mid) bombIds.length < want && ![packId, ...bombIds].some((j) => j != null && touch(i, j)) && bombIds.push(i);
+    else bombIds.push(...mid.slice(0, want));
   }
   const play = order.filter((i) => i !== packId && !bombIds.includes(i)); // cartas con número, en orden de solución
   const np = play.length;
@@ -433,11 +676,13 @@ export function buildLevel(g, ev = null, t = 0) {
   // Evento: cada planeta deja menos cartas de sobra en el mazo (ev.tight = 0 en el primero … 4 en el último).
   // Desde el tercero puede no sobrar ninguna: sigue siendo ganable, pero sin errores (o con ayudas).
   if (ev) spares = Math.max(ev.tight >= 2 ? 0 : 1, spares - ev.tight);
+  // Mesa enrollada: la tira es el doble de larga; más sobrantes para que no cueste el doble.
+  if (scroll) spares += Math.round(n * SCROLL_SPARE);
   // En niveles fáciles las sobrantes suelen ser vecinas de alguna carta del tablero.
   const helpfulCard = (p) => card(r() < p ? (pick(r, known) + pick(r, [1, 12])) % 13 : randInt(r, 0, 12));
   for (let i = 0; i < spares; i++) stock.push(helpfulCard((1 - d) * 0.85));
 
-  const cards = pos.map((p, i) => ({ id: i, ...p, rank: ranks[i], suit: randInt(r, 0, 3), coveredBy: coveredBy[i] }));
+  const cards = pos.map((p, i) => ({ id: i, ...p, rank: ranks[i], suit: randInt(r, 0, 3), coveredBy: coveredBy[i], ...(under && { under: under[i] }) }));
   for (const id of bombIds) delete cards[id].rank;
   const SPECIAL = ['lock', 'key', 'pack', 'ice', 'alt', 'arrow', 'curtain', 'curtainKey', 'bomb', 'live'];
   const plain = (id) => SPECIAL.every((f) => cards[id][f] == null);
@@ -597,7 +842,8 @@ export function buildLevel(g, ev = null, t = 0) {
   }
 
   const level = {
-    g, world, index, d, template, boss, secret, event: !!ev,
+    g, world, index, d, template, boss, secret, event: !!ev, fresh, ...(respite && { respite }), ...(scroll && { scroll }),
+    ...(raw.names && { pieces: raw.names }),
     groups: groups.map(({ w, h }) => ({ w, h })),
     cards,
     keys,

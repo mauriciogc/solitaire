@@ -703,10 +703,14 @@ function startLevel(g, { resume = false, free = false, anim = 'up' } = {}) {
   const saved = !!run || (!free && !save.stars[g] && !isSecret(g));
   if (!run) {
     save.tries[g] = v + 1;
-    if (saved) save.run = { g, v, state: null };
+    if (saved) save.run = { g, v, state: null, sig: null };
     persist();
   }
   const level = variantLevel(generateLevel(g), v);
+  // Firma del tablero: si el nivel cambió de forma (p. ej. formas nuevas de la Fase 7), la partida guardada ya no
+  // le queda y se empieza de nuevo (sin cobrar boleto: es el mismo intento).
+  const sig = `${level.template}:${level.cards.length}:${level.stock.length}`;
+  if (run && run.sig !== sig) run.state = null;
   // Cuenta para la racha: nivel nuevo del camino o secreto aún no ganado (no repetir, no la galería dev).
   const won = isSecret(g) ? !!save.secret[worldOf(g)] : !!save.stars[g];
   const counts = !free && !won && (isSecret(g) || g <= save.next);
@@ -726,7 +730,7 @@ function startLevel(g, { resume = false, free = false, anim = 'up' } = {}) {
     racha: counts && isOn('racha') ? { n: racha().n, ico: rachaTheme().ico, hot: rachaHot() } : null,
     onSave: saved
       ? (state) => {
-          save.run = { g, v, state };
+          save.run = { g, v, state, sig };
           persist();
         }
       : null,

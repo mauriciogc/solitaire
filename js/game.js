@@ -1,6 +1,6 @@
 import { save, persist } from './storage.js';
 import { openModal, toast, confetti, updateCoins, money, starsHTML, reduced, buzz, sparkle, wait, spendFromWallet, balloons, lootBubbles, rachaWarnHTML } from './ui.js';
-import { worldInfo, packGroups, MECH_NAMES, LEVELS_PER_WORLD } from './levels.js';
+import { worldInfo, packGroups, MECH_NAMES, LEVELS_PER_WORLD, scrollStrip, scrollSpan, scrollCover, SCROLL_VIEW, W } from './levels.js';
 import * as E from './engine.js';
 import { price } from './economy.js';
 import { cardBackURL, icon, star, coin, lockIcon, keyIcon, arrowIcon, curtainIcon, suitSVG, avatarHTML } from './art.js';
@@ -90,7 +90,9 @@ const marks = (c) =>
 //       event: { ico, table } = nivel del evento del mes (table = la mesa de su temática) (sin estrellas; perder gasta su boleto y no se reintenta)
 export class Game {
   constructor(root, level, opts) {
-    this.level = level;
+    // Mesa enrollada: copia propia, porque sus tapas cambian si en la pantalla cabe más tira (scrollView).
+    this.level = level.scroll ? { ...level, cards: level.cards.map((c) => ({ ...c })) } : level;
+    level = this.level;
     this.opts = opts;
     this.info = worldInfo(level.world);
     this.cards = level.cards.map((c) => ({ ...c, removed: false, el: null }));
@@ -154,6 +156,23 @@ export class Game {
 
   // La primera vez que aparece una mecánica se explica (solo en modo jugador; en dev se ve en la galería).
   tips() {
+    if (this.level.scroll === 'mesa' && !save.seen.mesa) {
+      save.seen.mesa = true;
+      persist();
+      this.modalOpen = true;
+      return openModal({
+        title: 'Nuevo: mesa enrollada',
+        color: 'blue',
+        closable: false,
+        body: `<p class="lead">Esta mesa llega <b>enrollada</b>. Cuando limpias las primeras cartas, la mesa avanza y salen más cartas del rollo.</p>`,
+        onClose: () => {
+          this.modalOpen = false;
+          if (!reduced()) this.rollEl?.animate([{ scale: 1 }, { scale: 1.15 }, { scale: 1 }], { duration: 500, iterations: 2 });
+          setTimeout(() => this.tips(), 300);
+        },
+        buttons: [{ label: '¡Entendido!', cls: 'green' }],
+      });
+    }
     const next = (this.level.meta.mechs || []).find((m) => TIPS[m] && !save.seen[m]);
     if (!next) return;
     save.seen[next] = true;
@@ -233,6 +252,17 @@ export class Game {
       </footer>`;
     this.boardEl = el.querySelector('.board');
     this.wrapEl = el.querySelector('.board-wrap');
+    // Mesa enrollada: encima de la mesa del planeta va una alfombra de su color (--rug) que se desenrolla.
+    if (level.scroll === 'mesa') {
+      el.classList.add('scroll-mesa');
+      const tbl = el.querySelector('.table');
+      this.boardEl.insertAdjacentHTML('afterbegin', `<div class="rug" style="${tbl.getAttribute('style')}"></div><div class="strip"></div><div class="roll" style="${tbl.getAttribute('style')}"><i></i></div>`);
+      this.rugEl = this.boardEl.querySelector('.rug');
+      this.rollEl = this.boardEl.querySelector('.roll');
+      // Las cartas de la tira van en su propia capa, cortada en la orilla del rollo (un solo corte fijo: al avanzar
+      // las cartas solo se deslizan y el rollo se las traga o las suelta).
+      this.stripEl = this.boardEl.querySelector('.strip');
+    }
     this.stockEl = el.querySelector('.stock');
     this.wasteEl = el.querySelector('.waste');
     this.streakEl = el.querySelector('.streak');
@@ -267,6 +297,7 @@ export class Game {
     for (const c of this.cards) if (c.bomb && c.el && !reduced()) c.el.style.opacity = 0;
     const live = this.cards.filter((c) => c.el && !c.bomb);
     if (reduced() || !live.length) return Promise.resolve();
+    if (this.level.scroll) return this.unroll(live);
     const cx = (parseFloat(this.boardEl.style.width) - this.u) / 2;
     const cy = (parseFloat(this.boardEl.style.height) - this.u * 1.4) / 2;
     const order = live.slice().sort((a, b) => a.z - b.z || a.y - b.y || a.x - b.x);
@@ -352,12 +383,13 @@ export class Game {
     if (c.curtain != null) d.classList.add('curtain');
     if (c.alt != null) d.classList.add('dbl-card');
     d.style.zIndex = c.z * 100 + c.id;
-    this.boardEl.append(d);
+    (this.stripEl || this.boardEl).append(d);
     c.el = d;
     this.place(c);
   }
 
   place(c) {
+    if (this.level.scroll) return this.placeScroll(c);
     const o = this.offsets[c.group];
     c.el.style.left = `${(o.x + c.x) * this.u}px`;
     c.el.style.top = `${(o.y + c.y) * this.u}px`;
@@ -368,6 +400,7 @@ export class Game {
     const r = this.wrapEl.getBoundingClientRect();
     if (!r.width) return;
     this.wrapSize = `${Math.round(r.width)}x${Math.round(r.height)}`;
+    if (this.level.scroll) return this.layoutScroll(r);
     // La carta doble se ve 10% más grande: se deja un poco de aire para que no se salga del tablero.
     const room = this.cards.some((c) => c.alt != null) ? 0.93 : 1;
     const { u, bw, bh, offsets } = packGroups(this.level.groups, (r.width - 10) * room, (r.height - 10) * room);
@@ -381,14 +414,162 @@ export class Game {
     this.coach?.update();
   }
 
+  // ---------- Mesa enrollada ----------
+  // La tira (scrollStrip en levels.js) corre siempre hacia la izquierda con el rollo a la derecha, también con el
+  // teléfono parado (ahí sale más chica). Se ve una ventana de this.view (lo que cabe; ver layoutScroll); las cartas
+  // salen del rollo de una en una, cortadas en la orilla del rollo aunque estén giradas. Fuera del rollo valen las
+  // tapas de siempre: una carta que asoma pero tiene otra encima sigue boca abajo.
+  scrollO() {
+    const { S } = this.scrollBase();
+    let o = Infinity;
+    for (const c of this.cards) if (!c.removed) o = Math.min(o, scrollSpan(c, S.at)[0]);
+    return o === Infinity ? (this.scrollAt ?? 0) : o;
+  }
+
+  // Medidas fijas de la tira, en unidades de carta.
+  scrollBase() {
+    if (this.sBase) return this.sBase;
+    const gs = this.level.groups;
+    return (this.sBase = { S: scrollStrip(gs), pad: 0.25, rollT: 0.8, cross: Math.max(...gs.map((g) => g.h)) + 0.5 });
+  }
+
+  // Lo que depende de la ventana (this.view: cuánta tira se ve) y de cuánto avanzó (o).
+  scrollGeo(o = this.scrollAt, view = this.view) {
+    const B = this.scrollBase();
+    const rollAt = B.pad + view; // donde empieza el rollo; las cartas se cortan a la mitad del rollo
+    const cutAt = rollAt + B.rollT / 2;
+    // Cuánto de la carta sigue dentro del rollo (0 = afuera completa, 1 = escondida).
+    const cut = (c) => {
+      const [l, r] = scrollSpan(c, B.S.at);
+      return Math.max(0, Math.min(1, (B.pad + r - o - cutAt) / (r - l)));
+    };
+    return { ...B, o, rollAt, cutAt, along: rollAt + B.rollT + 0.1, cut, left: Math.max(0, B.S.end - o - view) };
+  }
+
+  // El tamaño de carta es el que deja la tira con la ventana mínima (SCROLL_VIEW); si con ese tamaño cabe más tira
+  // (teléfono acostado, pantalla grande), se ven más cartas. La ventana nunca se achica en la partida (al girar,
+  // mejor se achican las cartas): así nada que ya se podía jugar se vuelve a enrollar. Con más ventana cambian las
+  // tapas (scrollCover) y se repinta.
+  layoutScroll(r) {
+    this.scrollAt ??= this.scrollO();
+    const B = this.scrollBase(), along = r.width - 10, extra = B.pad + B.rollT + 0.1;
+    let u = Math.min((r.height - 10) / B.cross, along / (extra + Math.max(SCROLL_VIEW, this.view || 0)), 120);
+    const view = Math.max(SCROLL_VIEW, this.view || 0, along / u - extra);
+    if (view > (this.view || 0) + 1e-6) {
+      const grew = this.view != null;
+      this.view = view;
+      const cov = scrollCover(this.level, view);
+      this.level.cards.forEach((c, i) => (c.coveredBy = this.cards[i].coveredBy = cov[i]));
+      if (grew) queueMicrotask(() => this.refresh());
+    }
+    this.u = u = Math.max(18, u);
+    const G = this.scrollGeo();
+    this.boardEl.style.width = `${G.along * u}px`;
+    this.boardEl.style.height = `${G.cross * u}px`;
+    this.boardEl.style.setProperty('--cw', `${u}px`);
+    this.cards.forEach((c) => c.el && this.place(c));
+    this.paintRoll();
+    this.renderStock();
+    this.coach?.update();
+  }
+
+  placeScroll(c) {
+    const B = this.scrollBase();
+    c.el.style.left = `${(B.pad + B.S.at[c.group] + c.x - this.scrollAt) * this.u}px`;
+    c.el.style.top = `${((B.cross - this.level.groups[c.group].h) / 2 + c.y) * this.u}px`;
+    c.el.style.rotate = `${c.rot}deg`;
+  }
+
+  // La alfombra empieza un poco antes de la primera carta y llega hasta el rollo: al avanzar, su inicio se corre
+  // con las cartas y se sale de la pantalla (que la recorta). El rollo se adelgaza mientras menos le queda adentro.
+  rugBox(o = this.scrollAt) {
+    const G = this.scrollGeo(o), u = this.u, left = (G.pad - 0.2 - o) * u;
+    return { left: `${left}px`, width: `${G.cutAt * u - left}px` };
+  }
+
+  paintRoll() {
+    if (!this.rollEl) return;
+    const G = this.scrollGeo(), u = this.u;
+    const t = G.rollT * u * (G.left > 0 ? 0.55 + 0.45 * Math.min(1, G.left / 8) : 0.35);
+    const mid = G.cutAt * u;
+    Object.assign(this.rugEl.style, { ...this.rugBox(), top: 0, height: '100%' });
+    this.stripEl.style.clipPath = `inset(-100vh ${(G.along - G.cutAt) * u}px -100vh -100vw)`;
+    Object.assign(this.rollEl.style, { left: `${mid - t / 2}px`, top: `${-u * 0.12}px`, width: `${t}px`, height: `calc(100% + ${u * 0.24}px)` });
+    this.rollEl.classList.toggle('empty', G.left <= 0);
+  }
+
+  // Al empezar: el rollo sale gordo desde el inicio de la alfombra y rueda hasta su lugar desenrollándola; luego se
+  // ponen las cartas encima, de izquierda a derecha, ya como van (sin voltearse).
+  async unroll(live) {
+    const u = this.u, rug = this.rugEl, roll = this.rollEl;
+    const from = parseFloat(rug.style.left) - parseFloat(roll.style.left); // del inicio de la alfombra a su lugar
+    const D = 1000, ease = 'cubic-bezier(.3,.1,.25,1)';
+    const G = this.scrollGeo(), shown = live.filter((c) => G.cut(c) < 1);
+    for (const c of live) c.el.style.opacity = 0;
+    rug.animate([{ clipPath: 'inset(-40px 100% -60px -40px)' }, { clipPath: 'inset(-40px 0px -60px -40px)' }], { duration: D, easing: ease });
+    roll.animate([{ translate: `${from}px 0`, scale: '1.5 1' }, { translate: '0 0', scale: 1 }], { duration: D, easing: ease });
+    roll.querySelector('i').animate([{ backgroundPosition: `${-from}px 0` }, { backgroundPosition: '0 0' }], { duration: D, easing: ease });
+    buzz(12);
+    await wait(D - 150);
+    for (const c of live) {
+      c.el.style.opacity = '';
+      c.el.classList.add('noflip');
+      c.el.classList.toggle('up', this.shownUp(c));
+    }
+    shown.sort((a, b) => parseFloat(a.el.style.left) - parseFloat(b.el.style.left) || a.z - b.z);
+    const step = Math.min(35, 1100 / shown.length);
+    const anims = shown.map((c, i) =>
+      c.el.animate([{ translate: `0 ${-u * 0.6}px`, scale: 1.25, opacity: 0 }, { translate: '0 0', scale: 1, opacity: 1 }], { duration: 300, delay: i * step, easing: 'cubic-bezier(.3,1.4,.5,1)', fill: 'backwards' }),
+    );
+    await Promise.all(anims.map((a) => a.finished.catch(() => {})));
+    for (const c of live) c.el.classList.remove('noflip');
+  }
+
+  // Avanza (o regresa, al deshacer) la mesa: todo se corre hacia el inicio y las cartas salen del rollo.
+  scrollUpdate() {
+    const o = this.scrollO();
+    if (this.scrollAt == null || Math.abs(o - this.scrollAt) < 1e-6) return;
+    const before = this.scrollAt;
+    const B = this.scrollGeo(before), from = new Map(this.cards.filter((c) => c.el).map((c) => [c, [parseFloat(c.el.style.left), B.cut(c)]]));
+    this.scrollAt = o;
+    const G = this.scrollGeo();
+    const D = reduced() ? 0 : Math.min(900, 380 + Math.abs(o - before) * 160);
+    const ease = 'cubic-bezier(.45,0,.2,1)';
+    for (const c of this.cards) {
+      if (!c.el) continue;
+      const [x0, f0] = from.get(c);
+      this.place(c);
+      if (D && (f0 < 1 || G.cut(c) < 1)) c.el.animate([{ translate: `${x0 - parseFloat(c.el.style.left)}px 0` }, { translate: '0 0' }], { duration: D, easing: ease });
+    }
+    // La alfombra entera (con su orilla) se corre con las cartas y el rollo gira.
+    const d = (o - before) * this.u;
+    if (D && d) {
+      const tr = `${-d}px 0`;
+      const rug0 = this.rugBox(before);
+      Object.assign(this.rugEl.style, this.rugBox());
+      this.rugEl.animate([rug0, this.rugBox()], { duration: D, easing: ease });
+      this.rollEl.querySelector('i').animate([{ backgroundPosition: '0 0' }, { backgroundPosition: tr }], { duration: D, easing: ease });
+      this.rollEl.animate([{ scale: 1 }, { scale: '1.1 1' }, { scale: 1 }], { duration: D, easing: 'ease-in-out' });
+    }
+    setTimeout(() => this.paintRoll(), D * 0.6);
+    if (d > 0) buzz(12);
+  }
+
+  // ¿Se ve boca arriba? En la mesa enrollada el rollo no voltea cartas: salen como van (solo cuentan las tapas de
+  // otras cartas); una que asoma poco ya se ve, pero hasta que asoma media carta no se puede jugar.
+  shownUp(c) {
+    return E.faceUp(this.level, this.level.scroll ? { ...c, coveredBy: c.under } : c, this.st);
+  }
+
   // Pinta lo que depende del estado: boca arriba, candados, cortinas, hielo, bomba y carta viva.
   refresh() {
     const { level, st } = this;
+    if (level.scroll) this.scrollUpdate();
     this.updateStuck(true);
     for (const c of this.cards) {
       if (c.removed || !c.el) continue;
       const el = c.el;
-      if (!this.dealing) el.classList.toggle('up', E.faceUp(level, c, st));
+      if (!this.dealing) el.classList.toggle('up', this.shownUp(c));
       if (c.lock != null) el.classList.toggle('unlocked', E.lockOpen(level, c, st));
       if (c.curtain != null) el.classList.toggle('curtain-open', E.curtainOpen(level, c, st));
       if (c.ice) {
@@ -583,6 +764,7 @@ export class Game {
     c.el = null;
     el.classList.remove('shake');
     el.getAnimations().forEach((a) => a.cancel());
+    if (this.stripEl) this.boardEl.append(el); // sale de la tira: el corte del rollo no la tapa al volar
     const [ax, ay] = center(el.getBoundingClientRect());
     const b = this.wasteEl.getBoundingClientRect();
     const [bx, by] = center(b);
@@ -1251,9 +1433,7 @@ export class Game {
       ? '<p class="note">Ya cobraste las 3 estrellas de este nivel.</p>'
       : prev && stars <= prev
         ? `<p class="note">Tu récord aquí es de ${prev} estrella${prev > 1 ? 's' : ''}: solo se pagan las nuevas.</p>`
-      : this.level.secret && stars < 3 && prev < 3
-        ? `<p class="note">Con 3 estrellas el nivel secreto da además ${icon('wild')} comodín y ${icon('undo')} deshacer.</p>`
-        : stars > prev && prev ? '<p class="note">¡Nuevo récord de estrellas!</p>' : '';
+      : stars > prev && prev ? '<p class="note">¡Nuevo récord de estrellas!</p>' : '';
     setTimeout(() => {
       confetti();
       const m = openModal({
