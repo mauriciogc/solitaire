@@ -71,6 +71,12 @@ export function faceHTML(c, rank = c.rank) {
   const kind = c.live ? ' live' : c.arrow ? ' arrowed' : '';
   return `<div class="face front${red}${kind}">${corner}<span class="cs">${s}</span><span class="big${r === '10' ? ' ten' : ''}${SIXNINE(r)}">${r}</span>${arrow}</div>`;
 }
+// Giro equivalente entre -90° y 90° (una carta girada 180° se ve igual, pero derecha).
+const upright = (r) => {
+  let x = ((r % 360) + 360) % 360;
+  if (x > 180) x -= 360;
+  return x > 90 ? x - 180 : x < -90 ? x + 180 : x;
+};
 // El 6 y el 9 llevan rayita abajo: con las cartas giradas se confundían.
 const SIXNINE = (r) => (r === '6' || r === '9' ? ' uline' : '');
 const UL = (r) => (SIXNINE(r) ? ' class="uline"' : '');
@@ -98,7 +104,8 @@ export class Game {
     level = this.level;
     this.opts = opts;
     this.info = worldInfo(level.world);
-    this.cards = level.cards.map((c) => ({ ...c, removed: false, el: null }));
+    // Ninguna carta de cabeza: girada media vuelta tiene la misma silueta (tapa lo mismo) y el número queda derecho.
+    this.cards = level.cards.map((c) => ({ ...c, rot: upright(c.rot || 0), removed: false, el: null }));
     this.st = E.initState(level); // estado de reglas (js/engine.js): la única fuente de verdad
     this.history = []; // { t, before: estado anterior, ev: lo que pasó (para animar el deshacer), best, bonus }
     this.best = 0;
