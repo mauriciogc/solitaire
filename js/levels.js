@@ -448,7 +448,10 @@ const RESPITE_MIN = 10;
 // Gravedad: 3 a 5 columnas paradas sobre la mesa, cada una en su riel. Solo se juega la de abajo; la de encima va
 // boca arriba para planear y las demás esperan apiladas arriba. Al quitar la de abajo, la columna cae un lugar.
 // Para el motor: cada carta está tapada por la de abajo de su columna. Desde el nivel 70.
-export const SCROLL_FROM = { mesa: 39, gravedad: 69, nebulosa: 99 };
+// Mesa plegable: llega doblada en 3. Solo se ve y se juega el panel de en medio; al vaciarlo, los dos de los lados se
+// despliegan sobre sus bisagras (a los lados con el teléfono acostado, arriba y abajo parado). Para el motor es como
+// la nebulosa: las cartas de los lados tienen neb = 1 (level.neb = [en medio, lado, lado]). Desde el nivel 140.
+export const SCROLL_FROM = { mesa: 39, gravedad: 69, nebulosa: 99, plegable: 139 };
 export const GRAV_SHOWN = 2; // cartas boca arriba en cada columna
 export const NEB_SLOTS = 3;
 export const SCROLL_VIEW = 8.2, SCROLL_GAP = 0.45, SCROLL_SHOW = 0.5;
@@ -460,12 +463,15 @@ export function scrollKind(g) {
   for (const k in SCROLL_FROM) if (g === SCROLL_FROM[k]) return k;
   if (g >= SCROLL_FROM.mesa && !(hash(g * 31 + 7) % 12)) return 'mesa';
   if (g >= SCROLL_FROM.nebulosa && !((hash(g * 7919 + 1013) >>> 9) % 12)) return 'nebulosa';
-  return g >= SCROLL_FROM.gravedad && !((hash(g * 104729 + 577) >>> 11) % 12) ? 'gravedad' : null;
+  if (g >= SCROLL_FROM.gravedad && !((hash(g * 104729 + 577) >>> 11) % 12)) return 'gravedad';
+  // La plegable va al final: los niveles que ya eran de otra mesa siguen igual.
+  return g >= SCROLL_FROM.plegable && !((hash(g * 3571 + 211) >>> 7) % 12) ? 'plegable' : null;
 }
 // Lo bonito de la mesa es lo larga: el doble de cartas que un tablero normal.
 // La nebulosa, algo menos: solo se ven 3 tramos a la vez.
 function scrollTramos(r, d, kind) {
   if (kind === 'gravedad') return gravCols(r, d);
+  if (kind === 'plegable') return foldPanels(r, d);
   const want = kind === 'nebulosa' ? 32 + Math.round(d * 16) : 40 + Math.round(d * 20);
   const out = [], names = [];
   for (let n = 0; n < want; ) {
@@ -474,6 +480,31 @@ function scrollTramos(r, d, kind) {
     out.push(cards), names.push(name);
     n += cards.length;
   }
+  out.names = names;
+  return out;
+}
+// Mesa plegable: el panel de en medio y los dos lados (la misma figura en espejo). Cada panel es una pieza chica o
+// dos juntas, hasta tener las cartas que pide.
+function foldPanels(r, d) {
+  const names = [];
+  const panel = (want) => {
+    const cards = [];
+    let x = 0;
+    for (let k = 0; k < 3 && cards.length < want; k++) {
+      const name = pick(r, Object.keys(SMALL));
+      const g = normalizeGroup(SMALL[name](mulberry32(randInt(r, 0, 1e9))));
+      cards.push(...g.cards.map((c) => ({ ...c, x: c.x + x, h: g.h })));
+      names.push(name);
+      x += g.w + 0.4;
+    }
+    // Las piezas centradas a lo alto.
+    const H = Math.max(...cards.map((c) => c.h));
+    return cards.map(({ h, ...c }) => ({ ...c, y: c.y + (H - h) / 2 }));
+  };
+  const mid = panel(11 + Math.round(d * 6));
+  const side = panel(8 + Math.round(d * 5));
+  const w = Math.max(...side.map((c) => c.x));
+  const out = [mid, side, side.map((c) => ({ ...c, x: w - c.x, rot: -(c.rot || 0) }))];
   out.names = names;
   return out;
 }
@@ -609,7 +640,7 @@ export function buildLevel(g, ev = null, t = 0) {
   // La nebulosa, algo menos (medido con el bot casual).
   // El nivel donde se estrena cada mesa va amable aunque sea jefe.
   const debut = scroll && base === SCROLL_FROM[scroll];
-  const d = respite ? Math.min(d0, 0.06 + d0 * 0.15) : debut ? d0 * (scroll === 'gravedad' ? 0.35 : 0.3) : scroll === 'mesa' ? d0 * 0.3 : scroll === 'gravedad' ? d0 * (base < 200 ? 0.35 : 0.55) : scroll ? d0 * 0.65 : d0;
+  const d = respite ? Math.min(d0, 0.06 + d0 * 0.15) : debut ? d0 * (scroll === 'gravedad' ? 0.35 : scroll === 'plegable' ? 0.15 : 0.3) : scroll === 'mesa' ? d0 * 0.3 : scroll === 'gravedad' ? d0 * (base < 200 ? 0.35 : 0.55) : scroll ? d0 * 0.65 : d0;
   // Evento: en cada planeta salen más seguido las formas que más cuestan (medido con el bot casual).
   // Evento: en cada planeta salen más seguido las formas que más cuestan (medido con el bot casual).
   const template = ev?.template || (ev && (index === LEVELS_PER_WORLD - 1 || r() < 0.15 + ev.tight * 0.17) ? pick(r, ['peaks', 'peaks', 'scatter', 'invPyramid']) : scroll || (respite ? pick(r, RESPITE_SHAPES) : chooseTemplate(r, ev ? Math.max(3, base) : base, d, fresh)));
@@ -628,12 +659,13 @@ export function buildLevel(g, ev = null, t = 0) {
   );
   // Mesa enrollada: una carta sale completa del rollo cuando la tira ya empieza en su orilla derecha − SCROLL_VIEW
   // o más adelante; o sea, cuando ya se fueron todas las cartas que empiezan antes de eso.
-  const mesa = scroll === 'mesa', nebula = scroll === 'nebulosa', grav = scroll === 'gravedad';
+  const mesa = scroll === 'mesa', nebula = scroll === 'nebulosa', grav = scroll === 'gravedad', fold = scroll === 'plegable';
   const under = mesa && coveredBy.map((a) => a.slice());
   if (mesa) rollCover(pos, groups, SCROLL_VIEW).forEach((a, i) => coveredBy[i].push(...a));
   // Nebulosa: tramos que hay que vaciar antes de que salga cada carta.
-  const neb = nebula ? pos.map((p) => Math.max(0, p.group - NEB_SLOTS + 1)) : null;
-  const tramos = (nebula || grav) && groups.map((_, gi) => pos.reduce((a, p, i) => (p.group === gi && a.push(i), a), []));
+  // Plegable: los lados salen al vaciar el panel de en medio.
+  const neb = nebula ? pos.map((p) => Math.max(0, p.group - NEB_SLOTS + 1)) : fold ? pos.map((p) => (p.group ? 1 : 0)) : null;
+  const tramos = (nebula || grav || fold) && groups.map((_, gi) => pos.reduce((a, p, i) => (p.group === gi && a.push(i), a), []));
   // Gravedad: a cada carta solo la tapa la de abajo de su columna (la primera de cada columna es la de abajo).
   if (grav) for (const t of tramos) t.forEach((id, k) => (coveredBy[id] = k ? [t[k - 1]] : []));
 
@@ -641,7 +673,7 @@ export function buildLevel(g, ev = null, t = 0) {
   const order = [];
   while (order.length < n) {
     const free = [];
-    const out = nebula ? tramos.reduce((k, t) => k + t.every((j) => removed[j]), 0) : 0;
+    const out = neb ? tramos.reduce((k, t) => k + t.every((j) => removed[j]), 0) : 0;
     for (let i = 0; i < n; i++) if (!removed[i] && coveredBy[i].every((j) => removed[j]) && (!neb || neb[i] <= out)) free.push(i);
     const i = pick(r, free);
     removed[i] = true;
@@ -654,6 +686,8 @@ export function buildLevel(g, ev = null, t = 0) {
   const mech = new Set(chooseMechanics(r, world, index, boss, n, ev).slice(0, respite ? 1 : 2));
   // Mesa enrollada y nebulosa sin bombas: su cuenta correría con la carta todavía escondida.
   if (scroll) mech.delete('bomb');
+  // Estreno de la plegable sin otras mecánicas: al principio solo se juega el panel de en medio y ya cuesta más.
+  if (debut && scroll === 'plegable') mech.clear();
   // Cometa: es un regalo, así que va aparte de las demás (no cuenta en el límite de 2 y sale con cualquiera).
   // Por ahora solo sin ayudas y sin mesas especiales. Se estrena en el primer nivel de su mundo y después sale de
   // vez en cuando (es un regalo: no muy seguido). Usa su propio sorteo: un nivel que no lo trae queda igual que antes.
@@ -739,6 +773,8 @@ export function buildLevel(g, ev = null, t = 0) {
   if (ev) spares = Math.max(ev.tight >= 2 ? 0 : 1, spares - ev.tight);
   // Mesa enrollada: la tira es el doble de larga; más sobrantes para que no cueste el doble (nebulosa: la mitad).
   if (scroll) spares += Math.round(n * (mesa ? SCROLL_SPARE : SCROLL_SPARE / 2));
+  // Plegable: en su estreno, unas cartas de más (al principio solo hay jugadas en el panel de en medio).
+  if (debut && fold) spares += 3;
   // En niveles fáciles las sobrantes suelen ser vecinas de alguna carta del tablero.
   const helpfulCard = (p) => card(r() < p ? (pick(r, known) + pick(r, [1, 12])) % 13 : randInt(r, 0, 12));
   for (let i = 0; i < spares; i++) stock.push(helpfulCard((1 - d) * 0.85));
@@ -941,7 +977,7 @@ export function buildLevel(g, ev = null, t = 0) {
   const level = {
     g, world, index, d, template, boss, secret, event: !!ev, fresh, ...(respite && { respite }), ...(scroll && { scroll }),
     ...(raw.names && { pieces: raw.names }),
-    ...(nebula && { neb: tramos }),
+    ...((nebula || fold) && { neb: tramos }),
     ...(grav && { cols: tramos }),
     groups: groups.map(({ w, h }) => ({ w, h })),
     cards,

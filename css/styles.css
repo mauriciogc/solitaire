@@ -339,6 +339,19 @@ button.rg:active > i { scale: .92; }
 .roll::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, #0008, #fff4 35%, #fff1 55%, #0009); }
 /* Al final del tapete ya no queda nada enrollado: el rollo se aplana y desaparece (deshacer lo regresa). */
 .roll.empty { opacity: 0; scale: .2 1; }
+/* Mesa plegable (Fase 7): tres tapetes del color de la mesa con bisagras doradas. Los lados llevan sus cartas adentro
+   y giran sobre la bisagra; doblado, el de en medio se ve grueso (las capas de abajo asoman por las orillas). */
+.fold-panel { --rc: color-mix(in srgb, var(--rug) 80%, #120c2e); --rl: color-mix(in srgb, var(--rug) 45%, #fff); position: absolute; border: 3px solid var(--ink); border-radius: 14px;
+  background: repeating-linear-gradient(90deg, #ffffff12 0 2px, transparent 2px 10px) 0 0 / 10px 100%, var(--rc);
+  box-shadow: inset 0 0 0 5px var(--rc), inset 0 0 0 8px var(--rl), inset 0 0 22px 8px #0004, 0 6px 0 #0b062a66, 0 14px 26px #000a; }
+.fold-panel::before { content: ''; position: absolute; inset: 11px; border: 2px dashed var(--rl); border-radius: 8px; opacity: .5; pointer-events: none; }
+.fold-panel.mid { pointer-events: none; transition: box-shadow .4s var(--ease-out); }
+.fold-panel.mid.folded.across { box-shadow: inset 0 0 0 5px var(--rc), inset 0 0 0 8px var(--rl), inset 0 0 22px 8px #0004, -7px 4px 0 -2px color-mix(in srgb, var(--rug) 55%, #120c2e), 7px 4px 0 -2px color-mix(in srgb, var(--rug) 55%, #120c2e), -12px 9px 0 -4px color-mix(in srgb, var(--rug) 40%, #120c2e), 12px 9px 0 -4px color-mix(in srgb, var(--rug) 40%, #120c2e), 0 14px 26px #000a; }
+.fold-panel.mid.folded:not(.across) { box-shadow: inset 0 0 0 5px var(--rc), inset 0 0 0 8px var(--rl), inset 0 0 22px 8px #0004, 0 -7px 0 -2px color-mix(in srgb, var(--rug) 55%, #120c2e), 0 7px 0 -2px color-mix(in srgb, var(--rug) 55%, #120c2e), 0 -12px 0 -4px color-mix(in srgb, var(--rug) 40%, #120c2e), 0 13px 0 -4px color-mix(in srgb, var(--rug) 40%, #120c2e), 0 14px 26px #000a; }
+.fold-hinge { position: absolute; width: calc(var(--cw) * 0.18); height: calc(var(--cw) * 0.42); translate: -50% -50%; border-radius: 6px; pointer-events: none; background: linear-gradient(90deg, #e0a52a, #ffe27a 45%, #e0a52a); border: 2px solid var(--ink); }
+.fold-hinge:not(.across) { width: calc(var(--cw) * 0.42); height: calc(var(--cw) * 0.18); background: linear-gradient(#e0a52a, #ffe27a 45%, #e0a52a); }
+/* Ayuda: tapete doblado (los lados medio abiertos). */
+.step .ill .h-fold { position: absolute; top: 1px; width: 38px; height: 52px; border-radius: 7px; border: 2px solid var(--ink); background: #3fa0a8; }
 /* Nebulosa (Fase 7): nube que gira despacio donde esperan los tramos; se achica (--k) mientras menos le quedan. */
 .nebula { position: absolute; z-index: 0; pointer-events: none; }
 .neb-in { position: absolute; inset: 0; scale: var(--k, 1); opacity: 1; transition: scale .6s var(--ease-out), opacity .6s var(--ease-out); }

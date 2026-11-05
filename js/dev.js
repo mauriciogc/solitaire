@@ -2,7 +2,7 @@
 // Se activa con ?dev en la URL (y se apaga con ?dev=0). Queda guardado en el navegador.
 import { save, prefs, persist, resetProfile, backupOnce, restoreBackup, setDev } from './storage.js';
 import { rachaWin, rachaLose, racha, nextGoal, col, daysToNextCol, ev, daysToNextEvent, evEnter, evWin, EVENT_PER_PLANET, EVENT_LEVELS, fiesta, fiEnter, fiWin, nextFiesta, daysToNextFiesta, daysToFiesta, fiShape, isOn, UNLOCK } from './events.js';
-import { generateLevel, packGroups, worldInfo, specials, specialGroup, SPECIAL_ID, TOTAL_LEVELS, LEVELS_PER_WORLD, MECH_NAMES, MECHANICS, MECH_INTRO, SCROLL_FROM } from './levels.js';
+import { generateLevel, packGroups, worldInfo, specials, specialGroup, SPECIAL_ID, TOTAL_LEVELS, LEVELS_PER_WORLD, MECH_NAMES, MECHANICS, MECH_INTRO, SCROLL_FROM, EXTRA, extraDebut } from './levels.js';
 import { playCasual, solve, initState } from './engine.js';
 import { openModal, toast, updateCoins, popGoal } from './ui.js';
 import { mulberry32 } from './rng.js';
@@ -126,14 +126,20 @@ function showInfo(L) {
 
 // ---------- Galería: muchos niveles de un vistazo ----------
 const PAGE = 24;
-const TEMPLATES = ['todas', 'clusters', 'pyramid', 'peaks', 'wall', 'diamond', 'scatter', 'towers', 'layers', 'invPyramid'];
-// Fase 7: formas y piezas nuevas (solo salen en niveles sin ayudas) y respiros.
-const PIECES = ['sandwich', 'cross', 'steps', 'rosette', 'tiltFan', 'crown'];
+// Tableros y piezas en el orden en que salen en el camino, con el nivel donde aparecen por primera vez
+// (medido recorriendo los 5,200; si cambia el generador, volver a medir).
+const TEMPLATES = [['pyramid', 1], ['peaks', 2], ['clusters', 3], ['star', 10], ['layers', 12], ['wall', 19], ['towers', 23], ['butterfly', 33], ['diamond', 34], ['spiral', 35], ['mesa', 40], ['heart', 42], ['gravedad', 70], ['scatter', 71], ['nebulosa', 100], ['plegable', 140], ['invPyramid', 148], ['hourglass', 169]];
+// Fase 7: piezas nuevas (solo salen en niveles sin ayudas) y respiros.
+const PIECES = [['steps', 3], ['cross', 3], ['crown', 8], ['rosette', 13], ['sandwich', 16], ['tiltFan', 21]];
 const TPL_OPTS = [
-  ...[...TEMPLATES, 'butterfly', 'heart', 'spiral', 'star', 'hourglass', 'mesa', 'nebulosa', 'gravedad'].map((t) => [t, t]),
-  ...PIECES.map((k) => [`pz:${k}`, `pieza ${k}`]),
-  ['respiros', 'respiros'],
+  ['todas', 'tablero: todos'],
+  ...TEMPLATES.map(([t, n]) => [t, `${t} · ${n}`]),
+  ['respiros', 'respiros · 12'],
+  ...PIECES.map(([k, n]) => [`pz:${k}`, `pieza ${k} · ${n}`]),
 ];
+// Cartas en el orden en que salen (nivel de estreno: el primero de su mundo; cometa y turbo, el primero normal).
+const mechDebut = (m) => (EXTRA.includes(m) ? extraDebut(m) : MECH_INTRO[m] * LEVELS_PER_WORLD) + 1;
+const MECH_ORDER = MECHANICS.slice().sort((a, b) => mechDebut(a) - mechDebut(b));
 const okTpl = (L, t) => t === 'todas' || (t === 'respiros' ? !!L.respite : t.startsWith('pz:') ? !!L.pieces?.includes(t.slice(3)) : L.template === t);
 const tplName = (L) => L.template + (L.pieces ? ` (${L.pieces.join(', ')})` : '');
 // Etiqueta según el % del bot casual (ver tabla de la Fase 7): fácil ≥75, medio ≥50, difícil ≥25, muy difícil.
@@ -174,7 +180,7 @@ export function galleryScreen({ onPlay, onBack }) {
           (k, i) => `<select data-g="${k}">
             <option value="">${i ? '+ otra mecánica' : 'mecánica: todas'}</option>
             ${i ? '' : `<option value="none"${st[k] === 'none' ? ' selected' : ''}>sin mecánicas</option>`}
-            ${MECHANICS.map((m) => `<option value="${m}"${st[k] === m ? ' selected' : ''}>${MECH_NAMES[m]}</option>`).join('')}
+            ${MECH_ORDER.map((m) => `<option value="${m}"${st[k] === m ? ' selected' : ''}>${MECH_NAMES[m]} · ${mechDebut(m)}</option>`).join('')}
           </select>`,
         )
         .join('')}
@@ -382,7 +388,7 @@ export function openDevMenu({ onGallery, onPlanets, onRefresh }) {
   const recuento = `<p class="dline"><b>Tú: ${won} niveles ganados</b> (mundo ${(save.open || 0) + 1})</p>
     <table class="dtable"><tr><th>Se abre</th><th>Nivel</th><th>Tú</th></tr>${UN.map(([n, l]) => `<tr><td>${n}</td><td>${l}</td><td>${opens(l)}</td></tr>`).join('')}</table>
     <p class="dline"><b>Cartas especiales</b> (aparecen en el primer nivel de su mundo)</p>
-    <table class="dtable"><tr><th>Carta</th><th>Mundo</th><th>Nivel</th><th>Tú</th></tr>${MECHANICS.map((m) => `<tr><td>${MECH_NAMES[m]}</td><td>${MECH_INTRO[m] + 1}</td><td>${MECH_INTRO[m] * LEVELS_PER_WORLD + 1}</td><td>${opens(MECH_INTRO[m] * LEVELS_PER_WORLD)}</td></tr>`).join('')}
+    <table class="dtable"><tr><th>Carta</th><th>Mundo</th><th>Nivel</th><th>Tú</th></tr>${MECH_ORDER.map((m) => `<tr><td>${MECH_NAMES[m]}</td><td>${Math.ceil(mechDebut(m) / LEVELS_PER_WORLD)}</td><td>${mechDebut(m)}</td><td>${opens(mechDebut(m) - 1)}</td></tr>`).join('')}
     ${Object.entries(SCROLL_FROM).map(([k, g]) => `<tr><td>Tablero: ${k === 'mesa' ? 'mesa enrollada' : k}</td><td>${Math.floor(g / LEVELS_PER_WORLD) + 1}</td><td>${g + 1}</td><td>${opens(g)}</td></tr>`).join('')}</table>
     <p class="dline"><b>${evs.length + COLECCIONES.length + fis.length} eventos</b>: ${evs.length} del mes · ${COLECCIONES.length} colecciones · ${fis.length} de un día</p>
     <p class="dline"><b>Del mes (${evs.length})</b></p>${chips(evs.map(([m, e]) => [e.ico, `${MES[m]} · ${e.name}`]))}
@@ -474,9 +480,9 @@ export function openDevMenu({ onGallery, onPlanets, onRefresh }) {
   // Pestaña Fechas: mover el reloj al primer día de un evento del mes o al día de una festividad.
   const F = [
     { t: 'Eventos del mes', sub: isOn('mes') ? 'el reloj cae en el día 1 del mes' : `se abren en el nivel ${UNLOCK.mes}`, items: evs.map(([m, e]) => ({ l: `${e.name} · ${MES[m]}`, title: `Mueve el reloj al 1 de ${MES[m]}`, fn: () => toDay(daysToMonth(+m)) })) },
-    { t: 'Festividades', sub: isOn('fiesta2') ? 'el reloj cae en su primer día' : `las de leyendas (⚑) se abren en el nivel ${UNLOCK.fiesta2}`, items: fis.map((f) => {
+    { t: 'Festividades', sub: isOn('fiesta2') ? 'el reloj cae en su primer día' : `las de leyendas se abren en el nivel ${UNLOCK.fiesta2}`, items: fis.map((f) => {
       const d = f.date(y);
-      return { l: `${f.local && !isOn('fiesta2') ? '⚑ ' : ''}${f.name} · ${d.getDate()} ${MES[d.getMonth()]}`, title: `Mueve el reloj al ${d.getDate()} de ${MES[d.getMonth()]}, cuando empieza`, fn: () => toDay(daysToFiesta(f.key)) };
+      return { l: `${f.name} · ${d.getDate()} ${MES[d.getMonth()]}`, title: `Mueve el reloj al ${d.getDate()} de ${MES[d.getMonth()]}, cuando empieza`, fn: () => toDay(daysToFiesta(f.key)) };
     }) }
   ];
   const all = [...S, ...F].flatMap((sec) => sec.items);

@@ -236,6 +236,23 @@ export class Game {
         buttons: [{ label: '¡Entendido!', cls: 'green' }],
       });
     }
+    if (this.level.scroll === 'plegable' && !save.seen.plegable) {
+      save.seen.plegable = true;
+      persist();
+      this.modalOpen = true;
+      return openModal({
+        title: 'Nuevo: mesa plegable',
+        color: 'blue',
+        closable: false,
+        body: `<p class="lead">Esta mesa llega <b>doblada</b>. Limpia el panel de <b>en medio</b> y la mesa se <b>desdobla</b>: salen más cartas a los lados.</p>`,
+        onClose: () => {
+          this.modalOpen = false;
+          if (!reduced()) this.foldMid?.animate([{ scale: 1 }, { scale: 1.06 }, { scale: 1 }], { duration: 450, iterations: 2 });
+          setTimeout(() => this.tips(), 300);
+        },
+        buttons: [{ label: '¡Entendido!', cls: 'green' }],
+      });
+    }
     if (this.level.scroll === 'nebulosa' && !save.seen.nebulosa) {
       save.seen.nebulosa = true;
       persist();
@@ -350,6 +367,16 @@ export class Game {
       this.boardEl.insertAdjacentHTML('afterbegin', `<div class="nebula"><div class="neb-in"><i></i><i></i><i></i></div></div>`);
       this.nebEl = this.boardEl.querySelector('.nebula');
     }
+    // Plegable: tres tapetes del color de la mesa. Los de los lados son capas propias (sus cartas van adentro) para
+    // girar sobre la bisagra; empiezan doblados debajo del de en medio.
+    if (level.scroll === 'plegable') {
+      el.classList.add('scroll-fold');
+      const st = el.querySelector('.table').getAttribute('style');
+      this.boardEl.insertAdjacentHTML('afterbegin', `<div class="fold-panel side" data-g="1" style="${st}"></div><div class="fold-panel side" data-g="2" style="${st}"></div><div class="fold-panel mid" style="${st}"></div>${'<i class="fold-hinge"></i>'.repeat(4)}`);
+      this.foldEls = { 1: this.boardEl.querySelector('[data-g="1"]'), 2: this.boardEl.querySelector('[data-g="2"]') };
+      this.foldMid = this.boardEl.querySelector('.fold-panel.mid');
+      this.hingeEls = [...this.boardEl.querySelectorAll('.fold-hinge')];
+    }
     // Gravedad: cada columna en su riel, sobre la mesa del planeta.
     if (level.scroll === 'gravedad') {
       el.classList.add('scroll-grav');
@@ -391,6 +418,8 @@ export class Game {
     const live = this.cards.filter((c) => c.el && !c.bomb && !c.comet && !c.nebPos?.hid);
     if (reduced() || !live.length) return Promise.resolve();
     if (this.level.scroll === 'mesa') return this.unroll(live);
+    // Plegable: las de los lados no se reparten (esperan dobladas).
+    if (this.foldEls) live.splice(0, live.length, ...live.filter((c) => !c.group));
     if (this.nebEl) this.nebEl.animate([{ scale: 0, opacity: 0, rotate: '-180deg' }, { scale: 1, opacity: 1, rotate: '0deg' }], { duration: 900, delay: 500, easing: 'cubic-bezier(.3,1.3,.5,1)', fill: 'backwards' });
     const cx = (parseFloat(this.boardEl.style.width) - this.u) / 2;
     const cy = (parseFloat(this.boardEl.style.height) - this.u * 1.4) / 2;
@@ -481,7 +510,7 @@ export class Game {
     const cut = E.cutOf(c, this.st);
     if (cut) d.style.clipPath = tearClip(cut);
     d.style.zIndex = c.z * 100 + c.id;
-    (this.stripEl || this.boardEl).append(d);
+    (this.foldEls?.[c.group] || this.stripEl || this.boardEl).append(d);
     c.el = d;
     this.place(c);
   }
@@ -489,6 +518,7 @@ export class Game {
   place(c) {
     if (this.level.scroll === 'mesa') return this.placeScroll(c);
     if (this.level.scroll === 'gravedad') return this.placeGrav(c);
+    if (this.level.scroll === 'plegable') return this.placeFold(c);
     if (this.level.scroll) return this.placeNeb(c);
     const o = this.offsets[c.group];
     c.el.style.left = `${(o.x + c.x) * this.u}px`;
@@ -502,6 +532,7 @@ export class Game {
     this.wrapSize = `${Math.round(r.width)}x${Math.round(r.height)}`;
     if (this.level.scroll === 'mesa') return this.layoutScroll(r);
     if (this.level.scroll === 'gravedad') return this.layoutGrav(r);
+    if (this.level.scroll === 'plegable') return this.layoutFold(r);
     if (this.level.scroll) return this.layoutNeb(r);
     // La carta doble se ve 10% más grande: se deja un poco de aire para que no se salga del tablero.
     const room = this.cards.some((c) => c.alt != null) ? 0.93 : 1;
@@ -725,6 +756,114 @@ export class Game {
     this.paintGrav();
   }
 
+  // ---------- Mesa plegable ----------
+  // Tres tapetes en fila (o en columna con el teléfono parado, si así salen más grandes las cartas), todos del tamaño
+  // del panel más grande, con bisagras entre ellos. El de en medio es el grupo 0; los lados, 1 y 2. Doblado, cada
+  // lado está girado media vuelta sobre su bisagra y queda escondido debajo del de en medio.
+  layoutFold(r) {
+    const gs = this.level.groups, pad = 0.3, hinge = 0.16;
+    const PW = Math.max(...gs.map((g) => g.w)) + 1 + pad * 2, PH = Math.max(...gs.map((g) => g.h)) + 1.4 + pad * 2;
+    const W = r.width - 10, H = r.height - 10;
+    const row = { bw: 3 * PW + 2 * hinge, bh: PH }, col = { bw: PW, bh: 3 * PH + 2 * hinge };
+    const fit = (o) => Math.min(W / o.bw, H / o.bh, 120);
+    const across = fit(row) >= fit(col);
+    const o = across ? row : col;
+    this.u = Math.max(18, fit(o));
+    this.foldG = { across, PW, PH, pad, hinge };
+    this.boardEl.style.width = `${o.bw * this.u}px`;
+    this.boardEl.style.height = `${o.bh * this.u}px`;
+    this.boardEl.style.setProperty('--cw', `${this.u}px`);
+    this.paintFold();
+    this.cards.forEach((c) => c.el && this.place(c));
+    this.renderStock();
+    this.coach?.update();
+  }
+
+  // Esquina de cada tapete (en unidades de carta). Lugar 0 = izquierda/arriba, 1 = en medio, 2 = derecha/abajo.
+  foldBox(gi) {
+    const G = this.foldG, k = [1, 0, 2][gi];
+    return G.across ? { x: k * (G.PW + G.hinge), y: 0 } : { x: 0, y: k * (G.PH + G.hinge) };
+  }
+
+  // Giro de un lado (sobre la bisagra que lo une al de en medio): k = 1 doblado, 0 abierto.
+  foldTurn(gi, k = 1) {
+    const a = k * (gi === 1 ? 180 : -180);
+    return `perspective(${this.u * 14}px) ${this.foldG.across ? `rotateY(${a}deg)` : `rotateX(${-a}deg)`}`;
+  }
+
+  paintFold() {
+    const G = this.foldG, u = this.u;
+    if (this.foldShown == null) this.foldShown = this.foldOpen = E.nebOut(this.level, this.st) >= 1;
+    const box = (el, gi) => {
+      const b = this.foldBox(gi);
+      Object.assign(el.style, { left: `${b.x * u}px`, top: `${b.y * u}px`, width: `${G.PW * u}px`, height: `${G.PH * u}px` });
+    };
+    box(this.foldMid, 0);
+    this.foldMid.classList.toggle('folded', !this.foldOpen);
+    this.foldMid.classList.toggle('across', G.across);
+    for (const gi of [1, 2]) {
+      const el = this.foldEls[gi];
+      box(el, gi);
+      el.style.transformOrigin = G.across ? (gi === 1 ? 'right center' : 'left center') : gi === 1 ? 'center bottom' : 'center top';
+      el.style.transform = this.foldOpen ? '' : this.foldTurn(gi);
+    }
+    // Dos bisagras en cada unión.
+    const m = this.foldBox(0);
+    this.hingeEls.forEach((h, i) => {
+      const side = i < 2 ? -1 : 1, at = i % 2 ? 0.75 : 0.25;
+      const [x, y] = G.across ? [m.x + (side < 0 ? -G.hinge / 2 : G.PW + G.hinge / 2), m.y + G.PH * at] : [m.x + G.PW * at, m.y + (side < 0 ? -G.hinge / 2 : G.PH + G.hinge / 2)];
+      Object.assign(h.style, { left: `${x * u}px`, top: `${y * u}px` });
+      h.classList.toggle('across', G.across);
+      h.classList.toggle('shut', !this.foldOpen);
+    });
+  }
+
+  // Las del panel de en medio van en el tablero; las de los lados, dentro de su tapete.
+  placeFold(c) {
+    const G = this.foldG;
+    if (!G) return;
+    const g = this.level.groups[c.group], b = c.group ? { x: 0, y: 0 } : this.foldBox(0);
+    c.el.style.left = `${(b.x + (G.PW - g.w) / 2 + c.x) * this.u}px`;
+    c.el.style.top = `${(b.y + (G.PH - g.h) / 2 + c.y) * this.u}px`;
+    c.el.style.rotate = `${c.rot}deg`;
+  }
+
+  // Al vaciar el panel de en medio, los lados se despliegan uno tras otro y luego sus cartas se voltean.
+  // Deshacer: las cartas se voltean boca abajo y los lados se vuelven a doblar.
+  foldUpdate() {
+    const open = E.nebOut(this.level, this.st) >= 1;
+    if (!this.foldG || open === this.foldOpen) return;
+    this.foldOpen = open;
+    const D = reduced() ? 0 : 820;
+    const sides = [1, 2].map((gi) => [gi, this.foldEls[gi]]);
+    if (open) {
+      this.foldMid.classList.remove('folded');
+      sides.forEach(([gi, el], i) => {
+        el.style.transform = '';
+        if (D) el.animate([{ transform: this.foldTurn(gi) }, { transform: this.foldTurn(gi, 0) }], { duration: D, delay: i * 160, easing: 'cubic-bezier(.3,1.2,.45,1)', fill: 'backwards' });
+      });
+      this.hingeEls.forEach((h) => h.classList.remove('shut'));
+      if (D) this.foldMid.animate([{ scale: 1 }, { scale: 1.03 }, { scale: 1 }], { duration: 300, easing: 'ease-out' });
+      buzz(14);
+      setTimeout(() => {
+        if (!this.foldOpen) return;
+        this.foldShown = true;
+        this.refresh();
+      }, D + 200);
+    } else {
+      this.foldShown = false;
+      setTimeout(() => {
+        if (this.foldOpen) return;
+        sides.forEach(([gi, el]) => {
+          el.style.transform = this.foldTurn(gi);
+          if (D) el.animate([{ transform: this.foldTurn(gi, 0) }, { transform: this.foldTurn(gi) }], { duration: D * 0.7, easing: 'ease-in-out' });
+        });
+        this.foldMid.classList.add('folded');
+        this.hingeEls.forEach((h) => h.classList.add('shut'));
+      }, D ? 380 : 0);
+    }
+  }
+
   // ---------- Nebulosa ----------
   // Se ven NEB_SLOTS lugares en fila (o en columna con el teléfono parado, si así salen más grandes las cartas) y al
   // final la nebulosa. Cada lugar mide lo del tramo más grande. En qué lugar va cada tramo sale del estado: los que
@@ -839,6 +978,8 @@ export class Game {
   // ¿Se ve boca arriba? En la mesa enrollada el rollo no voltea cartas: salen como van (solo cuentan las tapas de
   // otras cartas); una que asoma poco ya se ve, pero hasta que asoma media carta no se puede jugar.
   shownUp(c) {
+    // Plegable: las de los lados se voltean cuando ya se desdoblaron.
+    if (this.foldEls && c.group && !this.foldShown) return false;
     if (this.level.scroll === 'gravedad') return E.faceUp(this.level, this.gravIndex(c) < GRAV_SHOWN ? { ...c, coveredBy: [] } : c, this.st);
     return E.faceUp(this.level, this.level.scroll === 'mesa' ? { ...c, coveredBy: c.under } : c, this.st);
   }
@@ -848,6 +989,7 @@ export class Game {
     const { level, st } = this;
     if (level.scroll === 'mesa') this.scrollUpdate();
     else if (level.scroll === 'gravedad') this.gravUpdate();
+    else if (level.scroll === 'plegable') this.foldUpdate();
     else if (level.scroll) this.nebUpdate();
     this.updateStuck(true);
     for (const c of this.cards) {
