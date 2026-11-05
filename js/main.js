@@ -420,6 +420,105 @@ function guide(view, step, screen) {
 }
 const endTouring = (screen) => screen.classList.toggle('touring', !!tourStep());
 
+// ---------- Recorrido de los botones de la izquierda ----------
+// Una sola vez en la vida, al volver al mapa con el nivel 1 ganado (también jugadores que ya iban más adelante).
+// Se ve igual que el recorrido del mapa: círculo y globo, lo demás apagado, y se avanza tocando lo del círculo.
+// El círculo se desliza de botón en botón. El regalo se reclama de verdad y no se sigue hasta reclamarlo (si hoy
+// ya se reclamó, solo se señala). save.sideTour = paso en el que va (si cierra el juego, sigue ahí) o 'done'.
+const SIDE_TOUR = [
+  { a: 'daily', title: 'Regalo diario', text: () => (dailyState(save.daily).claimed ? 'Cada día te espera un <b>regalo</b>. Hoy ya lo abriste: vuelve mañana por el siguiente.' : 'Cada día te espera un <b>regalo</b>. Tócalo y reclámalo.'), act: () => !dailyState(save.daily).claimed },
+  { a: 'dticket', title: 'Boletos de regalo', text: () => 'Cada 24 horas te regalamos <b>boletos</b> para entrar a niveles nuevos.' },
+  { a: 'shop', title: 'Tienda', text: () => 'Con tus monedas cambia cómo se ven tus <b>cartas</b>, tu <b>avatar</b> y tu <b>viajero</b>.' },
+  { a: 'album', title: 'Álbum', text: () => 'Cada planeta que terminas te da una <b>postal</b> para tu álbum.' },
+  { a: 'settings', title: 'Ajustes', text: () => 'Aquí está cómo jugar, tu perfil y tu respaldo. <b>¡Descubre tú cada botón!</b>' },
+  // Cierre: el círculo pasa al botón de jugar; tocarlo termina el recorrido y hace lo de siempre (jugar, continuar…).
+  { go: true, title: '¡Ahora sí, a jugar!', text: (b) => `Toca <b>${b?.querySelector('b')?.textContent || 'Jugar'}</b> y sigue tu camino.` },
+];
+const sideTourDue = () => save.next >= 1 && save.sideTour !== 'done';
+function sideTour() {
+  return new Promise((done) => {
+    const screen = document.querySelector('#app .screen');
+    const el = h(`<div class="guide side-guide"><div class="g-ring"></div><div class="g-bubble info"><b></b><span></span></div></div>`);
+    screen.append(el);
+    screen.classList.add('side-touring');
+    const ring = el.querySelector('.g-ring'), bub = el.querySelector('.g-bubble');
+    let i = typeof save.sideTour === 'number' ? save.sideTour : 0, busy = false;
+    const btn = () => (SIDE_TOUR[i].go ? screen.querySelector('.cta .go') : screen.querySelector(`.side.l [data-a="${SIDE_TOUR[i].a}"]`));
+    const finish = () => {
+      save.sideTour = 'done';
+      persist();
+      removeEventListener('resize', put);
+      screen.querySelector('.tour-on')?.classList.remove('tour-on');
+      screen.classList.remove('side-touring');
+      if (reduced()) el.remove();
+      else el.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 220 }).finished.then(() => el.remove());
+      done();
+    };
+    // Círculo sobre el botón y globo a su lado (o debajo si no cabe).
+    function put() {
+      const b = btn();
+      if (!b) return finish();
+      const r = b.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2, room = innerWidth - r.right - 24;
+      ring.classList.toggle('wide', !!SIDE_TOUR[i].go);
+      ring.style.setProperty('--s', `${Math.max(r.width, r.height) + 22}px`);
+      ring.style.setProperty('--w', `${r.width + 26}px`);
+      ring.style.setProperty('--h', `${r.height + 26}px`);
+      ring.style.left = `${cx}px`;
+      ring.style.top = `${cy}px`;
+      if (room >= 220) Object.assign(bub.style, { left: `${r.right + 20}px`, width: `${Math.min(330, room)}px`, translate: '0 0', top: `${Math.min(innerHeight - bub.offsetHeight - 12, Math.max(12, cy - bub.offsetHeight / 2))}px` });
+      else {
+        // Debajo si cabe; si no (botón de jugar, abajo), encima.
+        const below = r.bottom + 24 + bub.offsetHeight < innerHeight - 12;
+        Object.assign(bub.style, { left: '50%', width: '', translate: '-50% 0', top: `${below ? r.bottom + 24 : Math.max(12, r.top - 24 - bub.offsetHeight)}px` });
+      }
+    }
+    const show = () => {
+      const t = SIDE_TOUR[i];
+      save.sideTour = i;
+      persist();
+      screen.querySelector('.tour-on')?.classList.remove('tour-on');
+      btn()?.classList.add('tour-on');
+      bub.querySelector('b').textContent = t.title;
+      bub.querySelector('span').innerHTML = t.text(btn());
+      put();
+      if (!reduced()) bub.animate([{ opacity: 0, scale: 0.7 }, { opacity: 1, scale: 1.05, offset: 0.7 }, { opacity: 1, scale: 1 }], { duration: 420, easing: 'ease-out' });
+    };
+    const next = () => (++i >= SIDE_TOUR.length ? finish() : show());
+    // Solo cuenta tocar lo del círculo; tocar fuera hace latir el círculo.
+    el.addEventListener('click', async (e) => {
+      if (busy) return;
+      const r = btn()?.getBoundingClientRect();
+      if (!r) return finish();
+      const pad = 14;
+      if (e.clientX < r.left - pad || e.clientX > r.right + pad || e.clientY < r.top - pad || e.clientY > r.bottom + pad) {
+        if (!reduced()) ring.animate([{ scale: 1 }, { scale: 1.25 }, { scale: 1 }], { duration: 300 });
+        return;
+      }
+      const t = SIDE_TOUR[i];
+      btn()?.classList.add('tapped');
+      setTimeout(() => btn()?.classList.remove('tapped'), 160);
+      if (t.go) {
+        const b = btn();
+        finish();
+        return b?.click();
+      }
+      if (!t.act?.()) return next();
+      // El regalo se abre de verdad; al cerrar su ventana se sigue solo si ya se reclamó.
+      busy = true;
+      el.style.visibility = 'hidden';
+      sideAction(t.a);
+      await wait(400);
+      while (modalOpen()) await wait(250);
+      el.style.visibility = '';
+      busy = false;
+      if (t.act()) return show();
+      next();
+    });
+    addEventListener('resize', put);
+    show();
+  });
+}
+
 // ---------- Universo: todas las constelaciones en 3D ----------
 // Se recorren de lado; al tocar una, la cámara se acerca y se entra a sus planetas.
 // from: constelación de la que vienes (la vista empieza pegada a ella y se aleja).
@@ -638,9 +737,11 @@ function spendTickets(cost, sel = '[data-tickets]', ico = 'ticket', before = sav
 
 // La partida a medias es de un nivel nuevo del camino (cuenta para la racha) y lo que se pierde si se abandona.
 const runCounts = (g) => !save.stars[g] && !isSecret(g) && g <= save.next;
-const runRacha = (g) => {
+// ¿Abandonar la partida a medias reinicia la racha? Nivel nuevo, o repetido/secreto que se cerró a medias.
+const runLoses = (run) => (run.replay ? !!run.racha : runCounts(run.g));
+const runRacha = (run) => {
   const r = racha();
-  if (!runCounts(g) || !isOn('racha') || !r.n) return '';
+  if (!runLoses(run) || !isOn('racha') || !r.n) return '';
   return rachaWarnHTML(r.n, r.pend.length, 'Si lo abandonas');
 };
 function enterLevel(g) {
@@ -651,13 +752,13 @@ function enterLevel(g) {
     return openModal({
       title: 'Nivel a medias',
       color: 'orange',
-      body: `<p class="lead"><b>${levelName(run.g)}</b> sigue en juego. Termínalo, o abandónalo y pierdes su boleto.</p>${runRacha(run.g)}`,
+      body: `<p class="lead"><b>${levelName(run.g)}</b> sigue en juego. Termínalo, o abandónalo${run.replay ? '' : ' y pierdes su boleto'}.</p>${runRacha(run)}`,
       buttons: [
         {
           label: 'Abandonar y jugar este',
           cls: 'ghost',
           onClick: () => {
-            if (runCounts(run.g)) rachaLose(); // abandonar un nivel nuevo reinicia la racha
+            if (runLoses(run)) rachaLose(); // abandonar un nivel nuevo (o un repetido a medias) reinicia la racha
             save.run = null;
             persist();
             enterLevel(g);
@@ -713,7 +814,10 @@ function startLevel(g, { resume = false, free = false, anim = 'up' } = {}) {
   const run = resume ? save.run : null;
   const v = run ? run.v : save.tries[g] || 0;
   // Se guarda la partida de un nivel aún no ganado (el que cuesta boleto); repetir uno ganado se pierde al salir.
-  const saved = !!run || (!free && !save.stars[g] && !isSecret(g));
+  // Un repetido o secreto también se guarda en cuanto juegas algo (run.replay), pero solo para cuando se cierra la app
+  // a medias: al volver, Jugar apunta a ese nivel y para jugar otro hay que abandonarlo (y se pierde la racha).
+  // Salir desde la pausa sigue perdiendo el intento.
+  const saved = run ? !run.replay : !free && !save.stars[g] && !isSecret(g);
   if (!run) {
     save.tries[g] = v + 1;
     if (saved) save.run = { g, v, state: null, sig: null };
@@ -746,7 +850,17 @@ function startLevel(g, { resume = false, free = false, anim = 'up' } = {}) {
           save.run = { g, v, state, sig };
           persist();
         }
-      : null,
+      : free
+        ? null
+        : (state) => {
+            // Sin jugadas (o deshechas todas) no hay nada a medias.
+            if (!state.history?.length) {
+              if (save.run?.g === g && save.run.replay) (save.run = null), persist();
+              return;
+            }
+            save.run = { g, v, state, sig, replay: true, racha: counts || replay };
+            persist();
+          },
     onExit: back,
     // Si la racha está abierta y va en algo, las ventanas de rendirse/abandonar lo dicen.
     rachaRisk: () => ((counts || replay) && isOn('racha') && racha().n ? { n: racha().n, pend: racha().pend.length, isNew: counts } : null),
@@ -1062,7 +1176,8 @@ function openDailyTicket() {
 function helpTip(m, text) {
   const modal = m.el.querySelector('.modal'), head = modal.querySelector('.mhead');
   head.insertAdjacentHTML('afterbegin', '<button class="qhelp" aria-label="Ayuda" aria-expanded="false">?</button>');
-  modal.insertAdjacentHTML('beforeend', `<div class="qtip info">${text}</div>`);
+  // El globo va dentro de la cabecera: en pantallas bajas la cabecera se queda fija arriba al desplazar la ventana.
+  head.insertAdjacentHTML('beforeend', `<div class="qtip info">${text}</div>`);
   const btn = head.querySelector('.qhelp');
   const set = (on) => (modal.classList.toggle('tip-open', on), btn.setAttribute('aria-expanded', on));
   btn.addEventListener('click', () => set(!modal.classList.contains('tip-open')));
@@ -1661,6 +1776,10 @@ async function calm(gen) {
 async function notices() {
   const gen = ++noticeGen;
   if (tourStep() || save.onboard !== 'done') return;
+  if (sideTourDue()) {
+    if (!(await calm(gen))) return;
+    if (document.querySelector('#app .side.l')) await sideTour();
+  }
   for (const k of ['racha', 'col', 'mes', 'col2', 'fiesta', 'col3', 'fiesta2']) {
     if (!isOn(k) || save.intro?.[k]) continue;
     if (!(await calm(gen))) return;

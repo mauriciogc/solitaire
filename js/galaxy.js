@@ -469,7 +469,11 @@ export class Galaxy {
     };
     // Evento: sin estrellas; el jefe lleva encima el ícono del evento (gift = imagen ya cargada; apagado si ya se ganó).
     if (gift) { if (boss && gift.complete) { g.save(); if (lv.kind === 'done') g.globalAlpha = 0.55; g.drawImage(gift, cx - 31, cy - 104, 62, 62); g.restore(); } }
-    else if (lv.kind === 'done') for (let i = 0; i < 3; i++) star(cx - 30 + i * 30, 46 - (i === 1 ? 10 : 0), i === 1 ? 17 : 14, i < lv.stars);
+    // Solo las estrellas ganadas (las apagadas no se distinguían contra el planeta), en arco y más grandes si son menos.
+    else if (lv.kind === 'done') {
+      const at = { 1: [[0, 38, 19]], 2: [[-17, 42, 17], [17, 42, 17]], 3: [[-30, 46, 15], [0, 36, 18], [30, 46, 15]] }[Math.min(3, lv.stars)] || [];
+      for (const [x, y, r] of at) star(cx + x, y, r, true);
+    }
     else if (boss) { // corona del jefe
       g.beginPath(); g.moveTo(cx - 24, cy - 34); g.lineTo(cx - 28, cy - 62); g.lineTo(cx - 12, cy - 46); g.lineTo(cx, cy - 68); g.lineTo(cx + 12, cy - 46); g.lineTo(cx + 28, cy - 62); g.lineTo(cx + 24, cy - 34); g.closePath();
       g.fillStyle = lv.kind === 'lock' ? '#d9d2ea' : '#ffc83d'; g.fill(); g.lineWidth = 6; g.stroke();

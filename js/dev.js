@@ -400,6 +400,7 @@ export function openDevMenu({ onGallery, onPlanets, onRefresh }) {
       { l: '+1000 monedas', fn: () => ((save.coins += 1000), persist(), updateCoins()) },
       { l: '+20,000 monedas', fn: () => ((save.coins += 20000), persist(), updateCoins()) },
       { l: 'Explicar mecánicas', title: 'Las explicaciones de cada mecánica salen otra vez', fn: () => ((save.seen = {}), persist(), toast('Las explicaciones saldrán otra vez')) },
+      { l: 'Recorrido de botones', title: 'El recorrido de los botones de la izquierda sale otra vez al cerrar este menú', fn: () => { delete save.sideTour; persist(); onRefresh(); } },
     ] },
     { t: 'Avance', sub: `vas en el mundo ${w + 1}`, items: [
       { l: `Abrir mundo ${w + 1}`, fn: () => (completeWorlds(w, w), onRefresh()) },

@@ -1,6 +1,6 @@
 import { save, persist } from './storage.js';
 import { openModal, toast, confetti, updateCoins, money, starsHTML, reduced, buzz, sparkle, wait, spendFromWallet, balloons, lootBubbles, rachaWarnHTML } from './ui.js';
-import { worldInfo, packGroups, MECH_NAMES, LEVELS_PER_WORLD, scrollStrip, scrollSpan, scrollCover, SCROLL_VIEW, NEB_SLOTS, GRAV_SHOWN, W } from './levels.js';
+import { worldInfo, packGroups, MECH_NAMES, LEVELS_PER_WORLD, scrollStrip, scrollSpan, scrollCover, SCROLL_VIEW, SCROLL_SHOW, NEB_SLOTS, GRAV_SHOWN, W } from './levels.js';
 import * as E from './engine.js';
 import { price } from './economy.js';
 import { cardBackURL, icon, star, coin, lockIcon, keyIcon, arrowIcon, curtainIcon, suitSVG, avatarHTML } from './art.js';
@@ -114,7 +114,11 @@ export class Game {
     this.wrapSize = '';
     this.resizer = new ResizeObserver(([e]) => {
       const size = `${Math.round(e.contentRect.width)}x${Math.round(e.contentRect.height)}`;
-      if (size !== this.wrapSize) this.layout();
+      if (size === this.wrapSize) return;
+      // Mesa enrollada: al girar, el teléfono pasa por tamaños intermedios; se acomoda con el tamaño final.
+      if (this.level.scroll !== 'mesa' || !this.view) return this.layout();
+      clearTimeout(this.layoutT);
+      this.layoutT = setTimeout(() => this.layout(), 220);
     });
     this.resizer.observe(this.wrapEl);
     this.onKey = (e) => this.key(e);
@@ -234,6 +238,7 @@ export class Game {
 
   destroy() {
     this.resizer.disconnect();
+    clearTimeout(this.layoutT);
     window.removeEventListener('keydown', this.onKey);
     this.coach?.end();
     this.done = true;
@@ -498,15 +503,16 @@ export class Game {
   }
 
   // El tamaño de carta es el que deja la tira con la ventana mínima (SCROLL_VIEW); si con ese tamaño cabe más tira
-  // (teléfono acostado, pantalla grande), se ven más cartas. La ventana nunca se achica en la partida (al girar,
-  // mejor se achican las cartas): así nada que ya se podía jugar se vuelve a enrollar. Con más ventana cambian las
-  // tapas (scrollCover) y se repinta.
+  // (teléfono acostado, pantalla grande), se ven más cartas. Al girar se vuelve a calcular con la pantalla nueva,
+  // pero la ventana nunca queda tan corta que vuelva a enrollar una carta que ya salió (keepView). Con otra ventana
+  // cambian las tapas (scrollCover; con view ≥ SCROLL_VIEW el nivel sigue teniendo solución) y se repinta.
   layoutScroll(r) {
     this.scrollAt ??= this.scrollO();
     const B = this.scrollBase(), along = r.width - 10, extra = B.pad + B.rollT + 0.1;
-    let u = Math.min((r.height - 10) / B.cross, along / (extra + Math.max(SCROLL_VIEW, this.view || 0)), 120);
-    const view = Math.max(SCROLL_VIEW, this.view || 0, along / u - extra);
-    if (view > (this.view || 0) + 1e-6) {
+    const keep = this.view == null ? SCROLL_VIEW : Math.max(SCROLL_VIEW, this.keepView());
+    let u = Math.min((r.height - 10) / B.cross, along / (extra + keep), 120);
+    const view = Math.max(keep, along / u - extra);
+    if (Math.abs(view - (this.view || 0)) > 1e-6) {
       const grew = this.view != null;
       this.view = view;
       const cov = scrollCover(this.level, view);
@@ -522,6 +528,19 @@ export class Game {
     this.paintRoll();
     this.renderStock();
     this.coach?.update();
+  }
+
+  // Ventana más corta con la que todas las cartas que ya salieron del rollo siguen afuera: una carta sale cuando la
+  // tira empieza (o) en su orilla izquierda + SCROLL_SHOW − ventana o más adelante.
+  keepView() {
+    const { S } = this.scrollBase(), o = this.scrollO();
+    let need = 0;
+    for (const c of this.cards) {
+      if (c.removed) continue;
+      const l = scrollSpan(c, S.at)[0];
+      if (l + SCROLL_SHOW - this.view <= o + 1e-6) need = Math.max(need, l + SCROLL_SHOW - o);
+    }
+    return need;
   }
 
   placeScroll(c) {

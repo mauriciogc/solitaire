@@ -221,7 +221,7 @@ button:disabled { cursor: default; }
 .qhelp { position: absolute; left: 9px; top: 50%; translate: 0 -50%; width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; background: var(--cream); border: 2.5px solid var(--ink); box-shadow: inset 0 -4px 0 var(--cream-d), 0 2px 0 var(--ink); font: 400 21px 'Lilita One'; color: var(--ink); }
 .qhelp:active { translate: 0 calc(-50% + 2px); }
 .tip-open .qhelp { background: #ece6ff; box-shadow: inset 0 -4px 0 #cfc4f5, 0 2px 0 var(--ink); }
-.qtip { position: absolute; top: 60px; left: 10px; z-index: 5; width: min(290px, calc(100% - 20px)); padding: 10px 14px 12px; border-radius: 14px; background: #ece6ff; border-color: #6d5fc4; font-size: 14.5px; font-weight: 700; line-height: 1.3; color: var(--ink); transform-origin: 18px 0; visibility: hidden; opacity: 0; scale: .5; pointer-events: none; transition: opacity 150ms ease, scale 200ms var(--ease-out), visibility 0s 200ms; }
+.qtip { position: absolute; top: calc(100% + 8px); left: 10px; z-index: 5; font-family: 'Baloo 2', system-ui, sans-serif; text-align: center; width: min(290px, calc(100% - 20px)); padding: 10px 14px 12px; border-radius: 14px; background: #ece6ff; border-color: #6d5fc4; font-size: 14.5px; font-weight: 700; line-height: 1.3; color: var(--ink); transform-origin: 18px 0; visibility: hidden; opacity: 0; scale: .5; pointer-events: none; transition: opacity 150ms ease, scale 200ms var(--ease-out), visibility 0s 200ms; }
 .qtip::before { content: ''; position: absolute; top: -8px; left: 18px; width: 12px; height: 12px; background: #ece6ff; border: solid #6d5fc4; border-width: 2px 0 0 2px; rotate: 45deg; }
 .tip-open .qtip { visibility: visible; opacity: 1; scale: 1; pointer-events: auto; transition: opacity 150ms ease, scale 340ms var(--spring); }
 /* Premio listo = botón: se canjea al tocarlo. */
@@ -947,6 +947,15 @@ button.rg:active > i { scale: .92; }
 .g-bubble b { display: block; font: 400 20px 'Lilita One'; }
 .g-bubble span { display: block; font-size: 14.5px; font-weight: 700; line-height: 1.3; color: #5d5385; }
 .g-bubble span b { display: inline; font: inherit; color: #c22c49; }
+/* Recorrido de los botones de la izquierda: como el del mapa (lo demás apagado, sin velo de color). Una capa
+   transparente atrapa los toques; el círculo se desliza de botón en botón. */
+.side-guide { pointer-events: auto; }
+.side-guide .g-bubble { transition: top .45s cubic-bezier(.45,0,.2,1), left .45s cubic-bezier(.45,0,.2,1); }
+.side-touring .side.r, .side-touring .cta > :not(.tour-on), .side-touring .out-btn, .side-touring .me, .side-touring .side.l > :not(.tour-on) { opacity: .3; pointer-events: none; transition: opacity .3s; }
+/* Cierre: el círculo se vuelve una cápsula alrededor del botón de jugar. */
+.side-guide .g-ring.wide { width: var(--w); height: var(--h); border-radius: 30px; animation: ring-wide 1.1s var(--ease-out) infinite; }
+@keyframes ring-wide { 0%, 100% { scale: .97; } 50% { scale: 1.03; } }
+.side-guide .g-ring { transition: left .45s cubic-bezier(.45,0,.2,1), top .45s cubic-bezier(.45,0,.2,1), width .45s cubic-bezier(.3,1.3,.5,1), height .45s cubic-bezier(.3,1.3,.5,1), border-radius .45s ease; }
 /* Mientras dura el recorrido, lo demás del mapa no se toca. */
 .touring .side, .touring .cta, .touring .out-btn, .touring .me { opacity: .3; pointer-events: none; }
 
