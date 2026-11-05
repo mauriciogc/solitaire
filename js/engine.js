@@ -1,7 +1,7 @@
 // Motor de reglas: el estado de una partida y las acciones posibles.
 // Es la única fuente de reglas: lo usan el juego, el solucionador, el bot y las pruebas.
 //
-// Estado: { rem: bool[], stock: carta[], top: carta, streak, plays, actions, boom: id[] }
+// Estado: { rem: bool[], stock: carta[], top: carta, streak, plays, actions, boom: id[], turbo, cut: [] }
 //   rem      cartas del tablero ya retiradas (incluye cartas regalo activadas)
 //   plays    cartas jugadas del tablero (derrite el hielo)
 //   actions  jugadas + robos (mueve la carta viva y la cuenta de la bomba)
@@ -15,6 +15,13 @@
 //   arrow     flecha (+1 / -1): la siguiente jugada debe ser justo un número arriba / abajo
 //   curtain   cortina i: boca abajo hasta retirar su carta llave (level.curtains[i])
 //   bomb      bomba: carta especial sin número; si no la destapas antes de `bomb` acciones, explota y quema 3 cartas del mazo
+//   comet     cometa: carta especial sin número; si la destapas antes de `comet` acciones, vuela a la racha y le suma
+//             lo que falta para el siguiente premio (de 3 a 5, ver cometWish); si no, se va (sin castigo)
+//   turbo     cohete turbo (en el tablero o en el mazo): al jugarlo o robarlo, las TURBO jugadas siguientes suman 2 a la
+//             racha (s.turbo = las que quedan). Robar otra carta lo apaga
+//   half      boleto partido: dos números, `rank` arriba y `half` abajo. Se juega con cualquiera de las dos mitades;
+//             la otra se queda en su lugar (sigue tapando) para jugarla después (s.cut[id] = 1: se jugó la de arriba,
+//             2: la de abajo)
 //   live      carta viva (+1 / -1): su número cambia con cada acción (jugar o robar)
 //   neb       nebulosa: la carta está en un tramo escondido que sale cuando ya se vaciaron `neb` tramos, cualesquiera
 //             (level.neb = ids de cada tramo)
@@ -22,6 +29,7 @@ import { hash } from './rng.js';
 
 export const mod13 = (n) => ((n % 13) + 13) % 13;
 export const BURN = 3; // cartas que quema una bomba
+export const TURBO = 3; // jugadas que valen doble tras un cohete turbo
 
 export function initState(level, extra = {}) {
   return {
@@ -32,14 +40,20 @@ export function initState(level, extra = {}) {
     plays: 0,
     actions: 0,
     boom: [],
+    turbo: 0,
+    cut: [],
     ...extra,
   };
 }
 
-export const cloneState = (s) => ({ ...s, rem: s.rem.slice(), stock: s.stock.slice(), boom: s.boom.slice() });
+// (Partidas guardadas antes del boleto partido no traen cut.)
+export const cloneState = (s) => ({ ...s, rem: s.rem.slice(), stock: s.stock.slice(), boom: s.boom.slice(), cut: (s.cut || []).slice() });
 
-// Número que muestra ahora una carta (la carta viva cambia con las acciones).
-export const rankOf = (c, s) => (c.live ? mod13(c.rank + c.live * s.actions) : c.rank);
+// Mitad del boleto partido que ya se jugó (0 = está entero, 1 = la de arriba, 2 = la de abajo).
+export const cutOf = (c, s) => (c.half != null && s.cut?.[c.id]) || 0;
+
+// Número que muestra ahora una carta (la carta viva cambia con las acciones; del boleto partido, la mitad que queda).
+export const rankOf = (c, s) => (c.live ? mod13(c.rank + c.live * s.actions) : cutOf(c, s) === 1 ? c.half : c.rank);
 
 // ¿Vale el rango r sobre el descarte? A y K se conectan. Una flecha en el descarte obliga a una dirección.
 // Una carta doble en el descarte abre dos caminos (vale seguir desde cualquiera de sus dos números).
@@ -61,9 +75,10 @@ export const curtainOpen = (level, c, s) => c.curtain == null || !!s.rem[level.c
 export const lockOpen = (level, c, s) => c.lock == null || !!s.rem[level.keys[c.lock]];
 export const iceLeft = (c, s) => (c.ice ? Math.max(0, c.ice - s.plays) : 0);
 export const bombLeft = (c, s) => (c.bomb && !s.rem[c.id] ? c.bomb - s.actions : null);
+export const cometLeft = (c, s) => (c.comet && !s.rem[c.id] ? c.comet - s.actions : null);
 
-// Cartas especiales sin número (no se juegan, se activan al destaparse): regalo y bomba.
-export const special = (c) => !!(c.pack || c.bomb);
+// Cartas especiales sin número (no se juegan, se activan al destaparse): regalo, bomba y cometa.
+export const special = (c) => !!(c.pack || c.bomb || c.comet);
 
 // Boca arriba: libre y sin cortina cerrada.
 export const faceUp = (level, c, s) => !s.rem[c.id] && !special(c) && isFree(c, s, level) && curtainOpen(level, c, s);
@@ -71,12 +86,16 @@ export const faceUp = (level, c, s) => !s.rem[c.id] && !special(c) && isFree(c, 
 // ¿Se puede tocar ya (sin mirar el número)?
 export const isOpen = (level, c, s) => faceUp(level, c, s) && lockOpen(level, c, s) && !iceLeft(c, s);
 
-// Con qué número se jugaría (la carta doble prueba sus dos números). null = no se puede.
-export function playRank(level, c, s) {
+// Con qué número se jugaría (la carta doble prueba sus dos números; el boleto entero, sus dos mitades). null = no se puede.
+// low: del boleto entero, la mitad de abajo si las dos conectan (la que tocó el jugador).
+export function playRank(level, c, s, low = false) {
   if (!isOpen(level, c, s)) return null;
   const r = rankOf(c, s);
+  const both = c.half != null && !cutOf(c, s);
+  if (both && low && follows(s.top, c.half)) return c.half;
   if (follows(s.top, r)) return r;
   if (c.alt != null && follows(s.top, c.alt)) return c.alt;
+  if (both && follows(s.top, c.half)) return c.half;
   return null;
 }
 
@@ -114,6 +133,13 @@ export function nextReward(streak, step = 1) {
   }
 }
 
+// Lo que suma un cometa a la racha que llevas: lo que te falta para el siguiente premio, de 3 a 5
+// (si te faltan 4, suma 4 y te lo llevas). Para mostrarlo en la carta: cometWish(level, { streak: racha + 1 }).
+export function cometWish(level, s) {
+  const next = nextReward(s.streak, level.rewardStep ?? 1);
+  return next ? Math.min(5, Math.max(3, next.at - s.streak)) : 4;
+}
+
 // La carta útil es vecina (+1) de la primera carta jugable del tablero, por id.
 function rewardCard(level, s, kind) {
   if (kind === 'wild') return { wild: true, reward: true };
@@ -121,33 +147,49 @@ function rewardCard(level, s, kind) {
   return { rank: c ? mod13(rankOf(c, s) + 1) : 0, suit: c ? (c.id + 1) % 4 : 0, reward: true };
 }
 
-function applyReward(level, s) {
-  const kind = streakReward(s.streak, level.rewardStep ?? 1);
+// at: racha del premio (el cometa suma varios puntos de golpe y cada uno puede traer el suyo).
+function applyReward(level, s, at = s.streak) {
+  const kind = streakReward(at, level.rewardStep ?? 1);
   if (!kind) return null;
   let pos = -1;
   if (kind !== 'bank') {
     const gone = s.rem.reduce((a, b) => a + (b ? 1 : 0), 0);
-    const h = hash(level.g * 131 + s.streak * 17 + gone * 7 + s.stock.length);
+    const h = hash(level.g * 131 + at * 17 + gone * 7 + s.stock.length);
     pos = s.stock.length < 3 ? s.stock.length : 3 + (h % (s.stock.length - 2));
     s.stock.splice(pos, 0, rewardCard(level, s, kind));
   }
   return { kind, pos };
 }
 
-// Cartas especiales que quedaron destapadas: la carta regalo manda su contenido al final del mazo
-// y la bomba se desactiva. Las dos se quitan del tablero.
+// Cartas especiales que quedaron destapadas: la carta regalo manda su contenido al final del mazo,
+// la bomba se desactiva y el cometa suma a la racha. Se quitan del tablero.
 function activate(level, s) {
   const packs = [];
   const defused = [];
+  const wished = [];
   for (const c of level.cards) {
     if (!special(c) || s.rem[c.id] || !isFree(c, s, level)) continue;
     s.rem[c.id] = true;
     if (c.pack) {
       s.stock.push(...c.pack.map((x) => ({ ...x })));
       packs.push(c.id);
+    } else if (c.comet) {
+      s.streak += cometWish(level, s);
+      wished.push(c.id);
     } else defused.push(c.id);
   }
-  return { packs, defused };
+  return { packs, defused, wished };
+}
+
+// Cometas tapados cuya cuenta llegó a 0: se van del tablero sin hacer nada.
+function checkComets(level, s) {
+  const out = [];
+  for (const c of level.cards) {
+    if (!c.comet || s.rem[c.id] || s.actions < c.comet) continue;
+    s.rem[c.id] = true;
+    out.push(c.id);
+  }
+  return out;
 }
 
 // Bombas tapadas cuya cuenta llegó a 0: explotan, salen del tablero y queman las primeras cartas del mazo.
@@ -163,20 +205,36 @@ function checkBombs(level, s) {
 }
 
 // ---------- Acciones (devuelven un estado nuevo y lo que pasó, para animarlo) ----------
-export function play(level, s0, id) {
+export function play(level, s0, id, low = false) {
   const c = level.cards[id];
-  const r = playRank(level, c, s0);
+  const r = playRank(level, c, s0, low);
   const s = cloneState(s0);
-  s.rem[id] = true;
+  // Boleto entero: se parte y la otra mitad se queda en el tablero.
+  const split = c.half != null && !cutOf(c, s0) ? (r === c.rank && !(low && r === c.half) ? 1 : 2) : 0;
+  if (split) s.cut[id] = split;
+  else s.rem[id] = true;
   // La carta doble llega al descarte con sus dos números; la flecha, con su obligación.
   s.top = c.alt != null ? { rank: c.rank, alt: c.alt, suit: c.suit } : { rank: r, suit: c.suit, ...(c.arrow && { arrow: c.arrow }) };
   s.plays++;
   s.actions++;
   s.streak++;
-  const { packs, defused } = activate(level, s);
-  const reward = applyReward(level, s);
+  const at = s.streak;
+  // Turbo: esta jugada suma un punto más (y su premio, si toca).
+  const boosted = s0.turbo > 0;
+  if (boosted) s.streak++;
+  s.turbo = c.turbo ? TURBO : boosted ? s0.turbo - 1 : 0;
+  const { packs, defused, wished } = activate(level, s);
+  const reward = applyReward(level, s, at);
+  const boost = boosted ? applyReward(level, s, at + 1) : null;
+  // Puntos que sumó el cometa: cada premio que alcanza también cae (en orden).
+  const wishes = [];
+  for (let k = at + (boosted ? 2 : 1); k <= s.streak; k++) {
+    const w = applyReward(level, s, k);
+    if (w) wishes.push({ ...w, at: k });
+  }
   const boom = checkBombs(level, s);
-  return { s, ev: { t: 'play', id, rank: r, packs, defused, reward, boom } };
+  const gone = checkComets(level, s);
+  return { s, ev: { t: 'play', id, rank: r, packs, defused, reward, boost, boom, wished, wishes, gone, ...(c.turbo && { turbo: true }), ...(split && { split }) } };
 }
 
 export function draw(level, s0) {
@@ -185,24 +243,29 @@ export function draw(level, s0) {
   s.top = card;
   s.actions++;
   s.streak = 0;
+  s.turbo = card.turbo ? TURBO : 0;
   const boom = checkBombs(level, s);
-  return { s, ev: { t: 'draw', card, boom } };
+  const gone = checkComets(level, s);
+  return { s, ev: { t: 'draw', card, boom, gone, ...(card.turbo && { turbo: true }) } };
 }
 
 // ---------- Solucionador y bot ----------
-const sig = (c) => (c.wild ? 'w' : `${c.rank}${c.alt != null ? `/${c.alt}` : ''}${c.arrow ? (c.arrow > 0 ? '+' : '-') : ''}`);
+const sig = (c) => (c.wild ? 'w' : `${c.rank}${c.alt != null ? `/${c.alt}` : ''}${c.arrow ? (c.arrow > 0 ? '+' : '-') : ''}${c.turbo ? 't' : ''}`);
+// Niveles con cohete turbo: el turbo que queda también es parte del estado.
+const hasTurbo = (level) => level.cards.some((c) => c.turbo) || level.stock.some((c) => c.turbo);
 
 // Busca una solución desde un estado (profundidad primero, con memoria). Devuelve [id | 'draw' | 'wild', …] o null.
 // wilds: comodines que puede usar (como en el juego, solo al quedarse sin jugadas).
 export function solve(level, s0, limit = 250000, wilds = 0) {
-  const timed = level.cards.some((c) => c.live || c.bomb);
+  const timed = level.cards.some((c) => c.live || c.bomb || c.comet);
+  const turbo = hasTurbo(level);
   const seen = new Set();
   const path = [];
   let nodes = 0;
   const dfs = (s, w = wilds) => {
     if (won(s)) return true;
     if (++nodes > limit) return false;
-    const key = `${w}|${s.rem.map((b) => (b ? 1 : 0)).join('')}|${s.stock.map(sig).join(',')}|${sig(s.top)}|${Math.min(s.streak, 13 + (s.streak % 3))}${timed ? `|${s.actions}|${s.boom}` : ''}`;
+    const key = `${w}|${s.rem.map((b, i) => (b ? 1 : s.cut?.[i] ? s.cut[i] + 1 : 0)).join('')}|${s.stock.map(sig).join(',')}|${sig(s.top)}|${Math.min(s.streak, 13 + (s.streak % 3))}${timed ? `|${s.actions}|${s.boom}` : ''}${turbo ? `|${s.turbo}` : ''}`;
     if (seen.has(key)) return false;
     seen.add(key);
     const moves = legal(level, s);
@@ -231,13 +294,14 @@ export function solve(level, s0, limit = 250000, wilds = 0) {
 // (llegan 5 cartas vecinas de las que están libres). Devuelve { ok, cut }: cut = se acabó el límite
 // sin terminar de buscar (entonces un "no" no está comprobado).
 export function solveHelp(level, wilds = 0, five = 0, limit = 60000) {
-  const timed = level.cards.some((c) => c.live || c.bomb);
+  const timed = level.cards.some((c) => c.live || c.bomb || c.comet);
+  const turbo = hasTurbo(level);
   const seen = new Set();
   let nodes = 0, cut = false;
   const dfs = (s, w, f) => {
     if (won(s)) return true;
     if (++nodes > limit) return !(cut = true);
-    const key = `${w}${f}|${s.rem.map((b) => (b ? 1 : 0)).join('')}|${s.stock.map(sig).join(',')}|${sig(s.top)}|${Math.min(s.streak, 13 + (s.streak % 3))}${timed ? `|${s.actions}|${s.boom}` : ''}`;
+    const key = `${w}${f}|${s.rem.map((b, i) => (b ? 1 : s.cut?.[i] ? s.cut[i] + 1 : 0)).join('')}|${s.stock.map(sig).join(',')}|${sig(s.top)}|${Math.min(s.streak, 13 + (s.streak % 3))}${timed ? `|${s.actions}|${s.boom}` : ''}${turbo ? `|${s.turbo}` : ''}`;
     if (seen.has(key)) return false;
     seen.add(key);
     const moves = legal(level, s);

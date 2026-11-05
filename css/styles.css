@@ -482,11 +482,18 @@ button.rg:active > i { scale: .92; }
 .mini-back { --cw: 42px; background: var(--back) center / 100% 100%; border-radius: 6px; top: 6px; }
 
 /* Candados y llaves (visibles aunque la carta esté boca abajo) */
-.lock-ov { position: absolute; left: 50%; top: 6%; width: 50%; translate: -50% 0; z-index: 3; pointer-events: none; transition: opacity 200ms var(--ease-out), scale 200ms var(--ease-out); }
-.lock-ov .ico { width: 100%; height: auto; display: block; }
-.card.unlocked .lock-ov { opacity: 0; scale: 1.4; }
-.key-mark { position: absolute; right: -10%; top: -7%; z-index: 3; width: 46%; aspect-ratio: 1; border-radius: 50%; pointer-events: none; background: var(--cream); border: 2px solid var(--ink); display: grid; place-items: center; }
-.key-mark .ico { width: 82%; height: 82%; }
+/* Candado y llave: carta del color de su pareja (--kh) con su dibujo dentro, en el lugar del palo. Boca abajo: orilla de
+   ese color y el dibujo al centro. El candado cerrado apaga el número; al abrirse salta, se va y aparece el palo. */
+.front.locked, .front.keyed { background: hsl(var(--kh) 90% 94%); box-shadow: inset 0 0 0 2px var(--ink), inset 0 calc(var(--cw) * -0.1) 0 hsl(var(--kh) 65% 82%), 2px 4px 0 #0b062a33, 4px 9px 12px #0b062a40; }
+.front .lk-badge { position: absolute; right: 4%; top: 3%; width: 34%; z-index: 3; pointer-events: none; transition: opacity 260ms var(--ease-out), scale 260ms var(--spring), rotate 260ms var(--ease-out); }
+.front .lk-badge .ico { width: 100%; height: auto; display: block; }
+.front.locked .cs { opacity: 0; transition: opacity 200ms 160ms; }
+.front.locked .big, .front.locked .rk { opacity: .45; transition: opacity 260ms var(--ease-out); }
+.card.unlocked .front.locked .lk-badge { opacity: 0; scale: 1.7; rotate: 25deg; }
+.card.unlocked .front.locked .cs, .card.unlocked .front.locked .big, .card.unlocked .front.locked .rk { opacity: 1; }
+.back .lk-ico { position: absolute; left: 50%; top: 50%; width: 60%; aspect-ratio: 1; translate: -50% -50%; display: grid; place-items: center; border-radius: 50%; background: hsl(var(--kh) 90% 94%); border: 2px solid var(--ink); box-shadow: inset 0 -3px 0 hsl(var(--kh) 65% 82%); transition: opacity 260ms var(--ease-out), scale 260ms var(--spring); }
+.back .lk-ico .ico { width: 78%; height: 78%; }
+.card.unlocked .back .lk-ico { opacity: 0; scale: 1.5; }
 /* Hielo: capa escarchada con cuántas jugadas faltan; se rompe al llegar a 0. */
 .ice-ov { position: absolute; inset: 0; z-index: 2; pointer-events: none; display: grid; place-items: center; border-radius: calc(var(--cw) * 0.14);
   background: linear-gradient(155deg, #ffffffe8 0 18%, #cdeefbd9 18% 50%, #a6ddf4d9 50% 62%, #e3f7ffe0 62%); box-shadow: inset 0 0 0 2px var(--ink), inset 0 0 0 4px #8fd2ef; transition: opacity 300ms var(--ease-out), scale 300ms var(--ease-out); }
@@ -494,6 +501,8 @@ button.rg:active > i { scale: .92; }
 .ice-ov b:empty { display: none; }
 .card.melted .ice-ov { opacity: 0; scale: 1.25; }
 /* Carta regalo */
+.card.pack-card .inner, .card.bomb-card .inner, .card.comet-card .inner { transform: none; transition: none; }
+.card.pack-card .back, .card.bomb-card .back, .card.comet-card .back { display: none; }
 .card.pack-card .face { background: #8a5cf0; box-shadow: inset 0 0 0 2px var(--ink), inset 0 0 0 5px var(--gold), inset 0 0 0 7px #6c3fd4, 2px 4px 0 #0b062a33, 4px 9px 12px #0b062a40; }
 .pack-num { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; z-index: 2; font: 400 calc(var(--cw) * 0.46) / 1 'Lilita One'; color: #ffd85a; text-shadow: 2px 0 0 var(--ink), -2px 0 0 var(--ink), 0 2px 0 var(--ink), 0 -2px 0 var(--ink), 0 3px 0 var(--ink); }
 /* Bomba */
@@ -525,15 +534,64 @@ button.rg:active > i { scale: .92; }
 .front.double { background: #fff4d9; box-shadow: inset 0 0 0 2px var(--ink), inset 0 calc(var(--cw) * -0.1) 0 #f3d999, 2px 4px 0 #0b062a33, 4px 9px 12px #0b062a40; }
 .front .dbl { position: absolute; left: 4%; right: 4%; bottom: 22%; display: flex; align-items: center; justify-content: center; font: 400 calc(var(--cw) * 0.42) / 1 'Lilita One'; }
 .front .dbl i { width: calc(var(--cw) * 0.055); height: calc(var(--cw) * 0.4); margin: 0 4%; background: currentColor; opacity: .7; rotate: 18deg; border-radius: 2px; }
+/* Cometa: carta de noche con el cometa, su cuenta arriba (como la bomba) y lo que suma abajo. */
+.card.comet-card .face { background: radial-gradient(circle at 30% 25%, #fff8 0 1.5%, transparent 2.5%), radial-gradient(circle at 75% 70%, #fff6 0 1.2%, transparent 2.2%), radial-gradient(circle at 20% 80%, #fff5 0 1%, transparent 2%), #34307e; box-shadow: inset 0 0 0 2px var(--ink), inset 0 calc(var(--cw) * -0.1) 0 #27236a, 2px 4px 0 #0b062a33, 4px 9px 12px #0b062a40; }
+.comet-face { position: absolute; inset: 0; z-index: 2; display: grid; place-items: center; pointer-events: none; }
+.comet-face .ico { width: 74%; height: 74%; translate: 0 -6%; }
+.comet-face b { position: absolute; right: -12%; top: -8%; width: 46%; aspect-ratio: 1; border-radius: 50%; display: grid; place-items: center; background: #4aa8de; border: 2px solid var(--ink); box-shadow: inset 0 -3px 0 #2f86c0; color: #fff; font: 400 calc(var(--cw) * 0.27) / 1 'Lilita One'; }
+.comet-face b:empty { display: none; }
+.comet-face em { position: absolute; bottom: 7%; font: 400 calc(var(--cw) * 0.26) / 1 'Lilita One'; font-style: normal; color: #ffd85a; text-shadow: 1.5px 0 0 var(--ink), -1.5px 0 0 var(--ink), 0 1.5px 0 var(--ink), 0 -1.5px 0 var(--ink), 0 2.5px 0 var(--ink); }
+.card.comet-hot .comet-face b { animation: bomb-pulse 500ms ease-in-out infinite alternate; }
+.card.comet-hot .comet-face .ico { animation: comet-wobble 700ms ease-in-out infinite alternate; }
+@keyframes comet-wobble { from { rotate: -6deg; } to { rotate: 6deg; } }
+.comet-trail.fire { width: 12px; height: 12px; margin: -6px 0 0 -6px; background: radial-gradient(circle, #fff6c8 0 25%, #ffc83d 45%, #ff6a3d 65%, #ff6a3d00 75%); }
+/* Cohete turbo: boca abajo (tablero y mazo) es el mismo reverso con la orilla naranja (cardBackURL) y el cohete al centro; boca arriba es
+   una carta normal con el cohete en la esquina en lugar del número chico. */
+.front .rk.tb-rk { left: 5%; top: 3%; width: calc(var(--cw) * 0.34); height: calc(var(--cw) * 0.34); }
+.front .rk.tb-rk .ico { display: block; width: 100%; height: 100%; }
+.back .tb-ico { position: absolute; left: 50%; top: 50%; width: 58%; aspect-ratio: 1; translate: -50% -50%; display: grid; place-items: center; border-radius: 50%; background: #ff8a3d; border: 2px solid var(--ink); box-shadow: inset 0 -3px 0 #e0602a; }
+.back .tb-ico .ico { width: 80%; height: 80%; }
+.turbo-fly { position: fixed; z-index: 10000; width: 54px; height: 54px; margin: -27px 0 0 -27px; pointer-events: none; filter: drop-shadow(0 0 8px #ffb02e); }
+.turbo-fly .ico { width: 100%; height: 100%; }
+.combo.turbo { box-shadow: 0 0 0 2px #ff8a3d, 0 0 14px #ff8a3d99; }
+.turbo-chip { display: flex; align-items: center; gap: 3px; padding: 1px 7px 1px 3px; border-radius: 99px; background: #ff8a3d; border: 2px solid var(--ink); box-shadow: inset 0 -3px 0 #e0602a; animation: turbo-shake .5s ease-in-out infinite alternate; }
+.turbo-chip .ico { width: calc(22px * var(--k)); height: calc(22px * var(--k)); }
+.turbo-chip b { font: 400 calc(15px * var(--k)) / 1 'Lilita One'; color: #fff; text-shadow: 1.5px 0 0 var(--ink), -1.5px 0 0 var(--ink), 0 1.5px 0 var(--ink), 0 -1.5px 0 var(--ink); }
+.turbo-chip .tps { display: flex; flex-direction: column; gap: 2px; }
+.turbo-chip .tps:empty { display: none; }
+.turbo-chip .tp { width: 6px; height: 6px; border-radius: 50%; background: #ffe27a; box-shadow: 0 0 0 1.5px var(--ink); }
+@keyframes turbo-shake { from { rotate: -3deg; } to { rotate: 3deg; } }
+.comet-trail { position: fixed; z-index: 10000; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%; pointer-events: none; background: radial-gradient(circle, #fff 0 30%, #9fe3ff 55%, #9fe3ff00 72%); }
 /* Flecha: carta durazno con la flecha en la esquina (como la cuenta de la bomba). */
 .front.arrowed { background: #ffeede; box-shadow: inset 0 0 0 2px var(--ink), inset 0 calc(var(--cw) * -0.1) 0 #ffd0ad, 2px 4px 0 #0b062a33, 4px 9px 12px #0b062a40; }
 .front.arrowed .cs { display: none; }
-.arrow-badge { position: absolute; right: -12%; top: -8%; width: 46%; z-index: 3; }
+/* La flecha va dentro de la carta, en el lugar del palo. */
+.arrow-badge { position: absolute; right: 6%; top: 4%; width: 31%; z-index: 3; }
 .arrow-badge .ico { width: 100%; height: auto; display: block; }
 /* Carta viva: verde, con la flecha de hacia dónde cambia en la esquina (sin círculo). */
 .front.live { background: #e9fbf0; box-shadow: inset 0 0 0 2px var(--ink), inset 0 calc(var(--cw) * -0.1) 0 #b9ecd0, 2px 4px 0 #0b062a33, 4px 9px 12px #0b062a40; }
 .front .rk.dir { left: 6%; top: 4%; width: calc(var(--cw) * 0.3); height: calc(var(--cw) * 0.3); color: #1f9d5a; }
+.front .rk.dir.down { color: #e8434f; }
 .front .rk.dir svg { display: block; width: 100%; height: 100%; }
+/* Boleto partido: boleto de cine rosa con dos mitades (la de abajo un poco más oscura), línea picada y muescas a los lados.
+   Al jugar una mitad, la otra se queda recortada en zigzag (clip-path en la carta, ver tearClip en game.js). */
+/* Boca abajo: el reverso de siempre con la misma línea picada (clara, sobre el reverso oscuro) y muescas. */
+.face.back .perf { background-image: repeating-linear-gradient(90deg, #fff6e6cc 0 7%, transparent 7% 12%); }
+/* En el reverso la orilla crema se come parte de la muesca: un poco más grande para que se vea igual que en la cara. */
+.face.back .perf::before, .face.back .perf::after { width: calc(var(--cw) * 0.22); }
+.face.back .perf::before { left: calc(var(--cw) * -0.11); }
+.face.back .perf::after { right: calc(var(--cw) * -0.11); }
+.front.ticket { background: linear-gradient(#ffe8ee 50%, #ffd3de 50%); box-shadow: inset 0 0 0 2px var(--ink), inset 0 calc(var(--cw) * -0.1) 0 #f6b6c8, 2px 4px 0 #0b062a33, 4px 9px 12px #0b062a40; }
+.front .tk { position: absolute; left: 0; right: 0; height: 50%; display: flex; align-items: center; justify-content: center; gap: 5%; }
+.front .tk.a { top: 0; }
+.front .tk.b { bottom: 0; translate: 0 -4%; }
+.front .tk .cs { position: static; width: calc(var(--cw) * 0.2); height: calc(var(--cw) * 0.2); flex: none; }
+.front .tk b { font: 400 calc(var(--cw) * 0.42) / 1 'Lilita One'; letter-spacing: -0.03em; }
+.face .perf { position: absolute; inset: 0; overflow: hidden; border-radius: inherit; pointer-events: none; background: repeating-linear-gradient(90deg, #2a1f5c99 0 7%, transparent 7% 12%) 50% 50% / 70% 2.5px no-repeat; }
+.face .perf::before, .face .perf::after { content: ''; position: absolute; top: 50%; width: calc(var(--cw) * 0.17); aspect-ratio: 1; border-radius: 50%; background: #120b33; border: 2px solid var(--ink); translate: 0 -50%; }
+.face .perf::before { left: calc(var(--cw) * -0.09); }
+.face .perf::after { right: calc(var(--cw) * -0.09); }
+.card .inner.become { pointer-events: none; }
 /* Carta doble: un poco más grande en el tablero (al jugarse vuelve al tamaño normal). */
 .board .card.dbl-card { scale: 1.1; }
 .board .card.dbl-card.up:active { scale: 1.05; }
@@ -908,7 +966,7 @@ button.rg:active > i { scale: .92; }
 .pv { position: relative; width: 150px; height: 104px; margin: 0 auto 4px; border-radius: 8px; background: #0003; overflow: hidden; }
 .pv .m { position: absolute; border-radius: 2px; background: hsl(var(--hue) 60% 48%); border: 1px solid #fff9; }
 .pv .m.free { background: #fff; } .pv .m.lock { border: 2px solid #ff4d6d; } .pv .m.key { background: var(--gold); } .pv .m.pack { background: #9b5cf0; }
-.pv .m.ice { background: #bfeaff; } .pv .m.bomb { background: #333; border-color: #ff5a5a; } .pv .m.live { background: #2ec4b6; } .pv .m.alt { background: #7cf; }
+.pv .m.ice { background: #bfeaff; } .pv .m.bomb { background: #333; border-color: #ff5a5a; } .pv .m.live { background: #2ec4b6; } .pv .m.comet { background: #34307e; border-color: #ffd85a; } .pv .m.turbo { background: #ff8a3d; } .pv .m.alt { background: #7cf; } .pv .m.ticket { background: #ff9fb8; }
 .pv .m.arrow { background: #5ce28b; } .pv .m.curtain { background: #c0392b; }
 /* Galería de planetas (dev): la mesa en chiquito con su planetita encima. */
 .ptile { gap: 6px; }
@@ -926,7 +984,7 @@ button.rg:active > i { scale: .92; }
 
 /* ---------- Menos movimiento ---------- */
 @media (prefers-reduced-motion: reduce) {
-  .hero-card, .hero-undo span, .hero-fan i, .g-ring, .card.shake, .undo-btn.nudge, .streak.pop, .confetti, .day.today, .iconbtn.ready, .racha-btn.hot, .racha-pill.hot, .fire, .rg.ready > i, .rclaim, .rw-ico, .combo i.next, .combo.near .prize, .combo.hot, .combo .need, .rh-ico .ico, .dticket span, .logo-bands, .big-stars .ico, .rays, .gbox, .loot-it { animation: none !important; }
+  .hero-card, .hero-undo span, .hero-fan i, .g-ring, .card.shake, .undo-btn.nudge, .streak.pop, .confetti, .day.today, .iconbtn.ready, .racha-btn.hot, .racha-pill.hot, .fire, .rg.ready > i, .rclaim, .rw-ico, .combo i.next, .combo.near .prize, .combo.hot, .turbo-chip, .comet-hot .ico, .combo .need, .rh-ico .ico, .dticket span, .logo-bands, .big-stars .ico, .rays, .gbox, .loot-it { animation: none !important; }
   .card .inner, .stock .card { transition-duration: 0.01ms !important; }
 }
 

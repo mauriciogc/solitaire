@@ -653,23 +653,28 @@ const MECH_TEXT = {
   curtain: 'Sigue boca abajo hasta que quitas su carta con telón.',
   bomb: 'Destápala antes de que su cuenta llegue a cero, o quema 3 cartas de tu mazo.',
   live: 'Con la flecha arriba, su número sube cada vez que juegas o robas; con la flecha abajo, baja.',
+  ticket: 'Tiene dos números: juégalo con cualquiera de las dos mitades. Se parte y la otra mitad se queda para después.',
+  turbo: 'Al jugarlo, tus 3 jugadas siguientes valen doble en la racha. Si robas, se apaga.',
+  comet: 'Destápalo antes de que su cuenta llegue a cero y suma a tu racha los puntos que marca. Si no, se va.',
 };
 // Flecha y carta viva: se enseñan los dos casos (arriba y abajo).
 const MECH_BOTH = {
+  lock: () => mini(0, '8', 'c', { key: 0 }) + mini(0, '9', 'd', { lock: 0 }),
   arrow: () => mini(0, '6', 'd', { arrow: 1 }) + mini(0, '6', 'c', { arrow: -1 }),
   live: () => mini(0, 'K', 's', { live: 1 }) + mini(0, '4', 'h', { live: -1 }),
 };
 // Ayuda → Cartas especiales, en bloques como "Cómo jugar".
 const MECH_GROUPS = [
   ['Se abren después', ['lock', 'ice', 'curtain']],
-  ['Cambian el número', ['double', 'arrow', 'live']],
+  ['Cambian el número', ['double', 'arrow', 'live', 'ticket']],
   ['No se juegan', ['pack', 'bomb']],
+  ['Te ayudan', ['comet', 'turbo']],
 ];
 // Reverso de la baraja del jugador, para los dibujos de la ayuda.
 const helpBack = (x, extra = '') => `<div class="card" style="left:${x}px;${extra};--back:${cardBackURL()}"><div class="inner">${backHTML({})}</div></div>`;
 function mechCard(m, x = 0) {
   const back = `--back:${cardBackURL()}`;
-  if (m === 'lock') return mini(x, '9', 'd', { marks: `<span class="lock-ov">${lockIcon(350)}</span>` });
+  if (m === 'lock') return mini(x, '9', 'd', { lock: 0 });
   if (m === 'pack') return `<div class="card pack-card up" style="left:${x}px"><div class="inner"><div class="face front"></div></div><span class="pack-num">+3</span></div>`;
   if (m === 'ice') return mini(x, 'Q', 'c', { marks: '<span class="ice-ov"><b>2</b></span>' });
   if (m === 'double') return `<div class="card up" style="left:${x}px">${faceHTML({ rank: 4, alt: 7, suit: 1 })}</div>`;
@@ -677,6 +682,9 @@ function mechCard(m, x = 0) {
   if (m === 'curtain') return `<div class="card curtain" style="left:${x}px;${back}"><div class="inner">${backHTML({ curtain: 0 })}</div></div>`;
   if (m === 'bomb') return `<div class="card bomb-card up" style="left:${x}px"><div class="inner"><div class="face front"></div></div><span class="bomb-face">${icon('bomb')}<b>3</b></span></div>`;
   if (m === 'live') return mini(x, 'K', 's', { live: 1 });
+  if (m === 'ticket') return `<div class="card up" style="left:${x}px">${faceHTML({ rank: 4, half: 9, suit: 1 })}</div>`;
+  if (m === 'turbo') return mini(x, '7', 'h', { turbo: true });
+  if (m === 'comet') return `<div class="card comet-card up" style="left:${x}px"><div class="inner"><div class="face front"></div></div><span class="comet-face">${icon('comet')}<b>4</b><em>+3</em></span></div>`;
   return '';
 }
 

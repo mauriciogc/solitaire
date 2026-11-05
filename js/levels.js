@@ -654,6 +654,23 @@ export function buildLevel(g, ev = null, t = 0) {
   const mech = new Set(chooseMechanics(r, world, index, boss, n, ev).slice(0, respite ? 1 : 2));
   // Mesa enrollada y nebulosa sin bombas: su cuenta correría con la carta todavía escondida.
   if (scroll) mech.delete('bomb');
+  // Cometa: es un regalo, así que va aparte de las demás (no cuenta en el límite de 2 y sale con cualquiera).
+  // Por ahora solo sin ayudas y sin mesas especiales. Se estrena en el primer nivel de su mundo y después sale de
+  // vez en cuando (es un regalo: no muy seguido). Usa su propio sorteo: un nivel que no lo trae queda igual que antes.
+  const rc = mulberry32(hash(g * 7907 + t * 31 + 11));
+  if (fresh && !scroll && n >= 8 && world >= MECH_INTRO.comet && (base === extraDebut('comet') || rc() < EXTRA_ODDS)) mech.add('comet');
+  // Cohete turbo: el otro regalo, igual que el cometa pero con su propio sorteo.
+  const rt = mulberry32(hash(g * 6007 + t * 37 + 5));
+  const turbo = fresh && !scroll && n >= 8 && world >= MECH_INTRO.turbo && (base === extraDebut('turbo') || rt() < EXTRA_ODDS);
+  // Boleto partido: mecánica normal (cuenta en el límite de 2), pero con su propio sorteo como el cometa, para que los
+  // niveles que no lo traen queden igual. En su mundo va en todos (sola en los primeros niveles); después, de vez en cuando.
+  // Por ahora solo sin ayudas y sin mesas especiales (los demás, al cerrar la Fase 7).
+  const rb = mulberry32(hash(g * 5303 + t * 41 + 3));
+  if (fresh && !scroll && n >= 10 && world >= MECH_INTRO.ticket && (world === MECH_INTRO.ticket || rb() < TICKET_ODDS)) {
+    const keep = respite || (world === MECH_INTRO.ticket && index < 5) ? 0 : 1;
+    [...mech].slice(keep).forEach((m) => mech.delete(m));
+    mech.add('ticket');
+  }
 
   // Carta regalo: una carta especial (sin número) que se activa sola al quedar destapada del todo
   // y manda 2-5 cartas al final del mazo. Va tapada y en el primer 40% del orden de retirada.
@@ -665,17 +682,26 @@ export function buildLevel(g, ev = null, t = 0) {
   }
   // Bombas (1-3): cartas especiales sin número, tapadas, que hay que destapar antes de que su cuenta llegue a 0.
   const bombIds = [];
+  // Sin ayudas: ninguna bomba (ni cometa) tapa ni está tapada por otra especial (el motor solo activa una por
+  // jugada y la de abajo se quedaba atorada). Los demás niveles siguen igual: sus mazos probados dependen de esto.
+  const touch = (i, j) => coveredBy[i].includes(j) || coveredBy[j].includes(i);
   if (mech.has('bomb')) {
     const mid = order.slice(Math.floor(n * 0.15), Math.floor(n * 0.75)).filter((i) => coveredBy[i].length && i !== packId);
     shuffle(r, mid);
     const want = randInt(r, 1, n >= 20 ? 3 : 2);
-    // Sin ayudas: ninguna bomba tapa ni está tapada por otra especial (el motor solo activa una por jugada y
-    // la de abajo se quedaba atorada). Los demás niveles siguen igual: sus mazos probados dependen de esto.
-    const touch = (i, j) => coveredBy[i].includes(j) || coveredBy[j].includes(i);
     if (fresh) for (const i of mid) bombIds.length < want && ![packId, ...bombIds].some((j) => j != null && touch(i, j)) && bombIds.push(i);
     else bombIds.push(...mid.slice(0, want));
   }
-  const play = order.filter((i) => i !== packId && !bombIds.includes(i)); // cartas con número, en orden de solución
+  // Cometas (1-2): cartas especiales sin número, tapadas. Destapado a tiempo suma a la racha (ver cometWish en
+  // engine.js); si no, se va. Nunca estorba, así que no hace falta comprobarlo con el solucionador.
+  const cometIds = [];
+  if (mech.has('comet')) {
+    const mid = order.slice(Math.floor(n * 0.15), Math.floor(n * 0.8)).filter((i) => coveredBy[i].length && i !== packId && !bombIds.includes(i));
+    shuffle(rc, mid);
+    const want = randInt(rc, 1, n >= 24 ? 2 : 1);
+    for (const i of mid) cometIds.length < want && ![packId, ...bombIds, ...cometIds].some((j) => j != null && touch(i, j)) && cometIds.push(i);
+  }
+  const play = order.filter((i) => i !== packId && !bombIds.includes(i) && !cometIds.includes(i)); // cartas con número, en orden de solución
   const np = play.length;
 
   const minC = d < 0.15 ? 4 : d < 0.35 ? 3 : 2;
@@ -683,8 +709,10 @@ export function buildLevel(g, ev = null, t = 0) {
   const maxC = Math.max(minC + 1, Math.round(9 - d * 5.5) - (boss ? 2 : 0) - (ev ? ev.tight : 0));
   const ranks = new Array(n);
   const starts = [];
+  const chainEnd = []; // índice (en play) de la última carta de la cadena de cada carta
   for (let k = 0; k < np; ) {
     const len = Math.min(np - k, randInt(r, minC, maxC));
+    for (let t = 0; t < len; t++) chainEnd[k + t] = k + len - 1;
     let cur = randInt(r, 0, 12);
     starts.push(cur);
     let dir = r() < 0.5 ? 1 : -1;
@@ -716,9 +744,37 @@ export function buildLevel(g, ev = null, t = 0) {
   for (let i = 0; i < spares; i++) stock.push(helpfulCard((1 - d) * 0.85));
 
   const cards = pos.map((p, i) => ({ id: i, ...p, rank: ranks[i], suit: randInt(r, 0, 3), coveredBy: coveredBy[i], ...(under && { under: under[i] }), ...(neb?.[i] && { neb: neb[i] }) }));
-  for (const id of bombIds) delete cards[id].rank;
-  const SPECIAL = ['lock', 'key', 'pack', 'ice', 'alt', 'arrow', 'curtain', 'curtainKey', 'bomb', 'live'];
+  for (const id of [...bombIds, ...cometIds]) delete cards[id].rank;
+  const SPECIAL = ['lock', 'key', 'pack', 'ice', 'alt', 'arrow', 'curtain', 'curtainKey', 'bomb', 'live', 'comet', 'turbo', 'half'];
   const plain = (id) => SPECIAL.every((f) => cards[id][f] == null);
+
+  // Boleto partido (1-2): la referencia juega primero la mitad de arriba (su número de la cadena) y la de abajo al final
+  // de esa misma cadena, que es ±1 de la última carta. Por eso las cartas que tapa el boleto deben ir después de esa
+  // cadena. Cada boleto en una cadena distinta. tails[m] = boleto cuya otra mitad se juega tras la carta m.
+  const tails = {};
+  if (mech.has('ticket')) {
+    const specials = [packId, ...bombIds, ...cometIds].filter((j) => j != null);
+    const opts = [];
+    for (let k = 0; k < np; k++) {
+      const id = play[k], m = chainEnd[k];
+      if (!plain(id) || specials.some((j) => coveredBy[j].includes(id))) continue;
+      if (play.some((j, q) => q > k && q <= m && coveredBy[j].includes(id))) continue;
+      opts.push(k);
+    }
+    shuffle(rb, opts);
+    const want = randInt(rb, 1, np >= 20 ? 2 : 1);
+    for (const k of opts) {
+      const m = chainEnd[k];
+      if (Object.keys(tails).length >= want || tails[m] != null) continue;
+      const id = play[k];
+      let b = mod13(ranks[play[m]] + (rb() < 0.5 ? 1 : -1));
+      if (b === ranks[id]) b = mod13(2 * ranks[play[m]] - b);
+      cards[id].half = b;
+      tails[m] = id;
+    }
+  }
+  // Solución de referencia con las dos mitades de cada boleto.
+  const steps = play.flatMap((id, k) => [{ id, rank: ranks[id], k }, ...(tails[k] != null ? [{ id: tails[k], rank: cards[tails[k]].half, tail: true }] : [])]);
 
   // Candados y llaves: la carta con candado no se puede jugar hasta retirar su llave.
   // La llave siempre va antes que el candado en la solución, así el nivel sigue siendo ganable.
@@ -774,7 +830,7 @@ export function buildLevel(g, ev = null, t = 0) {
   // y si la jugada siguiente va sin robar en medio. Las mecánicas se colocan para que la referencia las cumpla.
   const act = [];
   const drew = [];
-  const bombFree = {}; // acciones al quedar destapada cada bomba en la referencia
+  const bombFree = {}; // acciones al quedar destapada cada bomba (o cometa) en la referencia
   {
     const stk = stock.slice();
     const rem = new Array(n).fill(false);
@@ -782,24 +838,23 @@ export function buildLevel(g, ev = null, t = 0) {
     let si = 0;
     let a = 0;
     let packed = packId == null;
-    play.forEach((id, k) => {
+    for (const { id, rank, k, tail } of steps) {
       let dn = 0;
-      while (!follows(top, ranks[id])) {
+      while (!follows(top, rank)) {
         top = stk[si++];
         a++;
         dn++;
       }
-      drew[k] = dn;
-      act[k] = a;
-      rem[id] = true;
-      top = { rank: ranks[id] };
+      if (!tail) (drew[k] = dn), (act[k] = a);
+      if (tail || cards[id].half == null) rem[id] = true;
+      top = { rank };
       a++;
       if (!packed && coveredBy[packId].every((j) => rem[j])) {
         stk.push(...cards[packId].pack);
         packed = true;
       }
-      for (const id of bombIds) if (bombFree[id] == null && coveredBy[id].every((j) => rem[j])) bombFree[id] = a;
-    });
+      for (const id of [...bombIds, ...cometIds]) if (bombFree[id] == null && coveredBy[id].every((j) => rem[j])) bombFree[id] = a;
+    }
   }
   const pickPlain = (from, to, ok = () => true) => {
     const c = [];
@@ -827,7 +882,7 @@ export function buildLevel(g, ev = null, t = 0) {
   // Flecha: solo donde la referencia juega justo después, sin robar, el número de arriba (o de abajo).
   if (mech.has('arrow')) {
     for (let t = randInt(r, 1, 2); t > 0; t--) {
-      const k = pickPlain(0, np - 1, (k) => drew[k + 1] === 0);
+      const k = pickPlain(0, np - 1, (k) => drew[k + 1] === 0 && tails[k] == null);
       if (k == null) continue;
       const a = ranks[play[k]];
       const b = ranks[play[k + 1]];
@@ -862,6 +917,15 @@ export function buildLevel(g, ev = null, t = 0) {
   }
   // Bomba: explota si llevas `bomb` acciones sin destaparla. La referencia la destapa antes, con 2-5 de margen.
   for (const id of bombIds) cards[id].bomb = (bombFree[id] ?? 0) + randInt(r, 2, 5);
+  // Cometa: la referencia lo alcanza con 2-4 acciones de margen.
+  for (const id of cometIds) cards[id].comet = (bombFree[id] ?? 0) + randInt(rc, 2, 4);
+  // Cohete turbo: la mitad de las veces es una carta del tablero (de la primera mitad de la solución, para que
+  // alcance a lucirse) y la otra mitad una carta del mazo. Solo suma a la racha: no cambia la solución.
+  if (turbo) {
+    const k = rt() < 0.5 ? pickPlain(0, Math.ceil(np * 0.6)) : null;
+    if (k != null) cards[play[k]].turbo = true;
+    else stock[randInt(rt, 0, Math.max(0, Math.floor(stock.length * 0.6) - 1))].turbo = true;
+  }
   // Carta viva: su número cambia ±1 con cada acción; se calcula para que encaje justo cuando la referencia la juega.
   // Puede haber dos (una que sube y otra que baja) para complicar más.
   if (mech.has('live')) {
@@ -885,7 +949,7 @@ export function buildLevel(g, ev = null, t = 0) {
     curtains,
     waste0,
     stock,
-    solution: play, // la carta regalo no está: se activa sola
+    solution: steps.map((x) => x.id), // la carta regalo no está (se activa sola); el boleto partido va dos veces
     meta: { spares, decoys, chains: starts.length, locks: keys.length, pack },
   };
   // Bomba y carta viva dependen de cuántas acciones haces, y en el juego los premios de racha añaden robos.
@@ -898,7 +962,7 @@ export function buildLevel(g, ev = null, t = 0) {
     for (const c of cards) if (c.live) (c.rank = ranks[c.id]), delete c.live;
     for (let extra = 4; !check() && extra <= 40; extra *= 2) for (const c of cards) if (c.bomb) c.bomb += extra;
   }
-  level.meta.mechs = MECHANICS.filter((m) => cards.some((c) => c[MECH_FIELD[m]] != null));
+  level.meta.mechs = MECHANICS.filter((m) => cards.some((c) => c[MECH_FIELD[m]] != null) || (m === 'turbo' && stock.some((c) => c.turbo)));
   return level;
 }
 
@@ -1018,17 +1082,36 @@ export function fiestaLevel(seed, k, world, n = FIESTA_PER_PLANET) {
 }
 
 // ---------- Mecánicas por mundo ----------
-export const MECHANICS = ['lock', 'pack', 'ice', 'double', 'arrow', 'curtain', 'bomb', 'live'];
-const MECH_FIELD = { lock: 'lock', pack: 'pack', ice: 'ice', double: 'alt', arrow: 'arrow', curtain: 'curtain', bomb: 'bomb', live: 'live' };
+export const MECHANICS = ['lock', 'pack', 'ice', 'double', 'arrow', 'curtain', 'bomb', 'live', 'ticket', 'comet', 'turbo'];
+const MECH_FIELD = { lock: 'lock', pack: 'pack', ice: 'ice', double: 'alt', arrow: 'arrow', curtain: 'curtain', bomb: 'bomb', live: 'live', ticket: 'half', comet: 'comet', turbo: 'turbo' };
 // Mundo (índice desde 0) en el que se presenta cada una.
-export const MECH_INTRO = { lock: 1, pack: 2, ice: 4, double: 7, arrow: 11, curtain: 15, bomb: 19, live: 24 };
+export const MECH_INTRO = { lock: 1, pack: 2, ice: 4, double: 7, arrow: 11, curtain: 15, bomb: 19, live: 24, ticket: 20, comet: 12, turbo: 16 };
 export const MECH_NAMES = {
-  lock: 'Candado', pack: 'Carta regalo', ice: 'Hielo', double: 'Carta doble', arrow: 'Flecha', curtain: 'Cortina', bomb: 'Bomba', live: 'Carta viva',
+  lock: 'Candado', pack: 'Carta regalo', ice: 'Hielo', double: 'Carta doble', arrow: 'Flecha', curtain: 'Cortina', bomb: 'Bomba', live: 'Carta viva', ticket: 'Boleto partido', comet: 'Cometa', turbo: 'Cohete turbo',
 };
+// Cartas de regalo (cometa y cohete turbo): no entran al sorteo de mecánicas, van aparte (buildLevel), con esta
+// probabilidad por nivel cada una. Los que piden ayudas, el evento y los especiales todavía no las traen: sus mazos ya
+// probados (path-data, event-data, special-data) cambiarían; se meten al cerrar la Fase 7.
+// Como los de ayudas y las mesas especiales no las traen, se sortean algo más seguido: contando todos queda ~1 de cada 32.
+// (Pendiente al acomodar niveles: que salgan cada 30-35 niveles en vez de al azar.)
+export const EXTRA = ['comet', 'turbo'];
+// Boleto partido: no entra al sorteo de chooseMechanics (cambiaría los niveles ya probados); va con su propio sorteo.
+export const TICKET_ODDS = 0.12;
+export const EXTRA_ODDS = 0.047;
+// Estreno: el primer nivel de su mundo que no pide ayudas ni es mesa especial.
+const debuts = {};
+export function extraDebut(m) {
+  if (debuts[m] == null) {
+    let g = MECH_INTRO[m] * LEVELS_PER_WORLD;
+    while (hardHelp(g) || scrollKind(g)) g++;
+    debuts[m] = g;
+  }
+  return debuts[m];
+}
 
 function chooseMechanics(r, world, index, boss, n, ev = null) {
   if (n < 8) return [];
-  const avail = MECHANICS.filter((m) => world >= MECH_INTRO[m]);
+  const avail = MECHANICS.filter((m) => !EXTRA.includes(m) && m !== 'ticket' && world >= MECH_INTRO[m]);
   if (!avail.length) return [];
   // Evento: siempre trae alguna de las que ya conoces (dos en los jefes). En los últimos planetas
   // la carta viva y la bomba (las más duras) van primero si ya las conoces.
@@ -1052,7 +1135,7 @@ export function variantLevel(level, v) {
   const r = mulberry32(hash(level.g * 7919 + v));
   const k = randInt(r, 1, 12);
   const perm = shuffle(r, [0, 1, 2, 3]);
-  const map = (c) => (c.rank == null ? { ...c } : { ...c, rank: (c.rank + k) % 13, suit: perm[c.suit], ...(c.alt != null && { alt: (c.alt + k) % 13 }) });
+  const map = (c) => (c.rank == null ? { ...c } : { ...c, rank: (c.rank + k) % 13, suit: perm[c.suit], ...(c.alt != null && { alt: (c.alt + k) % 13 }), ...(c.half != null && { half: (c.half + k) % 13 }) });
   const mapCard = (c) => ({ ...map(c), ...(c.pack && { pack: c.pack.map(map) }) });
   return { ...level, variant: v, cards: level.cards.map(mapCard), stock: level.stock.map(map), waste0: map(level.waste0) };
 }

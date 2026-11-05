@@ -3,7 +3,7 @@
 // de reglas real, que aplica premios de racha, cartas regalo, bombas, etc. Si esa ruta no alcanza,
 // prueba con el solucionador. Uso: node tests/verify-levels.mjs
 import { generateLevel, eventLevel, specialLevel, hardHelp, EVENT_LEVELS, EVENT_WORLDS, SPECIAL_COUNT, TOTAL_LEVELS, WORLD_COUNT, overlaps, MECHANICS } from '../js/levels.js';
-import { initState, playRank, play, draw, won, solve, solveHelp } from '../js/engine.js';
+import { initState, playRank, play, draw, won, solve, solveHelp, cutOf } from '../js/engine.js';
 
 let fails = 0;
 let bySolver = 0;
@@ -13,7 +13,9 @@ function reference(L) {
   let s = initState(L);
   for (const id of L.solution) {
     if (s.rem[id]) continue;
-    while (playRank(L, L.cards[id], s) == null) {
+    // Boleto partido entero: la solución juega primero la mitad de arriba.
+    const c = L.cards[id], top = c.half != null && !cutOf(c, s);
+    while (top ? playRank(L, c, s) !== c.rank : playRank(L, c, s) == null) {
       if (!s.stock.length) return false;
       s = draw(L, s).s;
     }
