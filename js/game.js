@@ -64,13 +64,16 @@ export function faceHTML(c, rank = c.rank) {
   const red = c.suit === 1 || c.suit === 2 ? ' red' : '';
   const arrow = c.arrow ? `<span class="arrow-badge">${arrowIcon(c.arrow > 0)}</span>` : '';
   // Carta doble: los dos números ("5/8").
-  if (c.alt != null) return `<div class="face front double${red}"><span class="cs">${s}</span><span class="dbl"><b>${RANKS[c.rank]}</b><i></i><b>${RANKS[c.alt]}</b></span></div>`;
+  if (c.alt != null) return `<div class="face front double${red}"><span class="cs">${s}</span><span class="dbl"><b${UL(RANKS[c.rank])}>${RANKS[c.rank]}</b><i></i><b${UL(RANKS[c.alt])}>${RANKS[c.alt]}</b></span></div>`;
   const r = RANKS[rank];
   // Carta viva: en la esquina va la flecha de hacia dónde cambia (el número está al centro).
-  const corner = c.live ? `<span class="rk dir">${LIVE_DIR[c.live > 0 ? 'up' : 'down']}</span>` : `<span class="rk">${r}</span>`;
+  const corner = c.live ? `<span class="rk dir">${LIVE_DIR[c.live > 0 ? 'up' : 'down']}</span>` : `<span class="rk${SIXNINE(r)}">${r}</span>`;
   const kind = c.live ? ' live' : c.arrow ? ' arrowed' : '';
-  return `<div class="face front${red}${kind}">${corner}<span class="cs">${s}</span><span class="big${r === '10' ? ' ten' : ''}">${r}</span>${arrow}</div>`;
+  return `<div class="face front${red}${kind}">${corner}<span class="cs">${s}</span><span class="big${r === '10' ? ' ten' : ''}${SIXNINE(r)}">${r}</span>${arrow}</div>`;
 }
+// El 6 y el 9 llevan rayita abajo: con las cartas giradas se confundían.
+const SIXNINE = (r) => (r === '6' || r === '9' ? ' uline' : '');
+const UL = (r) => (SIXNINE(r) ? ' class="uline"' : '');
 const LIVE_DIR = {
   up: '<svg viewBox="0 0 24 24"><path d="M12 20V5M5 11.5 12 4.5l7 7" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
   down: '<svg viewBox="0 0 24 24"><path d="M12 4v15M5 12.5l7 7 7-7" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
@@ -830,6 +833,7 @@ export class Game {
           const big = el.querySelector('.front .big');
           big.textContent = RANKS[r];
           big.classList.toggle('ten', RANKS[r] === '10');
+          big.classList.toggle('uline', RANKS[r] === '6' || RANKS[r] === '9');
           if (old != null && !reduced()) {
             const up = c.live > 0 ? 1 : -1;
             big.animate(

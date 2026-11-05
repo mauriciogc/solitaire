@@ -467,6 +467,7 @@ button.rg:active > i { scale: .92; }
 .front .cs { position: absolute; right: 9%; top: 7%; width: calc(var(--cw) * 0.24); height: calc(var(--cw) * 0.24); }
 .suit { display: block; width: 100%; height: 100%; }
 .front .big { position: absolute; left: 0; right: 0; bottom: 13%; text-align: center; font-family: 'Lilita One'; font-size: calc(var(--cw) * 0.66); line-height: 1; }
+.front .uline { text-decoration: underline; text-decoration-thickness: .09em; text-underline-offset: .07em; text-decoration-skip-ink: none; }
 .front .big.ten { font-size: calc(var(--cw) * 0.52); letter-spacing: -0.04em; bottom: 16%; }
 .back { transform: rotateY(180deg); background: var(--back) center / 100% 100%; }
 .front.wild { background: var(--back-wild) center / 100% 100%; box-shadow: 2px 4px 0 #0b062a33, 4px 9px 12px #0b062a40; }
