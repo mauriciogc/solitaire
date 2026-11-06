@@ -2,7 +2,7 @@
 // Se activa con ?dev en la URL (y se apaga con ?dev=0). Queda guardado en el navegador.
 import { save, prefs, persist, resetProfile, backupOnce, restoreBackup, setDev } from './storage.js';
 import { rachaWin, rachaLose, racha, nextGoal, col, daysToNextCol, ev, daysToNextEvent, evEnter, evWin, EVENT_PER_PLANET, EVENT_LEVELS, fiesta, fiEnter, fiWin, nextFiesta, daysToNextFiesta, daysToFiesta, fiShape, isOn, UNLOCK } from './events.js';
-import { generateLevel, packGroups, worldInfo, specials, specialGroup, SPECIAL_ID, TOTAL_LEVELS, LEVELS_PER_WORLD, MECH_NAMES, MECHANICS, MECH_INTRO, SCROLL_FROM, EXTRA, extraDebut } from './levels.js';
+import { generateLevel, hardHelp, packGroups, worldInfo, specials, specialGroup, SPECIAL_ID, TOTAL_LEVELS, LEVELS_PER_WORLD, MECH_NAMES, MECHANICS, MECH_INTRO, SCROLL_FROM, EXTRA, extraDebut } from './levels.js';
 import { playCasual, solve, initState } from './engine.js';
 import { openModal, toast, updateCoins, popGoal } from './ui.js';
 import { mulberry32 } from './rng.js';
@@ -51,23 +51,33 @@ export function casualRate(level, tries = 60) {
 }
 
 // ---------- Barra dentro de la partida ----------
+// Iconos de la barra dev (trazo blanco, para que se lean sobre la mesa).
+const DSV = (d) => `<svg class="db-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+const DI = {
+  grid: DSV('<rect x="3.5" y="3.5" width="7" height="7" rx="1.6"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.6"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.6"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.6"/>'),
+  prev: DSV('<path d="M15 5l-7 7 7 7"/>'),
+  next: DSV('<path d="M9 5l7 7-7 7"/>'),
+  eye: DSV('<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/>'),
+  flag: DSV('<path d="M5 21V4"/><path d="M5 4h12l-2.5 4L17 12H5"/>'),
+  step: DSV('<path d="M6 5l9 7-9 7z"/><path d="M18.5 5v14"/>'),
+  play: DSV('<path d="M7 4.5l12 7.5-12 7.5z"/>'),
+  trophy: DSV('<path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M7 6H4v1.5A3.5 3.5 0 0 0 7.5 11M17 6h3v1.5a3.5 3.5 0 0 1-3.5 3.5M12 14v3M8 20h8"/>'),
+  info: DSV('<circle cx="12" cy="12" r="9"/><path d="M12 11v6"/><path d="M12 7.5v.1"/>'),
+};
 export function attachDevBar(game, { go, toGallery }) {
   const g = game.level.g;
   const bar = document.createElement('div');
   bar.className = 'dev-bar';
+  // Tres grupos: ir (galería y niveles), probar (ver, solución, paso, resolver, ganar) e Info. Iconos de trazo, sin emojis.
+  const L = game.level;
+  const where = L.special != null ? `Especial ${L.special + 1}` : `M${Math.floor(g / LEVELS_PER_WORLD) + 1} · N${(g % LEVELS_PER_WORLD) + 1}`;
+  const btn = (d, ico, txt, extra = '') => `<button data-d="${d}" ${extra}>${DI[ico]}${txt ? `<span>${txt}</span>` : ''}</button>`;
   bar.innerHTML = `
-    <button data-d="gal">▦ Galería</button>
-    <span class="sep"></span>
-    <button data-d="prev" ${g === 0 ? 'disabled' : ''}>◀</button>
-    <button data-d="goto" title="Ir a nivel">#${g + 1}</button>
-    <button data-d="next" ${g >= TOTAL_LEVELS - 1 ? 'disabled' : ''}>▶</button>
-    <span class="sep"></span>
-    <button data-d="reveal">Ver todo</button>
-    <button data-d="sol">Solución</button>
-    <button data-d="step">Paso</button>
-    <button data-d="auto">Resolver</button>
-    <button data-d="win">Ganar</button>
-    <button data-d="info">Info</button>`;
+    <b class="db-tag">DEV</b>
+    <div class="db-grp">${btn('gal', 'grid', 'Galería')}</div>
+    <div class="db-grp db-nav">${btn('prev', 'prev', '', `aria-label="Nivel anterior" ${g === 0 ? 'disabled' : ''}`)}<button data-d="goto" class="db-lvl" title="Ir a nivel"><b>#${g + 1}</b><small>${where}${L.help ? ` · pide ${L.help}` : ''}</small></button>${btn('next', 'next', '', `aria-label="Nivel siguiente" ${g >= TOTAL_LEVELS - 1 ? 'disabled' : ''}`)}</div>
+    <div class="db-grp">${btn('reveal', 'eye', 'Ver todo')}${btn('sol', 'flag', 'Solución')}${btn('step', 'step', 'Paso')}${btn('auto', 'play', 'Resolver')}${btn('win', 'trophy', 'Ganar')}</div>
+    <div class="db-grp">${btn('info', 'info', 'Info')}</div>`;
   let reveal = false;
   bar.addEventListener('click', (e) => {
     const b = e.target.closest('[data-d]');
@@ -143,19 +153,24 @@ const TABLE_ICONS = {
 const tableIcon = (t) => TABLE_ICONS[t] || '';
 const SCROLL_NAMES = { mesa: 'mesa enrollada', gravedad: 'gravedad', nebulosa: 'nebulosa', plegable: 'mesa plegable' };
 const PIECES = [['steps', 3], ['cross', 3], ['crown', 8], ['rosette', 13], ['sandwich', 16], ['tiltFan', 21]];
-const TPL_OPTS = [
-  ['todas', 'tablero: todos'],
-  ...TEMPLATES.map(([t, n]) => [t, `${t} · ${n}`]),
-  ['respiros', 'respiros · 12'],
-  ...PIECES.map(([k, n]) => [`pz:${k}`, `pieza ${k} · ${n}`]),
+// Nombres en español de formas y piezas (galería e Info).
+const TPL_NAMES = { pyramid: 'Pirámide', peaks: 'Picos', clusters: 'Grupitos', star: 'Estrella', layers: 'Capas', wall: 'Muro', towers: 'Torres', butterfly: 'Mariposa', diamond: 'Diamante', spiral: 'Espiral', mesa: 'Mesa enrollada', heart: 'Corazón', gravedad: 'Gravedad', scatter: 'Dispersas', nebulosa: 'Nebulosa', plegable: 'Mesa plegable', invPyramid: 'Pirámide invertida', hourglass: 'Reloj de arena' };
+const PIECE_NAMES = { steps: 'escalerita', cross: 'cruz', crown: 'corona', rosette: 'roseta', sandwich: 'sándwich', tiltFan: 'abanico inclinado' };
+// Filtro de tablero, en grupos: formas, mesas especiales y piezas (cada una con el nivel donde sale primero).
+const TPL_GROUPS = [
+  ['Formas', [...TEMPLATES.filter(([t]) => !SCROLL_NAMES[t]).map(([t, n]) => [t, `${TPL_NAMES[t]} · ${n}`]), ['respiros', 'Respiros · 12']]],
+  ['Mesas especiales', TEMPLATES.filter(([t]) => SCROLL_NAMES[t]).map(([t, n]) => [t, `${TPL_NAMES[t]} · ${n}`])],
+  ['Piezas', PIECES.map(([k, n]) => [`pz:${k}`, `${PIECE_NAMES[k]} · ${n}`])],
 ];
 // Cartas en el orden en que salen (nivel de estreno: el primero de su mundo; cometa y turbo, el primero normal).
 const mechDebut = (m) => (EXTRA.includes(m) ? extraDebut(m) : MECH_INTRO[m] * LEVELS_PER_WORLD) + 1;
 const MECH_ORDER = MECHANICS.slice().sort((a, b) => mechDebut(a) - mechDebut(b));
 const okTpl = (L, t) => t === 'todas' || (t === 'respiros' ? !!L.respite : t.startsWith('pz:') ? !!L.pieces?.includes(t.slice(3)) : L.template === t);
-const tplName = (L) => L.template + (L.pieces ? ` (${L.pieces.join(', ')})` : '');
+const tplName = (L) => (TPL_NAMES[L.template] || L.template) + (L.pieces ? ` + ${L.pieces.map((k) => PIECE_NAMES[k] || k).join(', ')}` : '');
 // Etiqueta según el % del bot casual (ver tabla de la Fase 7): fácil ≥75, medio ≥50, difícil ≥25, muy difícil.
 const rateTag = (L, p) => (L.help ? `pide ${L.help}` : p >= 75 ? 'fácil' : p >= 50 ? 'medio' : p >= 25 ? 'difícil' : 'muy difícil');
+// Color de la dificultad en la tarjeta (mismo corte que rateTag).
+const rateCls = (L, p) => (L.help ? 'r-help' : p >= 75 ? 'r-easy' : p >= 50 ? 'r-mid' : p >= 25 ? 'r-hard' : 'r-max');
 
 function preview(L, W = 150, H = 104) {
   const { u, bw, bh, offsets } = packGroups(L.groups, W - 8, H - 8, 0.7, 26);
@@ -175,40 +190,63 @@ export function galleryScreen({ onPlay, onBack }) {
   const st = gallery;
   const el = document.createElement('div');
   el.className = 'screen gallery';
+  // Qué niveles se recorren (sale del estado: así volver de un nivel deja todo igual).
+  const view = () => (st.help[0] === 's' ? 'esp' : st.help ? 'ayuda' : st.boss ? 'jefes' : 'camino');
+  const VIEWS = [['camino', 'Camino'], ['jefes', 'Jefes'], ['ayuda', 'Piden ayuda'], ['esp', 'Especiales']];
+  // Qué es cada vista (sale debajo del selector).
+  const hardN = [...Array(TOTAL_LEVELS).keys()].filter((g) => hardHelp(g)).length;
+  const VIEW_TEXT = {
+    camino: `Los ${TOTAL_LEVELS.toLocaleString('es-MX')} niveles del mapa, en orden.`,
+    jefes: `El último nivel de cada mundo (${(TOTAL_LEVELS / LEVELS_PER_WORLD).toLocaleString('es-MX')}).`,
+    ayuda: `Niveles del camino que no se ganan sin comodines o +5 (${hardN.toLocaleString('es-MX')}). Elige cuántas ayudas piden.`,
+    esp: 'Tableros aparte, fuera del mapa (1,000): de aquí salen las festividades (los niveles piden 2 y el jefe 3). Elige cuántas ayudas piden; los de 1 y 4 quedan para eventos futuros.',
+  };
+  const opt = (v, t, cur) => `<option value="${v}"${cur === v ? ' selected' : ''}>${t}</option>`;
+  function controls() {
+    const v = view();
+    // Segunda fila según la vista: cuántas ayudas (o qué grupo de especiales).
+    const sub = v === 'ayuda' ? [['any', 'Todas'], ['1', '1'], ['2', '2'], ['3', '3']] : v === 'esp' ? [['s1', '1'], ['s2', '2'], ['s3', '3'], ['s4', '4']] : null;
+    const dirty = st.tpl !== 'todas' || st.mA || st.mB;
+    el.querySelector('.g-filters').innerHTML = `
+      <div class="g-seg">${VIEWS.map(([k, t]) => `<button data-view="${k}" class="${v === k ? 'on' : ''}">${t}</button>`).join('')}</div>
+      <p class="g-what">${VIEW_TEXT[v]}</p>
+      ${sub ? `<div class="g-sub"><span>${v === 'esp' ? 'Piden' : 'Ayudas'}</span>${sub.map(([k, t]) => `<button data-help="${k}" class="${st.help === k ? 'on' : ''}">${t}</button>`).join('')}</div>` : ''}
+      <div class="g-pick">
+        <label class="${st.tpl !== 'todas' ? 'on' : ''}"><small>Tablero</small><select data-g="tpl">${opt('todas', 'Todos', st.tpl)}${TPL_GROUPS.map(([h, list]) => `<optgroup label="${h}">${list.map(([k, t]) => opt(k, t, st.tpl)).join('')}</optgroup>`).join('')}</select></label>
+        <label class="${st.mA ? 'on' : ''}"><small>Carta especial</small><select data-g="mA">${opt('', 'Todas', st.mA)}${opt('none', 'Sin cartas especiales', st.mA)}${MECH_ORDER.map((m) => opt(m, `${MECH_NAMES[m]} · ${mechDebut(m)}`, st.mA)).join('')}</select></label>
+        ${st.mA && st.mA !== 'none' ? `<label class="${st.mB ? 'on' : ''}"><small>Junto con</small><select data-g="mB">${opt('', 'Cualquiera', st.mB)}${MECH_ORDER.filter((m) => m !== st.mA).map((m) => opt(m, MECH_NAMES[m], st.mB)).join('')}</select></label>` : ''}
+        ${dirty ? '<button class="g-clear" data-g="clear">Limpiar</button>' : ''}
+      </div>`;
+  }
   el.innerHTML = `
     <header class="top">
       <button class="icon-btn" data-g="back" aria-label="Volver">${icon('close')}</button>
-      <b>Galería dev</b>
-      <span></span>
+      <b>Galería de niveles</b>
+      <button class="g-jump" data-g="goto" title="Ir a un nivel">${icon('next')}<span>Ir a…</span></button>
     </header>
-    <div class="g-controls">
-      <button data-g="prev">◀</button>
-      <button data-g="goto" class="g-range"></button>
-      <button data-g="next">▶</button>
-      <select data-g="tpl">${TPL_OPTS.map(([v, t]) => `<option value="${v}"${v === st.tpl ? ' selected' : ''}>${t}</option>`).join('')}</select>
-      <label><input type="checkbox" data-g="boss"${st.boss ? ' checked' : ''}> solo jefes</label>
-      ${['mA', 'mB']
-        .map(
-          (k, i) => `<select data-g="${k}">
-            <option value="">${i ? '+ otra mecánica' : 'mecánica: todas'}</option>
-            ${i ? '' : `<option value="none"${st[k] === 'none' ? ' selected' : ''}>sin mecánicas</option>`}
-            ${MECH_ORDER.map((m) => `<option value="${m}"${st[k] === m ? ' selected' : ''}>${MECH_NAMES[m]} · ${mechDebut(m)}</option>`).join('')}
-          </select>`,
-        )
-        .join('')}
-      <select data-g="help">
-        ${[['', 'ayudas: todas'], ['any', 'piden ayuda'], ['1', 'piden 1'], ['2', 'piden 2'], ['3', 'piden 3'], ['s1', 'especiales de 1'], ['s2', 'especiales de 2'], ['s3', 'especiales de 3'], ['s4', 'especiales de 4']]
-          .map(([v, t]) => `<option value="${v}"${st.help === v ? ' selected' : ''}>${t}</option>`)
-          .join('')}
-      </select>
-    </div>
-    <div class="g-grid"></div>`;
+    <div class="g-filters"></div>
+    <div class="g-grid"></div>
+    <nav class="g-pager"><button data-g="prev" aria-label="Anteriores">${icon('prev')}</button><span class="g-range"></span><button data-g="next" aria-label="Siguientes">${icon('next')}</button></nav>`;
   const grid = el.querySelector('.g-grid');
 
   // Especiales: se recorre su lista (st.start cuenta dentro de ella); si no, los niveles del camino.
   const list = () => (st.help[0] === 's' ? specials(+st.help[1]).map((i) => SPECIAL_ID + i) : null);
   const last = () => list()?.length ?? TOTAL_LEVELS;
+  // Tarjeta: el tablero grande con su número y lo que lo distingue encima; abajo forma, cartas y dificultad.
+  const tile = (L) => {
+    const badges = [L.boss && `<i class="gb gb-boss">${icon('crown')}Jefe</i>`, L.help && `<i class="gb gb-help">Pide ${L.help}</i>`, L.respite && '<i class="gb gb-rest">Respiro</i>', L.scroll && `<i class="gb gb-mesa">${tableIcon(L.scroll)}${TPL_NAMES[L.scroll]}</i>`].filter(Boolean).join('');
+    const where = L.special != null ? `Especial ${L.g - SPECIAL_ID + 1} · grupo ${specialGroup(L.g - SPECIAL_ID) + 1}` : `Mundo ${Math.floor(L.g / LEVELS_PER_WORLD) + 1} · nivel ${(L.g % LEVELS_PER_WORLD) + 1}`;
+    return `<button class="tile" data-play="${L.g}">
+      <div class="g-pv"><div class="pv">${preview(L)}</div>${L.special != null ? '' : `<b class="g-num">${L.g + 1}</b>`}<div class="g-badges">${badges}</div></div>
+      <div class="g-where">${where}</div>
+      <div class="g-shape">${tplName(L)}</div>
+      <div class="g-stats"><span>${L.cards.length} cartas</span><span>mazo ${L.stock.length}</span><span>d ${L.d.toFixed(2)}</span></div>
+      <div class="g-mechs">${L.meta.mechs.map((m) => `<i class="tag m-${m}">${MECH_NAMES[m]}</i>`).join('')}</div>
+      <div class="g-rate" data-rate="${L.g}"><i></i><span>bot …</span></div>
+    </button>`;
+  };
   function render() {
+    controls();
     const items = [], sp = list(), end = last();
     let g = st.start;
     while (items.length < PAGE && g < end) {
@@ -224,27 +262,21 @@ export function galleryScreen({ onPlay, onBack }) {
       if (g - st.start > 4000) break; // filtros muy estrictos: no colgar la página
     }
     st.end = g;
-    el.querySelector('.g-range').textContent = sp ? `especiales ${st.start + 1} – ${g} de ${end}` : `#${st.start + 1} – #${g}`;
-    grid.innerHTML = items
-      .map(
-        (L) => `<button class="tile" data-play="${L.g}">
-          <div class="pv">${preview(L)}</div>
-          <div class="tl"><b>${L.special != null ? '' : `#${L.g + 1}`}</b> ${label(L.g)}${L.boss ? ' · jefe' : ''}${L.respite ? ' · <b>respiro</b>' : ''}${L.help ? ` · <b>pide ${L.help}</b>` : ''}</div>
-          <div class="tl">${tplName(L)} · d ${L.d.toFixed(2)} · ${L.cards.length} cartas · mazo ${L.stock.length}</div>
-          <div class="tl mechs">${L.meta.mechs.map((m) => `<i class="tag m-${m}">${MECH_NAMES[m]}</i>`).join('') || '—'}</div>
-          <div class="tl rate" data-rate="${L.g}">bot …</div>
-        </button>`,
-      )
-      .join('');
+    el.querySelector('.g-range').textContent = sp ? `${st.start + 1} – ${g} de ${end}` : `Niveles ${st.start + 1} – ${g}`;
+    el.querySelector('[data-g="prev"]').disabled = st.start <= 0;
+    el.querySelector('[data-g="next"]').disabled = g >= end;
+    grid.innerHTML = items.length ? items.map(tile).join('') : '<p class="g-empty">No hay niveles con estos filtros por aquí. Prueba con los siguientes o limpia los filtros.</p>';
     // El % del bot se calcula después, para no bloquear el dibujo.
     let i = 0;
     const next = () => {
       const L = items[i++];
       if (!L || !el.isConnected) return;
-      const span = grid.querySelector(`[data-rate="${L.g}"]`);
-      if (span) {
+      const box = grid.querySelector(`[data-rate="${L.g}"]`);
+      if (box) {
         const p = casualRate(L, 40);
-        span.textContent = `bot casual ${p}% · ${rateTag(L, p)}`;
+        box.className = `g-rate ${rateCls(L, p)}`;
+        box.querySelector('i').style.width = `${p}%`;
+        box.querySelector('span').textContent = `bot ${p}% · ${rateTag(L, p)}`;
       }
       setTimeout(next, 0);
     };
@@ -261,10 +293,29 @@ export function galleryScreen({ onPlay, onBack }) {
       st.scroll = grid.scrollTop;
       return onPlay(+t.dataset.play);
     }
+    const vw = e.target.closest('[data-view]')?.dataset.view;
+    if (vw) {
+      st.boss = vw === 'jefes';
+      st.help = vw === 'ayuda' ? 'any' : vw === 'esp' ? 's1' : '';
+      st.start = 0;
+      return render();
+    }
+    const h = e.target.closest('[data-help]')?.dataset.help;
+    if (h) {
+      st.help = h;
+      st.start = 0;
+      return render();
+    }
     const a = e.target.closest('[data-g]')?.dataset.g;
     if (a === 'back') {
       st.active = false;
       return onBack();
+    }
+    if (a === 'clear') {
+      st.tpl = 'todas';
+      st.mA = st.mB = '';
+      st.start = 0;
+      render();
     }
     if (a === 'prev') {
       st.start = Math.max(0, st.start - PAGE);
@@ -277,25 +328,21 @@ export function galleryScreen({ onPlay, onBack }) {
     if (a === 'goto') {
       const n = askLevel(st.start);
       if (n != null) {
+        if (st.help[0] === 's') st.help = ''; // un nivel del camino: deja la lista de especiales
         st.start = n;
         render();
       }
     }
   });
   el.addEventListener('change', (e) => {
-    if (e.target.dataset.g === 'tpl') {
-      st.tpl = e.target.value;
-      st.start = 0;
+    const k = e.target.dataset.g;
+    if (k === 'tpl') st.tpl = e.target.value;
+    if (k === 'mA') {
+      st.mA = e.target.value;
+      if (!st.mA || st.mA === 'none' || st.mB === st.mA) st.mB = '';
     }
-    if (e.target.dataset.g === 'boss') st.boss = e.target.checked;
-    if (e.target.dataset.g === 'help') {
-      st.help = e.target.value;
-      st.start = 0;
-    }
-    if (e.target.dataset.g === 'mA' || e.target.dataset.g === 'mB') {
-      st[e.target.dataset.g] = e.target.value;
-      st.start = 0;
-    }
+    if (k === 'mB') st.mB = e.target.value;
+    st.start = 0;
     render();
   });
   render();
