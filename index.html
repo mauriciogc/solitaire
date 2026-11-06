@@ -11,7 +11,9 @@
     <meta name="apple-mobile-web-app-title" content="Solitaire" />
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" href="icon.svg" type="image/svg+xml" />
-    <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=21" />
+    <!-- Como en Sproutly: en icons/, sin ?v= ni sizes. Con ?v= el iPhone a veces no lo cargaba y ponía una captura. -->
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+    <link rel="apple-touch-icon-precomposed" href="icons/apple-touch-icon.png" />
     <title>Solitaire</title>
     <link rel="preload" href="fonts/lilita-one.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="preload" href="fonts/baloo2.woff2" as="font" type="font/woff2" crossorigin />
