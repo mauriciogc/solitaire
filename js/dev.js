@@ -164,7 +164,7 @@ const MECH_ORDER = MECHANICS.slice().sort((a, b) => mechDebut(a) - mechDebut(b))
 const okTpl = (L, t) => t === 'todas' || (t === 'respiros' ? !!L.respite : t.startsWith('pz:') ? !!L.pieces?.includes(t.slice(3)) : L.template === t);
 const tplName = (L) => (TPL_NAMES[L.template] || L.template) + (L.pieces ? ` + ${L.pieces.map((k) => PIECE_NAMES[k] || k).join(', ')}` : '');
 // Etiqueta según el % del bot casual (ver tabla de la Fase 7): fácil ≥75, medio ≥50, difícil ≥25, muy difícil.
-const rateTag = (L, p) => (L.help ? `pide ${L.help}` : p >= 75 ? 'fácil' : p >= 50 ? 'medio' : p >= 25 ? 'difícil' : 'muy difícil');
+export const rateTag = (L, p) => (L.help ? `pide ${L.help}` : p >= 75 ? 'fácil' : p >= 50 ? 'medio' : p >= 25 ? 'difícil' : 'muy difícil');
 // Color de la dificultad en la tarjeta (mismo corte que rateTag).
 const rateCls = (L, p) => (L.help ? 'r-help' : p >= 75 ? 'r-easy' : p >= 50 ? 'r-mid' : p >= 25 ? 'r-hard' : 'r-max');
 
@@ -553,7 +553,7 @@ export function openDevMenu({ onGallery, onPlanets, onRefresh, card }) {
     ] },
     { t: 'Volver a explicar', items: [
       { l: 'Explicar mecánicas', title: 'Las explicaciones de cada mecánica salen otra vez', fn: () => ((save.seen = {}), persist(), toast('Las explicaciones saldrán otra vez')) },
-      { l: 'Recorrido de botones', title: 'El recorrido de los botones de la izquierda sale otra vez al cerrar este menú', fn: () => { delete save.sideTour; persist(); onRefresh(); } },
+      { l: 'Recorrido de botones', title: 'El recorrido de los botones (izquierda, arriba, eventos y Jugar) sale otra vez al cerrar este menú', fn: () => { delete save.sideTour; persist(); onRefresh(); } },
     ] },
     { t: 'Avance', sub: `vas en el mundo ${w + 1}`, items: [
       { l: `Abrir mundo ${w + 1}`, fn: () => (completeWorlds(w, w), onRefresh()) },

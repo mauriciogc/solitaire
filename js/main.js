@@ -7,7 +7,7 @@ import { pauseOffscreen, openModal, toast, updateCoins, money, esc, reduced, wai
 import { icon, star, coin, miniPlanet, avatarHTML, AVATAR_COLORS, cardBackURL, setDeck, lockIcon, chestBody, chestLid, boxBody, boxLid } from './art.js';
 import { GROUPS, SECTIONS, ITEMS, shopItems, groupOf, owns, equipped, equip, buy, item, lockedUntil, titleHTML } from './shop.js';
 import { BIOMES, biomeKey, EVENT_BIOMES } from './biomes.js';
-import { dev, gallery, attachDevBar, galleryScreen, openDevMenu, planetGal, planetsScreen } from './dev.js';
+import { dev, gallery, attachDevBar, galleryScreen, openDevMenu, planetGal, planetsScreen, casualRate, rateTag } from './dev.js';
 
 document.documentElement.classList.toggle('dev-on', !!prefs.dev);
 // Reversos de los premios de racha (carta regalo violeta y comodín dorado), para todo el documento:
@@ -228,6 +228,9 @@ function showMap({ region, start = null, anim, after = null, unlock = null } = {
     if (a === 'mech') {
       const open = cta.classList.toggle('mech-open'), tog = cta.querySelector('.mech-tog');
       tog.setAttribute('aria-expanded', open);
+      // Acostado el aviso sale a la izquierda: no más ancho que lo que hay hasta la orilla.
+      const nm = cta.querySelector('.newmech');
+      if (open && nm && !matchMedia('(max-aspect-ratio: 1/1)').matches) nm.style.maxWidth = `${Math.min(420 * parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--k') || 1), cta.getBoundingClientRect().left - 24)}px`;
       // Ya lo leyó: deja de brincar y en el tablero ya no sale el "Nuevo: …" (misma bandera, save.seen).
       const mech = galaxy?.sel && Object.entries(MECH_INTRO).find(([, iw]) => iw === galaxy.sel.wd.w)?.[0];
       if (open && mech && !save.seen[mech]) {
@@ -419,19 +422,27 @@ function guide(view, step, screen) {
 }
 const endTouring = (screen) => screen.classList.toggle('touring', !!tourStep());
 
-// ---------- Recorrido de los botones de la izquierda ----------
+// ---------- Recorrido de los botones ----------
 // Una sola vez en la vida, al volver al mapa con el nivel 1 ganado (también jugadores que ya iban más adelante).
 // Se ve igual que el recorrido del mapa: círculo y globo, lo demás apagado, y se avanza tocando lo del círculo.
-// El círculo se desliza de botón en botón. El regalo se reclama de verdad y no se sigue hasta reclamarlo (si hoy
+// Orden: los botones de la izquierda, lo de arriba (estrellas, boletos, monedas y perfil), los eventos que faltan
+// por abrirse (salen solo durante su paso, con candado) y al final Jugar, que cierra el recorrido y entra al nivel.
+// El círculo se desliza de un lugar a otro. El regalo se reclama de verdad y no se sigue hasta reclamarlo (si hoy
 // ya se reclamó, solo se señala). save.sideTour = paso en el que va (si cierra el juego, sigue ahí) o 'done'.
+const TOUR_EVS = [['racha', 'rocket'], ['col', 'concha'], ['mes', 'star'], ['fiesta', 'flame']];
 const SIDE_TOUR = [
   { a: 'daily', title: 'Regalo diario', text: () => (dailyState(save.daily).claimed ? 'Cada día te espera un <b>regalo</b>. Hoy ya lo abriste: vuelve mañana por el siguiente.' : 'Cada día te espera un <b>regalo</b>. Tócalo y reclámalo.'), act: () => !dailyState(save.daily).claimed },
   { a: 'dticket', title: 'Boletos de regalo', text: () => 'Cada 24 horas te regalamos <b>boletos</b> para entrar a niveles nuevos.' },
   { a: 'shop', title: 'Tienda', text: () => 'Con tus monedas cambia cómo se ven tus <b>cartas</b>, tu <b>avatar</b> y tu <b>viajero</b>.' },
   { a: 'album', title: 'Álbum', text: () => 'Cada planeta que terminas te da una <b>postal</b> para tu álbum.' },
-  { a: 'settings', title: 'Ajustes', text: () => 'Aquí está cómo jugar, tu perfil y tu respaldo. <b>¡Descubre tú cada botón!</b>' },
+  { a: 'settings', title: 'Ajustes', text: () => 'Aquí está cómo jugar, el sonido y tu respaldo.' },
+  { sel: '.res .pill[aria-label="Estrellas"]', title: 'Tus estrellas', text: () => 'Cada nivel te da hasta <b>3 estrellas</b>. Las necesitas para abrir mundos nuevos.' },
+  { sel: '.res .pill[aria-label="Boletos"]', title: 'Tus boletos', text: () => 'Entrar a un nivel nuevo cuesta <b>boletos</b>. Si lo ganas, te los devuelve.' },
+  { sel: '.res .pill[aria-label="Monedas"]', title: 'Tus monedas', text: () => 'Las ganas en cada nivel. Con ellas compras <b>comodines</b>, <b>deshacer</b> y cosas de la <b>tienda</b>.' },
+  { sel: '.res .me', title: 'Tu perfil', text: () => 'Tu nombre, tu avatar y todo lo que llevas ganado.' },
+  { evs: true, sel: '.tour-evs', title: 'Eventos', text: () => 'Jugando se abren los <b>eventos</b>: la racha, las colecciones, el evento del mes y las festividades. ¡Con premios exclusivos!' },
   // Cierre: el círculo pasa al botón de jugar; tocarlo termina el recorrido y hace lo de siempre (jugar, continuar…).
-  { go: true, title: '¡Ahora sí, a jugar!', text: (b) => `Toca <b>${b?.querySelector('b')?.textContent || 'Jugar'}</b> y sigue tu camino.` },
+  { go: true, sel: '.cta .go', title: '¡Ahora sí, a jugar!', text: (b) => `Toca <b>${b?.querySelector('b')?.textContent || 'Jugar'}</b> y sigue tu camino.` },
 ];
 const sideTourDue = () => save.next >= 1 && save.sideTour !== 'done';
 function sideTour() {
@@ -441,48 +452,85 @@ function sideTour() {
     screen.append(el);
     screen.classList.add('side-touring');
     const ring = el.querySelector('.g-ring'), bub = el.querySelector('.g-bubble');
-    let i = typeof save.sideTour === 'number' ? save.sideTour : 0, busy = false;
-    const btn = () => (SIDE_TOUR[i].go ? screen.querySelector('.cta .go') : screen.querySelector(`.side.l [data-a="${SIDE_TOUR[i].a}"]`));
+    let i = typeof save.sideTour === 'number' ? Math.min(save.sideTour, SIDE_TOUR.length - 1) : 0, busy = false, over = false;
+    const btn = () => { const t = SIDE_TOUR[i]; return screen.querySelector(t.sel || `.side.l [data-a="${t.a}"]`); };
+    // Eventos que faltan por abrirse: salen en la columna de la derecha, con candado, solo durante su paso.
+    const lockedEvs = () => TOUR_EVS.filter(([k]) => !isOn(k));
+    const addEvs = () => {
+      const col = screen.querySelector('.side.r');
+      if (!col || col.querySelector('.tour-evs')) return;
+      const g = h(`<div class="tour-evs">${lockedEvs().map(([, ico]) => `<span class="iconbtn tb ev-btn soon">${icon(ico)}<span class="fi-lock">${icon('lock')}</span></span>`).join('')}</div>`);
+      col.append(g);
+      if (!reduced()) g.querySelectorAll('.iconbtn').forEach((b, k) => b.animate([{ opacity: 0, scale: 0.3 }, { opacity: 1, scale: 1.12, offset: 0.7 }, { opacity: 1, scale: 1 }], { duration: 420, delay: k * 90, easing: 'ease-out', fill: 'backwards' }));
+    };
+    const dropEvs = () => {
+      const g = screen.querySelector('.tour-evs');
+      if (!g) return;
+      if (reduced()) return g.remove();
+      g.animate([{ opacity: 1, scale: 1 }, { opacity: 0, scale: 0.6 }], { duration: 220, easing: 'ease-in', fill: 'forwards' }).finished.then(() => g.remove(), () => g.remove());
+    };
     const finish = () => {
+      over = true;
       save.sideTour = 'done';
       persist();
-      removeEventListener('resize', put);
+      dropEvs();
       screen.querySelector('.tour-on')?.classList.remove('tour-on');
       screen.classList.remove('side-touring');
       if (reduced()) el.remove();
       else el.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 220 }).finished.then(() => el.remove());
       done();
     };
-    // Círculo sobre el botón y globo a su lado (o debajo si no cabe).
+    // Círculo sobre lo señalado y globo a su lado (o debajo / encima si no cabe). Se vuelve a medir en cada cuadro:
+    // los botones entran animados y en iPhone el giro avisa tarde, así el círculo nunca se descuadra.
     function put() {
       const b = btn();
-      if (!b) return finish();
-      const r = b.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2, room = innerWidth - r.right - 24;
-      ring.classList.toggle('wide', !!SIDE_TOUR[i].go);
+      if (!b) return;
+      if (!b.classList.contains('tour-on')) b.classList.add('tour-on'); // por si se volvió a dibujar
+      const r = b.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+      const roomR = innerWidth - r.right - 24, roomL = r.left - 24;
+      ring.classList.toggle('wide', r.width > r.height * 1.25 || r.height > r.width * 1.25);
       ring.style.setProperty('--s', `${Math.max(r.width, r.height) + 22}px`);
-      ring.style.setProperty('--w', `${r.width + 26}px`);
-      ring.style.setProperty('--h', `${r.height + 26}px`);
-      ring.style.left = `${cx}px`;
-      ring.style.top = `${cy}px`;
-      if (room >= 220) Object.assign(bub.style, { left: `${r.right + 20}px`, width: `${Math.min(330, room)}px`, translate: '0 0', top: `${Math.min(innerHeight - bub.offsetHeight - 12, Math.max(12, cy - bub.offsetHeight / 2))}px` });
-      else {
+      // El círculo (y su latido) no se sale de la pantalla: pegado a la orilla, se recorre hacia adentro.
+      const rw = r.width + 26, rh = r.height + 26, edge = 10;
+      ring.style.setProperty('--w', `${rw}px`);
+      ring.style.setProperty('--h', `${rh}px`);
+      ring.style.left = `${Math.min(innerWidth - rw / 2 - edge, Math.max(rw / 2 + edge, cx))}px`;
+      ring.style.top = `${Math.min(innerHeight - rh / 2 - edge, Math.max(rh / 2 + edge, cy))}px`;
+      const midY = () => Math.min(innerHeight - bub.offsetHeight - 12, Math.max(12, cy - bub.offsetHeight / 2));
+      if (cx < innerWidth / 2 && roomR >= 220) Object.assign(bub.style, { left: `${r.right + 20}px`, width: `${Math.min(330, roomR)}px`, translate: '0 0', top: `${midY()}px` });
+      else if (cx > innerWidth / 2 && roomL >= 220 && r.height > r.width * 1.25) {
+        const w = Math.min(330, roomL);
+        Object.assign(bub.style, { left: `${r.left - 20 - w}px`, width: `${w}px`, translate: '0 0', top: `${midY()}px` });
+      } else {
         // Debajo si cabe; si no (botón de jugar, abajo), encima.
         const below = r.bottom + 24 + bub.offsetHeight < innerHeight - 12;
         Object.assign(bub.style, { left: '50%', width: '', translate: '-50% 0', top: `${below ? r.bottom + 24 : Math.max(12, r.top - 24 - bub.offsetHeight)}px` });
       }
     }
+    const loop = () => {
+      if (over || !el.isConnected) return;
+      if (!busy) put();
+      requestAnimationFrame(loop);
+    };
     const show = () => {
       const t = SIDE_TOUR[i];
+      if (t.evs && !lockedEvs().length) return next(); // ya se abrieron todos
       save.sideTour = i;
       persist();
       screen.querySelector('.tour-on')?.classList.remove('tour-on');
-      btn()?.classList.add('tour-on');
+      if (t.evs) addEvs();
+      // Lo de arriba que no se ve (en vertical la primera ficha se oculta) se salta.
+      if (!btn()?.getClientRects().length) return t.sel && !t.go ? next() : finish();
+      btn().classList.add('tour-on');
       bub.querySelector('b').textContent = t.title;
       bub.querySelector('span').innerHTML = t.text(btn());
       put();
       if (!reduced()) bub.animate([{ opacity: 0, scale: 0.7 }, { opacity: 1, scale: 1.05, offset: 0.7 }, { opacity: 1, scale: 1 }], { duration: 420, easing: 'ease-out' });
     };
-    const next = () => (++i >= SIDE_TOUR.length ? finish() : show());
+    const next = () => {
+      if (SIDE_TOUR[i].evs) dropEvs();
+      return ++i >= SIDE_TOUR.length ? finish() : show();
+    };
     // Solo cuenta tocar lo del círculo; tocar fuera hace latir el círculo.
     el.addEventListener('click', async (e) => {
       if (busy) return;
@@ -513,8 +561,8 @@ function sideTour() {
       if (t.act()) return show();
       next();
     });
-    addEventListener('resize', put);
     show();
+    loop();
   });
 }
 
@@ -652,7 +700,7 @@ const MECH_TEXT = {
   curtain: 'Sigue boca abajo hasta que quitas su carta con telón.',
   bomb: 'Destápala antes de que su cuenta llegue a cero, o quema 3 cartas de tu mazo.',
   live: 'Con la flecha arriba, su número sube cada vez que juegas o robas; con la flecha abajo, baja.',
-  ticket: 'Tiene dos números: juégalo con cualquiera de las dos mitades. Se parte y la otra mitad se queda para después.',
+  ticket: 'Tiene dos números: juégalo con cualquiera. Se parte y la otra mitad queda para después.',
   turbo: 'Al jugarlo, tus 3 jugadas siguientes valen doble en la racha. Si robas, se apaga.',
   comet: 'Destápalo antes de que su cuenta llegue a cero y suma a tu racha los puntos que marca. Si no, se va.',
 };
@@ -955,6 +1003,7 @@ function startLevel(g, { resume = false, free = false, anim = 'up' } = {}) {
   game.attachDev = () => attachDevBar(game, { go: (n) => startLevel(n, { free: true, anim: null }), toGallery: () => showGallery(gallery.active ? undefined : g) });
   current = null;
   if (dev.on) game.attachDev();
+  diffTag(game, level);
 }
 
 // ---------- Galería (modo dev) ----------
@@ -1275,7 +1324,7 @@ function openRacha() {
     buttons: ready ? [{ label: `${icon('gift')} Reclamar`, cls: 'gold', keep: true, onClick: claim }] : [],
   });
   m.el.querySelectorAll('.rclaim, .rg.ready').forEach((b) => b.addEventListener('click', claim));
-  helpTip(m, 'Gana niveles nuevos seguidos (también los secretos), con las estrellas que sea. Repetir niveles no suma. Si pierdes o abandonas uno nuevo, o te rindes en uno repetido, vuelves a 0 y se pierden los premios sin reclamar; los que ya alcanzaste no se repiten. Después del 30, hay premio cada 50. A medianoche empieza otra: lo que no reclames antes, se pierde.');
+  helpTip(m, 'Gana niveles nuevos seguidos (también los secretos), con las estrellas que sea. Repetir niveles no suma. El evento del mes y las festividades no cuentan: ni suman ni la rompen. Si pierdes o abandonas uno nuevo, o te rindes en uno repetido, vuelves a 0 y se pierden los premios sin reclamar; los que ya alcanzaste no se repiten. Después del 30, hay premio cada 50. A medianoche empieza otra: lo que no reclames antes, se pierde.');
   const c = m.el.querySelector('.rclock');
   const tick = setInterval(() => (c.isConnected ? (c.textContent = clock(msToMidnight())) : clearInterval(tick)), 1000);
 }
@@ -1346,7 +1395,7 @@ function openCol() {
   };
   paint();
   if (!reduced()) [...grid.children].forEach((el, i) => el.animate([{ opacity: 0, translate: '0 16px', scale: 0.9 }, { opacity: 1, translate: '0 0', scale: 1 }], { duration: 360, delay: 120 + i * 50, easing: 'cubic-bezier(0.34, 1.45, 0.64, 1)', fill: 'backwards' }));
-  helpTip(m, `Cada estrella nueva que ganas en un nivel te da 1 ${c.one || c.token}. Cámbia${c.m ? 'los' : 'las'} aquí antes de que acabe el domingo: las que sobren se pierden. Lo exclusivo es tuyo para siempre.`);
+  helpTip(m, `Cada estrella nueva que ganas en un nivel te da 1 ${c.one || c.token} (los del evento del mes y las festividades no dan). Cámbia${c.m ? 'los' : 'las'} aquí antes de que acabe el domingo: las que sobren se pierden. Lo exclusivo es tuyo para siempre.`);
   grid.addEventListener('click', async (e) => {
     const el = e.target.closest('.coffer');
     if (!el) return;
@@ -1626,14 +1675,14 @@ function openEvIntro(e, go = false) {
       ${kind === 'fiesta' ? `<p class="lead">¡Hoy es <b>${e.name}</b>! ${e.days > 1 ? `Solo por ${e.days} días` : 'Solo por hoy'}: viaja por <b>${K.P} planetas</b> y gana premios <b>exclusivos</b> que no salen en ningún otro lado.</p>
       <ul class="evi-rules">
         ${rule('ticket', `<b>Sin boletos</b>: entra y reintenta las veces que quieras.`)}
-        ${rule('flame', `${K.L} niveles <b>difíciles</b>. Aquí no cuentan las estrellas: solo ganar.`)}
+        ${rule('flame', `${K.L} niveles <b>difíciles</b>. Sin estrellas: solo ganar. No cuentan para tu <b>racha</b> ni tu <b>colección</b>.`)}
         ${rule('gift', `Gana el <b>nivel ${K.N}</b> de cada planeta y abre su <b>regalo sorpresa</b>. Es tuyo para siempre.`)}
         ${rule('flag', `${K.left() > 864e5 ? 'Termina en unos días' : 'Termina hoy a la medianoche'}: te quedan <b>${evDaysOf(K)}</b>.`)}
       </ul>` : `<p class="lead">¡Llegó el evento del mes! Viaja por <b>${EVENT_PLANETS} planetas</b> y gana premios <b>exclusivos</b> que solo salen ahora: avatares, marcos, reversos, postales, fondos, títulos y naves.</p>
       <ul class="evi-rules">
         ${rule(e.tk, `Entras con <b>1 boleto</b>. Si ganas, lo conservas; si pierdes, el siguiente llega en <b>24 horas</b>.`)}
         ${rule('gift', `Gana el <b>nivel 5</b> de cada planeta y abre su <b>regalo sorpresa</b>. Es tuyo para siempre.`)}
-        ${rule('flame', `${EVENT_LEVELS} niveles <b>difíciles</b>. Aquí no cuentan las estrellas: solo ganar.`)}
+        ${rule('flame', `${EVENT_LEVELS} niveles <b>difíciles</b>. Sin estrellas: solo ganar. No cuentan para tu <b>racha</b> ni tu <b>colección</b>.`)}
         ${rule('flag', `Tienes <b>${evDays()}</b> para llegar al último planeta. ¡Entra cada día y no dejes pasar tu boleto!`)}
       </ul>`}`,
     // Botón del mes: con los colores y la flor de la temática (sin el triángulo de Jugar).
@@ -1748,6 +1797,7 @@ function startEvent() {
   game.attachDev = () => attachDevBar(game, { go: () => toast('En el evento se juega en orden'), toGallery: () => showGallery(save.next) });
   current = null;
   if (dev.on) game.attachDev();
+  diffTag(game, level);
 }
 // Premio del 5.º nivel: la caja tiembla, se abre y salen los exclusivos (ya puestos).
 function openEvPrize(e, res) {
@@ -2896,8 +2946,23 @@ function openSettings(then) {
     prefs.screenInfo = !prefs.screenInfo;
     persist();
     screenInfo();
-    toast(prefs.screenInfo ? 'Medidas de pantalla: sí' : 'Medidas de pantalla: no');
+    toast(prefs.screenInfo ? 'Medidas de pantalla y dificultad: sí' : 'Medidas de pantalla y dificultad: no');
   });
+}
+
+// ---------- Dificultad escondida ----------
+// Con las medidas de pantalla prendidas (5 toques al título de Ajustes), el tablero dice en una esquina qué tan
+// difícil es el nivel, como en el modo dev: % que gana el bot casual y su etiqueta. Para probar en el iPhone sin dev.
+function diffTag(g, level) {
+  if (!prefs.screenInfo || !g?.el) return;
+  const tag = h('<div class="diff-tag">…</div>');
+  g.el.append(tag);
+  // El bot juega 60 partidas: después de que el tablero entra, para no trabar la animación.
+  setTimeout(() => {
+    if (!tag.isConnected) return;
+    const p = casualRate(level);
+    tag.textContent = `bot ${p}% · ${rateTag(level, p)}`;
+  }, 700);
 }
 
 // ---------- Medidas de pantalla (diagnóstico) ----------
@@ -3091,6 +3156,8 @@ function hideLoader() {
 // La primera vez: presentación y perfil (obligatorias). Después siempre empieza en las constelaciones,
 // con la que vas al frente: ahí salen los avisos. Una partida a medias se retoma con Continuar.
 function boot() {
+  // Reiniciar el perfil, salir del modo dev o volver al punto de partida cambian lo puesto: reverso, frente y fondo.
+  applyLook();
   if (save.onboard === 'intro') return showIntro();
   if (save.onboard === 'perfil') return showSignup();
   showUniverse();

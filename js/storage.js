@@ -87,12 +87,14 @@ function replaceWith(p) {
   persist();
 }
 
-// Borra todo el avance del jugador (también lo comprado), conserva nombre y avatar.
+// Borra todo el avance del jugador (también lo comprado), conserva nombre y avatar. Lo que ya se le enseñó no se
+// repite (ya lo hizo): tutorial del tablero, recorridos del mapa y de los botones, mecánicas y presentaciones de eventos.
 export function resetProfile() {
-  const { name, avatar, named, look, onboard } = save;
+  const { name, avatar, named, look, onboard, tutorial, mapTour, sideTour, seen, intro } = save;
+  const learned = { tutorial, seen, intro, ...(mapTour ? { mapTour } : {}), ...(sideTour ? { sideTour } : {}) };
   // Un personaje gratis (Nico o Lila) se conserva; uno comprado se pierde y vuelve a la inicial.
   const free = look === 'char' && ['nino', 'nina'].includes(save.char);
-  replaceWith({ ...fresh(name, avatar), named, onboard, ...(free ? { look, char: save.char } : {}) });
+  replaceWith({ ...fresh(name, avatar), named, onboard, ...learned, ...(free ? { look, char: save.char } : {}) });
 }
 
 // look: { look, char } del avatar (opcional).

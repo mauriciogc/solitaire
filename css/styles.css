@@ -269,11 +269,12 @@ button.rg:active > i { scale: .92; }
 /* Mecánica nueva: botón con la carta junto a Jugar; el aviso sale de él hacia la izquierda. */
 .mech-tog { position: relative; display: grid; place-items: center; width: calc(52px * var(--k)); height: calc(52px * var(--k)); border-radius: calc(17px * var(--k)); flex: none; animation: nudge 700ms var(--ease-out) 900ms; }
 .mech-tog .card { position: relative; --cw: calc(26px * var(--k)); rotate: -8deg; transition: rotate 300ms var(--spring), scale 300ms var(--spring); }
-.mech-tog i { position: absolute; top: calc(-7px * var(--k)); right: calc(-7px * var(--k)); width: calc(22px * var(--k)); height: calc(22px * var(--k)); border-radius: 50%; display: grid; place-items: center; background: #ffb02e; border: 2px solid var(--ink); font: 400 calc(14px * var(--k)) 'Lilita One'; font-style: normal; color: var(--ink); transition: scale 260ms var(--spring); }
+.mech-tog > i { position: absolute; top: calc(-7px * var(--k)); right: calc(-7px * var(--k)); width: calc(22px * var(--k)); height: calc(22px * var(--k)); border-radius: 50%; display: grid; place-items: center; background: #ffb02e; border: 2px solid var(--ink); font: 400 calc(14px * var(--k)) 'Lilita One'; font-style: normal; color: var(--ink); transition: scale 260ms var(--spring); }
 .mech-tog.seen { animation: none; }
 .mech-open .mech-tog .card { rotate: 0deg; scale: 1.08; }
-.mech-open .mech-tog i { scale: 0; }
-.newmech { position: absolute; right: calc(100% + 12px); top: 0; bottom: 0; display: flex; flex-direction: column; justify-content: center; width: max-content; max-width: calc(420px * var(--k)); padding: 0 16px 2px; border-radius: 16px; background: #ece6ff; border-color: #6d5fc4; color: var(--ink); transform-origin: right center; opacity: 0; scale: .4; translate: 30px 0; pointer-events: none; transition: opacity 160ms ease, scale 200ms var(--ease-out), translate 200ms var(--ease-out); }
+.mech-open .mech-tog > i { scale: 0; }
+/* Crece hacia arriba si el texto no cabe en el alto del botón (no se corta); el ancho lo limita main.js a lo que hay a la izquierda. */
+.newmech { position: absolute; right: calc(100% + 12px); bottom: 0; min-height: 100%; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; width: max-content; max-width: calc(420px * var(--k)); padding: 6px 16px 8px; border-radius: 16px; background: #ece6ff; border-color: #6d5fc4; color: var(--ink); transform-origin: right center; opacity: 0; scale: .4; translate: 30px 0; pointer-events: none; transition: opacity 160ms ease, scale 200ms var(--ease-out), translate 200ms var(--ease-out); }
 .newmech::after { content: ''; position: absolute; right: -8px; top: 50%; width: 12px; height: 12px; margin-top: -7px; background: #ece6ff; border: solid #6d5fc4; border-width: 2px 2px 0 0; rotate: 45deg; }
 .mech-open .newmech { opacity: 1; scale: 1; translate: 0 0; pointer-events: auto; transition: opacity 160ms ease, scale 380ms var(--spring), translate 380ms var(--spring); }
 .newmech > div > b { display: block; font-size: calc(14px * var(--k)); line-height: 1.1; }
@@ -1080,7 +1081,11 @@ button.rg:active > i { scale: .92; }
    transparente atrapa los toques; el círculo se desliza de botón en botón. */
 .side-guide { pointer-events: auto; }
 .side-guide .g-bubble { transition: top .45s cubic-bezier(.45,0,.2,1), left .45s cubic-bezier(.45,0,.2,1); }
-.side-touring .side.r, .side-touring .cta > :not(.tour-on), .side-touring .out-btn, .side-touring .me, .side-touring .side.l > :not(.tour-on) { opacity: .3; pointer-events: none; transition: opacity .3s; }
+.side-touring :is(.side.l, .side.r, .res, .cta) > :not(.tour-on), .side-touring .out-btn { opacity: .3; pointer-events: none; transition: opacity .3s; }
+/* Eventos que faltan por abrirse: solo durante su paso del recorrido, en la columna de la derecha. */
+/* Juntos (no con el espacio de la columna) para que su círculo no llegue al botón de Jugar. */
+.tour-evs { display: flex; flex-direction: column; gap: calc(10px * var(--k)); }
+.tour-evs .iconbtn { display: grid; }
 /* Cierre: el círculo se vuelve una cápsula alrededor del botón de jugar. */
 .side-guide .g-ring.wide { width: var(--w); height: var(--h); border-radius: 30px; animation: ring-wide 1.1s var(--ease-out) infinite; }
 @keyframes ring-wide { 0%, 100% { scale: .97; } 50% { scale: 1.03; } }
@@ -1567,6 +1572,21 @@ html:not(.dev-on) .dev-pill { display: none; }
   .modal > .mbody { flex: none; overflow: clip; padding-top: 12px; }
   .mbtns { padding: 8px 20px 12px; }
 }
+/* Acostado, las ventanas con un dibujo grande arriba (boletos, cuentas regresivas, comprar ayuda): el mismo orden,
+   con el dibujo más chico para que quepan completas sin desplazarse. */
+@media (orientation: landscape) and (max-height: 500px) {
+  .dticket { height: 92px; margin: 0 0 2px; }
+  .dticket .rays, .buy-hero .rays { width: 160px; height: 160px; }
+  .dticket span { translate: calc(var(--i) * 22px) calc(var(--i) * var(--i) * 4px); }
+  .dticket span .ico { width: 70px; height: 70px; }
+  .dticket b { right: calc(50% - 62px); bottom: 4px; font-size: 28px; }
+  .tk-clock { font-size: 28px; margin-bottom: 2px; }
+  .buy-hero { height: 96px; margin: 0 0 2px; }
+  .buy-hero .hero-card { width: 56px; height: 78px; }
+  .buy-hero .hero-undo { zoom: .68; }
+  .buy-hero .hero-fan { zoom: .7; }
+  .buy-hero .qty { right: calc(50% - 72px); bottom: 2px; font-size: 26px; }
+}
 /* Tienda acostada: los botones van arriba como siempre, pero se desplazan junto con las tarjetas (nada fijo). */
 @media (max-height: 500px) {
   .modal.shop-modal { height: auto; }
@@ -1663,6 +1683,15 @@ html:not(.dev-on) .dev-pill { display: none; }
   .ev-items { padding-top: 10px; }
   .ev-items .coffer .s-art { height: 70px; }
   .ev-prize .note { margin: 4px 0 0; }
+}
+/* Acostado: la caja a la izquierda y los premios en una sola fila a su lado, para que Continuar se vea sin desplazar. */
+@media (orientation: landscape) and (max-height: 500px) {
+  .ev-prize .mbody { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 10px; align-items: center; }
+  .ev-prize .evbox { grid-row: 1 / span 2; }
+  .ev-prize .gbox { width: 64px; height: 64px; }
+  .ev-items { flex-wrap: nowrap; gap: 8px; }
+  .ev-items .coffer { width: 124px; }
+  .ev-prize .note { grid-column: 2; }
 }
 .ev-btn .ico { width: 88%; height: 88%; }
 .ev-btn .wait { position: absolute; top: -9px; left: 50%; translate: -50% 0; padding: 0 7px 1px; border-radius: 9px; background: var(--ink); border: 2px solid #fff; color: #fff; font: 400 13px 'Lilita One'; line-height: 1.35; white-space: nowrap; }
@@ -1961,3 +1990,5 @@ html:not(.dev-on) .dev-pill { display: none; }
 .pop-prize svg { width: 64px; height: 64px; filter: drop-shadow(0 4px 0 #2a1f5c55); }
 .pop-txt { position: fixed; z-index: 2600; font: 400 24px 'Lilita One'; pointer-events: none; white-space: nowrap; }
 .ev-done-pc { margin: 12px auto 6px; max-width: 320px; }
+/* Dificultad escondida (con las medidas de pantalla prendidas): discreta, abajo a la izquierda del tablero. */
+.diff-tag { position: absolute; left: calc(6px + var(--sl)); bottom: calc(4px + var(--sb)); z-index: 5; padding: 1px 7px 2px; border-radius: 8px; background: #0b062a99; color: #fff; font: 700 11px 'Baloo 2', system-ui, sans-serif; pointer-events: none; }
