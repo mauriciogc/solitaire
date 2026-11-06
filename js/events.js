@@ -487,9 +487,10 @@ export const FI_REPEAT = [{ coins: 300, undo: 2 }, { wild: 1, coins: 200 }, { wi
 export const fiShape = (f) => { const P = f?.p || FIESTA_PLANETS, N = f?.n || FIESTA_PER_PLANET; return { P, N, L: P * N }; };
 const dayOf = (d) => Math.floor((d.getTime() - d.getTimezoneOffset() * 6e4) / DAY);
 // Las fiestas listas de un año, con su día (local) ya recorrido si chocan: [{ f, day }].
-function fiestaDays(y) {
+// all: también las de leyendas aunque aún no se abran (para el modo dev).
+export function fiestaDays(y, all = false) {
   const out = [];
-  for (const f of FIESTAS.filter((x) => x.ready && (!x.local || isOn('fiesta2'))).map((x) => ({ f: x, day: dayOf(x.date(y)) })).sort((a, b) => a.day - b.day)) {
+  for (const f of FIESTAS.filter((x) => x.ready && (all || !x.local || isOn('fiesta2'))).map((x) => ({ f: x, day: dayOf(x.date(y)) })).sort((a, b) => a.day - b.day)) {
     while (out.some((o) => o.day === f.day)) f.day++;
     out.push(f);
   }

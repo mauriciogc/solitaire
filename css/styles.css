@@ -984,7 +984,7 @@ button.rg:active > i { scale: .92; }
 .g-jump { display: flex; align-items: center; gap: 4px; height: 40px; padding: 0 12px 0 8px; border-radius: 14px; background: #fff2; color: #fff; font: 400 15px 'Lilita One'; }
 .g-jump .ico { width: 18px; height: 18px; }
 .g-filters { display: flex; flex-direction: column; gap: 8px; padding: 0 12px 10px; }
-.g-seg { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px; padding: 3px; border-radius: 14px; background: #0004; }
+.g-seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; padding: 3px; border-radius: 14px; background: #0004; }
 .g-seg button { padding: 8px 4px; border-radius: 11px; color: #cfc8f2; font: 400 14px 'Lilita One'; transition: background-color 200ms var(--ease-out), color 200ms var(--ease-out); }
 .g-seg button.on { background: #8a5cf0; color: #fff; box-shadow: 0 2px 0 #0005; }
 .g-what { margin: -2px 2px 0; font-size: 12px; font-weight: 700; line-height: 1.3; opacity: .75; }
@@ -998,12 +998,22 @@ button.rg:active > i { scale: .92; }
 .g-pick small { font-size: 10.5px; font-weight: 800; opacity: .65; text-transform: uppercase; letter-spacing: .04em; }
 .g-pick select { appearance: none; width: 100%; background: none; border: 0; color: #fff; font: 800 14px 'Baloo 2', sans-serif; padding: 0; }
 .g-pick select option, .g-pick select optgroup { color: #000; }
+.g-boss { display: flex; align-items: center; gap: 4px; padding: 0 12px; border-radius: 12px; background: #fff1; color: #fff; font: 400 14px 'Lilita One'; border: 2px solid transparent; transition: background-color 180ms var(--ease-out); }
+.g-boss .ico { width: 18px; height: 18px; } .g-boss.on { border-color: #e89a17; background: #e89a1733; }
+.g-uses { display: flex; flex-wrap: wrap; gap: 3px; }
+.g-uses i { display: inline-flex; align-items: center; gap: 3px; padding: 1px 7px 1px 2px; border-radius: 99px; background: #ff8a3d33; font: 700 10.5px 'Baloo 2', sans-serif; font-style: normal; }
+.g-uses .ico { width: 15px; height: 15px; }
 .g-clear { padding: 0 14px; border-radius: 12px; background: #ff5f7e33; color: #ffb3c2; font: 400 14px 'Lilita One'; }
 .g-pager { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 8px 12px calc(8px + env(safe-area-inset-bottom)); background: #0003; }
 .g-pager button { width: 52px; height: 40px; display: grid; place-items: center; border-radius: 12px; background: #8a5cf0; transition: opacity 200ms; }
 .g-pager button:disabled { opacity: .3; }
 .g-pager .ico { width: 20px; height: 20px; }
 .g-range { min-width: 150px; text-align: center; font: 400 15px 'Lilita One'; }
+.g-pager[hidden] { display: none; }
+.g-source label { flex: 1 1 110px; }
+.g-planet { grid-column: 1 / -1; display: flex; align-items: center; gap: 6px; margin: 6px 0 -2px; font: 400 16px 'Lilita One'; }
+.g-planet:first-child { margin-top: 0; }
+.g-planet .ico { width: 22px; height: 22px; }
 .g-empty { grid-column: 1 / -1; padding: 30px 10px; text-align: center; opacity: .7; font-weight: 700; }
 .g-grid { flex: 1; overflow-y: auto; overscroll-behavior: contain; padding: 4px 12px 24px; display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; align-content: start; }
 .tile { display: flex; flex-direction: column; gap: 3px; padding: 8px 8px 9px; border-radius: 16px; background: #fff1; text-align: left; transition: background-color 200ms var(--ease-out), scale 160ms var(--ease-out); }

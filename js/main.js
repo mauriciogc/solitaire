@@ -7,9 +7,8 @@ import { pauseOffscreen, openModal, toast, updateCoins, money, esc, reduced, wai
 import { icon, star, coin, miniPlanet, avatarHTML, AVATAR_COLORS, cardBackURL, setDeck, lockIcon, chestBody, chestLid, boxBody, boxLid } from './art.js';
 import { GROUPS, SECTIONS, ITEMS, shopItems, groupOf, owns, equipped, equip, buy, item, lockedUntil, titleHTML } from './shop.js';
 import { BIOMES, biomeKey, EVENT_BIOMES } from './biomes.js';
-import { dev, gallery, initDevFromUrl, attachDevBar, galleryScreen, openDevMenu, planetGal, planetsScreen } from './dev.js';
+import { dev, gallery, attachDevBar, galleryScreen, openDevMenu, planetGal, planetsScreen } from './dev.js';
 
-initDevFromUrl();
 document.documentElement.classList.toggle('dev-on', !!prefs.dev);
 // Reversos de los premios de racha (carta regalo violeta y comodín dorado), para todo el documento:
 // las cartas que vuelan van fuera del tablero.
@@ -966,9 +965,34 @@ function showGallery(start) {
   current = () => showGallery();
   if (start != null) {
     gallery.start = Math.max(0, start - (start % 24));
-    if (gallery.help[0] === 's') gallery.help = ''; // ir a un nivel del camino: deja la lista de especiales
+    if (gallery.src !== 'camino' || isSecret(start)) gallery.src = 'camino'; // ir a un nivel del camino
   }
-  mount(galleryScreen({ onPlay: (g) => startLevel(g, save.run?.g === g ? { resume: true, anim: null } : { free: true, anim: null }), onBack: () => showMap() }));
+  mount(galleryScreen({ onPlay: (g) => startLevel(g, save.run?.g === g ? { resume: true, anim: null } : { free: true, anim: null }), onPlayLevel: playDevLevel, onBack: () => showMap() }));
+}
+// Modo dev: jugar un tablero del evento del mes o de una festividad desde la galería, con su mesa, sin guardar nada.
+function playDevLevel(level, look) {
+  const old = [...app.children];
+  game?.destroy();
+  game = null;
+  document.getElementById('modal-root').replaceChildren();
+  const back = () => showGallery();
+  game = new Game(app, level, {
+    dev,
+    free: true,
+    event: look,
+    onExit: back,
+    onAbandon: back,
+    onRetry: () => playDevLevel(level, look),
+    onReplay: () => playDevLevel(level, look),
+    onDone: back,
+    onWin: () => ({ coins: 0, tickets: 0, prev: 0, title: '¡Nivel superado!' }),
+  });
+  const drop = () => old.forEach((o) => (o._dispose?.(), o.remove()));
+  if (old.length && !reduced()) game.el.animate([{ translate: '0 100%' }, { translate: '0 0' }], { duration: 560, easing: 'cubic-bezier(0.2, 0.9, 0.25, 1)' }).finished.then(drop, drop);
+  else drop();
+  game.attachDev = () => attachDevBar(game, { go: () => toast('Cambia de nivel desde la galería'), toGallery: back });
+  current = null;
+  if (dev.on) game.attachDev();
 }
 // Galería de planetas (modo dev): al volver de su mesa o de su planeta se regresa aquí.
 function showPlanets() {
@@ -2660,7 +2684,14 @@ function profileForm({ title, p, action, onSave, noCancel = false, first = false
     box.className = box.className.replace(/\bmr-\S+/, `mr-${p.ring}`);
     if (pop && !reduced()) box.querySelector('.avatar-preview .avatar').animate([{ scale: 0.7, rotate: '-8deg' }, { scale: 1.1, rotate: '4deg', offset: 0.6 }, { scale: 1, rotate: '0deg' }], { duration: 420, easing: 'ease-out' });
   };
+  const name0 = p.name;
   input.addEventListener('input', () => {
+    // Atajo de pruebas en el celular: 00000 como nombre prende o apaga el modo dev (el nombre no cambia).
+    if (input.value.trim() === '00000') {
+      input.value = p.name = name0;
+      if (!first) m.close(); // en el primer perfil se queda abierto: hay que terminarlo
+      return toggleDev();
+    }
     p.name = input.value;
     paint();
   });
@@ -3079,9 +3110,19 @@ function boot() {
   setTimeout(hideLoader, 60);
 })();
 
-// Atajo de pruebas: la tecla 0 prende o apaga el modo dev en cualquier pantalla (se quitará al publicar).
+// Atajo de pruebas: cinco veces el 0 seguidas (en menos de 1.5 s entre una y otra) prende o apaga el modo dev en
+// cualquier pantalla. En el celular, escribir 00000 como nombre en el perfil (se quitará al publicar).
+let zeros = 0, zeroAt = 0;
 window.addEventListener('keydown', (e) => {
-  if (e.key !== '0' || e.metaKey || e.ctrlKey || e.target.closest?.('input, textarea')) return;
+  if (e.target.closest?.('input, textarea')) return;
+  if (e.key !== '0' || e.metaKey || e.ctrlKey) return void (zeros = 0);
+  zeros = e.timeStamp - zeroAt < 1500 ? zeros + 1 : 1;
+  zeroAt = e.timeStamp;
+  if (zeros < 5) return;
+  zeros = 0;
+  toggleDev();
+});
+function toggleDev() {
   setDev(!prefs.dev);
   toast(prefs.dev ? 'Modo dev: lo que hagas es de prueba' : 'Modo dev apagado: tu partida volvió');
   // Solo se muestran u ocultan los botones dev: la pantalla no se vuelve a dibujar.
@@ -3092,7 +3133,7 @@ window.addEventListener('keydown', (e) => {
     game.el.querySelector('.dev-bar')?.remove();
     game.attachDev();
   }
-});
+}
 
 // Para pruebas automáticas en modo dev: abrir un nivel por número (desde la consola).
 window.devPlay = (g) => prefs.dev && startLevel(g, { free: true });
