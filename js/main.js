@@ -2734,14 +2734,7 @@ function profileForm({ title, p, action, onSave, noCancel = false, first = false
     box.className = box.className.replace(/\bmr-\S+/, `mr-${p.ring}`);
     if (pop && !reduced()) box.querySelector('.avatar-preview .avatar').animate([{ scale: 0.7, rotate: '-8deg' }, { scale: 1.1, rotate: '4deg', offset: 0.6 }, { scale: 1, rotate: '0deg' }], { duration: 420, easing: 'ease-out' });
   };
-  const name0 = p.name;
   input.addEventListener('input', () => {
-    // Atajo de pruebas en el celular: 00000 como nombre prende o apaga el modo dev (el nombre no cambia).
-    if (input.value.trim() === '00000') {
-      input.value = p.name = name0;
-      if (!first) m.close(); // en el primer perfil se queda abierto: hay que terminarlo
-      return toggleDev();
-    }
     p.name = input.value;
     paint();
   });
@@ -2929,6 +2922,7 @@ function openSettings(then) {
       ${game ? '' : `<button class="row" data-a="profile">${avatarHTML(save)}<b>Perfil</b>${icon('chev')}</button>`}
       ${game ? '' : `<button class="row" data-a="backup">${icon('backup')}<b>Respaldo<span>Guarda tu avance con un código</span></b>${icon('chev')}</button>`}
       ${installPrompt ? `<button class="row" data-a="install"><img class="ico app-ico" src="icon.svg" alt=""><b>Instalar app<span>Pantalla completa y sin conexión</span></b>${icon('chev')}</button>` : ''}
+      <div class="rows tools"${prefs.tools ? '' : ' hidden'}>${toolRows()}</div>
     </div>`,
   });
   m.el.addEventListener('click', (e) => {
@@ -2938,23 +2932,45 @@ function openSettings(then) {
     if (a === 'backup') { m.el.remove(); openBackup(() => openSettings(then)); }
     if (a === 'install') installApp().then((ok) => ok && m.el.remove());
   });
-  // Escondido: 5 toques al título prenden o apagan las medidas de pantalla (para revisar el iPhone, aun con la app instalada).
-  let taps = 0;
-  m.el.querySelector('.mhead h2').addEventListener('click', () => {
-    if (++taps < 5) return;
+  // Escondido, para probar en el iPhone: 8 toques seguidos al título muestran los botones de pruebas (dificultad
+  // y modo dev). Otros 8 los esconden y apagan los dos.
+  const tools = m.el.querySelector('.tools'), paintTools = () => (tools.innerHTML = toolRows());
+  let taps = 0, last = 0;
+  m.el.querySelector('.mhead h2').addEventListener('click', (e) => {
+    taps = e.timeStamp - last < 1500 ? taps + 1 : 1;
+    last = e.timeStamp;
+    if (taps < 8) return;
     taps = 0;
-    prefs.screenInfo = !prefs.screenInfo;
+    prefs.tools = !prefs.tools;
+    if (!prefs.tools) {
+      prefs.diffInfo = false;
+      if (prefs.dev) toggleDev();
+    }
     persist();
-    screenInfo();
-    toast(prefs.screenInfo ? 'Medidas de pantalla y dificultad: sí' : 'Medidas de pantalla y dificultad: no');
+    paintTools();
+    tools.hidden = !prefs.tools;
+    toast(prefs.tools ? 'Pruebas: a la vista' : 'Pruebas: escondidas y apagadas');
+  });
+  tools.addEventListener('click', (e) => {
+    const a = e.target.closest('[data-a]')?.dataset.a;
+    if (a === 't-diff') {
+      prefs.diffInfo = !prefs.diffInfo;
+      persist();
+      toast(prefs.diffInfo ? 'Dificultad del nivel: sí' : 'Dificultad del nivel: no');
+    }
+    if (a === 't-dev') toggleDev();
+    paintTools();
   });
 }
+// Botones de pruebas en Ajustes (8 toques al título): cada uno dice si está prendido.
+const toolRows = () => [['t-diff', 'flame', 'Vista de dificultad', 'El tablero dice qué tan difícil es el nivel', prefs.diffInfo], ['t-dev', 'gear', 'Modo dev', 'Botones de pruebas en el mapa y el tablero', prefs.dev]]
+  .map(([a, ico, name, sub, on]) => `<button class="row${on ? ' ok' : ''}" data-a="${a}">${icon(ico)}<b>${name}<span>${sub}</span></b><em>${on ? 'Desactivar' : 'Activar'}</em></button>`).join('');
 
 // ---------- Dificultad escondida ----------
-// Con las medidas de pantalla prendidas (5 toques al título de Ajustes), el tablero dice en una esquina qué tan
+// Con la vista de dificultad prendida (botones de pruebas en Ajustes: 8 toques al título), el tablero dice en una esquina qué tan
 // difícil es el nivel, como en el modo dev: % que gana el bot casual y su etiqueta. Para probar en el iPhone sin dev.
 function diffTag(g, level) {
-  if (!prefs.screenInfo || !g?.el) return;
+  if (!prefs.diffInfo || !g?.el) return;
   const tag = h('<div class="diff-tag">…</div>');
   g.el.append(tag);
   // El bot juega 60 partidas: después de que el tablero entra, para no trabar la animación.
@@ -3000,6 +3016,7 @@ function screenInfo() {
   addEventListener('orientationchange', () => setTimeout(paint, 400));
 }
 screenInfo();
+addEventListener('screeninfo', screenInfo); // el menú dev las prende o apaga
 
 // ---------- Respaldo con código ----------
 // El avance vive en este navegador: si se borra la app (o Safari lo limpia) se pierde. Con el código se recupera.
@@ -3177,18 +3194,7 @@ function boot() {
   setTimeout(hideLoader, 60);
 })();
 
-// Atajo de pruebas: cinco veces el 0 seguidas (en menos de 1.5 s entre una y otra) prende o apaga el modo dev en
-// cualquier pantalla. En el celular, escribir 00000 como nombre en el perfil (se quitará al publicar).
-let zeros = 0, zeroAt = 0;
-window.addEventListener('keydown', (e) => {
-  if (e.target.closest?.('input, textarea')) return;
-  if (e.key !== '0' || e.metaKey || e.ctrlKey) return void (zeros = 0);
-  zeros = e.timeStamp - zeroAt < 1500 ? zeros + 1 : 1;
-  zeroAt = e.timeStamp;
-  if (zeros < 5) return;
-  zeros = 0;
-  toggleDev();
-});
+// Modo dev: botones de pruebas en Ajustes, 8 toques seguidos al título (ver openSettings).
 function toggleDev() {
   setDev(!prefs.dev);
   toast(prefs.dev ? 'Modo dev: lo que hagas es de prueba' : 'Modo dev apagado: tu partida volvió');

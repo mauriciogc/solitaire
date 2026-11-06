@@ -718,6 +718,8 @@ button.rg:active > i { scale: .92; }
 .row > b span { display: block; font-size: 12.5px; font-weight: 600; color: #7a6f9d; }
 .row em { font: 400 18px 'Lilita One'; font-style: normal; color: #c22c49; }
 .row.ok { background: #e4f6e9; border-color: #a8dcb8; }
+.rows.tools[hidden] { display: none; }
+.rows.tools .row em { font-size: 15px; }
 .row .avatar { width: 34px; height: 34px; font-size: 17px; }
 .row > .app-ico { border-radius: 9px; border: 2px solid var(--ink); }
 .sw { width: 58px; height: 34px; flex: none; border-radius: 17px; border: 2.5px solid var(--ink); background: #d9cdb6; position: relative; box-shadow: inset 0 3px 0 #0001; }
@@ -1990,5 +1992,5 @@ html:not(.dev-on) .dev-pill { display: none; }
 .pop-prize svg { width: 64px; height: 64px; filter: drop-shadow(0 4px 0 #2a1f5c55); }
 .pop-txt { position: fixed; z-index: 2600; font: 400 24px 'Lilita One'; pointer-events: none; white-space: nowrap; }
 .ev-done-pc { margin: 12px auto 6px; max-width: 320px; }
-/* Dificultad escondida (con las medidas de pantalla prendidas): discreta, abajo a la izquierda del tablero. */
+/* Dificultad escondida (botones de pruebas en Ajustes): discreta, abajo a la izquierda del tablero. */
 .diff-tag { position: absolute; left: calc(6px + var(--sl)); bottom: calc(4px + var(--sb)); z-index: 5; padding: 1px 7px 2px; border-radius: 8px; background: #0b062a99; color: #fff; font: 700 11px 'Baloo 2', system-ui, sans-serif; pointer-events: none; }

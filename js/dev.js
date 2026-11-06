@@ -1,5 +1,5 @@
 // Modo dev: probar niveles rápido sin jugarlos a mano.
-// Se prende y apaga con cinco veces el 0 (en el celular: 00000 como nombre en el perfil). Queda guardado en el navegador.
+// Se prende y apaga con los botones de pruebas de Ajustes (8 toques seguidos al título). Queda guardado en el navegador.
 import { save, prefs, persist, resetProfile, backupOnce, restoreBackup, setDev } from './storage.js';
 import { rachaWin, rachaLose, racha, nextGoal, col, daysToNextCol, ev, daysToNextEvent, evEnter, evWin, EVENT_PER_PLANET, EVENT_LEVELS, fiesta, fiEnter, fiWin, nextFiesta, daysToNextFiesta, daysToFiesta, fiShape, isOn, UNLOCK } from './events.js';
 import { generateLevel, hardHelp, fiestaPick, fiestaLevel, eventLevel, eventGroup, EVENT_WORLDS, packGroups, worldInfo, specials, specialGroup, SPECIAL_ID, TOTAL_LEVELS, LEVELS_PER_WORLD, MECH_NAMES, MECHANICS, MECH_INTRO, SCROLL_FROM, EXTRA, extraDebut } from './levels.js';
@@ -550,6 +550,7 @@ export function openDevMenu({ onGallery, onPlanets, onRefresh, card }) {
       { l: 'Galería de planetas', cls: 'gold', title: 'Cada tipo de planeta: verlo en el mapa o jugar en su mesa', fn: onPlanets },
       { l: `Boosters infinitos: ${prefs.devInfinite ? 'sí' : 'no'}`, fn: () => { prefs.devInfinite = !prefs.devInfinite; persist(); toast(`Boosters infinitos: ${prefs.devInfinite ? 'sí' : 'no'}`); } },
       { l: '+20,000 monedas', fn: () => ((save.coins += 20000), persist(), updateCoins()) },
+      { l: `Medidas de pantalla: ${prefs.screenInfo ? 'sí' : 'no'}`, title: 'Recuadro con lo que dice el navegador del tamaño de la pantalla (para revisar el iPhone)', fn: () => { prefs.screenInfo = !prefs.screenInfo; persist(); dispatchEvent(new Event('screeninfo')); toast(`Medidas de pantalla: ${prefs.screenInfo ? 'sí' : 'no'}`); } },
     ] },
     { t: 'Volver a explicar', items: [
       { l: 'Explicar mecánicas', title: 'Las explicaciones de cada mecánica salen otra vez', fn: () => ((save.seen = {}), persist(), toast('Las explicaciones saldrán otra vez')) },
