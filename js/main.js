@@ -494,12 +494,16 @@ function sideTour() {
       const cx = r.left + r.width / 2, cy = r.top + r.height / 2, roomR = W - r.right - 24, roomL = r.left - 24;
       const wide = r.width > r.height * 1.25 || r.height > r.width * 1.25;
       ring.classList.toggle('wide', wide);
-      // Círculo: cuadrado alrededor del botón; cápsula si es alargado. Sin salirse de la pantalla (ni con su latido).
-      const s = Math.max(r.width, r.height) + 22, rw = wide ? r.width + 26 : s, rh = wide ? r.height + 26 : s, edge = 10;
-      const to = { x: Math.min(W - rw / 2 - edge, Math.max(rw / 2 + edge, cx)), y: Math.min(H - rh / 2 - edge, Math.max(rh / 2 + edge, cy)), w: rw, h: rh };
+      // Círculo: cuadrado alrededor del botón; cápsula si es alargado. Siempre centrado en el botón: junto a una orilla
+      // no se recorre (se veía chueco), se achica hasta lo que cabe (nunca menos que el botón y su borde).
+      const B = 8, near = (c, len, full) => Math.max(len + B, 2 * (Math.min(c, full - c) - 3));
+      const s = Math.max(r.width, r.height) + 22 + B;
+      let rw = Math.min(wide ? r.width + 26 + B : s, near(cx, r.width, W)), rh = Math.min(wide ? r.height + 26 + B : s, near(cy, r.height, H));
+      if (!wide) rw = rh = Math.min(rw, rh);
+      const to = { x: cx, y: cy, w: rw, h: rh };
       if (!cur || reduced()) cur = { ...to };
       else for (const k in to) cur[k] += (to[k] - cur[k]) * 0.2;
-      Object.assign(ring.style, { left: `${cur.x - cur.w / 2}px`, top: `${cur.y - cur.h / 2}px`, width: `${cur.w}px`, height: `${cur.h}px`, translate: 'none' });
+      Object.assign(ring.style, { left: `${cur.x - cur.w / 2}px`, top: `${cur.y - cur.h / 2}px`, width: `${cur.w}px`, height: `${cur.h}px`, translate: 'none', boxSizing: 'border-box' });
       const bh = bub.offsetHeight, midY = () => Math.min(H - bh - 12, Math.max(12, cy - bh / 2));
       if (cx < W / 2 && roomR >= 220) Object.assign(bub.style, { left: `${r.right + 20}px`, width: `${Math.min(330, roomR)}px`, translate: '0 0', top: `${midY()}px` });
       else if (cx > W / 2 && roomL >= 220 && r.height > r.width * 1.25) {
