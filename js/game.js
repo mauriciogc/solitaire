@@ -128,6 +128,7 @@ const marks = (c) =>
 
 // opts: onExit, onAbandon(gaveUp), onRetry, onReplay, rachaRisk() → { n, pend } | null, onWin(stars) → { coins, tickets, prev, gold, wild, chest }, onDone(res), onSave(state)?,
 //       resume (estado guardado), saved (la partida se guarda al salir), tutorial, dev
+//       meteor: empezó durante una lluvia de meteoritos (la ficha de monedas lleva ×2 y su reloj; ver meteor.js)
 //       event: { ico, table } = nivel del evento del mes (table = la mesa de su temática) (sin estrellas; perder gasta su boleto y no se reintenta)
 export class Game {
   constructor(root, level, opts) {
@@ -338,7 +339,7 @@ export class Game {
       <header class="hud">
         <button class="tb hbtn" data-a="exit" aria-label="Pausa" title="Pausa">${icon('pause')}</button>
         <div class="hud-mid"><div class="combo info"></div></div>
-        <div class="hud-r">${this.opts.racha ? `<div class="pill info racha-pill ${this.opts.racha.hot ? 'hot' : ''}" aria-label="Racha">${this.opts.racha.hot ? `<span class="fire">${icon('flame')}</span>` : ''}${icon(this.opts.racha.ico)}<span>${this.opts.racha.n}</span></div>` : ''}<div class="pill info">${coin()}<span data-coins>${money(save.coins)}</span></div>${avatarHTML(save, 'hud-av')}</div>
+        <div class="hud-r">${this.opts.racha ? `<div class="pill info racha-pill ${this.opts.racha.hot ? 'hot' : ''}" aria-label="Racha">${this.opts.racha.hot ? `<span class="fire">${icon('flame')}</span>` : ''}${icon(this.opts.racha.ico)}<span>${this.opts.racha.n}</span></div>` : ''}<div class="pill info${this.opts.meteor ? ' met-pill' : ''}">${coin()}<span data-coins>${money(save.coins)}</span>${this.opts.meteor ? '<i class="x2">×2</i><small class="met-clock"></small>' : ''}</div>${avatarHTML(save, 'hud-av')}</div>
       </header>
       <div class="board-wrap"><div class="board"></div><div class="streak"></div></div>
       <footer class="tray">
@@ -1736,6 +1737,11 @@ export class Game {
     this.flyFromStock(ev.card, a);
     this.burn(ev.boom, burnRects);
     this.cometsGone(ev.gone);
+    // Lo que destapó la explosión (o el cometa que se fue) se activa ya.
+    if (ev.packs.length) this.renderStock();
+    for (const id of ev.packs) this.flyPack(this.cards[id]);
+    for (const id of ev.defused) this.defuse(this.cards[id]);
+    if (ev.wished.length) this.flyComets(ev, 0, this.rewardSlots(ev.wishes));
     if (ev.turbo) this.launchTurbo(ev);
     this.refresh();
     if (missed.length) setTimeout(() => this.warnMissed(missed), FLY_MS);
@@ -1846,12 +1852,12 @@ export class Game {
     this.renderStock();
     this.renderWaste();
 
+    rewards.forEach((r, i) => {
+      if (r?.kind === 'bank') save.wild = Math.max(0, save.wild - 1);
+      if (r) this.unflyReward(rewardRects[i], r.kind);
+    });
+    (ev.packs || []).forEach((id, i) => this.unflyPack(this.cards[id], packRects[i]));
     if (h.t === 'play') {
-      rewards.forEach((r, i) => {
-        if (r?.kind === 'bank') save.wild = Math.max(0, save.wild - 1);
-        this.unflyReward(rewardRects[i], r?.kind);
-      });
-      (ev.packs || []).forEach((id, i) => this.unflyPack(this.cards[id], packRects[i]));
       if (ev.split) this.unsplitTicket(this.cards[ev.id], ev, wasteRect);
       else this.returnToBoard(this.cards[ev.id], wasteRect);
     } else if (h.t === 'draw') {
@@ -2152,7 +2158,12 @@ export class Game {
     this.coach?.end();
     const left = this.stock.length;
     const stars = this.extras ? 1 : E.starsFor(this.level, left);
+    const shown = save.coins;
     const res = this.opts.onWin(stars);
+    // Las monedas del nivel se suman al volver al mapa, volando al monedero: detrás de la ventana la ficha se queda
+    // como estaba (onWin ya las guardó y las pintaba de golpe).
+    const pill = this.el.querySelector('.hud-r [data-coins]');
+    if (pill) pill.textContent = money(shown);
     const { coins, tickets, prev, gold, wild, undo, col } = res;
     const ev = this.opts.event;
     const title = ev ? res.title : this.level.secret ? '¡Nivel secreto!' : this.level.boss ? '¡Jefe derrotado!' : '¡Nivel superado!';
@@ -2160,7 +2171,8 @@ export class Game {
     // tronar y cuentan para el premio de burbujas (countPop en ui.js).
     const bub = (ico, n) => `${ico}<b>+${n}</b>`;
     const loot = [
-      coins && bub(coin(), coins),
+      // Lluvia de meteoritos: la burbuja de las monedas lleva su ×2.
+      coins && (res.met ? `${bub(coin(), coins)}<i class="x2">×2</i>` : bub(coin(), coins)),
       tickets && bub(icon('ticket'), tickets),
       gold && bub(icon('gold'), 1),
       wild && bub(icon('wild'), wild),

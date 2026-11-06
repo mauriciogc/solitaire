@@ -11,6 +11,7 @@ import { tableHTML, BIOMES, biomeKey } from './biomes.js';
 import { peek } from './galaxy.js';
 import { EVENTOS, COLECCIONES, FIESTAS, fiestaDays } from './events.js';
 import { ITEMS, SECTIONS, GROUPS, owns, lockedUntil } from './shop.js';
+import { meteor, nextShowers, MET_FROM } from './meteor.js';
 import { KINDS, TREASURE, makeLot, makeCode, rewardName, lotText, usedHere, lotNonces } from './codes.js';
 // Icono de cada sección de la tienda (para el recuento).
 const SEC_ICO = { avatar: 'user', ring: 'star', title: 'crown', back: 'deck', face: 'face', traveler: 'rocket', space: 'planet', frame: 'album' };
@@ -483,6 +484,17 @@ export function openDevMenu({ onGallery, onPlanets, onRefresh, card }) {
   const evNow = ev(), colNow = col();
   const evSet = (patch) => { Object.assign(ev().state, { run: null, tk: 1, at: 0, ...patch }); persist(); onRefresh(); };
   // fiNext: la siguiente fiesta que no es la de hoy ni la de mañana (para brincar al día antes de ella).
+  const metNow = meteor();
+  const DIAS = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
+  const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+  const when = (x) => { const d = new Date(x.at); return `${DIAS[d.getDay()]} ${d.getDate()} ${MESES[d.getMonth()]} · ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`; };
+  // Cuánto falta para una lluvia (con el reloj del modo dev, si se movió de día).
+  const until = (x) => {
+    const ms = x.at - (Date.now() + (save.devDay || 0) * 864e5);
+    if (ms <= 0) return 'cayendo ahora';
+    const m = Math.ceil(ms / 6e4), d = Math.floor(m / 1440), h = Math.floor((m % 1440) / 60);
+    return `en ${d ? `${d} d ` : ''}${d || h ? `${h} h ` : ''}${m % 60} min`;
+  };
   const fiNow = fiesta(), fiNext = nextFiesta(fiNow?.soon ? fiNow.inDays : 0), fiOn = fiNow && !fiNow.soon;
   const { N: FN, L: FL } = fiShape(fiNow);
   const fiSet = (patch) => { Object.assign(fiesta().state, { run: null, ...patch }); persist(); onRefresh(); };
@@ -505,8 +517,8 @@ export function openDevMenu({ onGallery, onPlanets, onRefresh, card }) {
   const MES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
   const evs = Object.entries(EVENTOS).filter(([, e]) => e.ready).sort((a, b) => a[0] - b[0]);
   const fis = FIESTAS.filter((f) => f.ready), y = new Date().getFullYear();
-  const origin = (it) => (!it.ev ? 'tienda' : it.code ? 'codigo' : FIESTAS.some((f) => f.key === it.ev) ? 'fiesta' : Object.values(EVENTOS).some((e) => e.key === it.ev) ? 'mes' : 'col');
-  const ORI = [['tienda', 'Tienda'], ['col', 'Colección'], ['mes', 'Del mes'], ['fiesta', 'De un día'], ['codigo', 'Código']];
+  const origin = (it) => (!it.ev ? 'tienda' : it.code ? 'codigo' : it.met ? 'meteoro' : FIESTAS.some((f) => f.key === it.ev) ? 'fiesta' : Object.values(EVENTOS).some((e) => e.key === it.ev) ? 'mes' : 'col');
+  const ORI = [['tienda', 'Tienda'], ['col', 'Colección'], ['mes', 'Del mes'], ['fiesta', 'De un día'], ['codigo', 'Código'], ['meteoro', 'Meteoro']];
   const cnt = (sec, o) => ITEMS[sec].filter((it) => origin(it) === o).length;
   const mine = (sec, o) => ITEMS[sec].filter((it) => origin(it) === o && owns(sec, it.k)).length;
   const cell = (sec, o) => (cnt(sec, o) ? `${mine(sec, o)}/${cnt(sec, o)}` : '–');
@@ -523,6 +535,8 @@ export function openDevMenu({ onGallery, onPlanets, onRefresh, card }) {
   // Todo lo que sale en el camino, en el orden en que aparece (nivel = el primero donde lo ves; los eventos se abren al ganar el anterior).
   const UN = [
     ['Racha cohete', UNLOCK.racha, 'rocket'],
+    // Las próximas lluvias del horario: iguales en todos los teléfonos, a la misma hora de cada uno.
+    ['Lluvia de meteoritos', MET_FROM, 'meteoro', nextShowers(6).map((x) => ['meteoro', when(x), until(x), '']), '2 o 3 veces por semana, 30 minutos a cualquier hora, sin aviso. Es igual en todos los teléfonos.'],
     ['Colecciones', UNLOCK.col, 'concha', colsOf(0), 'Se turnan: 2 semanas al mes (la del 1.er y la del 3.er lunes)'],
     ['Eventos del mes', UNLOCK.mes, 'planet', evs.map(([m, e]) => [e.ico, e.name, MES[m], `m:${m}`])],
     ['Colecciones nuevas y 3.ª semana', UNLOCK.col2, 'fosil', colsOf(true), 'Se suman a las de antes y se turnan: 3 semanas al mes'],
@@ -628,6 +642,14 @@ export function openDevMenu({ onGallery, onPlanets, onRefresh, card }) {
       fiOn && { l: 'Empezar de cero', fn: () => ((save.fi = null), persist(), onRefresh()) },
       { l: 'Ver el aviso de Festividades', title: 'La ventana que sale al desbloquearlas (nivel 120), con 3 iconos', fn: () => (save.intro && delete save.intro.fiesta, persist(), onRefresh()) },
       { l: 'Ver el aviso de Leyendas', title: `La ventana que sale al llegar al nivel ${UNLOCK.fiesta2}, con las festividades nuevas`, fn: () => (save.intro && delete save.intro.fiesta2, persist(), onRefresh()) },
+    ] },
+    // Lluvia de meteoritos: hacerla caer ya (30 min), cortarla y repetir su aviso o su premio.
+    { t: 'Lluvia de meteoritos', sub: `${metNow ? `cayendo · quedan ${Math.ceil(metNow.left() / 6e4)} min · premio ${metNow.state.prize ? 'ya dado' : 'pendiente'}` : 'no está cayendo'}${(save.next || 0) >= MET_FROM ? '' : ` · a ti te cae desde el nivel ${MET_FROM}`}`, items: [
+      !metNow && { l: 'Que caiga ya', title: 'Empieza una lluvia de 30 minutos ahora (aunque no hayas llegado a su nivel)', fn: () => ((save.devMet = Date.now()), persist(), onRefresh()) },
+      metNow && { l: 'Que termine', fn: () => { if (save.devMet) save.devMet = 0; else save.devMetOff = metNow.id; persist(); onRefresh(); } },
+      metNow && { l: 'Ver su aviso otra vez', fn: () => ((metNow.state.intro = false), persist(), onRefresh()) },
+      metNow && { l: 'Premio otra vez', title: 'El siguiente nivel con 3★ vuelve a dar el premio de esta lluvia', fn: () => ((metNow.state.prize = false), persist(), toast('El premio vuelve a estar pendiente')) },
+      { l: 'Aviso de primera vez', title: 'El aviso de la siguiente lluvia vuelve a explicar que cae sin avisar', fn: () => (delete save.metSeen, persist(), toast('Saldrá el aviso completo')) },
     ] },
     // Una por festividad: mueve el reloj al día en que empieza (la de este año). Las de leyendas, solo desde el nivel 200.
   ].map((sec) => ({ ...sec, items: sec.items.filter(Boolean) }));

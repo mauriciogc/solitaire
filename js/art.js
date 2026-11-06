@@ -304,6 +304,9 @@ const ICONS = {
   bomb: () => tshape(CIRCLE(15, 19, 10.5), '#4a4373', '#332d58', '<path d="M9 16a7 7 0 0 1 5.5-4.5" stroke="#8f88c0" stroke-width="2.4" stroke-linecap="round" fill="none"/>', 2.2)
     + `<g transform="rotate(40 21 9)">${tshape('M18 6h6v5h-6z', '#8f88c0', '#6e66a3', '', 1.8)}</g><path d="M24 6c1.5-2.5 3.5-2.8 5-1.2" stroke="${K}" stroke-width="1.8" fill="none" stroke-linecap="round"/>${tshape(starPath(29, 4.5, 3.6, 1.6), '#ffd85a', '#ffb02e', '', 1.4)}`,
   // Cometa: estrella con cola, de lado (carta cometa).
+  // Lluvia de meteoritos: piedra morada con cráteres y su cola de fuego (cae hacia abajo a la izquierda).
+  meteoro: () => tshape('M6.5 15.5Q15 6 30 2Q23.5 13 17 25.5z', '#ff9c3d', '#ff6a2e', '<path d="M11 16.5Q18 9.5 26.5 5.5Q21.5 13.5 17 21.5z" fill="#ffd85a"/>', 2)
+    + tshape(CIRCLE(12, 21, 7.6), '#a493bd', '#7a6a9e', '<circle cx="9.4" cy="19.6" r="1.9" fill="#7a6a9e"/><circle cx="14.6" cy="24" r="1.3" fill="#7a6a9e"/><circle cx="14.4" cy="17.6" r="1" fill="#7a6a9e"/><path d="M7.4 18.4a5 5 0 0 1 3-3.2" stroke="#e4dcf2" stroke-width="1.6" fill="none" stroke-linecap="round"/>', 2.2),
   comet: () => tshape('M2.5 29.5 14 10.5l9 8.5z', '#8fd8ff', '#5fb6e8', '<path d="M6 27 15.5 14.5l3.5 3.2z" fill="#e4f7ff"/>', 2)
     + tshape(starPath(19.5, 13, 9, 4.2), '#ffd85a', '#ffb02e', '<circle cx="18" cy="11.5" r="1.6" fill="#fff6c8"/>', 2.2),
   album: () => tshape('M5 7a2 2 0 0 1 2-2h18a2 2 0 0 1 2 2v18a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2z', '#4aa8de', '#2f86c0', '', 2.2) + tshape('M9 9h14v10H9z', '#fff6e6', '#ecdcc0', '<path d="M9 17l4-4 3 3 2-2 5 5v0H9z" fill="#5ad68c"/><circle cx="19" cy="12" r="1.8" fill="#ffc83d"/>', 1.8) + `<path d="M10 23h8" stroke="${K}" stroke-width="2" stroke-linecap="round"/>`,
@@ -549,6 +552,11 @@ export const BACKS = {
       + `<g transform="translate(8 84) scale(1.25)">${ICONS.palmera()}</g>`
       + `<path d="M58 26 76 44M76 26 58 44" stroke="${K}" stroke-width="10" stroke-linecap="round"/><path d="M58 26 76 44M76 26 58 44" stroke="#e8434f" stroke-width="5.4" stroke-linecap="round"/>`
       + `<g transform="translate(64 96)"><circle r="11" fill="#fff6e6" stroke="${K}" stroke-width="2.4"/><path d="M0-9 2.6 0 0 9-2.6 0z" fill="#e8434f" stroke="${K}" stroke-width="1.4" stroke-linejoin="round"/><path d="M-9 0 0-2.4 9 0 0 2.4z" fill="#4aa8de" stroke="${K}" stroke-width="1.4" stroke-linejoin="round"/></g>` },
+  // Exclusivo de la lluvia de meteoritos: noche morada con meteoritos que caen en diagonal y polvo de estrellas.
+  lluvia: { a: '#2a1f66', b: '#1d1550', flat: true, dots: '#ffe7a8',
+    bg: () => `<ellipse cx="80" cy="24" rx="30" ry="18" fill="#ff8a3d" opacity=".16"/><ellipse cx="20" cy="118" rx="30" ry="18" fill="#8a5cf0" opacity=".3"/>`
+      + [[66, 22, 0.5], [84, 58, 0.42], [22, 40, 0.38], [74, 104, 0.46]].map(([x, y, k]) => `<g transform="translate(${x - 16 * k} ${y - 16 * k}) scale(${k})">${ICONS.meteoro()}</g>`).join(''),
+    art: () => `<g transform="translate(14 38) scale(2.1)">${ICONS.meteoro()}</g>` },
   regalo: { a: '#7b4ee6', b: '#6438c8', star: ['#fff6e6', '#e3d3ff'] },
   comodin: { a: '#ffc83d', b: '#eca21f', star: ['#ff9c2b', '#e8761a'], dots: '#fff4c7' },
 };
@@ -948,6 +956,11 @@ export const AVATARS = {
     + `<path d="M47.4 70h5.2L50 73z" fill="#ff9cb0" stroke="${K}" stroke-width="1.4" stroke-linejoin="round"/><path d="M50 73q-2 3-4.4 1.6M50 73q2 3 4.4 1.6" fill="none" stroke="#c9c0e8" stroke-width="1.8" stroke-linecap="round"/>`
     + P(ELL(50, 44, 31, 6.4), '#6c3fd4', '#5a2fbf')
     + P('M34 44Q44 30 52 6Q56 4 57 8Q60 30 66 44z', '#6c3fd4', '#5a2fbf', '<path d="M35 40q15 4.4 30 0" stroke="#ff8a1a" stroke-width="4.4" fill="none"/><rect x="46" y="36.6" width="8" height="6.4" rx="1" fill="#ffc83d" stroke="#2a1f5c" stroke-width="1.6"/>'),
+  // Exclusivo de la lluvia de meteoritos: Meteorín, piedrita espacial con cráteres y pelo de fuego.
+  meteorin: () => P('M20 56Q10 32 26 12Q29 28 37 31Q35 13 50 2Q57 21 63 29Q67 16 78 10Q90 32 80 56z', '#ff8a3d', '#ff5f2e', '<path d="M31 50Q27 34 33 23Q37 35 44 37Q43 24 50 13Q55 27 59 35Q63 26 69 22Q74 37 69 50z" fill="#ffd85a"/>')
+    + P(ELL(50, 64, 34, 32), '#a493bd', '#7f6ea0', '<circle cx="28" cy="56" r="5.4" fill="#8a79a8"/><circle cx="72" cy="80" r="4.2" fill="#8a79a8"/><circle cx="70" cy="47" r="3" fill="#8a79a8"/><circle cx="34" cy="84" r="2.6" fill="#8a79a8"/><path d="M24 48a26 26 0 0 1 12-12" stroke="#e4dcf2" stroke-width="3" fill="none" stroke-linecap="round"/>')
+    + eyes(62, 13, 5.2) + blush(72, 22)
+    + `<path d="M42 75q8 7 16 0" fill="none" stroke="${K}" stroke-width="3.4" stroke-linecap="round"/>`,
   // Exclusivo de los códigos: Tesoro escondido. Loro pirata con paliacate rojo, pico ganchudo y su doblón.
   loro: () => P('M10 104Q12 80 50 78Q88 80 90 104z', '#3fbf5a', '#2f9e48', '<path d="M38 82q12 10 24 0" fill="none" stroke="#ffd23d" stroke-width="6" stroke-linecap="round"/>')
     + mirror(P('M24 58Q12 66 14 84Q24 78 28 68z', '#2fae4a', '#22903a'))

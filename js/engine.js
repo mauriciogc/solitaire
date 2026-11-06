@@ -163,22 +163,38 @@ function applyReward(level, s, at = s.streak) {
 
 // Cartas especiales que quedaron destapadas: la carta regalo manda su contenido al final del mazo,
 // la bomba se desactiva y el cometa suma a la racha. Se quitan del tablero.
-function activate(level, s) {
-  const packs = [];
-  const defused = [];
-  const wished = [];
-  for (const c of level.cards) {
-    if (!special(c) || s.rem[c.id] || !isFree(c, s, level)) continue;
-    s.rem[c.id] = true;
-    if (c.pack) {
-      s.stock.push(...c.pack.map((x) => ({ ...x })));
-      packs.push(c.id);
-    } else if (c.comet) {
-      s.streak += cometWish(level, s);
-      wished.push(c.id);
-    } else defused.push(c.id);
+// Se repite mientras salga alguna: una especial que se va puede destapar otra que tenía debajo.
+function activate(level, s, out = { packs: [], defused: [], wished: [] }) {
+  let more = true;
+  while (more) {
+    more = false;
+    for (const c of level.cards) {
+      if (!special(c) || s.rem[c.id] || !isFree(c, s, level)) continue;
+      s.rem[c.id] = true;
+      more = true;
+      if (c.pack) {
+        s.stock.push(...c.pack.map((x) => ({ ...x })));
+        out.packs.push(c.id);
+      } else if (c.comet) {
+        s.streak += cometWish(level, s);
+        out.wished.push(c.id);
+      } else out.defused.push(c.id);
+    }
   }
-  return { packs, defused, wished };
+  return out;
+}
+
+// Después de explotar bombas o irse cometas: lo que destaparon se activa ya (no hasta la siguiente acción).
+// Los premios que alcance un cometa destapado así también caen.
+function activateAfter(level, s, act, wishes) {
+  const from = s.streak;
+  const n = act.wished.length;
+  activate(level, s, act);
+  if (act.wished.length === n) return;
+  for (let k = from + 1; k <= s.streak; k++) {
+    const w = applyReward(level, s, k);
+    if (w) wishes.push({ ...w, at: k });
+  }
 }
 
 // Cometas tapados cuya cuenta llegó a 0: se van del tablero sin hacer nada.
@@ -223,7 +239,8 @@ export function play(level, s0, id, low = false) {
   const boosted = s0.turbo > 0;
   if (boosted) s.streak++;
   s.turbo = c.turbo ? TURBO : boosted ? s0.turbo - 1 : 0;
-  const { packs, defused, wished } = activate(level, s);
+  const act = activate(level, s);
+  const { packs, defused, wished } = act;
   const reward = applyReward(level, s, at);
   const boost = boosted ? applyReward(level, s, at + 1) : null;
   // Puntos que sumó el cometa: cada premio que alcanza también cae (en orden).
@@ -234,6 +251,7 @@ export function play(level, s0, id, low = false) {
   }
   const boom = checkBombs(level, s);
   const gone = checkComets(level, s);
+  if (boom.length || gone.length) activateAfter(level, s, act, wishes);
   return { s, ev: { t: 'play', id, rank: r, packs, defused, reward, boost, boom, wished, wishes, gone, ...(c.turbo && { turbo: true }), ...(split && { split }) } };
 }
 
@@ -246,7 +264,10 @@ export function draw(level, s0) {
   s.turbo = card.turbo ? TURBO : 0;
   const boom = checkBombs(level, s);
   const gone = checkComets(level, s);
-  return { s, ev: { t: 'draw', card, boom, gone, ...(card.turbo && { turbo: true }) } };
+  const act = { packs: [], defused: [], wished: [] };
+  const wishes = [];
+  if (boom.length || gone.length) activateAfter(level, s, act, wishes);
+  return { s, ev: { t: 'draw', card, boom, gone, ...act, wishes, ...(card.turbo && { turbo: true }) } };
 }
 
 // ---------- Solucionador y bot ----------

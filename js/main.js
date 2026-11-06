@@ -8,6 +8,7 @@ import { icon, star, coin, miniPlanet, avatarHTML, AVATAR_COLORS, cardBackURL, s
 import { GROUPS, SECTIONS, ITEMS, shopItems, groupOf, owns, equipped, equip, buy, item, lockedUntil, titleHTML, titleIcon } from './shop.js';
 import { BIOMES, biomeKey, EVENT_BIOMES } from './biomes.js';
 import { redeem } from './codes.js';
+import { meteor, metWin, metCoins } from './meteor.js';
 import { dev, gallery, attachDevBar, galleryScreen, openDevMenu, planetGal, planetsScreen, casualRate, rateTag } from './dev.js';
 
 document.documentElement.classList.toggle('dev-on', !!prefs.dev);
@@ -152,7 +153,11 @@ const playCTA = () => {
   return run ? goBtn('Continuar', levelName(run.g), 'continue') : gateW != null ? goBtn('Abrir', `Mundo ${gateW + 1}`, 'gate') : done ? goBtn('¡Completado!', '', 'none') : goBtn('Jugar', `Nivel ${save.next + 1}`, 'continue');
 };
 const playNow = () => (save.run ? enterLevel(save.run.g) : pendingWorld() != null ? openWorldGate(pendingWorld()) : enterLevel(save.next));
-const goBtn = (title, sub, act) => `<button class="go" data-a="${act}">${icon('play')}<span class="t"><b class="outl">${title}</b>${sub ? `<small>${sub}</small>` : ''}</span></button>`;
+const goBtn = (title, sub, act) => {
+  // Lluvia de meteoritos: el Jugar del camino lleva orilla de fuego y lo que le queda (el del evento no: ahí no cuenta).
+  const m = ['continue', 'play-next'].includes(act) && meteor();
+  return `<button class="go${m ? ' met' : ''}" data-a="${act}">${icon('play')}<span class="t"><b class="outl">${title}</b>${sub ? `<small>${sub}</small>` : ''}</span>${m ? `<small class="met-clock">${mmss(m.left())}</small>` : ''}</button>`;
+};
 
 // Estado de un mundo para dibujarlo. gate: forzar que se vea por abrir (antes de animar su desbloqueo).
 function worldData(w, gate = pendingWorld()) {
@@ -187,7 +192,7 @@ function showMap({ region, start = null, anim, after = null, unlock = null } = {
   // Se pueden ver todas las constelaciones, aunque estén bloqueadas: así se nota que hay muchas.
   const locked = region * REGION_SIZE > currentWorld();
   const el = h(`<div class="screen galaxy">
-    <div class="space"></div><div class="g3d"></div><div class="glabels g-only"></div>
+    <div class="space"></div><div class="g3d"></div>${metSky()}<div class="glabels g-only"></div>
     <div class="g-only">
       <button class="hbtn tb press out-btn" data-a="up" aria-label="Ver todas las constelaciones" title="Constelaciones">${icon('prev')}</button>
       <div class="wtitle info">${constIcon()}<div><b>${locked ? icon('lock') : ''}${regionName(region)}</b><small>Constelación ${region + 1} de ${REGION_COUNT} · ${star(true)}${regionStars(region)}/${REGION_SIZE * 30}</small></div></div>
@@ -597,7 +602,7 @@ function showUniverse({ from = regionOf(currentWorld()) } = {}) {
   gallery.active = false;
   current = () => showUniverse({ from });
   const el = h(`<div class="screen galaxy universe">
-    <div class="space"></div><div class="g3d"></div><div class="glabels"></div>
+    <div class="space"></div><div class="g3d"></div>${metSky()}<div class="glabels"></div>
     <div class="wtitle solo info">${constIcon()}<div><b>Constelaciones</b><small>${REGION_COUNT} en el universo · ${star(true)}${fmt(totalStars())}</small></div></div>
     <div class="side l">${sideButtons()}</div>
     <div class="side r">${eventButtons()}</div>
@@ -905,8 +910,11 @@ function startLevel(g, { resume = false, free = false, anim = 'up' } = {}) {
     if (save.run?.g === g) save.run = null;
     persist();
   };
+  // Lluvia de meteoritos: si cae al empezar, el nivel cuenta aunque se gane cuando ya terminó (no en la galería dev).
+  const met0 = free ? null : meteor()?.id;
   game = new Game(app, level, {
     dev,
+    meteor: !!met0,
     resume: run?.state,
     saved,
     free: !!save.stars[g] || isSecret(g) || free || dev.infinite, // intento que no costó boleto
@@ -945,8 +953,9 @@ function startLevel(g, { resume = false, free = false, anim = 'up' } = {}) {
     // Sin las 3 estrellas: lo vuelve a jugar ya (gratis, porque ya lo ganó).
     onReplay: () => startLevel(g),
     // Tras la ventana de victoria: de vuelta al planeta, con el avance animado (o a la galería en dev).
-    onDone: (res) => {
+    onDone: async (res) => {
       if (dev.on && gallery.active) return showGallery();
+      if (res.met?.prize?.items) await openMetPrize(res.met.prize.items);
       const w = worldOf(g);
       const go = () => showMap({ start: w, anim: 'down', after: res.counted ? { g, w, res } : null });
       if (res.chest) return openBossReward(w, res).then(go);
@@ -960,7 +969,8 @@ function startLevel(g, { resume = false, free = false, anim = 'up' } = {}) {
       // solo la primera vez que se saca con 3 estrellas; con menos, solo monedas.
       if (isSecret(g)) {
         const prev = save.secret[w] || 0;
-        const coins = coinsFor(w * LEVELS_PER_WORLD + LEVELS_PER_WORLD - 1, stars, prev) * SECRET_MULT;
+        const met = metWin(free ? null : meteor()?.id || met0, stars);
+        const coins = metCoins(coinsFor(w * LEVELS_PER_WORLD + LEVELS_PER_WORLD - 1, stars, prev) * SECRET_MULT, met);
         const bonus = stars >= 3 && prev < 3 ? SECRET_PRIZE : {};
         const wild = bonus.wild || 0, undo = bonus.undo || 0;
         const fichas = colWin(stars, prev);
@@ -972,12 +982,13 @@ function startLevel(g, { resume = false, free = false, anim = 'up' } = {}) {
         persist();
         updateCoins();
         // Primera vez con 3 estrellas: la postal del mundo gana el sello secreto (se celebra al continuar).
-        return { coins, tickets: 0, prev, wild, undo, counted: true, first: !prev, racha, replay: !free, seal: stars >= 3 && prev < 3, col: fichas ? { n: fichas, ico: col().token } : null };
+        return { coins, tickets: 0, prev, wild: wild + (met?.prize?.wild || 0), undo: undo + (met?.prize?.undo || 0), met, counted: true, first: !prev, racha, replay: !free, seal: stars >= 3 && prev < 3, col: fichas ? { n: fichas, ico: col().token } : null };
       }
       // En modo dev se puede saltar a cualquier nivel: solo cuenta si ya estaba desbloqueado.
       if (g > save.next) return { coins: 0, tickets: 0, prev: 0, replay: !free };
       const prev = save.stars[g] || 0;
-      const coins = coinsFor(g, stars, prev);
+      const met = metWin(free ? null : meteor()?.id || met0, stars);
+      const coins = metCoins(coinsFor(g, stars, prev), met);
       // La primera victoria devuelve los boletos que cuesta el nivel.
       const tickets = prev ? 0 : ticketRefund(g);
       // El jefe da el boleto dorado para abrir el mundo siguiente (solo la primera vez).
@@ -1002,7 +1013,7 @@ function startLevel(g, { resume = false, free = false, anim = 'up' } = {}) {
       persist();
       updateCoins();
       // Repetir desde la victoria salta el festejo del mapa: no se ofrece si toca abrir el mundo siguiente.
-      return { coins, tickets, prev, gold, chest, worldStars: worldStars(w), counted: true, first: !prev, racha, replay: !free && !chest, col: fichas ? { n: fichas, ico: col().token } : null };
+      return { coins, tickets, prev, gold, chest, wild: met?.prize?.wild || 0, undo: met?.prize?.undo || 0, met, worldStars: worldStars(w), counted: true, first: !prev, racha, replay: !free && !chest, col: fichas ? { n: fichas, ico: col().token } : null };
     },
   });
   // El tablero sube y la pantalla anterior se queda atrás.
@@ -1081,11 +1092,13 @@ const ORIGINS = [
   { k: 'mes', name: 'Evento del mes', ico: 'star' },
   { k: 'fiesta', name: 'Festividades de un día', ico: 'flame' },
   { k: 'codigo', name: 'Tesoro escondido · con código', ico: 'cofre' },
+  { k: 'meteoro', name: 'Lluvia de meteoritos', ico: 'meteoro' },
 ];
 // De qué evento salió un exclusivo: { g: grupo de ORIGINS, ico, name } (o null si es de la tienda).
 function exFrom(it) {
   if (!it.ev) return null;
   if (it.code) return { g: 'codigo', ico: 'cofre', name: 'Código de regalo' };
+  if (it.met) return { g: 'meteoro', ico: 'meteoro', name: 'Lluvia de meteoritos' };
   const f = FIESTAS.find((x) => x.key === it.ev);
   if (f) return { g: 'fiesta', ico: f.ico, name: f.name };
   const e = Object.values(EVENTOS).find((x) => x.key === it.ev);
@@ -1854,6 +1867,79 @@ function boxBubbles(m, bubbles) {
   }, 450);
 }
 
+// ---------- Lluvia de meteoritos (ver meteor.js) ----------
+const mmss = (ms) => { const s = Math.ceil(ms / 1000); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
+// Meteoritos que cruzan el cielo del mapa (encima de los planetas, debajo de los botones). Cada uno con su lugar,
+// tamaño y espera, para que no caigan parejos.
+const METS = [[78, 4, 1, 0], [52, -6, 0.7, 1.3], [96, 18, 0.85, 2.1], [64, 26, 0.6, 3.4], [88, -2, 1.1, 4.6], [38, 8, 0.75, 5.5], [70, 40, 0.65, 6.8]];
+const metSky = () => (meteor() ? `<div class="met-sky" aria-hidden="true">${METS.map(([x, y, s, d]) => `<i style="left:${x}%;top:${y}%;--s:${s};animation-delay:${d}s">${icon('meteoro')}</i>`).join('')}</div>` : '');
+// Aviso de cada lluvia: un meteorito cae, truena y se dice lo que da. La primera vez en la vida, con sus reglas.
+function openMetIntro() {
+  const first = !save.metSeen;
+  return new Promise((done) => {
+    const m = openModal({
+      title: '¡Lluvia de meteoritos!',
+      color: 'violet',
+      wide: true,
+      cls: 'ev-intro met-intro',
+      body: `<div class="evi-hero met-hero"><div class="rays"></div><span class="met-fall">${icon('meteoro', 0, 0, 'big')}</span></div>
+        <p class="lead">¡Está cayendo ahora! Te quedan <b class="met-clock">${mmss(meteor()?.left() || 0)}</b> para aprovecharla.</p>
+        <ul class="evi-rules">
+          <li>${coin()}<span>Las monedas de cada nivel que ganes valen <b>el doble</b>.</span></li>
+          <li>${star(true)}<span>Gana un nivel con <b>3 estrellas</b> y te cae un <b>premio sorpresa</b> (uno por lluvia).</span></li>
+          ${first ? `<li>${icon('meteoro')}<span>Cae <b>sin aviso</b>, unas veces por semana, a cualquier hora. ¡Si la ves, juega!</span></li>` : ''}
+        </ul>`,
+      buttons: [{ label: '¡A jugar!', cls: 'gold wide' }],
+      onClose: () => {
+        const mt = meteor();
+        if (mt) mt.state.intro = true;
+        save.metSeen = true;
+        persist();
+        done();
+      },
+    });
+    if (reduced()) return;
+    // Cae en diagonal dejando su estela y al llegar truena con chispas.
+    const f = m.el.querySelector('.met-fall');
+    f.animate([{ translate: '160px -150px', scale: 0.5, opacity: 0 }, { opacity: 1, offset: 0.2 }, { translate: '0 0', scale: 1.1, opacity: 1, offset: 0.8 }, { translate: '0 0', scale: 1 }], { duration: 900, delay: 250, easing: 'cubic-bezier(0.5, 0, 0.9, 0.6)', fill: 'backwards' })
+      .finished.then(() => {
+        if (!f.isConnected) return;
+        const r = f.getBoundingClientRect();
+        sparkle({ x: r.left + r.width / 2, y: r.top + r.height / 2 }, 26);
+        buzz(25);
+        f.classList.add('landed');
+      }, () => {});
+    m.el.querySelectorAll('.evi-rules li').forEach((el, i) => el.animate([{ opacity: 0, translate: '-14px 0' }, { opacity: 1, translate: '0 0' }], { duration: 320, delay: 1100 + i * 120, easing: 'ease-out', fill: 'backwards' }));
+  });
+}
+// El premio de la lluvia fue un exclusivo de meteoro: sale de una caja como los del evento.
+function openMetPrize(items) {
+  return new Promise((done) => {
+    confetti(60);
+    const m = openModal({
+      title: '¡Te cayó un tesoro del cielo!',
+      color: 'violet',
+      closable: false,
+      cls: 'gift-prize',
+      body: `<div class="gift-box"><div class="gbox"><span class="lid">${boxLid()}</span><span class="body">${boxBody()}</span></div></div>
+        <p class="note">Exclusivo de la lluvia de meteoritos: es tuyo para siempre. Póntelo desde tu perfil.</p>`,
+      buttons: [{ label: 'Continuar', cls: 'green wide', onClick: () => { closeShelf(); done(); } }],
+    });
+    boxBubbles(m, items.map((it) => giftBubble(it.sec, it.k)));
+  });
+}
+// Cada segundo avanzan los relojes de la lluvia (botón Jugar, aviso y ficha del tablero). Cuando empieza o termina,
+// la pantalla se vuelve a pintar (si hay una ventana o una animación, en cuanto se pueda).
+let metWas = !!meteor();
+setInterval(() => {
+  const m = meteor();
+  document.querySelectorAll('.met-clock').forEach((c) => (c.textContent = m ? mmss(m.left()) : ''));
+  if (!!m === metWas || (!game && (modalOpen() || document.querySelector('.warp') || map?.galaxy?.busy))) return;
+  metWas = !!m;
+  // En el tablero no se toca nada: la pantalla que sigue ya sale como debe.
+  if (!game) current?.();
+}, 1000);
+
 // ---------- Avisos al llegar ----------
 // En las constelaciones (y al volver al mapa) salen, uno por uno: lo recién desbloqueado (una sola vez en la vida),
 // la bienvenida de la colección (cada colección) y la del evento del mes (cada mes con evento), y si se perdió la racha.
@@ -1873,6 +1959,11 @@ async function notices() {
   if (sideTourDue()) {
     if (!(await calm(gen))) return;
     if (document.querySelector('#app .side.l')) await sideTour();
+  }
+  // La lluvia de meteoritos va antes que todo: dura solo 30 minutos.
+  if (meteor() && !meteor().state.intro) {
+    if (!(await calm(gen))) return;
+    if (meteor() && !meteor().state.intro) await openMetIntro();
   }
   for (const k of ['racha', 'col', 'mes', 'col2', 'fiesta', 'col3', 'fiesta2']) {
     if (!isOn(k) || save.intro?.[k]) continue;

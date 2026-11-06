@@ -89,6 +89,8 @@ export const ITEMS = {
     { k: 'gatobruja', name: 'Gato brujo', text: 'Con su sombrero de bruja', ev: 'halloween', mes: 1 },
     // Exclusivos de los códigos de regalo (code): temática Tesoro escondido. Solo salen al canjear su código.
     { k: 'loro', name: 'Capitán Pico', text: 'Loro cazatesoros', ev: 'tesoro', code: 1 },
+    // Exclusivos de la lluvia de meteoritos (met): muy rara vez, por ganar con 3★ mientras cae (ver meteor.js).
+    { k: 'meteorin', name: 'Meteorín', text: 'Piedrita espacial con pelo de fuego', ev: 'meteoro', met: 1 },
   ],
   ring: [
     { k: 'sencillo', name: 'Sencillo', price: 0 },
@@ -177,6 +179,7 @@ export const ITEMS = {
     { k: 'mariachi', name: 'Mariachi', ev: 'patrias', mes: 1 },
     { k: 'hechicero', name: 'Hechicero', ev: 'halloween', mes: 1 },
     { k: 'cazatesoros', name: 'Cazatesoros', ev: 'tesoro', code: 1 },
+    { k: 'cazaestrellas', name: 'Cazaestrellas', ev: 'meteoro', met: 1 },
   ],
   back: [
     { k: 'clasico', name: 'Clásico', price: 0 },
@@ -230,6 +233,7 @@ export const ITEMS = {
     { k: 'vivamexico', name: '¡Viva México!', ev: 'patrias', mes: 1 },
     { k: 'calabazas', name: 'Calabazas', ev: 'halloween', mes: 1 },
     { k: 'mapatesoro', name: 'Mapa del tesoro', ev: 'tesoro', code: 1 },
+    { k: 'lluvia', name: 'Lluvia de estrellas', ev: 'meteoro', met: 1 },
   ],
   face: [
     { k: 'clasica', name: 'Clásica', price: 0 },
@@ -296,6 +300,7 @@ export const ITEMS = {
     { k: 'sombrero', name: 'Sombrero de charro', text: 'Vuela girando como platillo', ev: 'patrias', mes: 1 },
     { k: 'escoba', name: 'Escoba voladora', text: 'Deja chispitas al volar', ev: 'halloween', mes: 1 },
     { k: 'cofre', name: 'Cofre volador', text: 'Aletea y suelta monedas', ev: 'tesoro', code: 1 },
+    { k: 'meteoro', name: 'Meteoro', text: 'Cruza el cielo con su cola de fuego', ev: 'meteoro', met: 1 },
   ],
   space: [
     { k: 'nebulosa', name: 'Nebulosa', price: 0 },
@@ -380,6 +385,7 @@ export const ITEMS = {
     { k: 'patrias', name: 'Sarape', ev: 'patrias', mes: 1 },
     { k: 'halloween', name: 'Dulce o truco', ev: 'halloween', mes: 1 },
     { k: 'mapa', name: 'Mapa del tesoro', ev: 'tesoro', code: 1 },
+    { k: 'meteoros', name: 'Cielo de meteoros', ev: 'meteoro', met: 1 },
   ],
 };
 
@@ -413,7 +419,7 @@ export function buy(sec, k) {
 }
 
 // Cada título se ve distinto: color, icono y forma (los más caros, más vistosos).
-const TITLE_ICO = { novato: 'star', explorador: 'flag', cazacometas: 'rocket', maestro: 'trophy', viajero: 'planet', bombas: 'bomb', leyenda: 'crown', buscaconchas: 'concha', cazagemas: 'gema', guardabosques: 'bellota', golosito: 'caramelo', paleontologo: 'fosil', inventor: 'tuerca', tamalero: 'tamal', taquero: 'taco', heroeverde: 'tierra', jugueton: 'pinata', consentido: 'clavel', orgullo: 'corbata', amigomichi: 'gatito', mejoramigo: 'hueso', catrin: 'calavera', duende: 'esfera', buscador: 'rosca', flechazo: 'corazon', jardinero: 'tulipan', olas: 'sol', mariachi: 'sombrero', hechicero: 'calabaza', jefefinal: 'control', cerobugs: 'llaves', bromista: 'bufon', propositos: 'reloj', artista: 'gota', estrellarock: 'nota', director: 'claqueta', nahual: 'nahual', guiaalmas: 'xolito', almadelrio: 'velita', elegancia: 'catrina', valiente: 'locomotora', cazatesoros: 'cofre' };
+const TITLE_ICO = { novato: 'star', explorador: 'flag', cazacometas: 'rocket', maestro: 'trophy', viajero: 'planet', bombas: 'bomb', leyenda: 'crown', buscaconchas: 'concha', cazagemas: 'gema', guardabosques: 'bellota', golosito: 'caramelo', paleontologo: 'fosil', inventor: 'tuerca', tamalero: 'tamal', taquero: 'taco', heroeverde: 'tierra', jugueton: 'pinata', consentido: 'clavel', orgullo: 'corbata', amigomichi: 'gatito', mejoramigo: 'hueso', catrin: 'calavera', duende: 'esfera', buscador: 'rosca', flechazo: 'corazon', jardinero: 'tulipan', olas: 'sol', mariachi: 'sombrero', hechicero: 'calabaza', jefefinal: 'control', cerobugs: 'llaves', bromista: 'bufon', propositos: 'reloj', artista: 'gota', estrellarock: 'nota', director: 'claqueta', nahual: 'nahual', guiaalmas: 'xolito', almadelrio: 'velita', elegancia: 'catrina', valiente: 'locomotora', cazatesoros: 'cofre', cazaestrellas: 'meteoro' };
 export const titleName = (k = equipped('title')) => item('title', k).name;
 export const titleIcon = (k) => icon(TITLE_ICO[k] || 'star');
 export const titleHTML = (k = equipped('title'), cls = '', tag = 'span', attrs = '') =>

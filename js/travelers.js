@@ -1027,6 +1027,52 @@ const MODELS = {
       });
     } };
   },
+  // Meteoro (exclusivo de la lluvia de meteoritos): piedra morada con cráteres que gira despacio, con su cola de fuego
+  // que titila hacia arriba a la derecha (cae como el icono) y chispas que se quedan atrás.
+  meteoro(part) {
+    const g = new THREE.Group(), body = new THREE.Group();
+    // Piedra: esfera con los vértices movidos un poco (siempre igual) para que no quede lisa.
+    const geo = new THREE.IcosahedronGeometry(0.2, 2), pos = geo.attributes.position, v = new THREE.Vector3();
+    for (let i = 0; i < pos.count; i++) {
+      v.fromBufferAttribute(pos, i);
+      const n = 1 + Math.sin(v.x * 23 + v.y * 7) * 0.06 + Math.cos(v.z * 19 - v.x * 5) * 0.05;
+      pos.setXYZ(i, v.x * n, v.y * n, v.z * n);
+    }
+    geo.computeVertexNormals();
+    const rock = new THREE.Group();
+    rock.add(part(geo, '#a493bd', { ol: 0.06 }));
+    for (const [x, y, z, r] of [[0.1, 0.08, 0.15, 0.05], [-0.12, -0.04, 0.14, 0.04], [0.03, -0.13, 0.13, 0.035], [-0.05, 0.15, -0.1, 0.045]]) {
+      rock.add(part(new THREE.SphereGeometry(r, 10, 8), '#7a6a9e', { x, y, z, ol: 0 }));
+    }
+    body.add(rock);
+    // Cola: tres conos de luz, del más grande (naranja) al más chico (casi blanco), saliendo de la piedra.
+    const tail = new THREE.Group();
+    [['#ff6a2e', 0.2, 0.75, 0.6], ['#ff9c3d', 0.15, 0.6, 0.8], ['#ffe08a', 0.09, 0.42, 0.95]].forEach(([c, r, h, o]) => {
+      const m = new THREE.Mesh(new THREE.ConeGeometry(r, h, 16), glow(c, o));
+      m.position.y = h / 2 + 0.05;
+      tail.add(m);
+    });
+    tail.rotation.z = -Math.PI / 4;
+    body.add(tail);
+    const sparks = [];
+    for (let k = 0; k < 6; k++) {
+      const s = new THREE.Mesh(new THREE.SphereGeometry(0.025, 8, 6), glow(k % 2 ? '#ffd85a' : '#ff8a3d', 0.9));
+      body.add(s); sparks.push(s);
+    }
+    g.add(body);
+    return { obj: g, tick: (t) => {
+      rock.rotation.set(t * 0.7, t * 1.1, 0);
+      const k = 1 + Math.sin(t * 29) * 0.1 + Math.sin(t * 13) * 0.07;
+      tail.scale.set(1 + Math.sin(t * 23) * 0.06, k, 1);
+      body.position.y = Math.sin(t * 2) * 0.04;
+      // Las chispas salen por la cola, se apagan y vuelven a salir.
+      sparks.forEach((m, i) => {
+        const p = (t * 0.9 + i / sparks.length) % 1, d = 0.25 + p * 0.7, wob = Math.sin(i * 3 + t * 5) * 0.08;
+        m.position.set(d * 0.7 + wob, d * 0.7 - wob, Math.cos(i * 2) * 0.08);
+        m.scale.setScalar((1 - p) * 1.4 + 0.01);
+      });
+    } };
+  },
   // Mantarraya: aletas que aletean despacio y cola larga.
   mantarraya(part) {
     const g = new THREE.Group(), ray = new THREE.Group();

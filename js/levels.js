@@ -718,8 +718,8 @@ export function buildLevel(g, ev = null, t = 0) {
   }
   // Bombas (1-3): cartas especiales sin número, tapadas, que hay que destapar antes de que su cuenta llegue a 0.
   const bombIds = [];
-  // Sin ayudas: ninguna bomba (ni cometa) tapa ni está tapada por otra especial (el motor solo activa una por
-  // jugada y la de abajo se quedaba atorada). Los demás niveles siguen igual: sus mazos probados dependen de esto.
+  // Ninguna bomba (ni cometa) tapa ni está tapada por otra especial. El motor ya activa en cadena (la de abajo
+  // sale en la misma acción), pero se deja así: los mazos probados de todos los niveles dependen de este orden.
   const touch = (i, j) => coveredBy[i].includes(j) || coveredBy[j].includes(i);
   if (mech.has('bomb')) {
     const mid = order.slice(Math.floor(n * 0.15), Math.floor(n * 0.75)).filter((i) => coveredBy[i].length && i !== packId);
