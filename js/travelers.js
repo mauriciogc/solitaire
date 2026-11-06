@@ -982,6 +982,51 @@ const MODELS = {
       sparks.forEach((m, k) => { const p = (t * 0.7 + k / 5) % 1; m.position.set(0.6 + p * 0.35, Math.sin(p * 9 + k) * 0.06, Math.cos(k * 2) * 0.06); m.scale.setScalar(Math.sin(p * Math.PI) * 1.3 + 0.01); m.rotation.y = t * 4; });
     } };
   },
+  // Cofre volador (Tesoro escondido, exclusivo de los códigos): cofre de madera con herrajes dorados y alitas blancas.
+  // La tapa se abre de vez en cuando y brincan monedas que giran y vuelven a caer adentro.
+  cofre(part) {
+    const g = new THREE.Group(), box = new THREE.Group();
+    box.add(part(new THREE.BoxGeometry(0.5, 0.3, 0.34), '#c27a3e', { y: -0.05, ol: 0.07 }));
+    for (const x of [-0.16, 0.16]) box.add(part(new THREE.BoxGeometry(0.05, 0.31, 0.35), '#ffc83d', { x, y: -0.05, ol: 0 }));
+    box.add(part(new THREE.BoxGeometry(0.1, 0.11, 0.03), '#ffd23d', { y: 0.03, z: 0.175, ol: 0.15 }));
+    box.add(part(new THREE.SphereGeometry(0.018, 8, 6), INK, { y: 0.035, z: 0.19, ol: 0 }));
+    // La tapa gira desde la orilla de atrás.
+    const lid = new THREE.Group();
+    lid.add(part(new THREE.CylinderGeometry(0.17, 0.17, 0.5, 20, 1, false, 0, Math.PI).rotateZ(Math.PI / 2).scale(1, 0.7, 1), '#d88e4e', { z: 0.17, ol: 0.06 }));
+    for (const x of [-0.16, 0.16]) lid.add(part(new THREE.CylinderGeometry(0.175, 0.175, 0.05, 20, 1, false, 0, Math.PI).rotateZ(Math.PI / 2).scale(1, 0.7, 1), '#ffc83d', { x, z: 0.17, ol: 0 }));
+    lid.position.set(0, 0.1, -0.17);
+    box.add(lid);
+    const glowIn = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.02, 0.28), glow('#fff4c7', 0));
+    glowIn.position.y = 0.1; box.add(glowIn);
+    const coins = [];
+    for (let k = 0; k < 4; k++) {
+      const c = part(new THREE.CylinderGeometry(0.06, 0.06, 0.018, 16).rotateX(Math.PI / 2), '#ffd23d', { ol: 0.15 });
+      c.visible = false; box.add(c); coins.push(c);
+    }
+    const wings = [];
+    for (const s of [-1, 1]) {
+      const w = new THREE.Group();
+      for (let k = 0; k < 3; k++) w.add(part(new THREE.SphereGeometry(0.1 - k * 0.022, 12, 8).scale(1.4, 0.35, 0.8), '#fff6e6', { x: s * (0.1 + k * 0.05), y: 0.03 - k * 0.04, ol: 0.1 }));
+      w.position.set(s * 0.25, 0.02, -0.04); box.add(w); wings.push([w, s]);
+    }
+    box.rotation.set(0.25, -0.55, 0);
+    g.add(box);
+    return { obj: g, tick: (t) => {
+      box.position.y = Math.sin(t * 2.4) * 0.05;
+      wings.forEach(([w, s]) => (w.rotation.z = s * (0.2 + Math.sin(t * 9) * 0.45)));
+      // Ciclo de 4 s: cerrado, se abre (brillo y monedas), se cierra.
+      const c = (t % 4) / 4, open = c < 0.45 ? 0 : c < 0.55 ? (c - 0.45) / 0.1 : c < 0.85 ? 1 : c < 0.95 ? 1 - (c - 0.85) / 0.1 : 0;
+      lid.rotation.x = -open * 1.15;
+      glowIn.material.opacity = open * 0.9;
+      coins.forEach((m, k) => {
+        const p = (c - 0.55 - k * 0.06) / 0.26;
+        m.visible = p > 0 && p < 1;
+        if (!m.visible) return;
+        m.position.set((k - 1.5) * 0.09, 0.1 + Math.sin(p * Math.PI) * 0.42, 0.02 * k);
+        m.rotation.y = t * 8 + k;
+      });
+    } };
+  },
   // Mantarraya: aletas que aletean despacio y cola larga.
   mantarraya(part) {
     const g = new THREE.Group(), ray = new THREE.Group();

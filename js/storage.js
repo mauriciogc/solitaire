@@ -31,6 +31,7 @@ const fresh = (name, avatar = 0) => ({
   char: 'nino', // Nico y Lila son gratis
   owned: {}, // tienda: 'seccion:clave' -> 1 (ver shop.js)
   equip: {}, // tienda: seccion -> clave que usa
+  codes: {}, // códigos de regalo ya canjeados (ver codes.js): no se borran al reiniciar el perfil
 });
 
 const read = (k) => {
@@ -90,8 +91,8 @@ function replaceWith(p) {
 // Borra todo el avance del jugador (también lo comprado), conserva nombre y avatar. Lo que ya se le enseñó no se
 // repite (ya lo hizo): tutorial del tablero, recorridos del mapa y de los botones, mecánicas y presentaciones de eventos.
 export function resetProfile() {
-  const { name, avatar, named, look, onboard, tutorial, mapTour, sideTour, seen, intro } = save;
-  const learned = { tutorial, seen, intro, ...(mapTour ? { mapTour } : {}), ...(sideTour ? { sideTour } : {}) };
+  const { name, avatar, named, look, onboard, tutorial, mapTour, sideTour, seen, intro, codes } = save;
+  const learned = { tutorial, seen, intro, codes, ...(mapTour ? { mapTour } : {}), ...(sideTour ? { sideTour } : {}) };
   // Un personaje gratis (Nico o Lila) se conserva; uno comprado se pierde y vuelve a la inicial.
   const free = look === 'char' && ['nino', 'nina'].includes(save.char);
   replaceWith({ ...fresh(name, avatar), named, onboard, ...learned, ...(free ? { look, char: save.char } : {}) });

@@ -440,6 +440,19 @@ function popPrize(html, n, { x, y }) {
     { scale: 0.8, opacity: 0, translate: '-50% -140%' },
   ], { duration: 1800, easing: 'ease-out' }).finished.then(() => f.remove());
 }
+// Burbujas sobre toda la pantalla, sin ventana: para premios que llegan cuando la ventana ya se cerró
+// (comodines y deshacer, que no tienen monedero adonde volar). Salen de `at` y suben como las de la victoria.
+export function floatBubbles(items, at) {
+  if (!items.length) return;
+  const host = document.createElement('div');
+  host.className = 'bubble-host';
+  const from = document.createElement('i');
+  from.style.cssText = `position:absolute;left:${at.x}px;top:${at.y}px`;
+  host.append(from);
+  document.body.append(host);
+  lootBubbles({ el: host }, items, from, { lift: 20 });
+  setTimeout(() => host.remove(), 24000);
+}
 export function balloons(m, { max = 7 } = {}) {
   if (reduced()) return;
   const layer = document.createElement('div');

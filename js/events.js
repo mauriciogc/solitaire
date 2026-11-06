@@ -4,7 +4,6 @@
 // de temática cada día confundía, porque la colección también tiene temáticas). Los premios se reclaman a mano:
 // los reclamados son tuyos; los que no, se pierden si la racha se reinicia o si pasa la medianoche.
 import { save, persist } from './storage.js';
-import { equip } from './shop.js';
 import { EVENT_LEVELS, EVENT_PER_PLANET, EVENT_PLANETS, FIESTA_LEVELS, FIESTA_PER_PLANET, FIESTA_PLANETS } from './levels.js';
 
 // Los eventos se abren poco a poco, según los niveles ganados (save.next): primero la racha, luego la colección
@@ -215,8 +214,7 @@ export function colBuy(o) {
   c.state.n -= o.price;
   c.state.bought[o.k] = (c.state.bought[o.k] || 0) + 1;
   if (o.sec) {
-    save.owned[`${o.sec}:${o.item}`] = 1;
-    equip(o.sec, o.item);
+    save.owned[`${o.sec}:${o.item}`] = 1; // no se pone solo: se cambia en el perfil
   }
   persist();
   return o;
@@ -356,7 +354,7 @@ export function evEnter() {
   persist();
   return true;
 }
-// Ganó el nivel: el boleto vuelve, se avanza y se entrega el premio (los exclusivos quedan puestos).
+// Ganó el nivel: el boleto vuelve, se avanza y se entrega el premio (los exclusivos no se ponen solos: se cambian en el perfil).
 export function evWin() {
   const e = ev();
   if (!e?.state.run) return null;
@@ -371,7 +369,6 @@ export function evWin() {
   save.wild += prize.wild || 0;
   for (const it of prize.items) {
     save.owned[`${it.sec}:${it.k}`] = 1;
-    equip(it.sec, it.k);
   }
   persist();
   return { ...prize, k, planet: Math.floor(k / EVENT_PER_PLANET), last: k === EVENT_LEVELS - 1 };
@@ -571,7 +568,6 @@ export function fiWin() {
   save.wild += prize.wild || 0;
   for (const it of prize.items) {
     save.owned[`${it.sec}:${it.k}`] = 1;
-    equip(it.sec, it.k);
   }
   fiRecord();
   persist();

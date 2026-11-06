@@ -1,8 +1,8 @@
 // Red primero, caché como respaldo: siempre la última versión y funciona sin conexión.
-const CACHE = 'solitario-v115';
+const CACHE = 'solitario-v121';
 const FILES = [
   './', 'index.html', 'css/styles.css', 'manifest.webmanifest', 'icon.svg', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png',
-  'js/main.js', 'js/game.js', 'js/art.js', 'js/biomes.js', 'js/galaxy.js', 'js/dev.js', 'js/levels.js', 'js/rng.js', 'js/storage.js', 'js/ui.js', 'js/economy.js', 'js/coach.js', 'js/engine.js', 'js/shop.js', 'js/travelers.js', 'js/events.js', 'js/event-data.js', 'js/path-data.js', 'js/special-data.js', 'js/soft-data.js',
+  'js/main.js', 'js/game.js', 'js/art.js', 'js/biomes.js', 'js/galaxy.js', 'js/dev.js', 'js/levels.js', 'js/rng.js', 'js/storage.js', 'js/ui.js', 'js/economy.js', 'js/coach.js', 'js/engine.js', 'js/shop.js', 'js/travelers.js', 'js/events.js', 'js/event-data.js', 'js/path-data.js', 'js/special-data.js', 'js/soft-data.js', 'js/codes.js',
   'vendor/three.module.min.js', 'fonts/baloo2.woff2', 'fonts/lilita-one.woff2',
 ];
 

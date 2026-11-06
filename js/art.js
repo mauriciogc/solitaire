@@ -255,6 +255,14 @@ const ICONS = {
     `<path d="M16 2.6V9.4M27.6 9.3 22 12.6M27.6 22.7 22 19.4M16 29.4V22.6M4.4 22.7 10 19.4M4.4 9.3 10 12.6" stroke="#aab4d8" stroke-width="1.4"/><path d="M8.4 9.4 15 5.6" stroke="#fff" stroke-width="2" stroke-linecap="round" opacity=".8"/>`, 2.2)
     + `<circle cx="16" cy="16" r="6.4" fill="#5a6494" stroke="${K}" stroke-width="2"/><circle cx="16" cy="16" r="4.2" fill="none" stroke="#7f8ab8" stroke-width="1.4" stroke-dasharray="2 1.6"/><circle cx="16" cy="16" r="2.4" fill="#3a4270"/>`,
   // Estrella morada del nivel secreto (mismo dibujo que la dorada).
+  // Tesoro escondido (exclusivos de los códigos de regalo): cofre, doblón y palmera.
+  cofre: () => tshape('M4 15h24v10.5a2.5 2.5 0 0 1-2.5 2.5h-19A2.5 2.5 0 0 1 4 25.5z', '#c27a3e', '#9a5a2a', '<path d="M9.5 15v13M22.5 15v13" stroke="#ffc83d" stroke-width="3"/>')
+    + tshape('M4 15v-2.5A6.5 6.5 0 0 1 10.5 6h11A6.5 6.5 0 0 1 28 12.5V15z', '#d88e4e', '#b0683a', '<path d="M9.5 6v9M22.5 6v9" stroke="#ffc83d" stroke-width="3"/><path d="M8 9.5q8-3 16 0" stroke="#f2b47a" stroke-width="1.6" fill="none" stroke-linecap="round"/>')
+    + tshape('M12.6 12.6h6.8v7.2h-6.8z', '#ffd23d', '#e8a417', `<circle cx="16" cy="15.6" r="1.4" fill="${K}"/><path d="M16 16.4v2" stroke="${K}" stroke-width="1.4" stroke-linecap="round"/>`, 1.6),
+  doblon: () => tshape(CIRCLE(16, 16, 12.5), '#ffd23d', '#e8a417', `<circle cx="16" cy="16" r="8.6" fill="none" stroke="#d99a17" stroke-width="1.8"/><path d="M16 10.4v11.2M10.4 16h11.2" stroke="#c98a17" stroke-width="2.6" stroke-linecap="round"/><path d="M9 10.5a9 9 0 0 1 4-3.2" stroke="#fff3b8" stroke-width="2" fill="none" stroke-linecap="round"/>`),
+  palmera: () => `<path d="M15.5 29Q14 20 18 12" fill="none" stroke="${K}" stroke-width="5.4" stroke-linecap="round"/><path d="M15.5 29Q14 20 18 12" fill="none" stroke="#b8743a" stroke-width="2.8" stroke-linecap="round" stroke-dasharray="2.2 1.4"/>`
+    + ['M18 12Q10 6 3.5 10.5Q11 9.5 18 12z', 'M18 12Q26 5 30 11Q24 9 18 12z', 'M18 12Q12 13 7.5 20Q14 15 18 12z', 'M18 12Q25 13 27.5 20Q22 14.5 18 12z', 'M18 12Q17 5 21 2.5Q19.5 7 18 12z'].map((d) => tshape(d, '#5fc760', '#3f9a4a', '', 1.6)).join('')
+    + [[16.4, 13.4], [19.4, 13.6]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="1.9" fill="#8a5a2a" stroke="${K}" stroke-width="1.2"/>`).join(''),
   starSecret: () => tshape(starPath(16, 17, 14, 6.6), '#b36bff', '#8a3fe0', `<path d="M10.5 13.5l2.2-3.6" stroke="#ecdcff" stroke-width="2.2" stroke-linecap="round"/>`),
   starOff: () => tshape(starPath(16, 17, 14, 6.6), '#ddd3c0', '#c7baa2'),
   ticket: () => `<g transform="rotate(-12 16 16)">${tshape('M3 10.5a2 2 0 0 1 2-2h22a2 2 0 0 1 2 2v3a2.6 2.6 0 0 0 0 5.2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-3a2.6 2.6 0 0 0 0-5.2z', '#ff6f8e', '#e0496b', `<path d="M21 9v14" stroke="#fff" stroke-width="1.8" stroke-dasharray="2 2"/><path d="${starPath(11.5, 15.6, 4.4, 2)}" fill="#fff"/>`)}</g>`,
@@ -533,6 +541,14 @@ export const BACKS = {
       + [[28, 30, 0.45], [42, 48, 0.34]].map(([x, y, k]) => `<g transform="translate(${x - 16 * k} ${y - 16 * k}) scale(${k})">${ICONS.murcielago()}</g>`).join('')
       + `<path d="M14 112q12-10 22 0t22 0 22 0" fill="none" stroke="#3f8a3a" stroke-width="2.6" stroke-linecap="round"/>`
       + [[70, 102, 0.8], [30, 100, 0.95], [52, 116, 0.7]].map(([x, y, k]) => `<g transform="translate(${x - 16 * k} ${y - 16 * k}) scale(${k})">${ICONS.calabaza()}</g>`).join('') },
+  // Exclusivo de los códigos: Tesoro escondido. Mapa de pergamino con su camino punteado, la palmera y la X roja.
+  mapatesoro: { a: '#f3dca6', b: '#f3dca6', flat: true, nodots: true,
+    bg: () => `<ellipse cx="24" cy="30" rx="18" ry="12" fill="#e8c98a" opacity=".55"/><ellipse cx="78" cy="104" rx="20" ry="14" fill="#e8c98a" opacity=".55"/><ellipse cx="66" cy="20" rx="10" ry="6" fill="#d9b06a" opacity=".35"/>`
+      + `<path d="M14 54q8-4 14 2t14-2M60 120q6-3 12 1t12-1" fill="none" stroke="#7fc6d6" stroke-width="2" stroke-linecap="round"/>`,
+    art: () => `<path d="M30 112Q22 92 40 88T58 70Q74 62 68 44" fill="none" stroke="#c22c3c" stroke-width="3" stroke-linecap="round" stroke-dasharray="5 5"/>`
+      + `<g transform="translate(8 84) scale(1.25)">${ICONS.palmera()}</g>`
+      + `<path d="M58 26 76 44M76 26 58 44" stroke="${K}" stroke-width="10" stroke-linecap="round"/><path d="M58 26 76 44M76 26 58 44" stroke="#e8434f" stroke-width="5.4" stroke-linecap="round"/>`
+      + `<g transform="translate(64 96)"><circle r="11" fill="#fff6e6" stroke="${K}" stroke-width="2.4"/><path d="M0-9 2.6 0 0 9-2.6 0z" fill="#e8434f" stroke="${K}" stroke-width="1.4" stroke-linejoin="round"/><path d="M-9 0 0-2.4 9 0 0 2.4z" fill="#4aa8de" stroke="${K}" stroke-width="1.4" stroke-linejoin="round"/></g>` },
   regalo: { a: '#7b4ee6', b: '#6438c8', star: ['#fff6e6', '#e3d3ff'] },
   comodin: { a: '#ffc83d', b: '#eca21f', star: ['#ff9c2b', '#e8761a'], dots: '#fff4c7' },
 };
@@ -932,6 +948,16 @@ export const AVATARS = {
     + `<path d="M47.4 70h5.2L50 73z" fill="#ff9cb0" stroke="${K}" stroke-width="1.4" stroke-linejoin="round"/><path d="M50 73q-2 3-4.4 1.6M50 73q2 3 4.4 1.6" fill="none" stroke="#c9c0e8" stroke-width="1.8" stroke-linecap="round"/>`
     + P(ELL(50, 44, 31, 6.4), '#6c3fd4', '#5a2fbf')
     + P('M34 44Q44 30 52 6Q56 4 57 8Q60 30 66 44z', '#6c3fd4', '#5a2fbf', '<path d="M35 40q15 4.4 30 0" stroke="#ff8a1a" stroke-width="4.4" fill="none"/><rect x="46" y="36.6" width="8" height="6.4" rx="1" fill="#ffc83d" stroke="#2a1f5c" stroke-width="1.6"/>'),
+  // Exclusivo de los códigos: Tesoro escondido. Loro pirata con paliacate rojo, pico ganchudo y su doblón.
+  loro: () => P('M10 104Q12 80 50 78Q88 80 90 104z', '#3fbf5a', '#2f9e48', '<path d="M38 82q12 10 24 0" fill="none" stroke="#ffd23d" stroke-width="6" stroke-linecap="round"/>')
+    + mirror(P('M24 58Q12 66 14 84Q24 78 28 68z', '#2fae4a', '#22903a'))
+    + P(ELL(50, 56, 27, 27), '#4fd16a', '#36b350')
+    + mirror(P(ELL(38, 54, 9.4, 10), '#fff', '#e6eef0')) + eyes(54, 12, 4.2)
+    + P('M38 62Q50 55 62 62Q63 72 53 81Q54 73 47 70Q40 68 38 62z', '#ffc83d', '#ec9a17', '<path d="M43 61q7-3 14 0" stroke="#fff3b8" stroke-width="2" fill="none" stroke-linecap="round"/>')
+    + P('M44 70Q49 73 53 72Q51 78 46 76z', '#5a3a2a', '#3f2618') + blush(64, 21)
+    + P('M22 46Q24 25 50 25Q76 25 78 46Q64 37 50 37Q36 37 22 46z', '#e8434f', '#c22c3c', [[34, 33], [50, 30], [66, 33], [42, 40], [58, 40]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="2.2" fill="#fff"/>`).join(''))
+    + P('M75 37 90 30 86 44z', '#e8434f', '#c22c3c') + P('M76 41 89 50 74 50z', '#e8434f', '#c22c3c')
+    + `<g transform="translate(64 80) scale(.62)">${ICONS.doblon()}</g>`,
   sirena: () => P('M20 50Q12 82 20 104H80Q88 82 80 50Q78 24 50 22Q22 24 20 50z', '#ff6f61', '#e0524a')
     + kid('#5fd1c5', '#2fae9e')
     + mirror(P('M34 96Q38 84 46 88Q44 98 34 96z', '#ff9cc8', '#e870a8'))
@@ -1113,6 +1139,10 @@ export const RINGS = {
     + Array.from({ length: 16 }, (_, i) => { const [a, b] = at(i * 22.5, 50), [c, d] = at(i * 22.5, 60); return `<path d="M${a.toFixed(1)} ${b.toFixed(1)}L${c.toFixed(1)} ${d.toFixed(1)}" stroke="#e8e0ff" stroke-width="1.2"/>`; }).join('')
     + (() => { const [x, y] = at(-60, 56); return `<path d="M${x} ${y}v14" stroke="#e8e0ff" stroke-width="1.2"/><g transform="translate(${x} ${y + 18})">${[-1, 1].map((sx) => [0, 1, 2, 3].map((k) => `<path d="M0 0q${sx * 5} ${-4 + k * 2.6} ${sx * 8} ${-1 + k * 3}" fill="none" stroke="${K}" stroke-width="1.6" stroke-linecap="round"/>`).join('')).join('')}<circle r="4.6" fill="#3a3550" stroke="${K}" stroke-width="1.6"/><circle cx="-1.6" cy="-1" r=".9" fill="#ffd23d"/><circle cx="1.6" cy="-1" r=".9" fill="#ffd23d"/></g>`; })()
     + [[-135, 'calabaza', 0.95], [30, 'murcielago', 1.05]].map(([d, k, z]) => { const [x, y] = at(d, 56); return `<g transform="translate(${x - 16 * z} ${y - 16 * z}) scale(${z})">${ICONS[k]()}</g>`; }).join(''),
+  // Exclusivo de los códigos: Tesoro escondido. Cuerda de barco con doblones que giran despacio y el cofre arriba.
+  doblones: () => band(55, '#b8743a', 8) + `<circle cx="70" cy="70" r="55" fill="none" stroke="#e8b06a" stroke-width="3" stroke-dasharray="5 5"/>`
+    + `<g class="r-spin">${Array.from({ length: 8 }, (_, i) => { const [x, y] = at(i * 45 + 22.5, 55), k = i % 2 ? 0.5 : 0.62; return `<g class="r-tw" style="animation-delay:${(i * 0.3).toFixed(1)}s"><g transform="translate(${(x - 16 * k).toFixed(1)} ${(y - 16 * k).toFixed(1)}) scale(${k})">${ICONS.doblon()}</g></g>`; }).join('')}</g>`
+    + (() => { const [x, y] = at(-90, 57), k = 0.9; return `<g transform="translate(${x - 16 * k} ${y - 16 * k}) scale(${k})">${ICONS.cofre()}</g>`; })(),
   arcoiris: () => `<circle cx="70" cy="70" r="56" fill="none" stroke="${K}" stroke-width="13"/><g class="r-spin">${['#ff5f7e', '#ff9c5b', '#ffc83d', '#6fd36a', '#4aa8de', '#8a5cf0'].map((c, i) => `<circle cx="70" cy="70" r="56" fill="none" stroke="${c}" stroke-width="8" pathLength="6" stroke-dasharray="1 5" stroke-dashoffset="${-i}"/>`).join('')}</g>`,
 };
 const ringOf = (p) => (RINGS[p.ring] ? p.ring : RINGS[p.equip?.ring] ? p.equip.ring : 'sencillo');

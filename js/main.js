@@ -3,10 +3,11 @@ import { UNLOCK, EVENTOS, FIESTAS, COLECCIONES, evSoon, isOn, nextEvent, daysToN
 import { WORLD_COUNT, LEVELS_PER_WORLD, TOTAL_LEVELS, worldInfo, generateLevel, variantLevel, MECH_INTRO, MECH_NAMES, secretId, isSecret, eventLevel, fiestaLevel } from './levels.js';
 import { Game, faceHTML, backHTML } from './game.js';
 import { DAILY_PATH, dailyState, starsNeeded, TICKET_PRICE, ticketCost, ticketRefund, coinsFor, bossChest, openSurprise, SECRET_MULT, SECRET_PRIZE } from './economy.js';
-import { pauseOffscreen, openModal, toast, updateCoins, money, esc, reduced, wait, flyToWallet, spendFromWallet, sparkle, confetti, starsHTML, warp, buzz, balloons, lootBubbles, rachaWarnHTML } from './ui.js';
+import { pauseOffscreen, openModal, toast, updateCoins, money, esc, reduced, wait, flyToWallet, spendFromWallet, sparkle, confetti, starsHTML, warp, buzz, balloons, lootBubbles, floatBubbles, rachaWarnHTML } from './ui.js';
 import { icon, star, coin, miniPlanet, avatarHTML, AVATAR_COLORS, cardBackURL, setDeck, lockIcon, chestBody, chestLid, boxBody, boxLid } from './art.js';
-import { GROUPS, SECTIONS, ITEMS, shopItems, groupOf, owns, equipped, equip, buy, item, lockedUntil, titleHTML } from './shop.js';
+import { GROUPS, SECTIONS, ITEMS, shopItems, groupOf, owns, equipped, equip, buy, item, lockedUntil, titleHTML, titleIcon } from './shop.js';
 import { BIOMES, biomeKey, EVENT_BIOMES } from './biomes.js';
+import { redeem } from './codes.js';
 import { dev, gallery, attachDevBar, galleryScreen, openDevMenu, planetGal, planetsScreen, casualRate, rateTag } from './dev.js';
 
 document.documentElement.classList.toggle('dev-on', !!prefs.dev);
@@ -395,6 +396,9 @@ function setTour(step) {
   persist();
   document.querySelector('.guide')?.remove();
 }
+// La app siempre abre en el universo: si se cerró a medio recorrido (en la constelación o el planeta), vuelve a
+// empezar desde el universo. Si no, ningún círculo salía y el perfil se quedaba bloqueado.
+if (tourStep() && tourStep() !== 'uni') setTour('uni');
 // Pone el aviso sobre la vista 3D (view) y lo sigue mientras se mueve. screen = pantalla donde va.
 function guide(view, step, screen) {
   const t = TOUR[step];
@@ -677,7 +681,7 @@ const colBtn = () => {
 const eventButtons = (res) => rachaBtn(res?.racha ? res.racha - 1 : null) + colBtn() + evBtn();
 const sideButtons = () => `${ibtn('gift', 'Regalo diario', 'daily', !dailyState(save.daily).claimed)}${ticketBtn()}${ibtn('bag', 'Tienda', 'shop')}${ibtn('album', 'Álbum de postales', 'album')}${ibtn('gear', 'Ajustes', 'settings')}`;
 function sideAction(a) {
-  const act = { me: () => !tourStep() && openProfile(), shop: () => openShop(), daily: openDaily, dticket: openDailyTicket, racha: openRacha, col: openCol, evento: openEvento, fiesta: openFiesta, album: openAlbum, settings: openSettings, dev: () => openDevMenu({ onGallery: () => showGallery(save.next), onPlanets: showPlanets, onRefresh: boot, card: mechCard }) }[a];
+  const act = { me: () => !document.querySelector('.touring') && openProfile(), shop: () => openShop(), daily: openDaily, dticket: openDailyTicket, racha: openRacha, col: openCol, evento: openEvento, fiesta: openFiesta, album: openAlbum, settings: openSettings, dev: () => openDevMenu({ onGallery: () => showGallery(save.next), onPlanets: showPlanets, onRefresh: boot, card: mechCard }) }[a];
   act?.();
   return !!act;
 }
@@ -1076,10 +1080,12 @@ const ORIGINS = [
   { k: 'col', name: 'Colección de la semana', ico: 'gift' },
   { k: 'mes', name: 'Evento del mes', ico: 'star' },
   { k: 'fiesta', name: 'Festividades de un día', ico: 'flame' },
+  { k: 'codigo', name: 'Tesoro escondido · con código', ico: 'cofre' },
 ];
 // De qué evento salió un exclusivo: { g: grupo de ORIGINS, ico, name } (o null si es de la tienda).
 function exFrom(it) {
   if (!it.ev) return null;
+  if (it.code) return { g: 'codigo', ico: 'cofre', name: 'Código de regalo' };
   const f = FIESTAS.find((x) => x.key === it.ev);
   if (f) return { g: 'fiesta', ico: f.ico, name: f.name };
   const e = Object.values(EVENTOS).find((x) => x.key === it.ev);
@@ -1211,7 +1217,8 @@ const prizeIcons = (p) =>
 // Lo que da un premio, como piezas para la ventana (icono + cantidad).
 const lootHTML = (p) => prizeIcons(p).map((x) => `<span class="loot-it">${x}</span>`).join('');
 // Suma el premio al guardado y lo lanza al monedero desde un punto de la pantalla.
-async function grantPrize(p, from) {
+// Comodines y deshacer no tienen monedero: salen en burbujas (bubbles: false si la ventana ya las mostró).
+async function grantPrize(p, from, { bubbles = true } = {}) {
   save.coins += p.coins || 0;
   save.tickets += p.tickets || 0;
   save.undo += p.undo || 0;
@@ -1220,7 +1227,7 @@ async function grantPrize(p, from) {
   const runs = [];
   if (p.coins) runs.push(flyToWallet('coins', from, p.coins));
   if (p.tickets) runs.push(wait(200).then(() => flyToWallet('tickets', from, p.tickets)));
-  if (p.undo || p.wild) toast(prizeIcons({ undo: p.undo, wild: p.wild }).join(' '));
+  if (bubbles) floatBubbles(prizeIcons({ undo: p.undo, wild: p.wild }), from);
   await Promise.all(runs);
 }
 function openDailyTicket() {
@@ -1424,10 +1431,14 @@ function openCol() {
     const fresh = grid.querySelector(`[data-k="${o.k}"]`);
     if (!reduced()) fresh.animate([{ scale: 0.9 }, { scale: 1.08 }, { scale: 1 }], { duration: 420, easing: 'cubic-bezier(0.34, 1.45, 0.64, 1)' });
     refreshCol();
+    // Lo comprado sale en burbuja desde su tarjeta. Lo exclusivo no se pone solo: se cambia en el perfil.
     if (o.sec) {
-      applyLook();
-      toast(`${icon('check')} ¡Nuevo! Ya lo traes puesto`);
-    } else grantPrize(o.prize, at);
+      lootBubbles(m, [giftBubble(o.sec, o.item)], fresh);
+      if (o.sec === 'traveler') setTimeout(() => travShelf(m.el), 50);
+    } else {
+      lootBubbles(m, prizeIcons(o.prize), fresh);
+      grantPrize(o.prize, at, { bubbles: false });
+    }
   });
   const clk = m.el.querySelector('.cclock');
   const tick = setInterval(() => (clk.isConnected ? (clk.textContent = daysLeft(colLeft(), true)) : clearInterval(tick)), 1000);
@@ -1511,8 +1522,6 @@ setInterval(() => {
   if (c && !c.classList.contains('fresh')) c.outerHTML = colBtn();
 }, 20e3);
 // El premio de un planeta, en chiquito (para la etiqueta del planeta y la ventana del premio).
-const EV_KIND = { space: 'Fondo', frame: 'Postal', ring: 'Marco', avatar: 'Avatar', back: 'Reverso', title: 'Título', traveler: 'Nave' };
-const evPrizeArt = (sec, k) => (sec === 'title' ? titleHTML(k) : shopPreview(sec, k));
 // Tiempo que queda del evento, dicho para animar a jugar: días (o horas el último día).
 const evDaysOf = (K) => { const ms = K.left(), d = Math.floor(ms / 864e5); return d >= 2 ? `${d} días` : d === 1 ? '1 día' : `${Math.max(1, Math.ceil(ms / 3600e3))} horas`; };
 const evDays = () => { const ms = EVS.left(), d = Math.floor(ms / 864e5); return d >= 2 ? `${d} días` : d === 1 ? '1 día' : `${Math.max(1, Math.ceil(ms / 3600e3))} horas`; };
@@ -1641,7 +1650,7 @@ async function evCelebrate(galaxy, a, el, cta, paint) {
   if (a.coins) runs.push(flyToWallet('coins', { x: innerWidth / 2, y: innerHeight * 0.45 }, a.coins));
   await Promise.all(runs);
   updateCoins();
-  if (a.wild || a.undo) toast(prizeIcons({ undo: a.undo, wild: a.wild }).join(' '));
+  floatBubbles(prizeIcons({ undo: a.undo, wild: a.wild }), { x: innerWidth / 2, y: innerHeight * 0.45 });
   const boss = a.k % EVS.N === EVS.N - 1;
   if (boss && a.planet + 1 < EVS.P && galaxy.sel) {
     await wait(500);
@@ -1807,7 +1816,7 @@ function startEvent() {
   if (dev.on) game.attachDev();
   diffTag(game, level);
 }
-// Premio del 5.º nivel: la caja tiembla, se abre y salen los exclusivos (ya puestos).
+// Premio del 5.º nivel: la caja tiembla, se abre y los exclusivos salen en burbujas. No se ponen solos: se cambian en el perfil.
 function openEvPrize(e, res) {
   return new Promise((done) => {
     confetti(60);
@@ -1815,39 +1824,34 @@ function openEvPrize(e, res) {
       title: `¡${e.planets[res.planet]} completado!`,
       color: e.color,
       closable: false,
-      wide: res.items.length > 1,
-      cls: 'ev-prize',
-      body: `<div class="evbox"><div class="gbox"><span class="lid">${boxLid()}</span><span class="body">${boxBody()}</span></div></div>
-        <div class="ev-items">${res.items.map((it) => `<div class="coffer sg-${it.sec}"><em class="c-ex">${icon('star')}${EV_KIND[it.sec]}</em><div class="s-art">${evPrizeArt(it.sec, it.k)}</div>${it.sec === 'title' ? '' : `<b>${item(it.sec, it.k).name}</b>`}</div>`).join('')}</div>
-        <p class="note">Exclusivo de ${e.name}: es tuyo para siempre y ya lo traes puesto.</p>`,
+      cls: 'gift-prize',
+      body: `<div class="gift-box"><div class="gbox"><span class="lid">${boxLid()}</span><span class="body">${boxBody()}</span></div></div>
+        <p class="note">Exclusivo de ${e.name}: es tuyo para siempre. Póntelo desde tu perfil.</p>`,
       buttons: [{ label: 'Continuar', cls: 'green wide', onClick: () => { closeShelf(); done(); } }],
     });
-    applyLook();
-    travShelf(m.el);
-    const box = m.el.querySelector('.gbox'), items = [...m.el.querySelectorAll('.ev-items .coffer')];
-    if (reduced()) return m.el.classList.add('opened');
-    items.forEach((x) => (x.style.opacity = 0));
-    setTimeout(async () => {
-      await box.animate([{ rotate: '0deg' }, { rotate: '-9deg' }, { rotate: '8deg' }, { rotate: '-6deg' }, { rotate: '4deg' }, { rotate: '0deg' }], { duration: 650, iterations: 2 }).finished;
-      box.querySelector('.lid').animate([{ translate: '0 0', rotate: '0deg' }, { translate: '30px -70px', rotate: '40deg', opacity: 1, offset: 0.6 }, { translate: '60px -40px', rotate: '80deg', opacity: 0 }], { duration: 600, easing: 'cubic-bezier(0.2, 0.8, 0.4, 1)', fill: 'forwards' });
-      const r = box.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 3;
-      sparkle({ x: cx, y: cy }, 22);
-      buzz(20);
-      await Promise.all(items.map((x, i) => {
-        x.style.opacity = '';
-        const b = x.getBoundingClientRect(), dx = cx - (b.left + b.width / 2), dy = cy - (b.top + b.height / 2);
-        return x.animate([
-          { translate: `${dx}px ${dy}px`, scale: 0.2, rotate: '-20deg', opacity: 0 },
-          { translate: `${dx * 0.4}px ${dy * 0.4 - 60}px`, scale: 1.12, rotate: '6deg', opacity: 1, offset: 0.6 },
-          { translate: '0 0', scale: 1, rotate: '0deg', opacity: 1 },
-        ], { duration: 700, delay: 150 + i * 260, easing: 'cubic-bezier(0.3, 0.7, 0.4, 1)', fill: 'backwards' }).finished.then(() => {
-          const q = x.getBoundingClientRect();
-          sparkle({ x: q.left + q.width / 2, y: q.top + q.height / 3 }, 12);
-          buzz(12);
-        });
-      }));
-    }, 500);
+    boxBubbles(m, res.items.map((it) => giftBubble(it.sec, it.k)));
   });
+}
+// Una cosa de la tienda como burbuja: un circulito con su dibujo y abajo qué es (Avatar, Postal…).
+const GIFT_KIND = { avatar: 'Avatar', ring: 'Marco', title: 'Título', back: 'Reverso', face: 'Caras', traveler: 'Viajero', space: 'Fondo', frame: 'Postal' };
+const giftBubble = (sec, k) => `<span class="lb-pic lp-${sec}">${sec === 'title' ? titleIcon(k) : shopPreview(sec, k)}</span><b>${GIFT_KIND[sec]}</b>`;
+// La caja de regalo de la ventana (.gbox) tiembla, se abre y suelta sus premios en burbujas.
+function boxBubbles(m, bubbles) {
+  const box = m.el.querySelector('.gbox');
+  // Los viajeros son 3D: su lienzo vive en la burbuja, así que la vitrina se arma cuando la burbuja ya existe.
+  const out = () => {
+    lootBubbles(m, bubbles, box, { lift: 40 });
+    if (m.el.querySelector('.loot-bub canvas')) setTimeout(() => travShelf(m.el), 50);
+  };
+  if (reduced()) return m.el.classList.add('opened'), out();
+  setTimeout(async () => {
+    await box.animate([{ rotate: '0deg' }, { rotate: '-9deg' }, { rotate: '8deg' }, { rotate: '-6deg' }, { rotate: '4deg' }, { rotate: '0deg' }], { duration: 650, iterations: 2 }).finished;
+    box.querySelector('.lid').animate([{ translate: '0 0', rotate: '0deg' }, { translate: '30px -70px', rotate: '40deg', opacity: 1, offset: 0.6 }, { translate: '60px -40px', rotate: '80deg', opacity: 0 }], { duration: 600, easing: 'cubic-bezier(0.2, 0.8, 0.4, 1)', fill: 'forwards' });
+    const q = box.getBoundingClientRect();
+    sparkle({ x: q.left + q.width / 2, y: q.top + q.height / 3 }, 22);
+    buzz(20);
+    out();
+  }, 450);
 }
 
 // ---------- Avisos al llegar ----------
@@ -2696,7 +2700,7 @@ function profileForm({ title, p, action, onSave, noCancel = false, first = false
   })[tab]();
   let tabNow = 'avatar'; // la pestaña abierta: el botón de la tienda (junto a Guardar) lleva a esa sección
   const editBody = `<div class="pf-top"><div class="pf-hero space-${p.space}"><div class="space"></div><div class="avatar-preview">${avatarHTML(p, 'huge')}</div>
-      <div class="pf-id"><input class="text-in" maxlength="16" placeholder="Tu nombre" autocomplete="off" autocapitalize="words" enterkeyhint="done" value="${esc(p.name)}"><div class="pf-title">${titleHTML(p.title)}</div></div></div>
+      <div class="pf-id"><input class="text-in" maxlength="16" aria-label="Tu nombre" placeholder="Tu nombre" autocomplete="off" autocapitalize="words" enterkeyhint="done" value="${esc(p.name)}"><div class="pf-title">${titleHTML(p.title)}</div></div></div>
       <div class="pf-tabs">${TABS.map((t) => `<button class="pf-tab ${on(t.k === 'avatar')}" data-tab="${t.k}">${icon(t.ico)}<span>${t.name}</span></button>`).join('')}</div></div>
       <div class="pf-panel">${panel('avatar')}</div>`;
   const m = openModal({
@@ -2928,6 +2932,7 @@ function openSettings(then) {
     body: `<div class="rows">
       <button class="row" data-a="help">${icon('help')}<b>Cómo jugar</b>${icon('chev')}</button>
       ${game ? '' : `<button class="row" data-a="profile">${avatarHTML(save)}<b>Perfil</b>${icon('chev')}</button>`}
+      ${game ? '' : `<button class="row" data-a="gift">${icon('gift')}<b>Códigos<span>Canjea un código de regalo</span></b>${icon('chev')}</button>`}
       ${game ? '' : `<button class="row" data-a="backup">${icon('backup')}<b>Respaldo<span>Guarda tu avance con un código</span></b>${icon('chev')}</button>`}
       ${installPrompt ? `<button class="row" data-a="install"><img class="ico app-ico" src="icon.svg" alt=""><b>Instalar app<span>Pantalla completa y sin conexión</span></b>${icon('chev')}</button>` : ''}
       <div class="rows tools"${prefs.tools ? '' : ' hidden'}>${toolRows()}</div>
@@ -2938,6 +2943,7 @@ function openSettings(then) {
     if (a === 'help') { m.el.remove(); openHelp('basico', () => openSettings(then)); }
     if (a === 'profile') { m.el.remove(); openProfile(); }
     if (a === 'backup') { m.el.remove(); openBackup(() => openSettings(then)); }
+    if (a === 'gift') { m.el.remove(); openGiftCode(() => openSettings(then)); }
     if (a === 'install') installApp().then((ok) => ok && m.el.remove());
   });
   // Escondido, para probar en el iPhone: 8 toques seguidos al título muestran los botones de pruebas (dificultad
@@ -3098,6 +3104,71 @@ async function loadBackup(m, then) {
       },
     ],
   });
+}
+
+// ---------- Códigos de regalo ----------
+// Un código (ver codes.js) da monedas, ayudas o una cosa de la tienda. Sirve una sola vez.
+function openGiftCode(then, text = '') {
+  const m = openModal({
+    title: 'Códigos',
+    color: 'green',
+    onClose: then,
+    body: `<div class="gift-top">${icon('gift', 0, 0, 'big')}</div>
+      <p class="lead">¿Te regalaron un código? Escríbelo aquí y descubre tu regalo.</p>
+      <input class="text-in gift-in" value="${esc(text)}" maxlength="14" placeholder="XXXX-XXXX-XXXX" spellcheck="false" autocapitalize="characters" autocomplete="off" autocorrect="off" enterkeyhint="go">`,
+    buttons: [{ label: `${icon('gift')} Canjear`, cls: 'green wide', keep: true, disabled: true, onClick: () => tryGift(m, then) }],
+  });
+  const box = m.el.querySelector('.gift-in'), go = m.el.querySelector('.mbtns .btn');
+  // Se ve como se escribe en el código: mayúsculas y un guion cada 4 letras.
+  const tidy = () => {
+    const raw = box.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12);
+    box.value = raw.match(/.{1,4}/g)?.join('-') || '';
+    go.disabled = raw.length < 12;
+  };
+  box.addEventListener('input', tidy);
+  box.addEventListener('keydown', (e) => e.key === 'Enter' && !go.disabled && go.click());
+  tidy();
+}
+function tryGift(m, then) {
+  const box = m.el.querySelector('.gift-in');
+  const res = redeem(box.value);
+  if (res.err) {
+    const it = res.reward?.item && item(res.reward.item.sec, res.reward.item.k);
+    toast(res.err === 'usado' ? 'Ese código ya se usó' : it ? `Ya tienes ${it.name}: regálale el código a alguien más` : 'Ese código no sirve');
+    buzz(30);
+    if (!reduced()) box.animate([{ translate: '0 0' }, { translate: '-8px 0' }, { translate: '7px 0' }, { translate: '-4px 0' }, { translate: '0 0' }], { duration: 340, easing: 'ease-out' });
+    box.focus();
+    return;
+  }
+  m.el.remove();
+  openGiftPrize(res.reward);
+}
+// La caja tiembla, se abre y el regalo sale en burbujas, como los premios al ganar: icono y número (monedas, ayudas)
+// o un circulito con lo que es (giftBubble). Lo de la tienda se ve luego en la tienda o el perfil.
+// Las monedas y los boletos vuelan al monedero al continuar (el guardado ya los tiene).
+function openGiftPrize(r) {
+  confetti(60);
+  const it = r.item;
+  const m = openModal({
+    title: '¡Un regalo para ti!',
+    color: 'green',
+    closable: false,
+    cls: 'gift-prize',
+    body: `<div class="gift-box"><div class="gbox"><span class="lid">${boxLid()}</span><span class="body">${boxBody()}</span></div></div>`,
+    buttons: [{
+      label: 'Continuar',
+      cls: 'green wide',
+      onClick: () => {
+        const b = m.el.querySelector('.gbox').getBoundingClientRect(), at = { x: b.left + b.width / 2, y: b.top + b.height / 2 };
+        closeShelf();
+        (async () => {
+          if (r.coins) await flyToWallet('coins', at, r.coins);
+          if (r.tickets) await flyToWallet('tickets', at, r.tickets);
+        })();
+      },
+    }],
+  });
+  boxBubbles(m, it ? [giftBubble(it.sec, it.k)] : prizeIcons(r));
 }
 
 // ---------- Instalar como app ----------

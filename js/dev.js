@@ -11,6 +11,7 @@ import { tableHTML, BIOMES, biomeKey } from './biomes.js';
 import { peek } from './galaxy.js';
 import { EVENTOS, COLECCIONES, FIESTAS, fiestaDays } from './events.js';
 import { ITEMS, SECTIONS, GROUPS, owns, lockedUntil } from './shop.js';
+import { KINDS, TREASURE, makeLot, makeCode, rewardName, lotText, usedHere, lotNonces } from './codes.js';
 // Icono de cada sección de la tienda (para el recuento).
 const SEC_ICO = { avatar: 'user', ring: 'star', title: 'crown', back: 'deck', face: 'face', traveler: 'rocket', space: 'planet', frame: 'album' };
 
@@ -504,8 +505,8 @@ export function openDevMenu({ onGallery, onPlanets, onRefresh, card }) {
   const MES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
   const evs = Object.entries(EVENTOS).filter(([, e]) => e.ready).sort((a, b) => a[0] - b[0]);
   const fis = FIESTAS.filter((f) => f.ready), y = new Date().getFullYear();
-  const origin = (it) => (!it.ev ? 'tienda' : FIESTAS.some((f) => f.key === it.ev) ? 'fiesta' : Object.values(EVENTOS).some((e) => e.key === it.ev) ? 'mes' : 'col');
-  const ORI = [['tienda', 'Tienda'], ['col', 'Colección'], ['mes', 'Del mes'], ['fiesta', 'De un día']];
+  const origin = (it) => (!it.ev ? 'tienda' : it.code ? 'codigo' : FIESTAS.some((f) => f.key === it.ev) ? 'fiesta' : Object.values(EVENTOS).some((e) => e.key === it.ev) ? 'mes' : 'col');
+  const ORI = [['tienda', 'Tienda'], ['col', 'Colección'], ['mes', 'Del mes'], ['fiesta', 'De un día'], ['codigo', 'Código']];
   const cnt = (sec, o) => ITEMS[sec].filter((it) => origin(it) === o).length;
   const mine = (sec, o) => ITEMS[sec].filter((it) => origin(it) === o && owns(sec, it.k)).length;
   const cell = (sec, o) => (cnt(sec, o) ? `${mine(sec, o)}/${cnt(sec, o)}` : '–');
@@ -551,6 +552,11 @@ export function openDevMenu({ onGallery, onPlanets, onRefresh, card }) {
       { l: `Boosters infinitos: ${prefs.devInfinite ? 'sí' : 'no'}`, fn: () => { prefs.devInfinite = !prefs.devInfinite; persist(); toast(`Boosters infinitos: ${prefs.devInfinite ? 'sí' : 'no'}`); } },
       { l: '+20,000 monedas', fn: () => ((save.coins += 20000), persist(), updateCoins()) },
       { l: `Medidas de pantalla: ${prefs.screenInfo ? 'sí' : 'no'}`, title: 'Recuadro con lo que dice el navegador del tamaño de la pantalla (para revisar el iPhone)', fn: () => { prefs.screenInfo = !prefs.screenInfo; persist(); dispatchEvent(new Event('screeninfo')); toast(`Medidas de pantalla: ${prefs.screenInfo ? 'sí' : 'no'}`); } },
+    ] },
+    { t: 'Códigos de regalo', sub: prefs.codeLot ? `${prefs.codeLot.length} hechos` : 'aún no hay', items: [
+      { l: prefs.codeLot ? 'Hacer otro lote' : 'Hacer lote', cls: 'gold', title: 'Uno de cada cosa del Tesoro escondido, 20 de monedas (100 a 500), comodines, deshacer y boletos. Los de antes siguen sirviendo', fn: () => (makeLot(), openCodeList()) },
+      prefs.codeLot && { l: 'Ver los códigos', fn: openCodeList },
+      { l: 'Un código suelto', title: 'Elige qué da: monedas, ayudas o una cosa del Tesoro escondido', fn: openOneCode },
     ] },
     { t: 'Volver a explicar', items: [
       { l: 'Explicar mecánicas', title: 'Las explicaciones de cada mecánica salen otra vez', fn: () => ((save.seen = {}), persist(), toast('Las explicaciones saldrán otra vez')) },
@@ -658,4 +664,88 @@ export function openDevMenu({ onGallery, onPlanets, onRefresh, card }) {
     toDay(t === 'm' ? daysToMonth(+k) : daysToFiesta(k));
   }));
   m.el.querySelectorAll('.dsec [data-i]').forEach((b) => b.addEventListener('click', () => { m.close(); all[+b.dataset.i].fn(); }));
+}
+
+// ---------- Códigos de regalo ----------
+// En el teléfono se abre "Compartir" (Notas, WhatsApp…); en la PC se copia.
+async function shareText(text, what = 'Copiado') {
+  try {
+    if (navigator.share && matchMedia('(pointer: coarse)').matches) await navigator.share({ text });
+    else {
+      await navigator.clipboard.writeText(text);
+      toast(`${icon('check')}${what}`);
+    }
+  } catch (e) {
+    if (e?.name !== 'AbortError') toast('No se pudo copiar');
+  }
+}
+// Todos los códigos hechos, por grupos (acordeón). Tocar uno lo copia. "usado" = ya se canjeó en este teléfono.
+function openCodeList() {
+  const lot = prefs.codeLot || [];
+  const groups = [...new Set(lot.map((c) => c.group))];
+  const rows = groups.map((g, i) => {
+    const list = lot.filter((c) => c.group === g);
+    return `<tr class="dacc" data-acc="c${i}"><td class="dname" colspan="2"><b>${g}</b> <b class="dnum">${list.length}</b><span class="dchev">${icon('chev')}</span></td></tr>
+      ${list.map((c) => `<tr class="dsub dcode${usedHere(c.code) ? ' used' : ''}" data-of="c${i}" data-code="${c.code}" hidden><td class="dname">${c.name}</td><td><code>${c.code}</code></td></tr>`).join('')}`;
+  }).join('');
+  const m = openModal({
+    title: 'Códigos de regalo',
+    cls: 'devmenu',
+    wide: true,
+    body: `<p class="note">Cada código sirve una vez. Toca uno para copiarlo. Tachado = ya se usó en este teléfono.</p>
+      <table class="dtable dcodes">${rows}</table>`,
+    buttons: [
+      { label: 'Compartir todos', cls: 'green', keep: true, onClick: () => shareText(lotText(), `${lot.length} códigos copiados`) },
+      { label: 'Un código suelto', cls: 'ghost', onClick: openOneCode },
+    ],
+  });
+  m.el.querySelectorAll('[data-acc]').forEach((r) => r.addEventListener('click', () => {
+    const open = r.classList.toggle('open');
+    m.el.querySelectorAll(`[data-of="${r.dataset.acc}"]`).forEach((x) => (x.hidden = !open));
+  }));
+  m.el.querySelectorAll('[data-code]').forEach((r) => r.addEventListener('click', () => shareText(`${r.dataset.code} · ${r.firstChild.textContent}`, `${r.dataset.code} copiado`)));
+}
+// Uno a la medida: qué da (monedas, ayudas o el Tesoro escondido) y cuánto o cuál.
+function openOneCode() {
+  const opts = KINDS.map((k) => [k.k, k.name]);
+  const m = openModal({
+    title: 'Un código suelto',
+    cls: 'devmenu',
+    body: `<section class="dsec dform">
+        <label><small>Qué da</small><select data-c="kind">${opts.map(([v, n]) => `<option value="${v}">${n}</option>`).join('')}</select></label>
+        <label data-c="nbox"><small>Cuánto</small><input data-c="n" type="number" inputmode="numeric" min="1" value="100"></label>
+        <label data-c="ibox" hidden><small>Cuál</small><select data-c="item"></select></label>
+      </section>
+      <p class="dcode-out" hidden><code></code><small></small></p>`,
+    buttons: [
+      { label: 'Hacer código', cls: 'gold', keep: true, onClick: () => make() },
+      { label: 'Copiar', cls: 'green', keep: true, disabled: true, onClick: () => shareText(`${last.code} · ${last.name}`, `${last.code} copiado`) },
+    ],
+  });
+  const $ = (k) => m.el.querySelector(`[data-c="${k}"]`);
+  const out = m.el.querySelector('.dcode-out'), copy = m.el.querySelectorAll('.mbtns .btn')[1];
+  let last = null;
+  const sync = () => {
+    const v = $('kind').value, tre = v === 'item';
+    $('nbox').hidden = tre;
+    $('ibox').hidden = !tre;
+    if (tre) $('item').innerHTML = TREASURE.map((it, i) => `<option value="${i}">${rewardName({ item: it })}</option>`).join('');
+    else $('n').value = { coins: 100, wild: 1, undo: 3, tickets: 2 }[v];
+  };
+  $('kind').addEventListener('change', sync);
+  const make = () => {
+    const v = $('kind').value, n = Math.round(+$('n').value);
+    const r = v === 'item' ? { item: TREASURE[+$('item').value] } : { [v]: v === 'coins' ? Math.round(n / 10) * 10 : n };
+    const max = v === 'coins' ? 655350 : 65535;
+    if (!r.item && !(r[v] >= 1 && r[v] <= max)) return toast(`Pon un número de 1 a ${max.toLocaleString('es-MX')}${v === 'coins' ? ' (de 10 en 10)' : ''}`);
+    last = { group: 'Sueltos', name: rewardName(r), code: makeCode(r, lotNonces()) };
+    (prefs.codeLot ||= []).push(last);
+    persist();
+    out.hidden = false;
+    out.querySelector('code').textContent = last.code;
+    out.querySelector('small').textContent = last.name;
+    copy.disabled = false;
+    out.animate([{ scale: 0.8, opacity: 0 }, { scale: 1.06, opacity: 1, offset: 0.6 }, { scale: 1 }], { duration: 380, easing: 'ease-out' });
+  };
+  sync();
 }
