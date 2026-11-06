@@ -9,7 +9,9 @@ import { EVENT_DATA } from '../js/event-data.js';
 
 const MONTHS = [0, 1, 3, 6, 8, 9, 10, 11];
 const OUT = new URL('../js/event-data.js', import.meta.url);
-const TRIES = 30;
+const TRIES = +process.env.TRIES || 30;
+// Tope por nivel (CAP ms, 150 s por cada número de ayudas): un tablero terco no traba la corrida.
+const CAP = +process.env.CAP || 150e3;
 
 if (process.argv[2] === '--merge') {
   const all = {};
@@ -41,8 +43,8 @@ for (const m of months.length ? months : MONTHS) {
         continue;
       }
       if (fix) console.log(`rehaciendo: mes ${m + 1} grupo ${g} nivel ${k + 1}`);
-      let entry = null;
-      for (let t = 0; t < TRIES && !entry; t++) {
+      let entry = null, t0 = Date.now();
+      for (let t = 0; t < TRIES && !entry && Date.now() - t0 < CAP; t++) {
         const L = eventBase(m, k, g, t);
         if (!L.help) entry = solve(L, initState(L)) ? { t } : null;
         else {
@@ -50,9 +52,17 @@ for (const m of months.length ? months : MONTHS) {
           if (s) entry = { t, s };
         }
       }
+      // Si con su mesa especial no se logró, sin ella (intentos desde 500).
+      t0 = Date.now();
+      if (!entry && eventBase(m, k, g).scroll)
+        for (let t = 500; t < 500 + TRIES && !entry && Date.now() - t0 < CAP; t++) {
+          const s = harden(eventBase(m, k, g, t), eventBase(m, k, g).help);
+          if (s) entry = { t, s };
+        }
       // Si con sus ayudas no se logró, con una menos (h guarda cuántas pide entonces).
-      for (let h = eventBase(m, k, g).help - 1; h > 0 && !entry; h--)
-        for (let t = 0; t < TRIES && !entry; t++) {
+      t0 = Date.now();
+      for (let h = eventBase(m, k, g).help - 1; h > 0 && !entry; h--, t0 = Date.now())
+        for (let t = 0; t < TRIES && !entry && Date.now() - t0 < CAP; t++) {
           const s = harden(eventBase(m, k, g, t), h);
           if (s) entry = { t, s, h };
         }

@@ -622,7 +622,7 @@ const colBtn = () => {
 const eventButtons = (res) => rachaBtn(res?.racha ? res.racha - 1 : null) + colBtn() + evBtn();
 const sideButtons = () => `${ibtn('gift', 'Regalo diario', 'daily', !dailyState(save.daily).claimed)}${ticketBtn()}${ibtn('bag', 'Tienda', 'shop')}${ibtn('album', 'Álbum de postales', 'album')}${ibtn('gear', 'Ajustes', 'settings')}`;
 function sideAction(a) {
-  const act = { me: () => !tourStep() && openProfile(), shop: () => openShop(), daily: openDaily, dticket: openDailyTicket, racha: openRacha, col: openCol, evento: openEvento, fiesta: openFiesta, album: openAlbum, settings: openSettings, dev: () => openDevMenu({ onGallery: () => showGallery(save.next), onPlanets: showPlanets, onRefresh: boot }) }[a];
+  const act = { me: () => !tourStep() && openProfile(), shop: () => openShop(), daily: openDaily, dticket: openDailyTicket, racha: openRacha, col: openCol, evento: openEvento, fiesta: openFiesta, album: openAlbum, settings: openSettings, dev: () => openDevMenu({ onGallery: () => showGallery(save.next), onPlanets: showPlanets, onRefresh: boot, card: mechCard }) }[a];
   act?.();
   return !!act;
 }

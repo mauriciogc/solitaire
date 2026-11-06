@@ -629,12 +629,14 @@ export function buildLevel(g, ev = null, t = 0) {
   const world = Math.floor(base / LEVELS_PER_WORLD);
   const index = base % LEVELS_PER_WORLD;
   const r = mulberry32(hash(ev ? ev.seed : t ? g + t * 104729 : g));
-  // Nivel sin ayudas: puede salir con las formas y piezas nuevas. Los que piden ayudas, el evento y los
-  // especiales no las usan, porque sus mazos ya probados (path-data, event-data, special-data) dependen de la forma.
+  // Todos los niveles usan las formas, piezas, mesas y cartas nuevas (cierre de la Fase 7). Solo los del camino sin
+  // ayudas (fresh) tienen respiros; los que piden ayudas no llevan mesa enrollada (en una pantalla ancha se ve más
+  // tira y se ganarían sin ayuda). El evento y los especiales traen su mesa en ev.scroll (ver eventBase, specialBase).
   const fresh = !ev && !hardHelp(g);
   // Respiro: en cada mundo 1 nivel (a veces 2) sale fácil, para que no todos sean cuesta arriba (ver isRespite).
   const respite = fresh && !secret && isRespite(base);
-  const scroll = fresh && !secret && !respite ? scrollKind(base) : null;
+  const kind = !ev && !secret && !respite ? scrollKind(base) : null;
+  const scroll = ev ? ev.scroll || null : fresh || kind !== 'mesa' ? kind : null;
   const d0 = ev ? ev.d : secret ? Math.min(1, difficulty(base) + 0.05) : difficulty(base);
   // Mesa enrollada: la tira es larga y solo se ve un pedazo; el mazo va más amable (y con más sobrantes, abajo).
   // La nebulosa, algo menos (medido con el bot casual).
@@ -643,12 +645,12 @@ export function buildLevel(g, ev = null, t = 0) {
   const d = respite ? Math.min(d0, 0.06 + d0 * 0.15) : debut ? d0 * (scroll === 'gravedad' ? 0.35 : scroll === 'plegable' ? 0.15 : 0.3) : scroll === 'mesa' ? d0 * 0.3 : scroll === 'gravedad' ? d0 * (base < 200 ? 0.35 : 0.55) : scroll ? d0 * 0.65 : d0;
   // Evento: en cada planeta salen más seguido las formas que más cuestan (medido con el bot casual).
   // Evento: en cada planeta salen más seguido las formas que más cuestan (medido con el bot casual).
-  const template = ev?.template || (ev && (index === LEVELS_PER_WORLD - 1 || r() < 0.15 + ev.tight * 0.17) ? pick(r, ['peaks', 'peaks', 'scatter', 'invPyramid']) : scroll || (respite ? pick(r, RESPITE_SHAPES) : chooseTemplate(r, ev ? Math.max(3, base) : base, d, fresh)));
+  const template = ev?.scroll || ev?.template || (ev && (index === LEVELS_PER_WORLD - 1 || r() < 0.15 + ev.tight * 0.17) ? pick(r, ['peaks', 'peaks', 'scatter', 'invPyramid']) : scroll || (respite ? pick(r, RESPITE_SHAPES) : chooseTemplate(r, ev ? Math.max(3, base) : base, d, true)));
 
-  const shape = (dd) => (template === 'clusters' ? clusters(r, dd, index === LEVELS_PER_WORLD - 1, fresh) : [TEMPLATES[template](r, dd)]);
+  const shape = (dd) => (template === 'clusters' ? clusters(r, dd, index === LEVELS_PER_WORLD - 1, true) : [TEMPLATES[template](r, dd)]);
   let raw = scroll ? scrollTramos(r, d, scroll) : shape(d);
   // Sin ayudas: si salió muy chico, se vuelve a armar un poco más grande.
-  for (let k = 1; fresh && !scroll && k <= 12 && raw.reduce((s, gr) => s + gr.length, 0) < (respite ? RESPITE_MIN : freshMin(base)); k++) raw = shape(Math.min(1, d + k * 0.15));
+  for (let k = 1; !ev && !scroll && k <= 12 && raw.reduce((s, gr) => s + gr.length, 0) < (respite ? RESPITE_MIN : freshMin(base)); k++) raw = shape(Math.min(1, d + k * 0.15));
   const groups = raw.map(normalizeGroup);
   const pos = groups.flatMap((gr, gi) => gr.cards.map((c) => ({ ...c, group: gi })));
   const n = pos.length;
@@ -692,15 +694,15 @@ export function buildLevel(g, ev = null, t = 0) {
   // Por ahora solo sin ayudas y sin mesas especiales. Se estrena en el primer nivel de su mundo y después sale de
   // vez en cuando (es un regalo: no muy seguido). Usa su propio sorteo: un nivel que no lo trae queda igual que antes.
   const rc = mulberry32(hash(g * 7907 + t * 31 + 11));
-  if (fresh && !scroll && n >= 8 && world >= MECH_INTRO.comet && (base === extraDebut('comet') || rc() < EXTRA_ODDS)) mech.add('comet');
+  if (!scroll && n >= 8 && world >= MECH_INTRO.comet && (base === extraDebut('comet') || rc() < EXTRA_ODDS)) mech.add('comet');
   // Cohete turbo: el otro regalo, igual que el cometa pero con su propio sorteo.
   const rt = mulberry32(hash(g * 6007 + t * 37 + 5));
-  const turbo = fresh && !scroll && n >= 8 && world >= MECH_INTRO.turbo && (base === extraDebut('turbo') || rt() < EXTRA_ODDS);
+  const turbo = !scroll && n >= 8 && world >= MECH_INTRO.turbo && (base === extraDebut('turbo') || rt() < EXTRA_ODDS);
   // Boleto partido: mecánica normal (cuenta en el límite de 2), pero con su propio sorteo como el cometa, para que los
   // niveles que no lo traen queden igual. En su mundo va en todos (sola en los primeros niveles); después, de vez en cuando.
   // Por ahora solo sin ayudas y sin mesas especiales (los demás, al cerrar la Fase 7).
   const rb = mulberry32(hash(g * 5303 + t * 41 + 3));
-  if (fresh && !scroll && n >= 10 && world >= MECH_INTRO.ticket && (world === MECH_INTRO.ticket || rb() < TICKET_ODDS)) {
+  if (!scroll && n >= 10 && world >= MECH_INTRO.ticket && (world === MECH_INTRO.ticket || rb() < TICKET_ODDS)) {
     const keep = respite || (world === MECH_INTRO.ticket && index < 5) ? 0 : 1;
     [...mech].slice(keep).forEach((m) => mech.delete(m));
     mech.add('ticket');
@@ -723,8 +725,7 @@ export function buildLevel(g, ev = null, t = 0) {
     const mid = order.slice(Math.floor(n * 0.15), Math.floor(n * 0.75)).filter((i) => coveredBy[i].length && i !== packId);
     shuffle(r, mid);
     const want = randInt(r, 1, n >= 20 ? 3 : 2);
-    if (fresh) for (const i of mid) bombIds.length < want && ![packId, ...bombIds].some((j) => j != null && touch(i, j)) && bombIds.push(i);
-    else bombIds.push(...mid.slice(0, want));
+    for (const i of mid) bombIds.length < want && ![packId, ...bombIds].some((j) => j != null && touch(i, j)) && bombIds.push(i);
   }
   // Cometas (1-2): cartas especiales sin número, tapadas. Destapado a tiempo suma a la racha (ver cometWish en
   // engine.js); si no, se va. Nunca estorba, así que no hace falta comprobarlo con el solucionador.
@@ -1028,10 +1029,16 @@ export const EVENT_WORLDS = [8, 11, 15, 19, 24];
 export const eventGroup = (world) => EVENT_WORLDS.reduce((b, w, i) => (world >= w ? i : b), 0);
 // Tablero base (antes de endurecerlo). t = intento: tools/event-levels.mjs prueba varios hasta dar con uno que cumpla.
 // En el evento los premios de racha van al doble de distancia (rewardStep 2).
+// Mesas especiales que ya conoce quien llegó al mundo w (sin la enrollada: depende del ancho de la pantalla).
+const helpScrolls = (w) => Object.keys(SCROLL_FROM).filter((k) => k !== 'mesa' && SCROLL_FROM[k] < (w + 1) * LEVELS_PER_WORLD);
 export function eventBase(month, k, group, t = 0) {
   const p = Math.floor(k / EVENT_PER_PLANET), j = k % EVENT_PER_PLANET, boss = j === EVENT_PER_PLANET - 1;
+  // Una mesa especial por planeta, nunca en el jefe (cuál nivel y cuál mesa cambian con el mes).
+  // Desde el intento 500 va sin ella: el respaldo de event-levels.mjs cuando con la mesa no se logra.
+  const kinds = helpScrolls(EVENT_WORLDS[group]), h = hash(month * 131 + group * 17 + p);
+  const scroll = t < 500 && kinds.length && j === h % (EVENT_PER_PLANET - 1) ? kinds[(h >>> 4) % kinds.length] : null;
   // Índice dentro del mundo: el jefe usa el 10 (tableros de jefe); los demás, del 2 al 8.
-  const L = generateLevel(EVENT_ID + k, { world: EVENT_WORLDS[group], index: boss ? LEVELS_PER_WORLD - 1 : 1 + j * 2, d: eventDifficulty(k), tight: p, seed: 7e6 + month * 977 + group * 131 + k + t * 7919 });
+  const L = generateLevel(EVENT_ID + k, { world: EVENT_WORLDS[group], index: boss ? LEVELS_PER_WORLD - 1 : 1 + j * 2, d: eventDifficulty(k), tight: p, scroll, seed: 7e6 + month * 977 + group * 131 + k + t * 7919 });
   return { ...L, k, planet: p, boss, rewardStep: 2, help: EVENT_HELP[p][j] };
 }
 // key = edición (año × 12 + mes). Los tableros salen de event-data.js (ya probados: piden sus ayudas);
@@ -1092,7 +1099,10 @@ export const specials = (h, group = null) => [...Array(SPECIAL_COUNT).keys()].fi
 const SPECIAL_SHAPES = ['pyramid', 'diamond', 'wall', 'invPyramid', 'clusters', 'towers', 'peaks', 'scatter', 'layers'];
 export function specialBase(i, t = 0) {
   const h = specialHelp(i), boss = i % 4 === 3, shapes = SPECIAL_SHAPES.slice(0, h === 4 ? 7 : 9);
-  const L = buildLevel(SPECIAL_ID + i, { world: EVENT_WORLDS[specialGroup(i)], index: boss ? LEVELS_PER_WORLD - 1 : 1 + (i % 4) * 2, d: Math.min(1, 0.45 + h * 0.1), tight: h, template: t < 300 ? shapes[i % shapes.length] : null, seed: 8e6 + i * 13 + t * 7919 });
+  // ~1 de cada 12 con mesa especial (de las que ya conoce su grupo), como en el camino.
+  const kinds = helpScrolls(EVENT_WORLDS[specialGroup(i)]), hs = hash(i * 7349 + 101);
+  const scroll = t < 300 && kinds.length && !(hs % 12) ? kinds[(hs >>> 5) % kinds.length] : null;
+  const L = buildLevel(SPECIAL_ID + i, { world: EVENT_WORLDS[specialGroup(i)], index: boss ? LEVELS_PER_WORLD - 1 : 1 + (i % 4) * 2, d: Math.min(1, 0.45 + h * 0.1), tight: h, scroll, template: t < 300 ? shapes[i % shapes.length] : null, seed: 8e6 + i * 13 + t * 7919 });
   return { ...L, event: false, special: i, help: h, rewardStep: 2 };
 }
 export function specialLevel(i) {

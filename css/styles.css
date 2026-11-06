@@ -1648,18 +1648,31 @@ html:not(.dev-on) .dev-pill { display: none; }
 .devmenu .dsec h4 small { font: 700 12px 'Baloo 2', sans-serif; color: #6d6394; }
 /* Recuento del menú dev: eventos de cada tipo y cosas de la tienda por origen. */
 .devmenu .dline { margin: 6px 0 3px; font: 700 13px 'Baloo 2', sans-serif; color: var(--ink); }
-.devmenu .dcount { display: flex; flex-wrap: wrap; gap: 4px; }
-.devmenu .dcount span { display: inline-flex; align-items: center; gap: 3px; padding: 1px 8px 1px 3px; border-radius: 99px; background: #fff; border: 1.5px solid #d9cdf7; font: 700 12px 'Baloo 2', sans-serif; }
-.devmenu .dcount .ico { width: 18px; height: 18px; }
 .devmenu .dtable { width: 100%; border-collapse: collapse; font: 700 12px 'Baloo 2', sans-serif; color: var(--ink); }
 .devmenu .dtable th, .devmenu .dtable td { padding: 2px 4px; border-bottom: 1px solid #e3d9f8; text-align: center; }
 .devmenu .dtable td:first-child { text-align: left; }
+.devmenu .dorder td:first-child { text-align: center; } .devmenu .dorder td.dname { text-align: left; }
+
+.devmenu .dorder .dpic { width: 30px; padding: 1px 2px; }
+.devmenu .dpic > .ico { width: 20px; height: 20px; display: block; margin: 0 auto; }
+.devmenu .dmc { display: grid; place-items: center; height: 22px; }
+.devmenu .dmc .card { position: relative; left: 0 !important; --cw: 14px; rotate: -6deg; }
+.devmenu .dkind { display: inline-grid; place-items: center; width: 18px; height: 18px; font-style: normal; border-radius: 50%; color: #fff; font-size: 11px; line-height: 1; }
+.devmenu .k-ev { background: #ff8a3d; } .devmenu .k-card { background: #8a5cf0; } .devmenu .k-mesa { background: #2f86c0; }
+.devmenu .dgo { padding: 1px 10px 2px; border-radius: 99px; border: 2px solid var(--ink); background: #8a5cf0; color: #fff; font: 400 12px 'Lilita One'; }
+.devmenu .dacc { cursor: pointer; } .devmenu .dacc .dnum { padding: 0 6px; border-radius: 99px; background: #ff8a3d; color: #fff; font-size: 11px; }
+.devmenu .dchev { display: inline-block; vertical-align: middle; transition: rotate 220ms var(--ease-out); } .devmenu .dchev .ico { width: 14px; height: 14px; }
+.devmenu .dacc.open .dchev { rotate: 90deg; }
+.devmenu .dsub { background: #fff4ea; animation: dsub-in 260ms var(--ease-out) var(--d, 0ms) both; }
+.devmenu .dnote td { text-align: left; font-weight: 600; font-style: italic; color: #8a5a3a; }
+.devmenu .dshop .ico { width: 18px; height: 18px; vertical-align: middle; margin-right: 4px; }
+.devmenu .dshop-g td { background: #efe8ff; font-weight: 800; } .devmenu .dshop .dsub td.dname { padding-left: 14px; }
+@keyframes dsub-in { from { opacity: 0; translate: 0 -6px; } }
 .devmenu .dtabs { display: flex; gap: 6px; justify-content: center; }
 .devmenu .dtab { padding: 4px 16px 6px; border-radius: 12px; border: 2px solid var(--ink); background: var(--cream); font: 400 16px 'Lilita One'; color: var(--ink); }
 .devmenu .dtab.on { background: #8a5cf0; color: #fff; }
 .devmenu .dtable em { font-style: normal; padding: 0 6px; border-radius: 99px; color: #fff; }
-.devmenu .d-ok { background: #2fae6a; }
-.devmenu .d-no { background: #c22c49; }
+.devmenu .d-no { color: #d62f4f; font-weight: 800; } .devmenu .d-yes { color: #23a05e; font-weight: 800; }
 .devmenu .dtable + .dline { margin-top: 10px; }
 .devmenu .dbtns { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 6px; }
 .devmenu .dbtns .btn { min-height: 38px; padding: 4px 8px 6px; font-size: 14px; line-height: 1.15; border-radius: 12px; white-space: normal; }

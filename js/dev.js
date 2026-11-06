@@ -10,7 +10,9 @@ import { icon, miniPlanet } from './art.js';
 import { tableHTML, BIOMES, biomeKey } from './biomes.js';
 import { peek } from './galaxy.js';
 import { EVENTOS, COLECCIONES, FIESTAS } from './events.js';
-import { ITEMS, SECTIONS, owns, lockedUntil } from './shop.js';
+import { ITEMS, SECTIONS, GROUPS, owns, lockedUntil } from './shop.js';
+// Icono de cada sección de la tienda (para el recuento).
+const SEC_ICO = { avatar: 'user', ring: 'star', title: 'crown', back: 'deck', face: 'face', traveler: 'rocket', space: 'planet', frame: 'album' };
 
 export const dev = {
   get on() {
@@ -130,6 +132,16 @@ const PAGE = 24;
 // (medido recorriendo los 5,200; si cambia el generador, volver a medir).
 const TEMPLATES = [['pyramid', 1], ['peaks', 2], ['clusters', 3], ['star', 10], ['layers', 12], ['wall', 19], ['towers', 23], ['butterfly', 33], ['diamond', 34], ['spiral', 35], ['mesa', 40], ['heart', 42], ['gravedad', 70], ['scatter', 71], ['nebulosa', 100], ['plegable', 140], ['invPyramid', 148], ['hourglass', 169]];
 // Fase 7: piezas nuevas (solo salen en niveles sin ayudas) y respiros.
+// Iconos chiquitos de las mesas especiales (para el recuento).
+const SV = (b) => `<svg class="ico" viewBox="0 0 32 32" fill="none" stroke="#2a1f5c" stroke-width="2" stroke-linejoin="round">${b}</svg>`;
+const TABLE_ICONS = {
+  mesa: SV('<rect x="3" y="9" width="20" height="16" rx="3" fill="#3fa0a8"/><rect x="21" y="6" width="8" height="22" rx="4" fill="#6fc6cc"/><path d="M25 9v16" stroke-width="1.4"/>'),
+  gravedad: SV('<rect x="4" y="3" width="10" height="26" rx="3" fill="#c9bff0"/><rect x="18" y="3" width="10" height="26" rx="3" fill="#c9bff0"/><rect x="5.5" y="17" width="7" height="10" rx="1.6" fill="#fff"/><rect x="19.5" y="17" width="7" height="10" rx="1.6" fill="#fff"/><path d="M9 7v6l-2-2M9 13l2-2M23 7v6l-2-2M23 13l2-2" stroke-width="1.6" stroke-linecap="round"/>'),
+  nebulosa: SV('<circle cx="16" cy="16" r="13" fill="#8a5cf0"/><path d="M16 16c0-3 4-3 4 0s-3 6-7 5-6-5-4-9 8-6 12-3" stroke="#fff" stroke-width="2" stroke-linecap="round"/>'),
+  plegable: SV('<path d="M2 9l9 3v14l-9-3z" fill="#6fc6cc"/><rect x="11" y="7" width="10" height="19" rx="1.6" fill="#3fa0a8"/><path d="M30 9l-9 3v14l9-3z" fill="#6fc6cc"/>'),
+};
+const tableIcon = (t) => TABLE_ICONS[t] || '';
+const SCROLL_NAMES = { mesa: 'mesa enrollada', gravedad: 'gravedad', nebulosa: 'nebulosa', plegable: 'mesa plegable' };
 const PIECES = [['steps', 3], ['cross', 3], ['crown', 8], ['rosette', 13], ['sandwich', 16], ['tiltFan', 21]];
 const TPL_OPTS = [
   ['todas', 'tablero: todos'],
@@ -344,7 +356,8 @@ function completeWorlds(from, to) {
   save.run = null;
   persist();
 }
-export function openDevMenu({ onGallery, onPlanets, onRefresh }) {
+// card: dibuja la carta de una mecánica (mechCard de main.js) para el recuento.
+export function openDevMenu({ onGallery, onPlanets, onRefresh, card }) {
   const w = Math.min(Math.floor(save.next / LEVELS_PER_WORLD), save.open);
   const r = Math.floor(w / REGION);
   const evNow = ev(), colNow = col();
@@ -378,24 +391,38 @@ export function openDevMenu({ onGallery, onPlanets, onRefresh }) {
   const mine = (sec, o) => ITEMS[sec].filter((it) => origin(it) === o && owns(sec, it.k)).length;
   const cell = (sec, o) => (cnt(sec, o) ? `${mine(sec, o)}/${cnt(sec, o)}` : '–');
   const sum = (f) => SECTIONS.reduce((n, { k }) => n + f(k), 0);
+  // Totales de la tienda: en verde las que tienes y en rojo las que te faltan.
+  const have = (n, of) => `<span class="d-yes" title="tienes">${n}</span>${of - n ? ` <span class="d-no" title="faltan">${of - n}</span>` : ''}`;
   // Desde qué nivel ganado se abre cada cosa, y si tú ya llegaste.
   const won = save.next || 0;
-  const opens = (lvl) => (won >= lvl ? `<em class="d-ok">abierto</em>` : `<em class="d-no">faltan ${lvl - won}</em>`);
-  const UN = [['Racha', UNLOCK.racha], ['Colección (4 temáticas)', UNLOCK.col], ['Evento del mes', UNLOCK.mes], ['Colección: Dinos y Robots y 3.ª semana', UNLOCK.col2], ['Festividades de un día', UNLOCK.fiesta], ['Colección: Arte, Música y Cine, todas las semanas', UNLOCK.col3], ['Festividades de leyendas mexicanas', UNLOCK.fiesta2]];
+  const opens = (lvl) => (won >= lvl ? '' : `<span class="d-no" title="faltan ${lvl - won} niveles">${lvl - won}</span>`);
+  // Los eventos de cada tipo (van dentro de su renglón, como acordeón): del mes por mes, colecciones, de un día por fecha.
+  const fiDay = (f) => f.date(y);
+  const colsOf = (plus) => COLECCIONES.filter((c) => (c.plus || 0) === plus).map((c) => [c.token, c.name, '']);
+  const fisOf = (local) => fis.filter((f) => !!f.local === local).sort((a, b) => fiDay(a) - fiDay(b)).map((f) => [f.ico, f.name, `${fiDay(f).getDate()} ${MES[fiDay(f).getMonth()]}${f.days > 1 ? ` · ${f.days} días` : ''}`, `f:${f.key}`]);
+  // Todo lo que sale en el camino, en el orden en que aparece (nivel = el primero donde lo ves; los eventos se abren al ganar el anterior).
+  const UN = [
+    ['Racha cohete', UNLOCK.racha, 'rocket'],
+    ['Colecciones', UNLOCK.col, 'concha', colsOf(0), 'Se turnan: 2 semanas al mes (la del 1.er y la del 3.er lunes)'],
+    ['Eventos del mes', UNLOCK.mes, 'planet', evs.map(([m, e]) => [e.ico, e.name, MES[m], `m:${m}`])],
+    ['Colecciones nuevas y 3.ª semana', UNLOCK.col2, 'fosil', colsOf(true), 'Se suman a las de antes y se turnan: 3 semanas al mes'],
+    ['Festividades de un día', UNLOCK.fiesta, 'pinata', fisOf(false)],
+    ['Colecciones de Arte, Música y Cine', UNLOCK.col3, 'nota', colsOf(2), 'Se suman a las de antes y se turnan: todas las semanas'],
+    ['Festividades de leyendas mexicanas', UNLOCK.fiesta2, 'catrina', fisOf(true)],
+  ];
+  const KINDS = { ev: 'Evento', card: 'Carta', mesa: 'Mesa' };
+  const rows = [
+    ...UN.map(([name, l, ico, sub, note]) => ({ n: l + 1, k: 'ev', name, pic: icon(ico), sub, note })),
+    ...MECH_ORDER.map((m) => ({ n: mechDebut(m), k: 'card', name: MECH_NAMES[m], pic: `<span class="dmc">${card(m)}</span>` })),
+    ...Object.entries(SCROLL_FROM).map(([t, g]) => ({ n: g + 1, k: 'mesa', name: SCROLL_NAMES[t], pic: tableIcon(t) })),
+  ].sort((a, b) => a.n - b.n || Object.keys(KINDS).indexOf(a.k) - Object.keys(KINDS).indexOf(b.k));
+  const subRow = (i) => ([ico, name, when, go]) => `<tr class="dsub" data-of="${i}" hidden><td></td><td class="dpic">${icon(ico)}</td><td class="dname">${name}</td><td colspan="2">${when}</td><td>${go ? `<button class="dgo" data-go="${go}" title="Mueve el reloj al día en que empieza">Ir</button>` : ''}</td></tr>`;
+  const line = (r, i) => `<tr${r.sub ? ` class="dacc" data-acc="${i}"` : ''}><td><i class="dkind k-${r.k}" title="${KINDS[r.k]}">${KINDS[r.k][0]}</i></td><td class="dpic">${r.pic}</td><td class="dname">${r.name}${r.sub ? ` <b class="dnum">${r.sub.length}</b><span class="dchev">${icon('chev')}</span>` : ''}</td><td>${r.n}</td><td>${Math.ceil(r.n / LEVELS_PER_WORLD)}</td><td>${opens(r.n - 1)}</td></tr>${r.note ? `<tr class="dsub dnote" data-of="${i}" hidden><td></td><td colspan="5">${r.note}</td></tr>` : ''}${(r.sub || []).map(subRow(i)).join('')}`;
   const lastNeed = Math.max(...Object.values(ITEMS).flat().map((it) => it.need || 0));
   const shopLocked = sum((k) => ITEMS[k].filter((it) => lockedUntil(k, it.k)).length);
-  const chips = (list) => `<div class="dcount">${list.map(([ico, txt]) => `<span>${icon(ico)}${txt}</span>`).join('')}</div>`;
-  const recuento = `<p class="dline"><b>Tú: ${won} niveles ganados</b> (mundo ${(save.open || 0) + 1})</p>
-    <table class="dtable"><tr><th>Se abre</th><th>Nivel</th><th>Tú</th></tr>${UN.map(([n, l]) => `<tr><td>${n}</td><td>${l}</td><td>${opens(l)}</td></tr>`).join('')}</table>
-    <p class="dline"><b>Cartas especiales</b> (aparecen en el primer nivel de su mundo)</p>
-    <table class="dtable"><tr><th>Carta</th><th>Mundo</th><th>Nivel</th><th>Tú</th></tr>${MECH_ORDER.map((m) => `<tr><td>${MECH_NAMES[m]}</td><td>${Math.ceil(mechDebut(m) / LEVELS_PER_WORLD)}</td><td>${mechDebut(m)}</td><td>${opens(mechDebut(m) - 1)}</td></tr>`).join('')}
-    ${Object.entries(SCROLL_FROM).map(([k, g]) => `<tr><td>Tablero: ${k === 'mesa' ? 'mesa enrollada' : k}</td><td>${Math.floor(g / LEVELS_PER_WORLD) + 1}</td><td>${g + 1}</td><td>${opens(g)}</td></tr>`).join('')}</table>
-    <p class="dline"><b>${evs.length + COLECCIONES.length + fis.length} eventos</b>: ${evs.length} del mes · ${COLECCIONES.length} colecciones · ${fis.length} de un día</p>
-    <p class="dline"><b>Del mes (${evs.length})</b></p>${chips(evs.map(([m, e]) => [e.ico, `${MES[m]} · ${e.name}`]))}
-    <p class="dline"><b>Colecciones (${COLECCIONES.length})</b></p>${chips(COLECCIONES.map((c) => [c.token, c.name]))}
-    <p class="dline"><b>De un día (${fis.length})</b></p>${chips(fis.map((f) => { const d = f.date(y); return [f.ico, `${d.getDate()} ${MES[d.getMonth()]} · ${f.name}`]; }))}
+  const recuento = `<table class="dtable dorder"><tr><th></th><th></th><th>Qué</th><th>Nivel</th><th>Mundo</th><th>Tú</th></tr>${rows.map(line).join('')}</table>
     <p class="dline"><b>Tienda: tienes ${sum((k) => ITEMS[k].filter((it) => owns(k, it.k)).length)} de ${Object.values(ITEMS).flat().length}</b> (tuyas / que hay)</p>
-    <table class="dtable"><tr><th></th>${ORI.map(([, n]) => `<th>${n}</th>`).join('')}<th>Total</th></tr>${SECTIONS.map(({ k, name }) => `<tr><td>${name}</td>${ORI.map(([o]) => `<td>${cell(k, o)}</td>`).join('')}<td><b>${ITEMS[k].filter((it) => owns(k, it.k)).length}/${ITEMS[k].length}</b></td></tr>`).join('')}<tr><td><b>Total</b></td>${ORI.map(([o]) => `<td><b>${sum((k) => mine(k, o))}/${sum((k) => cnt(k, o))}</b></td>`).join('')}<td><b>${sum((k) => ITEMS[k].filter((it) => owns(k, it.k)).length)}/${Object.values(ITEMS).flat().length}</b></td></tr></table>
+    <table class="dtable dshop"><tr><th></th>${ORI.map(([, n]) => `<th>${n}</th>`).join('')}<th>Total</th></tr>${GROUPS.map((g) => `<tr class="dshop-g dacc" data-acc="s${g.k}"><td class="dname">${icon(g.ico)}${g.name}<span class="dchev">${icon('chev')}</span></td>${ORI.map(([o]) => `<td>${g.secs.reduce((n, k) => n + mine(k, o), 0)}/${g.secs.reduce((n, k) => n + cnt(k, o), 0)}</td>`).join('')}<td>${have(g.secs.reduce((n, k) => n + ITEMS[k].filter((it) => owns(k, it.k)).length, 0), g.secs.reduce((n, k) => n + ITEMS[k].length, 0))}</td></tr>${g.secs.map((k) => `<tr class="dsub" data-of="s${g.k}" hidden><td class="dname">${icon(SEC_ICO[k])}${SECTIONS.find((x) => x.k === k).name}</td>${ORI.map(([o]) => `<td>${cell(k, o)}</td>`).join('')}<td>${have(ITEMS[k].filter((it) => owns(k, it.k)).length, ITEMS[k].length)}</td></tr>`).join('')}`).join('')}<tr class="dtot"><td><b>Total</b></td>${ORI.map(([o]) => `<td>${have(sum((k) => mine(k, o)), sum((k) => cnt(k, o)))}</td>`).join('')}<td>${have(sum((k) => ITEMS[k].filter((it) => owns(k, it.k)).length), Object.values(ITEMS).flat().length)}</td></tr></table>
     <p class="dline">De la tienda, ${shopLocked} siguen con candado por mundo; lo último se abre en el mundo ${lastNeed + 1} (nivel ${lastNeed * LEVELS_PER_WORLD + 1}).</p>`;
   // Secciones con título; cada botón dice en corto lo que hace (la explicación larga va en su title).
   const S = [
@@ -403,8 +430,9 @@ export function openDevMenu({ onGallery, onPlanets, onRefresh }) {
       { l: 'Galería de niveles', cls: 'gold', fn: onGallery },
       { l: 'Galería de planetas', cls: 'gold', title: 'Cada tipo de planeta: verlo en el mapa o jugar en su mesa', fn: onPlanets },
       { l: `Boosters infinitos: ${prefs.devInfinite ? 'sí' : 'no'}`, fn: () => { prefs.devInfinite = !prefs.devInfinite; persist(); toast(`Boosters infinitos: ${prefs.devInfinite ? 'sí' : 'no'}`); } },
-      { l: '+1000 monedas', fn: () => ((save.coins += 1000), persist(), updateCoins()) },
       { l: '+20,000 monedas', fn: () => ((save.coins += 20000), persist(), updateCoins()) },
+    ] },
+    { t: 'Volver a explicar', items: [
       { l: 'Explicar mecánicas', title: 'Las explicaciones de cada mecánica salen otra vez', fn: () => ((save.seen = {}), persist(), toast('Las explicaciones saldrán otra vez')) },
       { l: 'Recorrido de botones', title: 'El recorrido de los botones de la izquierda sale otra vez al cerrar este menú', fn: () => { delete save.sideTour; persist(); onRefresh(); } },
     ] },
@@ -477,23 +505,14 @@ export function openDevMenu({ onGallery, onPlanets, onRefresh }) {
     ] },
     // Una por festividad: mueve el reloj al día en que empieza (la de este año). Las de leyendas, solo desde el nivel 200.
   ].map((sec) => ({ ...sec, items: sec.items.filter(Boolean) }));
-  // Pestaña Fechas: mover el reloj al primer día de un evento del mes o al día de una festividad.
-  const F = [
-    { t: 'Eventos del mes', sub: isOn('mes') ? 'el reloj cae en el día 1 del mes' : `se abren en el nivel ${UNLOCK.mes}`, items: evs.map(([m, e]) => ({ l: `${e.name} · ${MES[m]}`, title: `Mueve el reloj al 1 de ${MES[m]}`, fn: () => toDay(daysToMonth(+m)) })) },
-    { t: 'Festividades', sub: isOn('fiesta2') ? 'el reloj cae en su primer día' : `las de leyendas se abren en el nivel ${UNLOCK.fiesta2}`, items: fis.map((f) => {
-      const d = f.date(y);
-      return { l: `${f.name} · ${d.getDate()} ${MES[d.getMonth()]}`, title: `Mueve el reloj al ${d.getDate()} de ${MES[d.getMonth()]}, cuando empieza`, fn: () => toDay(daysToFiesta(f.key)) };
-    }) }
-  ];
-  const all = [...S, ...F].flatMap((sec) => sec.items);
+  const all = S.flatMap((sec) => sec.items);
   const secHTML = (sec) => `<section class="dsec"><h4>${sec.t}${sec.sub ? `<small>${sec.sub}</small>` : ''}</h4>${sec.html || ''}<div class="dbtns">${sec.items.map((it) => `<button class="btn ${it.cls || 'ghost'}" data-i="${all.indexOf(it)}"${it.title ? ` title="${it.title}"` : ''}>${it.l}</button>`).join('')}</div></section>`;
   const m = openModal({
     title: 'Modo dev',
     cls: 'devmenu',
     wide: true,
     // Dos pestañas: los botones primero (lo que más se usa) y el recuento aparte.
-    body: `<div class="dtabs"><button class="dtab on" data-tab="btns">Pruebas</button><button class="dtab" data-tab="dates">Fechas</button><button class="dtab" data-tab="count">Recuento</button></div>
-      <div class="dpane" data-pane="dates" hidden>${F.map(secHTML).join('')}</div>
+    body: `<div class="dtabs"><button class="dtab on" data-tab="btns">Pruebas</button><button class="dtab" data-tab="count">Recuento</button></div>
       <div class="dpane" data-pane="count" hidden><section class="dsec">${recuento}</section></div>
       <div class="dpane" data-pane="btns"><p class="note">Todo lo que hagas aquí es de prueba: al salir del modo dev vuelve tu partida.</p>
       ${S.map(secHTML).join('')}</div>`,
@@ -508,5 +527,15 @@ export function openDevMenu({ onGallery, onPlanets, onRefresh }) {
     m.el.querySelectorAll('.dtab').forEach((b) => b.classList.toggle('on', b === t));
     m.el.querySelectorAll('.dpane').forEach((p) => (p.hidden = p.dataset.pane !== t.dataset.tab));
   });
+  // Acordeón de los eventos: abre o cierra los renglones de su tipo.
+  m.el.querySelectorAll('[data-acc]').forEach((r) => r.addEventListener('click', () => {
+    const open = r.classList.toggle('open');
+    m.el.querySelectorAll(`[data-of="${r.dataset.acc}"]`).forEach((x, k) => ((x.hidden = !open), x.style.setProperty('--d', `${k * 25}ms`)));
+  }));
+  m.el.querySelectorAll('[data-go]').forEach((b) => b.addEventListener('click', () => {
+    const [t, k] = b.dataset.go.split(':');
+    m.close();
+    toDay(t === 'm' ? daysToMonth(+k) : daysToFiesta(k));
+  }));
   m.el.querySelectorAll('.dsec [data-i]').forEach((b) => b.addEventListener('click', () => { m.close(); all[+b.dataset.i].fn(); }));
 }
