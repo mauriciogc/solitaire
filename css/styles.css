@@ -1089,9 +1089,10 @@ button.rg:active > i { scale: .92; }
 .tour-evs { display: flex; flex-direction: column; gap: calc(10px * var(--k)); }
 .tour-evs .iconbtn { display: grid; }
 /* Cierre: el círculo se vuelve una cápsula alrededor del botón de jugar. */
-.side-guide .g-ring.wide { width: var(--w); height: var(--h); border-radius: 30px; animation: ring-wide 1.1s var(--ease-out) infinite; }
+.side-guide .g-ring.wide { border-radius: 30px; animation: ring-wide 1.1s var(--ease-out) infinite; }
 @keyframes ring-wide { 0%, 100% { scale: .97; } 50% { scale: 1.03; } }
-.side-guide .g-ring { transition: left .45s cubic-bezier(.45,0,.2,1), top .45s cubic-bezier(.45,0,.2,1), width .45s cubic-bezier(.3,1.3,.5,1), height .45s cubic-bezier(.3,1.3,.5,1), border-radius .45s ease; }
+/* Posición y tamaño los pone main.js en cada cuadro (se desliza solo); aquí solo la forma. */
+.side-guide .g-ring { transition: border-radius .45s ease; }
 /* Mientras dura el recorrido, lo demás del mapa no se toca. */
 .touring .side, .touring .cta, .touring .out-btn, .touring .me { opacity: .3; pointer-events: none; }
 

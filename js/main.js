@@ -482,29 +482,33 @@ function sideTour() {
     };
     // Círculo sobre lo señalado y globo a su lado (o debajo / encima si no cabe). Se vuelve a medir en cada cuadro:
     // los botones entran animados y en iPhone el giro avisa tarde, así el círculo nunca se descuadra.
+    // Todo se mide contra la capa del recorrido (no contra la ventana): si algo la desplaza (iPhone en vertical, la
+    // pantalla que entra animada), el círculo y el globo igual caen sobre el botón. El círculo se desliza solo (JS).
+    let cur = null;
     function put() {
       const b = btn();
       if (!b) return;
       if (!b.classList.contains('tour-on')) b.classList.add('tour-on'); // por si se volvió a dibujar
-      const r = b.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
-      const roomR = innerWidth - r.right - 24, roomL = r.left - 24;
-      ring.classList.toggle('wide', r.width > r.height * 1.25 || r.height > r.width * 1.25);
-      ring.style.setProperty('--s', `${Math.max(r.width, r.height) + 22}px`);
-      // El círculo (y su latido) no se sale de la pantalla: pegado a la orilla, se recorre hacia adentro.
-      const rw = r.width + 26, rh = r.height + 26, edge = 10;
-      ring.style.setProperty('--w', `${rw}px`);
-      ring.style.setProperty('--h', `${rh}px`);
-      ring.style.left = `${Math.min(innerWidth - rw / 2 - edge, Math.max(rw / 2 + edge, cx))}px`;
-      ring.style.top = `${Math.min(innerHeight - rh / 2 - edge, Math.max(rh / 2 + edge, cy))}px`;
-      const midY = () => Math.min(innerHeight - bub.offsetHeight - 12, Math.max(12, cy - bub.offsetHeight / 2));
-      if (cx < innerWidth / 2 && roomR >= 220) Object.assign(bub.style, { left: `${r.right + 20}px`, width: `${Math.min(330, roomR)}px`, translate: '0 0', top: `${midY()}px` });
-      else if (cx > innerWidth / 2 && roomL >= 220 && r.height > r.width * 1.25) {
+      const g = el.getBoundingClientRect(), W = g.width, H = g.height, br = b.getBoundingClientRect();
+      const r = { left: br.left - g.left, top: br.top - g.top, right: br.right - g.left, bottom: br.bottom - g.top, width: br.width, height: br.height };
+      const cx = r.left + r.width / 2, cy = r.top + r.height / 2, roomR = W - r.right - 24, roomL = r.left - 24;
+      const wide = r.width > r.height * 1.25 || r.height > r.width * 1.25;
+      ring.classList.toggle('wide', wide);
+      // Círculo: cuadrado alrededor del botón; cápsula si es alargado. Sin salirse de la pantalla (ni con su latido).
+      const s = Math.max(r.width, r.height) + 22, rw = wide ? r.width + 26 : s, rh = wide ? r.height + 26 : s, edge = 10;
+      const to = { x: Math.min(W - rw / 2 - edge, Math.max(rw / 2 + edge, cx)), y: Math.min(H - rh / 2 - edge, Math.max(rh / 2 + edge, cy)), w: rw, h: rh };
+      if (!cur || reduced()) cur = { ...to };
+      else for (const k in to) cur[k] += (to[k] - cur[k]) * 0.2;
+      Object.assign(ring.style, { left: `${cur.x - cur.w / 2}px`, top: `${cur.y - cur.h / 2}px`, width: `${cur.w}px`, height: `${cur.h}px`, translate: 'none' });
+      const bh = bub.offsetHeight, midY = () => Math.min(H - bh - 12, Math.max(12, cy - bh / 2));
+      if (cx < W / 2 && roomR >= 220) Object.assign(bub.style, { left: `${r.right + 20}px`, width: `${Math.min(330, roomR)}px`, translate: '0 0', top: `${midY()}px` });
+      else if (cx > W / 2 && roomL >= 220 && r.height > r.width * 1.25) {
         const w = Math.min(330, roomL);
         Object.assign(bub.style, { left: `${r.left - 20 - w}px`, width: `${w}px`, translate: '0 0', top: `${midY()}px` });
       } else {
         // Debajo si cabe; si no (botón de jugar, abajo), encima.
-        const below = r.bottom + 24 + bub.offsetHeight < innerHeight - 12;
-        Object.assign(bub.style, { left: '50%', width: '', translate: '-50% 0', top: `${below ? r.bottom + 24 : Math.max(12, r.top - 24 - bub.offsetHeight)}px` });
+        const below = r.bottom + 24 + bh < H - 12;
+        Object.assign(bub.style, { left: '50%', width: '', translate: '-50% 0', top: `${below ? r.bottom + 24 : Math.max(12, r.top - 24 - bh)}px` });
       }
     }
     const loop = () => {
