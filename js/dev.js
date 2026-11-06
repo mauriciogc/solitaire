@@ -11,7 +11,7 @@ import { tableHTML, BIOMES, biomeKey } from './biomes.js';
 import { peek } from './galaxy.js';
 import { EVENTOS, COLECCIONES, FIESTAS, fiestaDays } from './events.js';
 import { ITEMS, SECTIONS, GROUPS, owns, lockedUntil } from './shop.js';
-import { meteor, nextShowers, MET_FROM } from './meteor.js';
+import { meteor, nextShowers, metItems, MET_FROM } from './meteor.js';
 import { KINDS, TREASURE, makeLot, makeCode, rewardName, lotText, usedHere, lotNonces } from './codes.js';
 // Icono de cada sección de la tienda (para el recuento).
 const SEC_ICO = { avatar: 'user', ring: 'star', title: 'crown', back: 'deck', face: 'face', traveler: 'rocket', space: 'planet', frame: 'album' };
@@ -649,6 +649,9 @@ export function openDevMenu({ onGallery, onPlanets, onRefresh, card }) {
       metNow && { l: 'Que termine', fn: () => { if (save.devMet) save.devMet = 0; else save.devMetOff = metNow.id; persist(); onRefresh(); } },
       metNow && { l: 'Ver su aviso otra vez', fn: () => ((metNow.state.intro = false), persist(), onRefresh()) },
       metNow && { l: 'Premio otra vez', title: 'El siguiente nivel con 3★ vuelve a dar el premio de esta lluvia', fn: () => ((metNow.state.prize = false), persist(), toast('El premio vuelve a estar pendiente')) },
+      metNow && { l: 'Que el premio sea un exclusivo', title: 'El siguiente nivel con 3★ da uno de los exclusivos de meteoro que te faltan (con su ventana)', fn: () => { if (!metItems().some((x) => !owns(x.sec, x.k))) return toast('Ya tienes los 5 exclusivos'); metNow.state.prize = false; save.devMetItem = 1; persist(); toast('Gana un nivel con 3★: te cae un exclusivo'); } },
+      { l: 'Darme los 5 exclusivos', title: 'Para verlos en tu perfil y en la tienda', fn: () => { metItems().forEach((x) => (save.owned[`${x.sec}:${x.k}`] = 1)); persist(); toast('Ya tienes los 5 exclusivos de meteoro'); } },
+      { l: 'Quitarme los exclusivos', fn: () => { metItems().forEach((x) => delete save.owned[`${x.sec}:${x.k}`]); persist(); toast('Sin exclusivos de meteoro'); } },
       { l: 'Aviso de primera vez', title: 'El aviso de la siguiente lluvia vuelve a explicar que cae sin avisar', fn: () => (delete save.metSeen, persist(), toast('Saldrá el aviso completo')) },
     ] },
     // Una por festividad: mueve el reloj al día en que empieza (la de este año). Las de leyendas, solo desde el nivel 200.

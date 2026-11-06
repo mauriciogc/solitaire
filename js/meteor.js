@@ -69,7 +69,10 @@ export function metWin(id, stars) {
   if (stars >= 3 && !save.met.prize) {
     save.met.prize = true;
     const r = Math.random(), left = missing();
-    if (left.length && r < MET_ODDS.item) {
+    // Modo dev ("Que el premio sea un exclusivo"): esta vez sale uno seguro.
+    const force = save.devMetItem && left.length;
+    delete save.devMetItem;
+    if (left.length && (force || r < MET_ODDS.item)) {
       const it = left[Math.floor(Math.random() * left.length)];
       save.owned[`${it.sec}:${it.k}`] = 1;
       out.prize = { items: [it] };
