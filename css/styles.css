@@ -2031,10 +2031,15 @@ html:not(.dev-on) .dev-pill { display: none; }
 /* ---------- Lluvia de meteoritos (ver meteor.js) ---------- */
 /* Meteoritos que cruzan el cielo del mapa: encima de los planetas, debajo de etiquetas y botones. */
 .met-sky { position: absolute; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
-.met-sky i { position: absolute; width: calc(34px * var(--s) * var(--k)); height: calc(34px * var(--s) * var(--k)); opacity: 0; animation: met-fall 7.4s linear infinite; }
+.met-sky i { position: absolute; width: calc(34px * var(--s) * var(--k)); height: calc(34px * var(--s) * var(--k)); opacity: 0; visibility: hidden; pointer-events: auto; cursor: pointer; animation: met-fall 7.4s linear infinite; }
+/* Se truenan al tocarlos: área de toque más grande que el dibujo (se mueven rápido). Solo se tocan mientras se ven. */
+.met-sky i::after { content: ''; position: absolute; inset: -16px; }
+.met-sky i.popped { visibility: hidden !important; }
+.met-pop { position: fixed; z-index: 60; pointer-events: none; }
+.met-pop .ico { width: 100%; height: 100%; filter: drop-shadow(0 0 6px #ff8a3d); }
 .met-sky i .ico { width: 100%; height: 100%; filter: drop-shadow(0 0 6px #ff8a3d) drop-shadow(0 0 14px #ff5f2e88); }
 .met-sky i::before { content: ''; position: absolute; left: 62%; bottom: 62%; width: calc(140px * var(--s) * var(--k)); height: calc(5px * var(--s) * var(--k)); border-radius: 99px; transform-origin: 0 50%; rotate: -45deg; background: linear-gradient(90deg, #ffd85a, #ff8a3d88 35%, transparent); }
-@keyframes met-fall { 0% { opacity: 0; translate: 0 0; } 4% { opacity: 1; } 22% { opacity: 1; } 28% { opacity: 0; translate: -46vmin 46vmin; } 100% { opacity: 0; translate: -46vmin 46vmin; } }
+@keyframes met-fall { 0% { opacity: 0; translate: 0 0; visibility: hidden; } 0.5% { visibility: visible; } 4% { opacity: 1; } 22% { opacity: 1; } 26% { visibility: visible; } 28% { opacity: 0; translate: -46vmin 46vmin; visibility: hidden; } 100% { opacity: 0; translate: -46vmin 46vmin; visibility: hidden; } }
 /* Botón Jugar durante la lluvia: orilla de fuego que late y abajo lo que le queda. */
 .go.met { position: relative; background: linear-gradient(#ff8a3d, #ff5f2e); box-shadow: inset 0 -7px 0 #d6451f, inset 0 3px 0 #ffc48a, 0 4px 0 var(--ink), 0 0 0 3px #ffd85a, 0 0 18px 6px #ff8a3dcc, 0 12px 22px #0b062a77; animation: met-glow 1.2s ease-in-out infinite alternate; }
 .go.met .t small { text-shadow: 0 1.5px 0 #b5401c; }
@@ -2047,6 +2052,11 @@ html:not(.dev-on) .dev-pill { display: none; }
 .x2 { display: inline-block; margin-left: 4px; padding: 0 6px 1px; border-radius: 99px; background: linear-gradient(#ff8a3d, #ff5f2e); border: 2px solid var(--ink); color: #fff; font: 400 13px/1.2 'Lilita One'; font-style: normal; text-shadow: 0 1px 0 #b5401c; animation: met-x2 1.4s ease-in-out infinite; }
 .met-pill .met-clock { position: absolute; bottom: -15px; left: 50%; translate: -50% 0; padding: 0 7px 1px; border-radius: 99px; background: #2a1f66; color: #ffd85a; font: 400 11px/1.3 'Lilita One'; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .met-pill .met-clock:empty { display: none; }
+.met-sale { display: flex; align-items: center; justify-content: center; gap: 6px; width: fit-content; margin: 6px auto; padding: 3px 12px 4px 6px; border-radius: 99px; background: linear-gradient(#ff8a3d, #ff5f2e); border: 2px solid var(--ink); color: #fff; font: 400 15px/1.2 'Lilita One'; text-shadow: 0 1px 0 #b5401c; box-shadow: 0 0 12px 2px #ff8a3d88; animation: met-sale 1.4s ease-in-out infinite; }
+@keyframes met-sale { 0%, 100% { scale: 1; } 50% { scale: 1.05; } }
+.met-sale .ico { width: 22px; height: 22px; }
+.met-sale b { color: #ffe066; font-weight: 400; }
+.s-price s, .modal button s { opacity: 0.55; font-size: 0.8em; margin-right: 3px; text-decoration-thickness: 2px; }
 .loot-bub .x2 { position: absolute; top: -4px; right: -6px; margin: 0; }
 @keyframes met-x2 { 0%, 100% { scale: 1; } 50% { scale: 1.15; } }
 /* Aviso: el meteorito cae y al tocar el suelo late. */

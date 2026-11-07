@@ -31,6 +31,13 @@ export const coinsFor = (g, stars, prev = 0) => Math.max(0, part(g, stars) - par
 export function price(kind, g) {
   return TIERS[kind][ticketCost(g) - 1];
 }
+// Dentro del nivel, las ayudas cuestan distinto según dónde se juega: en el evento del mes y en las festividades,
+// 30% más caras (comodín, deshacer y +5); durante la lluvia de meteoritos, comodín y deshacer 30% menos (se ve como
+// descuento). La tienda tiene 10% menos mientras cae la lluvia.
+export const EV_MARKUP = 0.3;
+export const MET_OFF = { help: 0.3, shop: 0.1 };
+export const round5 = (n) => Math.round(n / 5) * 5;
+export const metShopPrice = (p, met) => (met && p ? round5(p * (1 - MET_OFF.shop)) : p);
 
 // ---------- Regalo diario: camino de 28 días ----------
 // Premios modestos para que dure semanas. Si un día no se reclama, se vuelve al día 1.

@@ -2,7 +2,7 @@ import { save, persist } from './storage.js';
 import { openModal, toast, confetti, updateCoins, money, starsHTML, reduced, buzz, sparkle, wait, spendFromWallet, balloons, lootBubbles, rachaWarnHTML } from './ui.js';
 import { worldInfo, packGroups, MECH_NAMES, LEVELS_PER_WORLD, scrollStrip, scrollSpan, scrollCover, SCROLL_VIEW, SCROLL_SHOW, NEB_SLOTS, GRAV_SHOWN, W } from './levels.js';
 import * as E from './engine.js';
-import { price } from './economy.js';
+import { price, EV_MARKUP, MET_OFF, round5 } from './economy.js';
 import { cardBackURL, icon, star, coin, lockIcon, keyIcon, arrowIcon, curtainIcon, suitSVG, avatarHTML } from './art.js';
 import { tableHTML } from './biomes.js';
 import { Coach } from './coach.js';
@@ -1920,14 +1920,24 @@ export class Game {
   }
 
   // Precio de los boosters según el nivel que se juega (mismos escalones que los boletos).
+  // En el evento y las festividades todo cuesta 30% más (también +5); con la lluvia de meteoritos, comodín y
+  // deshacer cuestan 30% menos.
   priceOf(kind) {
+    const r = this.helpRate(kind);
+    return r ? round5(this.basePrice(kind) * (1 + r)) : this.basePrice(kind);
+  }
+  basePrice(kind) {
     return price(kind, this.level.world * LEVELS_PER_WORLD);
+  }
+  helpRate(kind) {
+    return this.opts.event ? EV_MARKUP : this.opts.meteor && kind !== 'extra' ? -MET_OFF.help : 0;
   }
 
   // kind: 'wild' (1 comodín), 'undo' (3 deshacer) o 'extra' (+5 cartas al mazo, solo atascado).
   offerBuy(kind) {
     const cost = kind === 'extra' ? this.extraCost() : this.priceOf(kind);
     const n = { wild: 1, undo: 3, extra: 5 }[kind];
+    const sale = this.helpRate(kind) < 0;
     this.modalOpen = true;
     // Lo que se compra se ve en grande, flotando con rayos detrás.
     const hero = {
@@ -1946,12 +1956,13 @@ export class Game {
       cls: 'buy-modal',
       body: `<div class="buy-hero"><div class="rays"></div>${hero}<b class="qty outl">${kind === 'extra' ? '+5' : `×${n}`}</b></div>
         <p class="lead">${text}</p>
+        ${sale ? `<p class="met-sale">${icon('meteoro')}Lluvia de meteoritos: <b>−${Math.round(MET_OFF.help * 100)}%</b></p>` : ''}
         ${save.coins < cost ? '<p class="note">No te alcanzan las monedas.</p>' : ''}`,
       onClose: () => (this.modalOpen = false),
       buttons: [
         { label: 'Ahora no', cls: 'ghost grow' },
         {
-          label: `Comprar ${coin()} ${cost}`,
+          label: `Comprar ${coin()} ${sale ? `<s>${this.basePrice(kind)}</s> ` : ''}${cost}`,
           cls: 'green grow',
           disabled: save.coins < cost,
           onClick: () => {

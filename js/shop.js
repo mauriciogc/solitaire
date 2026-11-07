@@ -409,10 +409,11 @@ export function equip(sec, k) {
   return true;
 }
 // Compra y lo deja puesto. Devuelve false si no alcanza o aún no se abre.
-export function buy(sec, k) {
+// cost: lo que se cobra (con la lluvia de meteoritos sale más barato; ver metShopPrice).
+export function buy(sec, k, cost = item(sec, k)?.price) {
   const it = item(sec, k);
-  if (!it || it.ev || owns(sec, k) || lockedUntil(sec, k) || save.coins < it.price) return false;
-  save.coins -= it.price;
+  if (!it || it.ev || owns(sec, k) || lockedUntil(sec, k) || save.coins < cost) return false;
+  save.coins -= cost;
   save.owned[`${sec}:${k}`] = 1;
   equip(sec, k);
   return true;

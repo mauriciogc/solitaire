@@ -2,8 +2,8 @@ import { save, prefs, persist, resetProfile, renameProfile, exportCode, readCode
 import { UNLOCK, EVENTOS, FIESTAS, COLECCIONES, evSoon, isOn, nextEvent, daysToNextCol, plusCols, RACHA_GOALS, RACHA_STEP, rachaGoal, nextIndex, racha, rachaTheme, rachaReady, rachaHot, rachaWin, rachaLose, rachaClaim, msToMidnight, col, colLeft, colWin, colOffers, colBuy, ev, evLeft, evTicketLeft, evPrize, evEnter, evWin, evLose, evAlbum, fiAlbum, EVENT_PLANETS, EVENT_PER_PLANET, EVENT_LEVELS, fiesta, fiestaLeft, nextFiesta, fiEnter, fiWin, fiLose, fiShape } from './events.js';
 import { WORLD_COUNT, LEVELS_PER_WORLD, TOTAL_LEVELS, worldInfo, generateLevel, variantLevel, MECH_INTRO, MECH_NAMES, secretId, isSecret, eventLevel, fiestaLevel } from './levels.js';
 import { Game, faceHTML, backHTML } from './game.js';
-import { DAILY_PATH, dailyState, starsNeeded, TICKET_PRICE, ticketCost, ticketRefund, coinsFor, bossChest, openSurprise, SECRET_MULT, SECRET_PRIZE } from './economy.js';
-import { pauseOffscreen, openModal, toast, updateCoins, money, esc, reduced, wait, flyToWallet, spendFromWallet, sparkle, confetti, starsHTML, warp, buzz, balloons, lootBubbles, floatBubbles, rachaWarnHTML } from './ui.js';
+import { DAILY_PATH, dailyState, starsNeeded, TICKET_PRICE, ticketCost, ticketRefund, coinsFor, bossChest, openSurprise, SECRET_MULT, SECRET_PRIZE, MET_OFF, metShopPrice } from './economy.js';
+import { pauseOffscreen, openModal, toast, updateCoins, money, esc, reduced, wait, flyToWallet, spendFromWallet, sparkle, confetti, starsHTML, warp, buzz, balloons, lootBubbles, floatBubbles, rachaWarnHTML, popPrize, popBalloon, countPop } from './ui.js';
 import { icon, star, coin, miniPlanet, avatarHTML, AVATAR_COLORS, cardBackURL, setDeck, lockIcon, chestBody, chestLid, boxBody, boxLid } from './art.js';
 import { GROUPS, SECTIONS, ITEMS, shopItems, groupOf, owns, equipped, equip, buy, item, lockedUntil, titleHTML, titleIcon } from './shop.js';
 import { BIOMES, biomeKey, EVENT_BIOMES } from './biomes.js';
@@ -1135,7 +1135,7 @@ function openShop(tab = 'avatar') {
     cls: 'shop-modal',
     body: `<div class="shead"><div class="sgroups">${GROUPS.map((g) => `<button class="sgroup" data-group="${g.k}">${icon(g.ico)}<span>${g.name}</span></button>`).join('')}</div>
       <div class="stabs"></div>
-      <div class="sbar"><p class="shint"></p><span class="smoney">${coin()}<b data-shop-coins>${fmt(save.coins)}</b></span></div></div><div class="sgrid"></div>`,
+      ${meteor() ? `<p class="met-sale">${icon('meteoro')}Lluvia de meteoritos: <b>−${Math.round(MET_OFF.shop * 100)}%</b> en toda la tienda</p>` : ''}<div class="sbar"><p class="shint"></p><span class="smoney">${coin()}<b data-shop-coins>${fmt(save.coins)}</b></span></div></div><div class="sgrid"></div>`,
     onClose: () => {
       closeShelf();
       // El viajero vive en la escena 3D: al cambiarlo se vuelve a armar el mapa.
@@ -1143,12 +1143,14 @@ function openShop(tab = 'avatar') {
     },
   });
   const grid = m.el.querySelector('.sgrid'), hint = m.el.querySelector('.shint'), tabs = m.el.querySelector('.stabs');
+  // Lluvia de meteoritos: 10% menos en toda la tienda (se ve el precio tachado).
+  const cost = (it) => metShopPrice(it.price, !!meteor());
   const card = (sec, it) => {
     const own = owns(sec, it.k), on = inUse(sec, it.k), lock = lockedUntil(sec, it.k);
     const foot = on ? `<span class="s-on">${icon('check')}En uso</span>`
       : own ? '<span class="s-use">Usar</span>'
       : lock ? `<span class="s-lock">${icon('lock')}Mundo ${lock}</span>`
-      : `<span class="s-price ${save.coins < it.price ? 'short' : ''}">${coin()}${fmt(it.price)}</span>`;
+      : `<span class="s-price ${save.coins < cost(it) ? 'short' : ''}">${coin()}${cost(it) < it.price ? `<s>${fmt(it.price)}</s>` : ''}${fmt(cost(it))}</span>`;
     const ex = exFrom(it);
     return `<button class="sitem ${on ? 'on' : ''} ${own ? 'own' : ''} ${lock ? 'locked' : ''}" data-k="${it.k}">${ex ? `<i class="s-ev" title="${ex.name}">${icon(ex.ico)}</i>` : ''}<div class="s-art">${shopPreview(sec, it.k)}</div>${sec === 'title' ? '' : `<b>${it.name}</b>`}${it.text ? `<small>${it.text}</small>` : ''}${foot}</button>`;
   };
@@ -1200,12 +1202,13 @@ function openShop(tab = 'avatar') {
       toast(msg);
     };
     if (lockedUntil(tab, k)) return nope(`${icon('lock')} Se abre al llegar al mundo ${lockedUntil(tab, k)}`);
-    if (!owns(tab, k) && save.coins < it.price) return nope(`${coin()} Te faltan ${fmt(it.price - save.coins)} monedas`);
+    const pay = cost(it);
+    if (!owns(tab, k) && save.coins < pay) return nope(`${coin()} Te faltan ${fmt(pay - save.coins)} monedas`);
     const bought = !owns(tab, k);
     if (bought) {
-      buy(tab, k);
+      buy(tab, k, pay);
       const r = el.getBoundingClientRect();
-      await spendFromWallet('coins', { x: r.left + r.width / 2, y: r.top + r.height / 2 }, it.price);
+      await spendFromWallet('coins', { x: r.left + r.width / 2, y: r.top + r.height / 2 }, pay);
     } else equip(tab, k);
     applyLook();
     paintMe();
@@ -1230,7 +1233,8 @@ const prizeIcons = (p) =>
 // Lo que da un premio, como piezas para la ventana (icono + cantidad).
 const lootHTML = (p) => prizeIcons(p).map((x) => `<span class="loot-it">${x}</span>`).join('');
 // Suma el premio al guardado y lo lanza al monedero desde un punto de la pantalla.
-// Comodines y deshacer no tienen monedero: salen en burbujas (bubbles: false si la ventana ya las mostró).
+// Comodines y deshacer no tienen monedero: salen en burbujas (bubbles: false si la ventana ya las mostró; 'pop':
+// se dan de una vez, saltando en grande, como en la racha).
 async function grantPrize(p, from, { bubbles = true } = {}) {
   save.coins += p.coins || 0;
   save.tickets += p.tickets || 0;
@@ -1240,7 +1244,8 @@ async function grantPrize(p, from, { bubbles = true } = {}) {
   const runs = [];
   if (p.coins) runs.push(flyToWallet('coins', from, p.coins));
   if (p.tickets) runs.push(wait(200).then(() => flyToWallet('tickets', from, p.tickets)));
-  if (bubbles) floatBubbles(prizeIcons({ undo: p.undo, wild: p.wild }), from);
+  if (bubbles === 'pop') [p.wild && ['wild', p.wild], p.undo && ['undo', p.undo]].filter(Boolean).forEach(([k, n], i) => wait(i * 450).then(() => popPrize(icon(k), `+${n}`, { x: from.x + (i ? 40 : p.undo && p.wild ? -40 : 0), y: from.y })));
+  else if (bubbles) floatBubbles(prizeIcons({ undo: p.undo, wild: p.wild }), from);
   await Promise.all(runs);
 }
 function openDailyTicket() {
@@ -1335,7 +1340,7 @@ function openRacha() {
     refreshRacha();
     await wait(reduced() ? 0 : 650);
     m.close();
-    grantPrize(p, { x: r0.left + r0.width / 2, y: r0.top + r0.height / 2 });
+    grantPrize(p, { x: r0.left + r0.width / 2, y: r0.top + r0.height / 2 }, { bubbles: 'pop' });
   };
   // Acostado no cabe el botón de abajo: va arriba, junto al número (rtop se vuelve una fila).
   m = openModal({
@@ -1872,7 +1877,25 @@ const mmss = (ms) => { const s = Math.ceil(ms / 1000); return `${Math.floor(s / 
 // Meteoritos que cruzan el cielo del mapa (encima de los planetas, debajo de los botones). Cada uno con su lugar,
 // tamaño y espera, para que no caigan parejos.
 const METS = [[78, 4, 1, 0], [52, -6, 0.7, 1.3], [96, 18, 0.85, 2.1], [64, 26, 0.6, 3.4], [88, -2, 1.1, 4.6], [38, 8, 0.75, 5.5], [70, 40, 0.65, 6.8]];
+// Se truenan al tocarlos (cuentan para el premio de meteoros, ver countPop) y no vuelven hasta su siguiente pasada.
 const metSky = () => (meteor() ? `<div class="met-sky" aria-hidden="true">${METS.map(([x, y, s, d]) => `<i style="left:${x}%;top:${y}%;--s:${s};animation-delay:${d}s">${icon('meteoro')}</i>`).join('')}</div>` : '');
+document.addEventListener('pointerdown', (e) => {
+  const m = e.target.closest?.('.met-sky i');
+  if (!m || m.classList.contains('popped')) return;
+  e.stopPropagation();
+  const r = m.getBoundingClientRect(), at = { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+  // El que se ve se va (hasta que vuelva a pasar) y en su lugar truena una copia quieta.
+  const f = document.createElement('div');
+  f.className = 'met-pop';
+  f.style.cssText = `left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px`;
+  f.innerHTML = icon('meteoro');
+  document.body.append(f);
+  m.classList.add('popped');
+  m.addEventListener('animationiteration', () => m.classList.remove('popped'), { once: true });
+  popBalloon(f, ['#ffd85a', '#ff8a3d']);
+  sparkle(at, 10);
+  countPop('meteoro', at);
+}, true);
 // Aviso de cada lluvia: un meteorito cae, truena y se dice lo que da. La primera vez en la vida, con sus reglas.
 function openMetIntro() {
   const first = !save.metSeen;

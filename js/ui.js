@@ -358,16 +358,24 @@ export const rachaWarnHTML = (n, pend, when) =>
   `<div class="racha-warn"><span class="rw-ico">${icon('rocket')}<b class="outl">${n}</b></span><p><b>¡Pierdes tu racha de ${n}!</b> ${when}, vuelve a 0${pend ? ' y se pierden los premios sin reclamar' : ''}.</p></div>`;
 
 // Globos y burbujas truenados (save.pops). Se acumulan entre niveles. A los 100 globos regala 1 comodín y la cuenta
-// vuelve a 0; el siguiente pide 200, luego 400… (siempre 1 comodín). Las burbujas de premios (las de cada victoria
-// y las del cofre) igual pero desde 20 (20, 40, 80…) y dan siempre 50 monedas (provisional: fase de economía).
-const POPS = { globo: { from: 100 }, burbuja: { from: 20, coins: 50 } };
-export const popGoal = (kind, lvl) => POPS[kind].from * 2 ** lvl;
+// vuelve a 0; el siguiente pide 200, luego 400, 800 y vuelve a 100 (siempre 1 comodín). Las burbujas de premios (las de
+// cada victoria y las del cofre) igual pero desde 20 (20, 40… 640 y otra vez 20) y dan siempre 50 monedas (provisional:
+// fase de economía).
+// Premio por tronar: globos 1 comodín, burbujas 50 🪙, meteoros de la lluvia 100 🪙 el primero (`first`) y luego 50.
+// La meta se duplica en cada premio y el conteo vuelve a 0. Si la siguiente pasaría de POP_TOP, vuelve a empezar desde
+// `from` (globos 100…800, burbujas 20…640, meteoros 50…800). Los meteoros tienen antes una sola meta de 25 (`intro`).
+const POP_TOP = 1000;
+const POPS = { globo: { from: 100 }, burbuja: { from: 20, coins: 50 }, meteoro: { from: 50, intro: 25, coins: 50, first: 100 } };
+export const popGoal = (kind, lvl) => {
+  const { from, intro } = POPS[kind];
+  if (intro && !lvl) return intro;
+  return from * 2 ** ((lvl - (intro ? 1 : 0)) % (Math.floor(Math.log2(POP_TOP / from)) + 1));
+};
 export function countPop(kind, at) {
   const p = ((save.pops ||= {})[kind] ||= { n: 0, lvl: 0 });
   if (++p.n < popGoal(kind, p.lvl)) return persist();
   p.n = 0;
-  p.lvl++;
-  const coins = POPS[kind].coins;
+  const coins = (!p.lvl++ && POPS[kind].first) || POPS[kind].coins;
   if (coins) save.coins += coins;
   else save.wild++;
   persist();
@@ -422,7 +430,7 @@ export function lootBubbles(m, items, from, { lift = 30 } = {}) {
   }));
 }
 // El premio sale grande del globo, se presume y sube (sin texto: el icono basta).
-function popPrize(html, n, { x, y }) {
+export function popPrize(html, n, { x, y }) {
   buzz([20, 40, 30]);
   sparkle({ x, y }, 22);
   confetti(30);

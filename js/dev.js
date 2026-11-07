@@ -614,9 +614,10 @@ export function openDevMenu({ onGallery, onPlanets, onRefresh, card }) {
       { l: 'Perderla', fn: () => (rachaLose(), onRefresh()) },
       { l: 'Pasar al otro día', fn: () => ((save.devDay = (save.devDay || 0) + 1), persist(), onRefresh()) },
     ] },
-    { t: 'Globos y burbujas', sub: ['globo', 'burbuja'].map((k) => { const p = save.pops?.[k] || { n: 0, lvl: 0 }; return `${k}s ${p.n} de ${popGoal(k, p.lvl)}`; }).join(' · '), items: [
+    { t: 'Globos, burbujas y meteoros', sub: ['globo', 'burbuja', 'meteoro'].map((k) => { const p = save.pops?.[k] || { n: 0, lvl: 0 }; return `${k}s ${p.n} de ${popGoal(k, p.lvl)}`; }).join(' · '), items: [
       { l: 'A 1 globo del comodín', fn: () => popNear('globo') },
       { l: 'A 1 burbuja de las monedas', title: 'Las burbujas salen de los premios al ganar cualquier nivel y del cofre del jefe', fn: () => popNear('burbuja') },
+      { l: 'A 1 meteoro de las monedas', title: 'Los meteoros cruzan el cielo del mapa durante la lluvia (DEV → Lluvia de meteoritos → Que caiga ya)', fn: () => popNear('meteoro') },
       { l: 'Empezar de cero', fn: () => ((save.pops = {}), persist(), onRefresh()) },
     ] },
     { t: 'Colección', sub: colNow ? `${colNow.name} · ${colNow.state.n} fichas` : 'no hay esta semana', items: [

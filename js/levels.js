@@ -694,18 +694,24 @@ export function buildLevel(g, ev = null, t = 0) {
   // Por ahora solo sin ayudas y sin mesas especiales. Se estrena en el primer nivel de su mundo y después sale de
   // vez en cuando (es un regalo: no muy seguido). Usa su propio sorteo: un nivel que no lo trae queda igual que antes.
   const rc = mulberry32(hash(g * 7907 + t * 31 + 11));
-  if (!scroll && n >= 8 && world >= MECH_INTRO.comet && (base === extraDebut('comet') || rc() < EXTRA_ODDS)) mech.add('comet');
+  // En el camino sin ayudas no es al azar: va donde lo pone extraPlan (1-4 por tramo de 30-35 niveles).
+  const plan = fresh && !secret;
+  const extraHere = (m, roll) => base === extraDebut(m) || (plan ? (roll(), extraPlanned(m, base)) : roll() < EXTRA_ODDS);
+  if (!scroll && n >= 8 && world >= MECH_INTRO.comet && extraHere('comet', rc)) mech.add('comet');
   // Cohete turbo: el otro regalo, igual que el cometa pero con su propio sorteo.
   const rt = mulberry32(hash(g * 6007 + t * 37 + 5));
-  const turbo = !scroll && n >= 8 && world >= MECH_INTRO.turbo && (base === extraDebut('turbo') || rt() < EXTRA_ODDS);
+  const turbo = !scroll && n >= 8 && world >= MECH_INTRO.turbo && extraHere('turbo', rt);
   // Boleto partido: mecánica normal (cuenta en el límite de 2), pero con su propio sorteo como el cometa, para que los
   // niveles que no lo traen queden igual. En su mundo va en todos (sola en los primeros niveles); después, de vez en cuando.
   // Por ahora solo sin ayudas y sin mesas especiales (los demás, al cerrar la Fase 7).
   const rb = mulberry32(hash(g * 5303 + t * 41 + 3));
   if (!scroll && n >= 10 && world >= MECH_INTRO.ticket && (world === MECH_INTRO.ticket || rb() < TICKET_ODDS)) {
     const keep = respite || (world === MECH_INTRO.ticket && index < 5) ? 0 : 1;
+    const comet = mech.has('comet');
     [...mech].slice(keep).forEach((m) => mech.delete(m));
     mech.add('ticket');
+    // El cometa no cuenta en el límite: en el camino sin ayudas se queda (los demás niveles, como estaban).
+    if (plan && comet) mech.add('comet');
   }
 
   // Carta regalo: una carta especial (sin número) que se activa sola al quedar destapada del todo
@@ -1139,11 +1145,10 @@ export const MECH_INTRO = { lock: 1, pack: 2, ice: 4, double: 7, arrow: 11, curt
 export const MECH_NAMES = {
   lock: 'Candado', pack: 'Carta regalo', ice: 'Hielo', double: 'Carta doble', arrow: 'Flecha', curtain: 'Cortina', bomb: 'Bomba', live: 'Carta viva', ticket: 'Boleto partido', comet: 'Cometa', turbo: 'Cohete turbo',
 };
-// Cartas de regalo (cometa y cohete turbo): no entran al sorteo de mecánicas, van aparte (buildLevel), con esta
-// probabilidad por nivel cada una. Los que piden ayudas, el evento y los especiales todavía no las traen: sus mazos ya
-// probados (path-data, event-data, special-data) cambiarían; se meten al cerrar la Fase 7.
-// Como los de ayudas y las mesas especiales no las traen, se sortean algo más seguido: contando todos queda ~1 de cada 32.
-// (Pendiente al acomodar niveles: que salgan cada 30-35 niveles en vez de al azar.)
+// Cartas de regalo (cometa y cohete turbo): no entran al sorteo de mecánicas, van aparte (buildLevel).
+// En el camino sin ayudas cada una sale de 1 a 4 veces en cada tramo de 30-35 niveles (extraPlan, pedido 6 nov 2026).
+// Los que piden ayudas, el evento, los especiales y los secretos siguen con esta probabilidad por nivel (sus mazos ya
+// probados cambiarían); los de ayudas que la traen cuentan en su tramo.
 export const EXTRA = ['comet', 'turbo'];
 // Boleto partido: no entra al sorteo de chooseMechanics (cambiaría los niveles ya probados); va con su propio sorteo.
 export const TICKET_ODDS = 0.12;
@@ -1158,6 +1163,29 @@ export function extraDebut(m) {
   }
   return debuts[m];
 }
+
+// Tramos de 30-35 niveles desde el estreno: en cada uno, de 1 a 4 niveles con el regalo (casi siempre 1-2), en
+// lugares al azar entre los que pueden traerlo (sin ayudas ni mesa especial).
+const extraAt = {};
+const helpExtra = (m, g) => {
+  if (!hardHelp(g) || Math.floor(g / LEVELS_PER_WORLD) < MECH_INTRO[m]) return false;
+  const t = hardData(HARD_DATA[g])?.t || 0;
+  return mulberry32(hash(m === 'comet' ? g * 7907 + t * 31 + 11 : g * 6007 + t * 37 + 5))() < EXTRA_ODDS;
+};
+function extraPlan(m) {
+  const at = new Set(), r = mulberry32(hash(m === 'comet' ? 4241 : 9137));
+  for (let g = extraDebut(m) + 1; g < TOTAL_LEVELS; ) {
+    const end = Math.min(TOTAL_LEVELS, g + randInt(r, 30, 35)), ok = [];
+    let fixed = 0;
+    for (; g < end; g++) if (hardHelp(g)) fixed += helpExtra(m, g); else if (!scrollKind(g)) ok.push(g);
+    const x = r(), want = x < 0.45 ? 1 : x < 0.8 ? 2 : x < 0.95 ? 3 : 4;
+    // Siempre al menos 1 propio: el de un nivel con ayudas es solo el sorteo (puede no salir por la mesa o el tamaño).
+    const k = Math.max(1, Math.min(4 - fixed, want - fixed));
+    for (const j of shuffle(r, ok).slice(0, k)) at.add(j);
+  }
+  return at;
+}
+export const extraPlanned = (m, g) => (extraAt[m] ||= extraPlan(m)).has(g);
 
 function chooseMechanics(r, world, index, boss, n, ev = null) {
   if (n < 8) return [];
