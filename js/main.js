@@ -145,7 +145,9 @@ const wallet = () => `
   <div class="pill info" aria-label="Estrellas">${star(true)}<span>${fmt(totalStars())}</span></div>
   <div class="pill info" aria-label="Boletos">${icon('ticket')}<span data-tickets>${save.tickets}</span></div>
   <div class="pill info" aria-label="Monedas">${coin()}<span data-coins>${money(save.coins)}</span></div>
-  <button class="me press" data-a="me" aria-label="Tu perfil" title="Tu perfil">${avatarHTML(save)}</button>`;
+  <button class="me press" data-a="me" aria-label="Tu perfil" title="Tu perfil">${avatarHTML(save)}</button>${devBtn}`;
+// Modo dev: va en el lugar del avatar (arriba a la derecha); con el modo dev prendido el avatar se esconde (CSS).
+const devBtn = '<button class="tb press dev-pill" data-a="dev" aria-label="Modo dev" title="Modo dev">DEV</button>';
 // Botón de jugar: es el mismo en todas las vistas (universo, constelación) y lleva directo al tablero;
 // al salir del tablero se vuelve al planeta de ese nivel.
 const playCTA = () => {
@@ -197,7 +199,6 @@ function showMap({ region, start = null, anim, after = null, unlock = null } = {
       <button class="hbtn tb press out-btn" data-a="up" aria-label="Ver todas las constelaciones" title="Constelaciones">${icon('prev')}</button>
       <div class="wtitle info">${constIcon()}<div><b>${locked ? icon('lock') : ''}${regionName(region)}</b><small>Constelación ${region + 1} de ${REGION_COUNT} · ${star(true)}${regionStars(region)}/${REGION_SIZE * 30}</small></div></div>
     </div>
-    <button class="dev-pill" data-a="dev">DEV</button>
     <div class="side l">${sideButtons()}</div>
     <div class="side r" ${after ? 'style="opacity:0"' : ''}>${eventButtons(after?.res)}</div>
     <div class="p-only phud"></div>
@@ -606,7 +607,6 @@ function showUniverse({ from = regionOf(currentWorld()) } = {}) {
     <div class="wtitle solo info">${constIcon()}<div><b>Constelaciones</b><small>${REGION_COUNT} en el universo · ${star(true)}${fmt(totalStars())}</small></div></div>
     <div class="side l">${sideButtons()}</div>
     <div class="side r">${eventButtons()}</div>
-    <button class="dev-pill" data-a="dev">DEV</button>
     <div class="res">${wallet()}</div>
     <div class="cta">${fiBtn()}${playCTA()}</div>
   </div>`);
@@ -1589,9 +1589,8 @@ function showEvent({ anim, after = null, start = null, kind = null } = {}) {
     </div>
     <div class="p-only phud"></div>
     <div class="res">${EVS.tk ? evTicketPill(e) : ''}<div class="pill info" aria-label="Monedas">${coin()}<span data-coins>${money(save.coins - (after?.coins || 0))}</span></div>
-      <button class="me press" data-a="me" aria-label="Tu perfil" title="Tu perfil">${avatarHTML(save)}</button></div>
+      <button class="me press" data-a="me" aria-label="Tu perfil" title="Tu perfil">${avatarHTML(save)}</button>${devBtn}</div>
     <div class="cta"></div>
-    <button class="dev-pill" data-a="dev">DEV</button>
   </div>`);
   let galaxy = null;
   const cta = el.querySelector('.cta'), phud = el.querySelector('.phud');

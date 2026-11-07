@@ -64,6 +64,7 @@ export function attachDevBar(game, { go, toGallery }) {
   const g = game.level.g;
   const bar = document.createElement('div');
   bar.className = 'dev-bar';
+  // Botón DEV flotante (siempre a la vista, no quita lugar al tablero) que abre el menú como uno de hamburguesa.
   // Tres grupos: ir (galería y niveles), probar (ver, solución, paso, resolver, ganar) e Info. Iconos de trazo, sin emojis.
   const L = game.level;
   // Evento o festividad (traen k): su número dentro del evento; especial suelto; si no, mundo y nivel.
@@ -71,16 +72,29 @@ export function attachDevBar(game, { go, toGallery }) {
   const where = set ? (L.special != null ? 'festividad' : 'evento del mes') : L.special != null ? `Especial ${L.special + 1}` : `M${Math.floor(g / LEVELS_PER_WORLD) + 1} · N${(g % LEVELS_PER_WORLD) + 1}`;
   const btn = (d, ico, txt, extra = '') => `<button data-d="${d}" ${extra}>${DI[ico]}${txt ? `<span>${txt}</span>` : ''}</button>`;
   bar.innerHTML = `
-    <b class="db-tag">DEV</b>
+    <button class="db-fab" data-d="menu" aria-label="Menú dev" aria-expanded="false">DEV</button>
+    <div class="db-menu">
     <div class="db-grp">${btn('gal', 'grid', 'Galería')}</div>
     <div class="db-grp db-nav">${btn('prev', 'prev', '', `aria-label="Nivel anterior" ${g === 0 ? 'disabled' : ''}`)}<button data-d="goto" class="db-lvl" title="Ir a nivel"><b>#${num}</b><small>${where}${L.help ? ` · pide ${L.help}` : ''}</small></button>${btn('next', 'next', '', `aria-label="Nivel siguiente" ${g >= TOTAL_LEVELS - 1 ? 'disabled' : ''}`)}</div>
     <div class="db-grp">${btn('reveal', 'eye', 'Ver todo')}${btn('sol', 'flag', 'Solución')}${btn('step', 'step', 'Paso')}${btn('auto', 'play', 'Resolver')}${btn('win', 'trophy', 'Ganar')}</div>
-    <div class="db-grp">${btn('info', 'info', 'Info')}</div>`;
+    <div class="db-grp">${btn('info', 'info', 'Info')}</div>
+    </div>`;
+  const open = (on) => {
+    bar.classList.toggle('open', on);
+    bar.querySelector('.db-fab').setAttribute('aria-expanded', on);
+  };
+  // Tocar fuera lo cierra (lo de adentro lo deja abierto: Paso o Ver todo se usan varias veces seguidas).
+  const outside = (e) => {
+    if (!bar.isConnected) return document.removeEventListener('pointerdown', outside, true);
+    if (!bar.contains(e.target)) open(false);
+  };
+  document.addEventListener('pointerdown', outside, true);
   let reveal = false;
   bar.addEventListener('click', (e) => {
     const b = e.target.closest('[data-d]');
     if (!b) return;
     const act = {
+      menu: () => open(!bar.classList.contains('open')),
       gal: () => toGallery(),
       prev: () => go(g - 1),
       next: () => go(g + 1),
@@ -104,7 +118,7 @@ export function attachDevBar(game, { go, toGallery }) {
     };
     act[b.dataset.d]?.();
   });
-  game.el.querySelector('.board-wrap').before(bar);
+  game.el.append(bar);
 }
 
 function showInfo(L) {
