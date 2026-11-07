@@ -1920,7 +1920,7 @@ export class Game {
   }
 
   // Precio de los boosters según el nivel que se juega (mismos escalones que los boletos).
-  // En el evento y las festividades todo cuesta 30% más (también +5); con la lluvia de meteoritos, comodín y
+  // En el evento y las festividades todo cuesta 15% más (también +5); con la lluvia de meteoritos, comodín y
   // deshacer cuestan 30% menos.
   priceOf(kind) {
     const r = this.helpRate(kind);

@@ -269,9 +269,10 @@ export const EVENTOS = {
     ex: [{ space: 'embrujada' }, { frame: 'halloween' }, { ring: 'telarana' }, { avatar: 'gatobruja', back: 'calabazas' }, { title: 'hechicero', traveler: 'escoba' }],
   },
 };
-// Monedas de los niveles 1-4 de cada planeta (pocas) y lo que da el 5.º si ya tienes su exclusivo.
-export const EV_COINS = [20, 25, 30, 35, 40];
-export const EV_REPEAT = [{ coins: 300 }, { undo: 3 }, { wild: 1 }, { wild: 2, coins: 300 }, { wild: 3, coins: 600 }];
+// Monedas de los niveles 1-4 de cada planeta y lo que da el 5.º si ya tienes su exclusivo. Subidas 50% el
+// 6 nov 2026 (antes 20-40 y 300/600), cuando sus niveles duros dejaron de pedir ayudas.
+export const EV_COINS = [30, 40, 45, 55, 60];
+export const EV_REPEAT = [{ coins: 450 }, { undo: 3 }, { wild: 1 }, { wild: 2, coins: 450 }, { wild: 3, coins: 900 }];
 export const EV_TICKET_WAIT = DAY;
 
 // Fecha del teléfono (el modo dev la mueve con save.devDay).
@@ -478,8 +479,9 @@ export const FIESTAS = [
     planets: ['Valle de las Bromas', 'Carpa del Bufón', 'Planeta Palomita'],
     ex: [{ space: 'bromas', frame: 'inocente' }, { ring: 'cascabeles', back: 'arlequin' }, { avatar: 'bufoncito', title: 'bromista', traveler: 'sorpresa' }] },
 ];
-export const FI_COINS = [20, 30, 40, 50];
-export const FI_REPEAT = [{ coins: 300, undo: 2 }, { wild: 1, coins: 200 }, { wild: 2, coins: 400 }];
+// Subidas 50% el 6 nov 2026 (antes 20-50 y 300/200/400), como las del evento del mes.
+export const FI_COINS = [30, 45, 60, 75];
+export const FI_REPEAT = [{ coins: 450, undo: 2 }, { wild: 1, coins: 300 }, { wild: 2, coins: 600 }];
 // Planetas (P), niveles por planeta (N) y niveles en total (L) de una festividad.
 export const fiShape = (f) => { const P = f?.p || FIESTA_PLANETS, N = f?.n || FIESTA_PER_PLANET; return { P, N, L: P * N }; };
 const dayOf = (d) => Math.floor((d.getTime() - d.getTimezoneOffset() * 6e4) / DAY);

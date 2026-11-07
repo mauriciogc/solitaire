@@ -1037,7 +1037,7 @@ html.dev-on .galaxy .res .me { display: none; }
 .g-badges { position: absolute; right: 2px; top: 2px; display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
 .gb { display: inline-flex; align-items: center; gap: 2px; padding: 0 6px 1px; border-radius: 99px; font: 400 11px 'Lilita One'; font-style: normal; color: #fff; box-shadow: 0 1px 0 #0006; }
 .gb .ico { width: 13px; height: 13px; }
-.gb-boss { background: #e89a17; } .gb-help { background: #d62f4f; } .gb-rest { background: #23a05e; } .gb-mesa { background: #2f86c0; }
+.gb-boss { background: #e89a17; } .gb-t1 { background: #d97706; } .gb-t2 { background: #c2410c; } .gb-t3 { background: #b91c1c; } .gb-t4 { background: #6d28d9; } .gb-rest { background: #23a05e; } .gb-mesa { background: #2f86c0; }
 .g-where { font-size: 11.5px; font-weight: 700; opacity: .65; }
 .g-shape { font: 400 15px/1.15 'Lilita One'; }
 .g-stats { display: flex; flex-wrap: wrap; gap: 0 8px; font-size: 11.5px; font-weight: 700; opacity: .8; }
@@ -1046,7 +1046,7 @@ html.dev-on .galaxy .res .me { display: none; }
 .g-rate { position: relative; margin-top: auto; height: 20px; border-radius: 7px; background: #0004; overflow: hidden; font-size: 11.5px; font-weight: 800; }
 .g-rate i { position: absolute; inset: 0 auto 0 0; width: 0; background: #fff3; transition: width 400ms var(--ease-out); }
 .g-rate span { position: relative; display: block; padding: 1px 7px; }
-.g-rate.r-easy i { background: #23a05e; } .g-rate.r-mid i { background: #c9a020; } .g-rate.r-hard i { background: #e2753a; } .g-rate.r-max i, .g-rate.r-help i { background: #d62f4f; }
+.g-rate.r-easy i { background: #23a05e; } .g-rate.r-mid i { background: #c9a020; } .g-rate.r-hard i { background: #e2753a; } .g-rate.r-max i { background: #d62f4f; }
 .pv { position: relative; width: 150px; height: 104px; margin: 0 auto 4px; border-radius: 8px; background: #0003; overflow: hidden; }
 .pv .m { position: absolute; border-radius: 2px; background: hsl(var(--hue) 60% 48%); border: 1px solid #fff9; }
 .pv .m.free { background: #fff; } .pv .m.lock { border: 2px solid #ff4d6d; } .pv .m.key { background: var(--gold); } .pv .m.pack { background: #9b5cf0; }

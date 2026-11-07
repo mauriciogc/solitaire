@@ -1,9 +1,5 @@
 import { mulberry32, hash, randInt, pick, shuffle } from './rng.js';
-import { follows, mod13, solve, initState } from './engine.js';
-import { EVENT_DATA } from './event-data.js';
-import { HARD_DATA } from './path-data.js';
-import { SPECIAL_DATA } from './special-data.js';
-import { SOFT_DATA } from './soft-data.js';
+import { follows, mod13, solve, initState, playRank, cutOf, play as playCard, draw as drawCard, won, starsFor, playCasual } from './engine.js';
 
 // Unidades del tablero: una carta mide W x H. Posiciones = esquina superior izquierda.
 export const W = 1;
@@ -424,7 +420,7 @@ const FRESH_UNLOCK = [['butterfly', 0.08, 1], ['heart', 0.12, 0.6], ['spiral', 0
 const freshMin = (g) => (g >= 10 ? 15 : g >= 3 ? 13 : 0);
 
 // Respiros: desde el nivel 11, en cada mundo 1 nivel al azar (fijo por mundo) del 2.º al 9.º, y en 1 de cada 3
-// mundos otro más. Nunca el jefe ni uno que pide ayudas (esos no son "fresh"). Forma fácil, dificultad baja y
+// mundos otro más. Nunca el jefe ni uno duro (esos no son "fresh"). Forma fácil, dificultad baja y
 // tablero chico permitido: el bot casual los gana ~80% (como los del 1 al 10).
 const RESPITE_SHAPES = ['butterfly', 'layers', 'towers', 'clusters', 'clusters', 'pyramid'];
 const RESPITE_MIN = 10;
@@ -613,25 +609,106 @@ export const secretId = (w) => TOTAL_LEVELS + w;
 export const isSecret = (g) => g >= TOTAL_LEVELS && g < TOTAL_LEVELS + WORLD_COUNT;
 
 // ev: nivel del evento del mes (ver eventLevel): trae su propia dificultad, semilla y mundo de mecánicas.
-// Los niveles que piden ayudas (hardHelp) y los tableros especiales salen ya endurecidos de path-data.js y special-data.js.
+// Ningún nivel pide ayudas (6 nov 2026; el sistema de antes, con niveles que sin comodines o +5 no tenían solución,
+// quedó en la rama ayudas-en-duro). Los duros se arman con su escalón (TIERS): siempre se pueden ganar sin ayudas y
+// con el camino acertado dan 3★. Camino (hardHelp 1-3): muy difícil, extremo, demasiado extremo. Evento del mes
+// (EVENT_HELP 1-3) y especiales/festividades (specialHelp 1-4): difícil, muy difícil, extremo, demasiado extremo.
+// Sin archivos: el tablero de cada uno lo escoge el juego al armarlo con una revisión rápida (pickLevel).
 export function generateLevel(g, ev = null) {
   if (ev) return buildLevel(g, ev);
   if (g >= SPECIAL_ID) return specialLevel(g - SPECIAL_ID);
-  const h = hardHelp(g), d = h && hardData(HARD_DATA[g]);
-  // Sin ayudas: si salía muy duro (bot < 15% antes del 2500), otro tablero ya probado (soft-data.js).
-  return h ? hardened(buildLevel(g, null, d?.t), d, h) : buildLevel(g, null, SOFT_DATA[g] || 0);
+  const h = hardHelp(g);
+  if (h) return pickLevel(`c${g}`, h + 1, (t) => buildLevel(g, null, t, h + 1));
+  return softLevel(g);
 }
 
-// Tablero sin endurecer. t: otro tablero para el mismo nivel (tools/hard-levels.mjs prueba varios hasta que uno se deja).
-export function buildLevel(g, ev = null, t = 0) {
+// Revisión rápida (sin archivos, 6 nov 2026): el bot casual juega QUICK partidas con una semilla fija (el mismo
+// resultado en todos los teléfonos). Lo que se escogió se recuerda mientras la página esté abierta (picked).
+export const QUICK = 30;
+const picked = new Map();
+// Victorias del bot en QUICK partidas; deja de jugar en cuanto pasa de stop (ya se sabe que es demasiado fácil).
+const quickWins = (L, stop = QUICK) => {
+  const r = mulberry32(L.g + 1);
+  let w = 0;
+  for (let i = 0; i < QUICK && w <= stop; i++) w += playCasual(L, r);
+  return w;
+};
+// Niveles duros: prueba versiones t hasta una que se gane con el camino acertado y deje al bot cerca de TIERS[tier].aim
+// (si en PICK_TRIES ninguna cae en su rango, la más cercana). Unas decenas de milisegundos.
+const PICK_TRIES = 16;
+export function pickLevel(key, tier, make) {
+  if (picked.has(key)) return make(picked.get(key));
+  const aim = (TIERS[tier].aim / 100) * QUICK, near = Math.max(1, aim * 0.35);
+  let best = null;
+  for (let t = 0; t < PICK_TRIES; t++) {
+    const L = make(t);
+    if (refLeft(L) < 0) continue;
+    const off = Math.abs(quickWins(L, aim + Math.max(near, best ? best.off : QUICK)) - aim);
+    if (!best || off < best.off) best = { L, t, off };
+    if (off <= near) break;
+  }
+  picked.set(key, best.t);
+  return best.L;
+}
+
+// Niveles normales: a veces, por suerte de los números, uno sale brutal (bot < 15%, como un extremo pero sin estar
+// marcado). Si en la revisión rápida el bot gana menos del 15%, se arma la siguiente versión t. Del 11 al SOFT_UNTIL.
+export const SOFT_UNTIL = 2500;
+function softLevel(g) {
+  if (g < 10 || g >= SOFT_UNTIL || isSecret(g)) return buildLevel(g);
+  const key = `s${g}`;
+  if (picked.has(key)) return buildLevel(g, null, picked.get(key));
+  let best = null;
+  for (let t = 0; t < 12; t++) {
+    const L = buildLevel(g, null, t), w = quickWins(L);
+    if (!best || w > best.w) best = { L, t, w };
+    if (w >= QUICK * 0.15) break;
+  }
+  picked.set(key, best.t);
+  return best.L;
+}
+
+// Escalones de los niveles duros (tier 1-4; el camino usa hardHelp + 1). min: cartas mínimas del tablero; decoys: señuelos de más;
+// chain: cadenas más cortas (más robos y menos premios de racha); mechs: mecánicas (cuántas como mucho y al menos);
+// spares: sobrantes al final del mazo (pocas: un error y ya no alcanza); miss: cartas que puedes desperdiciar
+// respecto al camino acertado y aún sacar 3★ (sus estrellas van aparte, ver level.stars y starsFor); aim: % de
+// victorias del bot casual que se busca (pickLevel prueba tableros t y se queda con el más cercano).
+export const TIERS = [
+  null,
+  { name: 'Difícil', min: 20, decoys: 0, chain: 1, mechs: [2, 1], spares: 2, miss: 1, aim: 28 },
+  { name: 'Muy difícil', min: 24, decoys: 0, chain: 1, mechs: [2, 1], spares: 1, miss: 1, aim: 18 },
+  { name: 'Extremo', min: 28, decoys: 0, chain: 2, mechs: [2, 2], spares: 1, miss: 1, aim: 10 },
+  { name: 'Demasiado extremo', min: 32, decoys: 0, chain: 3, mechs: [3, 2], spares: 0, miss: 0, aim: 3 },
+];
+// Cartas que le quedan al mazo jugando la solución de referencia (el camino acertado: roba solo cuando su carta aún
+// no se puede jugar). -1 si no termina.
+// Igual que la referencia de npm test (tests/verify-levels.mjs).
+export function refLeft(L) {
+  let s = initState(L);
+  for (const id of L.solution) {
+    if (s.rem[id]) continue;
+    // Boleto partido entero: la solución juega primero la mitad de arriba.
+    const c = L.cards[id], top = c.half != null && !cutOf(c, s);
+    while (top ? playRank(L, c, s) !== c.rank : playRank(L, c, s) == null) {
+      if (!s.stock.length) return -1;
+      s = drawCard(L, s).s;
+    }
+    s = playCard(L, s, id).s;
+  }
+  return won(s) ? s.stock.length : -1;
+}
+export const refStars = (L) => { const k = refLeft(L); return k < 0 ? 0 : starsFor(L, k); };
+
+// t: otro tablero para el mismo nivel (pickLevel escoge el de los duros; softLevel, el de los normales).
+export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
+  const T = TIERS[tier];
   const secret = !ev && isSecret(g);
   const base = ev ? ev.world * LEVELS_PER_WORLD + ev.index : secret ? (g - TOTAL_LEVELS) * LEVELS_PER_WORLD + LEVELS_PER_WORLD - 1 : g;
   const world = Math.floor(base / LEVELS_PER_WORLD);
   const index = base % LEVELS_PER_WORLD;
   const r = mulberry32(hash(ev ? ev.seed : t ? g + t * 104729 : g));
-  // Todos los niveles usan las formas, piezas, mesas y cartas nuevas (cierre de la Fase 7). Solo los del camino sin
-  // ayudas (fresh) tienen respiros; los que piden ayudas no llevan mesa enrollada (en una pantalla ancha se ve más
-  // tira y se ganarían sin ayuda). El evento y los especiales traen su mesa en ev.scroll (ver eventBase, specialBase).
+  // Todos los niveles usan las formas, piezas, mesas y cartas nuevas (cierre de la Fase 7). Solo los del camino que no
+  // son duros (fresh) tienen respiros; los duros no llevan mesa enrollada (en una pantalla ancha se ve más tira). El evento y los especiales traen su mesa en ev.scroll (ver eventBase, specialBase).
   const fresh = !ev && !hardHelp(g);
   // Respiro: en cada mundo 1 nivel (a veces 2) sale fácil, para que no todos sean cuesta arriba (ver isRespite).
   const respite = fresh && !secret && isRespite(base);
@@ -650,7 +727,9 @@ export function buildLevel(g, ev = null, t = 0) {
   const shape = (dd) => (template === 'clusters' ? clusters(r, dd, index === LEVELS_PER_WORLD - 1, true) : [TEMPLATES[template](r, dd)]);
   let raw = scroll ? scrollTramos(r, d, scroll) : shape(d);
   // Sin ayudas: si salió muy chico, se vuelve a armar un poco más grande.
-  for (let k = 1; !ev && !scroll && k <= 12 && raw.reduce((s, gr) => s + gr.length, 0) < (respite ? RESPITE_MIN : freshMin(base)); k++) raw = shape(Math.min(1, d + k * 0.15));
+  // Niveles duros: tableros más grandes (T.min).
+  const minN = respite ? RESPITE_MIN : Math.max(freshMin(base), T?.min || 0);
+  for (let k = 1; (!ev || T) && !scroll && k <= 12 && raw.reduce((s, gr) => s + gr.length, 0) < minN; k++) raw = shape(Math.min(1, d + k * 0.15));
   const groups = raw.map(normalizeGroup);
   const pos = groups.flatMap((gr, gi) => gr.cards.map((c) => ({ ...c, group: gi })));
   const n = pos.length;
@@ -685,7 +764,7 @@ export function buildLevel(g, ev = null, t = 0) {
   const boss = index === LEVELS_PER_WORLD - 1;
   // Mecánicas del nivel: cada una aparece a partir de su mundo y luego se combinan (máximo 2 tipos).
   // Respiro: una sola mecánica como mucho.
-  const mech = new Set(chooseMechanics(r, world, index, boss, n, ev).slice(0, respite ? 1 : 2));
+  const mech = new Set(chooseMechanics(r, world, index, boss, n, ev, T).slice(0, respite ? 1 : T ? T.mechs[0] : 2));
   // Mesa enrollada y nebulosa sin bombas: su cuenta correría con la carta todavía escondida.
   if (scroll) mech.delete('bomb');
   // Estreno de la plegable sin otras mecánicas: al principio solo se juega el panel de en medio y ya cuesta más.
@@ -747,7 +826,7 @@ export function buildLevel(g, ev = null, t = 0) {
 
   const minC = d < 0.15 ? 4 : d < 0.35 ? 3 : 2;
   // Evento: cadenas más cortas en cada planeta (menos rachas largas = menos premios de racha).
-  const maxC = Math.max(minC + 1, Math.round(9 - d * 5.5) - (boss ? 2 : 0) - (ev ? ev.tight : 0));
+  const maxC = Math.max(minC + 1, Math.round(9 - d * 5.5) - (boss ? 2 : 0) - (ev ? ev.tight : 0) - (T ? T.chain : 0));
   const ranks = new Array(n);
   const starts = [];
   const chainEnd = []; // índice (en play) de la última carta de la cadena de cada carta
@@ -769,7 +848,7 @@ export function buildLevel(g, ev = null, t = 0) {
   const card = (rank) => ({ rank, suit: randInt(r, 0, 3) });
   const waste0 = card(starts[0]);
   const stock = starts.slice(1).map(card);
-  const decoys = d < 0.15 ? 0 : randInt(r, 0, Math.round(d * 3)) + (boss ? 1 : 0);
+  const decoys = d < 0.15 ? 0 : randInt(r, 0, Math.round(d * 3)) + (boss ? 1 : 0) + (T ? T.decoys : 0);
   for (let i = 0; i < decoys; i++) stock.splice(randInt(r, 0, stock.length), 0, card(randInt(r, 0, 12)));
   // Desde d ≥ 0.15 el margen base baja a 1: las 3★ (y a veces ganar) dependen de los premios de racha o de gastar.
   let spares = (d < 0.15 ? 2 : 1) + Math.round((1 - d) ** 1.5 * (3 + n * 0.25));
@@ -784,6 +863,8 @@ export function buildLevel(g, ev = null, t = 0) {
   if (debut && fold) spares += 3;
   // En niveles fáciles las sobrantes suelen ser vecinas de alguna carta del tablero.
   const helpfulCard = (p) => card(r() < p ? (pick(r, known) + pick(r, [1, 12])) % 13 : randInt(r, 0, 12));
+  // Niveles duros: pocas sobrantes (las estrellas se miden contra el camino acertado, ver abajo).
+  if (T) spares = T.spares;
   for (let i = 0; i < spares; i++) stock.push(helpfulCard((1 - d) * 0.85));
 
   const cards = pos.map((p, i) => ({ id: i, ...p, rank: ranks[i], suit: randInt(r, 0, 3), coveredBy: coveredBy[i], ...(under && { under: under[i] }), ...(neb?.[i] && { neb: neb[i] }) }));
@@ -1000,10 +1081,19 @@ export function buildLevel(g, ev = null, t = 0) {
   // Si no hay solución: primero se quita la carta viva y luego se le da más margen a la bomba.
   // En el evento los premios de racha van al doble de distancia: se comprueba igual que se juega.
   if (ev) level.rewardStep = 2;
-  const check = () => !cards.some((c) => c.live || c.bomb) || !!solve(level, initState(level), 60000);
+  // Primero el camino acertado (instantáneo); el solucionador solo si ese no llega a tiempo.
+  const check = () => !cards.some((c) => c.live || c.bomb) || refLeft(level) >= 0 || !!solve(level, initState(level), 60000);
   if (!check()) {
     for (const c of cards) if (c.live) (c.rank = ranks[c.id]), delete c.live;
     for (let extra = 4; !check() && extra <= 40; extra *= 2) for (const c of cards) if (c.bomb) c.bomb += extra;
+  }
+  // Niveles duros: estrellas contra el camino acertado (level.stars = cartas que deben quedar para 2★ y 3★).
+  // 3★ = terminar con lo que deja la referencia menos T.miss; 2★ = la mitad de eso; 1★ = ganar.
+  if (T) {
+    level.tier = tier;
+    // Si el camino acertado termina con el mazo vacío, ganar ya son 3★ (ganar es lo difícil).
+    const best = Math.max(0, refLeft(level));
+    level.stars = [Math.ceil(best / 2), Math.max(0, best - T.miss)];
   }
   level.meta.mechs = MECHANICS.filter((m) => cards.some((c) => c[MECH_FIELD[m]] != null) || (m === 'turbo' && stock.some((c) => c.turbo)));
   return level;
@@ -1020,8 +1110,8 @@ export const eventDifficulty = (k) => {
   const p = Math.floor(k / EVENT_PER_PLANET), j = k % EVENT_PER_PLANET;
   return Math.min(1, 0.42 + p * 0.1 + j * 0.02 + (j === EVENT_PER_PLANET - 1 ? 0.05 : 0));
 };
-// Ayudas que pide cada nivel (por planeta): sin ellas no hay solución; con ese número de comodines
-// (o de compras de +5) sí. Planeta 1: 1 de 5 niveles, planeta 2: 2 de 5… planeta 5: los 5. El 5.º de cada planeta es el más duro.
+// Escalón de cada nivel (por planeta; el nombre viene de cuando pedían ayudas): 0 normal, 1 difícil, 2 muy difícil,
+// 3 extremo (TIERS). Planeta 1: 1 de 5 niveles duro, planeta 2: 2 de 5… planeta 5: los 5. El 5.º de cada planeta es el más duro.
 export const EVENT_HELP = [
   [0, 0, 0, 0, 1],
   [0, 0, 1, 0, 2],
@@ -1033,28 +1123,25 @@ export const EVENT_HELP = [
 // (el evento se abre al ganar el nivel 80, mundo 9). El mundo de cada grupo es el que se usa para armarlo.
 export const EVENT_WORLDS = [8, 11, 15, 19, 24];
 export const eventGroup = (world) => EVENT_WORLDS.reduce((b, w, i) => (world >= w ? i : b), 0);
-// Tablero base (antes de endurecerlo). t = intento: tools/event-levels.mjs prueba varios hasta dar con uno que cumpla.
+// t = otro tablero para el mismo nivel (pickLevel escoge cuál va en los duros).
 // En el evento los premios de racha van al doble de distancia (rewardStep 2).
 // Mesas especiales que ya conoce quien llegó al mundo w (sin la enrollada: depende del ancho de la pantalla).
 const helpScrolls = (w) => Object.keys(SCROLL_FROM).filter((k) => k !== 'mesa' && SCROLL_FROM[k] < (w + 1) * LEVELS_PER_WORLD);
-export function eventBase(month, k, group, t = 0) {
+// tier: escalón del nivel duro (ver TIERS; EVENT_HELP dice cuál lleva cada uno, 0 = normal).
+export function eventBase(month, k, group, t = 0, tier = 0) {
   const p = Math.floor(k / EVENT_PER_PLANET), j = k % EVENT_PER_PLANET, boss = j === EVENT_PER_PLANET - 1;
   // Una mesa especial por planeta, nunca en el jefe (cuál nivel y cuál mesa cambian con el mes).
-  // Desde el intento 500 va sin ella: el respaldo de event-levels.mjs cuando con la mesa no se logra.
   const kinds = helpScrolls(EVENT_WORLDS[group]), h = hash(month * 131 + group * 17 + p);
-  const scroll = t < 500 && kinds.length && j === h % (EVENT_PER_PLANET - 1) ? kinds[(h >>> 4) % kinds.length] : null;
+  const scroll = kinds.length && j === h % (EVENT_PER_PLANET - 1) ? kinds[(h >>> 4) % kinds.length] : null;
   // Índice dentro del mundo: el jefe usa el 10 (tableros de jefe); los demás, del 2 al 8.
-  const L = generateLevel(EVENT_ID + k, { world: EVENT_WORLDS[group], index: boss ? LEVELS_PER_WORLD - 1 : 1 + j * 2, d: eventDifficulty(k), tight: p, scroll, seed: 7e6 + month * 977 + group * 131 + k + t * 7919 });
-  return { ...L, k, planet: p, boss, rewardStep: 2, help: EVENT_HELP[p][j] };
+  const L = generateLevel(EVENT_ID + k, { world: EVENT_WORLDS[group], index: boss ? LEVELS_PER_WORLD - 1 : 1 + j * 2, d: eventDifficulty(k), tight: p, scroll, seed: 7e6 + month * 977 + group * 131 + k + t * 7919, tier });
+  return { ...L, k, planet: p, boss, rewardStep: 2 };
 }
-// key = edición (año × 12 + mes). Los tableros salen de event-data.js (ya probados: piden sus ayudas);
-// cada año se cambian los números de las cartas (mismo tablero, misma dificultad).
+// key = edición (año × 12 + mes). Los duros escogen su tablero al armarse (pickLevel); cada año se cambian los
+// números de las cartas (mismo tablero, misma dificultad).
 export function eventLevel(key, k, world) {
-  const month = key % 12, group = eventGroup(world);
-  const d = EVENT_DATA[`${month}.${group}`]?.[k];
-  let L = eventBase(month, k, group, d?.t || 0);
-  if (d?.s && L.help) L = { ...L, stock: L.stock.map((c, i) => ({ ...c, rank: d.s[i] })), help: d.h ?? L.help };
-  else L.help = 0;
+  const month = key % 12, group = eventGroup(world), h = EVENT_HELP[Math.floor(k / EVENT_PER_PLANET)][k % EVENT_PER_PLANET];
+  const L = h ? pickLevel(`e${month}.${group}.${k}`, h, (t) => eventBase(month, k, group, t, h)) : eventBase(month, k, group);
   const v = Math.floor(key / 12) - 2026;
   return v > 0 ? { ...variantLevel(L, v), variant: 0 } : L;
 }
@@ -1062,12 +1149,11 @@ export function eventLevel(key, k, world) {
 export const EVENT_ID = TOTAL_LEVELS + WORLD_COUNT;
 export const isEvent = (g) => g >= EVENT_ID;
 
-// ---------- Niveles que piden ayudas (camino normal) ----------
-// Cada constelación (10 mundos = 100 niveles) tiene redondear(3 + (c − 1) × 37 / 51) niveles que no se
-// ganan sin ayudas (comodines o compras de +5): 3 en la primera y sube hasta 40 (el tope, 40%) en la 52.
-// Cuáles son sale de una semilla fija (los mismos para todos; en la primera, desde el planeta 6). Constelaciones 1-15:
-// todos piden 1; 16-35: algunos piden 2; 36-52: algunos 2 y algunos 3.
-// Su mazo ya probado viene de path-data.js (tools/hard-levels.mjs) y npm test lo revisa.
+// ---------- Niveles duros del camino ----------
+// Cada constelación (10 mundos = 100 niveles) tiene redondear(3 + (c − 1) × 37 / 51) niveles duros: 3 en la primera
+// y sube hasta 40 (el tope, 40%) en la 52. Cuáles son sale de una semilla fija (los mismos para todos; en la primera,
+// desde el planeta 6). hardHelp(g) = 1, 2 o 3 (el nombre viene de cuando pedían ayudas): escalón TIERS[h + 1], muy
+// difícil, extremo o demasiado extremo. Constelaciones 1-15: todos 1; 16-35: algunos 2; 36-52: algunos 2 y 3.
 export const CONST_LEVELS = 10 * LEVELS_PER_WORLD;
 export const hardCount = (c) => Math.round(3 + (c * 37) / 51); // c desde 0
 const HARD = new Map();
@@ -1079,51 +1165,37 @@ for (let c = 0; c < TOTAL_LEVELS / CONST_LEVELS; c++) {
 }
 export const hardHelp = (g) => HARD.get(g) || 0;
 
-// Datos guardados: "t:mazo[:h]" (t = tablero, mazo = un carácter por carta en base 13, h = ayudas si se
-// lograron menos de las pedidas). Sin datos (aún no se corre la herramienta) queda el tablero normal.
-export function hardData(str) {
-  if (!str) return null;
-  const [t, s, h] = str.split(':');
-  return { t: +t, s: [...s].map((c) => parseInt(c, 13)), ...(h && { h: +h }) };
-}
-function hardened(L, d, help) {
-  return d?.s ? { ...L, stock: L.stock.map((c, i) => ({ ...c, rank: d.s[i] })), help: d.h ?? help } : L;
-}
-
 // ---------- Tableros especiales (para eventos exclusivos) ----------
-// 1,000 tableros aparte, que no salen ni en el camino ni en el evento del mes, ordenados por cuántas ayudas
-// piden: 0-249 piden 1, 250-499 piden 2, 500-749 piden 3 y 750-999 piden 4. Cada uno es de un grupo de
+// 1,000 tableros aparte, que no salen ni en el camino ni en el evento del mes, ordenados por escalón
+// (specialHelp): 0-249 difícil, 250-499 muy difícil, 500-749 extremo y 750-999 demasiado extremo. Cada uno es de un grupo de
 // mecánicas como el evento (grupo 0-4 = el jugador ya llegó al mundo 9, 12, 16, 20 o 25): solo usan las que ya conoce.
-// Cada 4.º es tablero de jefe. specialLevel(i) da el tablero ya probado (special-data.js); specials(h, grupo) los busca.
+// Cada 4.º es tablero de jefe. specialLevel(i) arma el tablero (escoge la versión con pickLevel); specials(h, grupo) los busca.
 export const SPECIAL_COUNT = 1000;
 export const SPECIAL_ID = EVENT_ID + EVENT_LEVELS;
 export const specialHelp = (i) => 1 + Math.floor(i / 250);
 export const specialGroup = (i) => i % EVENT_WORLDS.length;
 export const specials = (h, group = null) => [...Array(SPECIAL_COUNT).keys()].filter((i) => specialHelp(i) === h && (group == null || specialGroup(i) === group));
-// Para que no salgan todos con la misma forma, cada uno trae la suya (se turnan); si en 300 tableros no se deja
-// endurecer, se permite cualquiera. Dispersa y capas casi nunca aguantan 4 ayudas: en esos no van.
+// Para que no salgan todos con la misma forma, cada uno trae la suya (se turnan). Dispersa y capas no van en los
+// demasiado extremos.
 const SPECIAL_SHAPES = ['pyramid', 'diamond', 'wall', 'invPyramid', 'clusters', 'towers', 'peaks', 'scatter', 'layers'];
-export function specialBase(i, t = 0) {
+export function specialBase(i, t = 0, tier = 0) {
   const h = specialHelp(i), boss = i % 4 === 3, shapes = SPECIAL_SHAPES.slice(0, h === 4 ? 7 : 9);
   // ~1 de cada 12 con mesa especial (de las que ya conoce su grupo), como en el camino.
   const kinds = helpScrolls(EVENT_WORLDS[specialGroup(i)]), hs = hash(i * 7349 + 101);
-  const scroll = t < 300 && kinds.length && !(hs % 12) ? kinds[(hs >>> 5) % kinds.length] : null;
-  const L = buildLevel(SPECIAL_ID + i, { world: EVENT_WORLDS[specialGroup(i)], index: boss ? LEVELS_PER_WORLD - 1 : 1 + (i % 4) * 2, d: Math.min(1, 0.45 + h * 0.1), tight: h, scroll, template: t < 300 ? shapes[i % shapes.length] : null, seed: 8e6 + i * 13 + t * 7919 });
-  return { ...L, event: false, special: i, help: h, rewardStep: 2 };
+  const scroll = kinds.length && !(hs % 12) ? kinds[(hs >>> 5) % kinds.length] : null;
+  const L = buildLevel(SPECIAL_ID + i, { world: EVENT_WORLDS[specialGroup(i)], index: boss ? LEVELS_PER_WORLD - 1 : 1 + (i % 4) * 2, d: Math.min(1, 0.45 + h * 0.1), tight: h, scroll, template: shapes[i % shapes.length], seed: 8e6 + i * 13 + t * 7919, tier });
+  return { ...L, event: false, special: i, rewardStep: 2 };
 }
-export function specialLevel(i) {
-  const d = hardData(SPECIAL_DATA[i]);
-  return hardened(specialBase(i, d?.t), d, specialHelp(i));
-}
+export const specialLevel = (i) => pickLevel(`p${i}`, specialHelp(i), (t) => specialBase(i, t, specialHelp(i)));
 
 // ---------- Festividades (eventos de 24 h) ----------
-// 3 planetas de 3 niveles, todos con tableros especiales: los dos primeros de cada planeta piden 2 ayudas y el jefe 3
+// 3 planetas de 3 niveles, todos con tableros especiales: los dos primeros de cada planeta muy difíciles y el jefe extremo
 // (y es tablero de jefe). Usan las mecánicas que ya conoces (grupo según el mundo al empezar). seed cambia con la
 // festividad y el año: cada edición trae otros tableros, y dentro de una no se repiten.
 export const FIESTA_PLANETS = 3;
 export const FIESTA_PER_PLANET = 3;
 export const FIESTA_LEVELS = FIESTA_PLANETS * FIESTA_PER_PLANET;
-// Algunas festividades largas traen más (n: niveles por planeta); los que no son jefe piden 2 ayudas y el jefe 3.
+// Algunas festividades largas traen más (n: niveles por planeta); los que no son jefe muy difíciles y el jefe extremo.
 // Qué tablero especial toca (sin armarlo; el modo dev lo usa para saber qué festividad usa cada uno).
 export function fiestaPick(seed, k, world, n = FIESTA_PER_PLANET) {
   const j = k % n, p = Math.floor(k / n), boss = j === n - 1;
@@ -1147,13 +1219,13 @@ export const MECH_NAMES = {
 };
 // Cartas de regalo (cometa y cohete turbo): no entran al sorteo de mecánicas, van aparte (buildLevel).
 // En el camino sin ayudas cada una sale de 1 a 4 veces en cada tramo de 30-35 niveles (extraPlan, pedido 6 nov 2026).
-// Los que piden ayudas, el evento, los especiales y los secretos siguen con esta probabilidad por nivel (sus mazos ya
-// probados cambiarían); los de ayudas que la traen cuentan en su tramo.
+// Los duros del camino, el evento, los especiales y los secretos siguen con esta probabilidad por nivel (cambiarían
+// sus tableros); los duros que la traen cuentan en su tramo.
 export const EXTRA = ['comet', 'turbo'];
 // Boleto partido: no entra al sorteo de chooseMechanics (cambiaría los niveles ya probados); va con su propio sorteo.
 export const TICKET_ODDS = 0.12;
 export const EXTRA_ODDS = 0.047;
-// Estreno: el primer nivel de su mundo que no pide ayudas ni es mesa especial.
+// Estreno: el primer nivel de su mundo que no es duro ni mesa especial.
 const debuts = {};
 export function extraDebut(m) {
   if (debuts[m] == null) {
@@ -1169,7 +1241,7 @@ export function extraDebut(m) {
 const extraAt = {};
 const helpExtra = (m, g) => {
   if (!hardHelp(g) || Math.floor(g / LEVELS_PER_WORLD) < MECH_INTRO[m]) return false;
-  const t = hardData(HARD_DATA[g])?.t || 0;
+  const t = 0; // aproximado: el tablero de un duro se escoge al armarlo (pickLevel)
   return mulberry32(hash(m === 'comet' ? g * 7907 + t * 31 + 11 : g * 6007 + t * 37 + 5))() < EXTRA_ODDS;
 };
 function extraPlan(m) {
@@ -1187,7 +1259,7 @@ function extraPlan(m) {
 }
 export const extraPlanned = (m, g) => (extraAt[m] ||= extraPlan(m)).has(g);
 
-function chooseMechanics(r, world, index, boss, n, ev = null) {
+function chooseMechanics(r, world, index, boss, n, ev = null, T = null) {
   if (n < 8) return [];
   const avail = MECHANICS.filter((m) => !EXTRA.includes(m) && m !== 'ticket' && world >= MECH_INTRO[m]);
   if (!avail.length) return [];
@@ -1203,6 +1275,8 @@ function chooseMechanics(r, world, index, boss, n, ev = null) {
   // Mundo de presentación: la nueva va sola en los primeros niveles y luego acompañada.
   if (newest) return index < 5 || !others.length ? [newest] : [newest, pick(r, others)];
   const k = boss ? 2 : r() < 0.2 ? 0 : r() < 0.55 ? 1 : 2;
+  // Niveles duros: al menos T.mechs[1] y, si cabe, hasta T.mechs[0].
+  if (T) return shuffle(r, avail.slice()).slice(0, Math.max(k, T.mechs[1]) + (T.mechs[0] > 2 && r() < 0.5 ? 1 : 0));
   return shuffle(r, avail.slice()).slice(0, k);
 }
 

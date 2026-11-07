@@ -310,40 +310,6 @@ export function solve(level, s0, limit = 250000, wilds = 0) {
   return dfs(s0) ? path : null;
 }
 
-// Solucionador con ayudas: wilds = comodines y five = compras de +5 cartas que se pueden usar.
-// Como en el juego, el comodín se usa al atorarse (sin jugadas) y el +5 solo con el mazo vacío
-// (llegan 5 cartas vecinas de las que están libres). Devuelve { ok, cut }: cut = se acabó el límite
-// sin terminar de buscar (entonces un "no" no está comprobado).
-export function solveHelp(level, wilds = 0, five = 0, limit = 60000) {
-  const timed = level.cards.some((c) => c.live || c.bomb || c.comet);
-  const turbo = hasTurbo(level);
-  const seen = new Set();
-  let nodes = 0, cut = false;
-  const dfs = (s, w, f) => {
-    if (won(s)) return true;
-    if (++nodes > limit) return !(cut = true);
-    const key = `${w}${f}|${s.rem.map((b, i) => (b ? 1 : s.cut?.[i] ? s.cut[i] + 1 : 0)).join('')}|${s.stock.map(sig).join(',')}|${sig(s.top)}|${Math.min(s.streak, 13 + (s.streak % 3))}${timed ? `|${s.actions}|${s.boom}` : ''}${turbo ? `|${s.turbo}` : ''}`;
-    if (seen.has(key)) return false;
-    seen.add(key);
-    const moves = legal(level, s);
-    for (const c of moves) if (dfs(play(level, s, c.id).s, w, f)) return true;
-    if (s.stock.length && dfs(draw(level, s).s, w, f)) return true;
-    if (moves.length) return false;
-    if (w > 0 && !s.top.wild && dfs({ ...cloneState(s), top: { wild: true } }, w - 1, f)) return true;
-    if (f > 0 && !s.stock.length) {
-      const free = level.cards.filter((c) => isOpen(level, c, s)), t = cloneState(s);
-      for (let i = 0; i < 5; i++) {
-        const c = free[i % Math.max(1, free.length)];
-        t.stock.push({ rank: c ? mod13(rankOf(c, s) + (i % 2 ? -1 : 1)) : 0, suit: i % 4 });
-      }
-      if (dfs(t, w, f - 1)) return true;
-    }
-    return false;
-  };
-  const ok = dfs(initState(level), wilds, five);
-  return { ok, cut: !ok && cut };
-}
-
 // Jugador casual: juega cualquier carta válida al azar; si no hay, roba. Sin boosters, con premios de racha.
 export function playCasual(level, r = Math.random) {
   let s = initState(level);
@@ -360,6 +326,8 @@ export function playCasual(level, r = Math.random) {
 // contarlas castigaba de más esos niveles). 3★ = te queda la mitad o más (los premios de racha suman),
 // 2★ = al menos un cuarto, 1★ = menos. Comprar +5 cartas siempre deja 1★ (se decide en el juego).
 export function starsFor(level, left) {
+  // Niveles duros (level.stars = [para 2★, para 3★]): se miden contra lo que deja el camino acertado.
+  if (level.stars) return left >= level.stars[1] ? 3 : left >= level.stars[0] ? 2 : 1;
   const total = level.stock.length;
   return left >= Math.ceil(total / 2) ? 3 : left >= Math.ceil(total / 4) ? 2 : 1;
 }

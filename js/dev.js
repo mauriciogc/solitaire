@@ -2,7 +2,7 @@
 // Se prende y apaga con los botones de pruebas de Ajustes (8 toques seguidos al título). Queda guardado en el navegador.
 import { save, prefs, persist, resetProfile, backupOnce, restoreBackup, setDev } from './storage.js';
 import { rachaWin, rachaLose, racha, nextGoal, col, daysToNextCol, ev, daysToNextEvent, evEnter, evWin, EVENT_PER_PLANET, EVENT_LEVELS, fiesta, fiEnter, fiWin, nextFiesta, daysToNextFiesta, daysToFiesta, fiShape, isOn, UNLOCK } from './events.js';
-import { generateLevel, hardHelp, fiestaPick, fiestaLevel, eventLevel, eventGroup, EVENT_WORLDS, packGroups, worldInfo, specials, specialGroup, SPECIAL_ID, TOTAL_LEVELS, LEVELS_PER_WORLD, MECH_NAMES, MECHANICS, MECH_INTRO, SCROLL_FROM, EXTRA, extraDebut } from './levels.js';
+import { TIERS, generateLevel, hardHelp, fiestaPick, fiestaLevel, eventLevel, eventGroup, EVENT_WORLDS, packGroups, worldInfo, specials, specialGroup, SPECIAL_ID, TOTAL_LEVELS, LEVELS_PER_WORLD, MECH_NAMES, MECHANICS, MECH_INTRO, SCROLL_FROM, EXTRA, extraDebut } from './levels.js';
 import { playCasual, solve, initState } from './engine.js';
 import { openModal, toast, updateCoins, popGoal } from './ui.js';
 import { mulberry32 } from './rng.js';
@@ -26,7 +26,7 @@ export const dev = {
 };
 
 // Dónde estaba la galería, para volver a la misma página y filtros al salir de un nivel.
-// src: camino · mes (evento del mes) · dia (festividades; fi = 'reserva' para los 1,000 especiales). help: '' todas, '0' sin ayuda, 'any' alguna, 'n' exactas.
+// src: camino · mes (evento del mes) · dia (festividades; fi = 'reserva' para los 1,000 especiales). help (filtro Dificultad): '' todos, '0' normales, 'any' duros, 'n' escalón n (TIERS).
 export const gallery = { start: 0, tpl: 'todas', boss: false, mA: '', mB: '', help: '', active: false, src: 'camino', month: null, fi: null, year: null, grp: null };
 
 const label = (g) => (g >= SPECIAL_ID ? `Especial ${g - SPECIAL_ID + 1} · grupo ${specialGroup(g - SPECIAL_ID) + 1}` : `Mundo ${Math.floor(g / LEVELS_PER_WORLD) + 1} · Nivel ${(g % LEVELS_PER_WORLD) + 1}`);
@@ -75,7 +75,7 @@ export function attachDevBar(game, { go, toGallery }) {
     <button class="db-fab" data-d="menu" aria-label="Menú dev" aria-expanded="false">DEV</button>
     <div class="db-menu">
     <div class="db-grp">${btn('gal', 'grid', 'Galería')}</div>
-    <div class="db-grp db-nav">${btn('prev', 'prev', '', `aria-label="Nivel anterior" ${g === 0 ? 'disabled' : ''}`)}<button data-d="goto" class="db-lvl" title="Ir a nivel"><b>#${num}</b><small>${where}${L.help ? ` · pide ${L.help}` : ''}</small></button>${btn('next', 'next', '', `aria-label="Nivel siguiente" ${g >= TOTAL_LEVELS - 1 ? 'disabled' : ''}`)}</div>
+    <div class="db-grp db-nav">${btn('prev', 'prev', '', `aria-label="Nivel anterior" ${g === 0 ? 'disabled' : ''}`)}<button data-d="goto" class="db-lvl" title="Ir a nivel"><b>#${num}</b><small>${where}${L.tier ? ` · ${TIERS[L.tier].name.toLowerCase()}` : ''}</small></button>${btn('next', 'next', '', `aria-label="Nivel siguiente" ${g >= TOTAL_LEVELS - 1 ? 'disabled' : ''}`)}</div>
     <div class="db-grp">${btn('reveal', 'eye', 'Ver todo')}${btn('sol', 'flag', 'Solución')}${btn('step', 'step', 'Paso')}${btn('auto', 'play', 'Resolver')}${btn('win', 'trophy', 'Ganar')}</div>
     <div class="db-grp">${btn('info', 'info', 'Info')}</div>
     </div>`;
@@ -137,7 +137,7 @@ function showInfo(L) {
     ['Mecánicas', L.meta.mechs.length ? L.meta.mechs.map((m) => MECH_NAMES[m]).join(', ') : 'ninguna'],
     ['Candados', L.meta.locks],
     ['Carta regalo', L.meta.pack ? `+${L.meta.pack} cartas al mazo` : 'no'],
-    ['Ayudas', L.help ? `pide ${L.help} (comodines o compras de +5): sin ellas no hay solución` : 'no pide'],
+    ...(L.tier ? [['Nivel duro', `${TIERS[L.tier].name} (bot meta ${TIERS[L.tier].aim}%) · 3★ si te quedan ${L.stars[1]} en el mazo, 2★ con ${L.stars[0]}`]] : []),
     ['Bot casual gana', ((p) => `${p}% · ${rateTag(L, p)}`)(casualRate(L))],
     ['Solucionador', sol ? `resuelve en ${sol.length} pasos${w ? ` con ${w} comodín${w > 1 ? 'es' : ''}` : ''} (${ms} ms)` : `no encontró (${ms} ms)`],
   ];
@@ -179,10 +179,11 @@ const mechDebut = (m) => (EXTRA.includes(m) ? extraDebut(m) : MECH_INTRO[m] * LE
 const MECH_ORDER = MECHANICS.slice().sort((a, b) => mechDebut(a) - mechDebut(b));
 const okTpl = (L, t) => t === 'todas' || (t === 'respiros' ? !!L.respite : t.startsWith('pz:') ? !!L.pieces?.includes(t.slice(3)) : L.template === t);
 const tplName = (L) => (TPL_NAMES[L.template] || L.template) + (L.pieces ? ` + ${L.pieces.map((k) => PIECE_NAMES[k] || k).join(', ')}` : '');
-// Etiqueta según el % del bot casual (ver tabla de la Fase 7): fácil ≥75, medio ≥50, difícil ≥25, muy difícil.
-export const rateTag = (L, p) => (L.help ? `pide ${L.help}` : p >= 75 ? 'fácil' : p >= 50 ? 'medio' : p >= 25 ? 'difícil' : 'muy difícil');
+// Etiqueta según el % del bot casual: fácil ≥75, medio ≥50, difícil ≥25, muy difícil ≥14, extremo ≥6 y demasiado
+// extremo (los niveles duros del camino buscan 18, 10 y 3%, ver TIERS).
+export const rateTag = (L, p) => (p >= 75 ? 'fácil' : p >= 50 ? 'medio' : p >= 25 ? 'difícil' : p >= 14 ? 'muy difícil' : p >= 6 ? 'extremo' : 'demasiado extremo');
 // Color de la dificultad en la tarjeta (mismo corte que rateTag).
-const rateCls = (L, p) => (L.help ? 'r-help' : p >= 75 ? 'r-easy' : p >= 50 ? 'r-mid' : p >= 25 ? 'r-hard' : 'r-max');
+const rateCls = (L, p) => (p >= 75 ? 'r-easy' : p >= 50 ? 'r-mid' : p >= 25 ? 'r-hard' : 'r-max');
 
 function preview(L, W = 150, H = 104) {
   const { u, bw, bh, offsets } = packGroups(L.groups, W - 8, H - 8, 0.7, 26);
@@ -241,17 +242,19 @@ export function galleryScreen({ onPlay, onPlayLevel, onBack }) {
     const { N, L } = fiShape(x.f);
     return { look: { ico: x.f.ico, table: x.f.key }, planets: x.f.planets || [], levels: [...Array(L).keys()].map((k) => fiestaLevel(x.day, k, EVENT_WORLDS[st.grp], N)), day: x.day };
   }
-  const okH = (L) => !st.help || (st.help === '0' ? !L.help : st.help === 'any' ? !!L.help : L.help === +st.help);
+  // Niveles duros por escalón (L.tier; ver TIERS).
+  const hv = (L) => L.tier || 0;
+  const okH = (L) => !st.help || (st.help === '0' ? !hv(L) : st.help === 'any' ? !!hv(L) : hv(L) === +st.help);
   const okM = (L, m) => !m || (m === 'none' ? !L.meta.mechs.length : L.meta.mechs.includes(m));
   const ok = (L) => okTpl(L, st.tpl) && okM(L, st.mA) && okM(L, st.mB) && okH(L) && (!st.boss || L.boss);
 
   function controls() {
     const evText = st.src === 'mes' ? 'La forma de cada tablero es la misma todos los años; con el año solo cambian los números de las cartas.' : '';
     const what = {
-      camino: `Los ${fmt(TOTAL_LEVELS)} niveles del mapa, en orden (${fmt(hardN)} piden ayuda). No cambian con el año.`,
+      camino: `Los ${fmt(TOTAL_LEVELS)} niveles del mapa, en orden (${fmt(hardN)} duros: muy difícil, extremo y demasiado extremo; se ganan sin ayudas con el camino acertado). No cambian con el año.`,
       mes: `Los ${EVENT_LEVELS} niveles del evento, por planeta. ${evText}`,
       dia: st.fi === 'reserva'
-        ? `Los 1,000 tableros especiales, fuera del mapa. Las festividades toman de aquí los suyos (los niveles piden 2 y el jefe 3); la etiqueta dice cuál lo usa en ${st.year}. Los de 1 y 4 quedan para eventos futuros.`
+        ? `Los 1,000 tableros especiales, fuera del mapa. Las festividades toman de aquí los suyos (los niveles muy difíciles y el jefe extremo); la etiqueta dice cuál lo usa en ${st.year}. Los difíciles y los demasiado extremos quedan para eventos futuros.`
         : `Sus niveles, por planeta. Cada año le tocan otros tableros (se eligen por la fecha) y cambian con el grupo de mundos.`,
     }[st.src];
     const years = [...Array(6).keys()].map((i) => now - 1 + i);
@@ -260,8 +263,9 @@ export function galleryScreen({ onPlay, onPlayLevel, onBack }) {
       : st.src === 'dia'
         ? pick('fi', 'Festividad', fiDays().map(({ f, day }) => { const d = new Date(day * 864e5); return opt(f.key, `${f.name} · ${d.getUTCDate()} ${MES_C[d.getUTCMonth()]}`, st.fi); }).join('') + opt('reserva', 'Reserva: los 1,000 especiales', st.fi)) + pick('year', 'Año', years.map((y) => opt(y, y, st.year)).join('')) + (st.fi === 'reserva' ? '' : pick('grp', 'Jugador en', GRP_NAMES.map((n, i) => opt(i, n, st.grp)).join('')))
         : '';
-    const maxH = st.src === 'dia' ? 4 : 3;
-    const helps = [['', 'Todas'], ['0', 'Sin ayuda'], ['any', 'Piden alguna'], ...[...Array(maxH).keys()].map((i) => [String(i + 1), `Piden ${i + 1}`])];
+    // Escalones de los niveles duros (ver TIERS): camino 2-4, evento 1-3, especiales 1-4.
+    const tiers = st.src === 'camino' ? [2, 3, 4] : st.src === 'mes' ? [1, 2, 3] : [1, 2, 3, 4];
+    const helps = [['', 'Todos'], ['0', 'Normales'], ['any', 'Duros'], ...tiers.map((i) => [String(i), TIERS[i].name])];
     const dirty = st.tpl !== 'todas' || st.mA || st.mB || st.boss || st.help;
     el.querySelector('.g-filters').innerHTML = `
       <div class="g-seg">${SRCS.map(([k, t]) => `<button data-src="${k}" class="${st.src === k ? 'on' : ''}">${t}</button>`).join('')}</div>
@@ -271,7 +275,7 @@ export function galleryScreen({ onPlay, onPlayLevel, onBack }) {
         ${pick('tpl', 'Tablero', opt('todas', 'Todos', st.tpl) + TPL_GROUPS.map(([h, list]) => `<optgroup label="${h}">${list.map(([k, t]) => opt(k, t, st.tpl)).join('')}</optgroup>`).join(''), st.tpl !== 'todas')}
         ${pick('mA', 'Carta especial', opt('', 'Todas', st.mA) + opt('none', 'Sin cartas especiales', st.mA) + MECH_ORDER.map((m) => opt(m, `${MECH_NAMES[m]} · ${mechDebut(m)}`, st.mA)).join(''), !!st.mA)}
         ${st.mA && st.mA !== 'none' ? pick('mB', 'Junto con', opt('', 'Cualquiera', st.mB) + MECH_ORDER.filter((m) => m !== st.mA).map((m) => opt(m, MECH_NAMES[m], st.mB)).join(''), !!st.mB) : ''}
-        ${pick('help', 'Ayudas', helps.map(([k, t]) => opt(k, t, st.help)).join(''), !!st.help)}
+        ${pick('help', 'Dificultad', helps.map(([k, t]) => opt(k, t, st.help)).join(''), !!st.help)}
         <button class="g-boss${st.boss ? ' on' : ''}" data-g="boss" aria-pressed="${st.boss}">${icon('crown')}Solo jefes</button>
         ${dirty ? '<button class="g-clear" data-g="clear">Limpiar</button>' : ''}
       </div>`;
@@ -290,7 +294,7 @@ export function galleryScreen({ onPlay, onPlayLevel, onBack }) {
   // Tarjeta: el tablero grande con su número y lo que lo distingue encima; abajo forma, cartas y dificultad.
   // pickI: índice en la lista del mes/día (se juega el tablero tal cual); si no, el id del nivel.
   const tile = (L, pickI) => {
-    const badges = [L.boss && `<i class="gb gb-boss">${icon('crown')}Jefe</i>`, L.help && `<i class="gb gb-help">Pide ${L.help}</i>`, L.respite && '<i class="gb gb-rest">Respiro</i>', L.scroll && `<i class="gb gb-mesa">${tableIcon(L.scroll)}${TPL_NAMES[L.scroll]}</i>`].filter(Boolean).join('');
+    const badges = [L.boss && `<i class="gb gb-boss">${icon('crown')}Jefe</i>`, L.tier && `<i class="gb gb-tier gb-t${L.tier}">${TIERS[L.tier].name}</i>`, L.respite && '<i class="gb gb-rest">Respiro</i>', L.scroll && `<i class="gb gb-mesa">${tableIcon(L.scroll)}${TPL_NAMES[L.scroll]}</i>`].filter(Boolean).join('');
     const inSet = pickI != null;
     const uses = !inSet && L.special != null ? [...(useBy[L.special]?.values() || [])] : [];
     const num = inSet ? L.k + 1 : L.special != null ? L.special + 1 : L.g + 1;
@@ -380,7 +384,8 @@ export function galleryScreen({ onPlay, onPlayLevel, onBack }) {
     if (src) {
       st.src = src;
       st.start = 0;
-      if (st.help === '4' && src !== 'dia') st.help = '';
+      // Cada fuente tiene sus escalones (camino 2-4, mes 1-3, día 1-4): si el elegido no existe ahí, se quita.
+      if ((st.help === '1' && src === 'camino') || (st.help === '4' && src === 'mes')) st.help = '';
       return render();
     }
     const a = e.target.closest('[data-g]')?.dataset.g;
