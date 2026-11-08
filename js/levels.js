@@ -448,6 +448,16 @@ const RESPITE_MIN = 10;
 // despliegan sobre sus bisagras (a los lados con el teléfono acostado, arriba y abajo parado). Para el motor es como
 // la nebulosa: las cartas de los lados tienen neb = 1 (level.neb = [en medio, lado, lado]). Desde el nivel 140.
 export const SCROLL_FROM = { mesa: 39, gravedad: 69, nebulosa: 99, plegable: 139 };
+// Marea (7 nov 2026): el agua sube desde abajo cada 3 robos y baja cada 3 jugadas; lo que queda bajo el agua no se
+// juega. Desde el nivel MAREA_FROM + 1, ~1 de cada 10 normales del camino (sin otra mesa, respiro ni ayudas).
+export const MAREA_FROM = 239;
+// Estreno: el primero desde MAREA_FROM que no es otra mesa, duro ni respiro.
+let mareaDebut = null;
+export const mareaFirst = () => {
+  if (mareaDebut == null) for (mareaDebut = MAREA_FROM; scrollKind(mareaDebut) || hardHelp(mareaDebut) || isRespite(mareaDebut); mareaDebut++);
+  return mareaDebut;
+};
+export const mareaKind = (g) => g === mareaFirst() || (g > mareaFirst() && !((hash(g * 3571 + 61) >>> 5) % 10));
 export const GRAV_SHOWN = 2; // cartas boca arriba en cada columna
 export const NEB_SLOTS = 3;
 export const SCROLL_VIEW = 8.2, SCROLL_GAP = 0.45, SCROLL_SHOW = 0.5;
@@ -767,6 +777,7 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
   const mech = new Set(chooseMechanics(r, world, index, boss, n, ev, T).slice(0, respite ? 1 : T ? T.mechs[0] : 2));
   // Mesa enrollada y nebulosa sin bombas: su cuenta correría con la carta todavía escondida.
   if (scroll) mech.delete('bomb');
+  const marea = fresh && !secret && !respite && !scroll && mareaKind(base);
   // Estreno de la plegable sin otras mecánicas: al principio solo se juega el panel de en medio y ya cuesta más.
   if (debut && scroll === 'plegable') mech.clear();
   // Cometa: es un regalo, así que va aparte de las demás (no cuenta en el límite de 2 y sale con cualquiera).
@@ -779,18 +790,35 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
   if (!scroll && n >= 8 && world >= MECH_INTRO.comet && extraHere('comet', rc)) mech.add('comet');
   // Cohete turbo: el otro regalo, igual que el cometa pero con su propio sorteo.
   const rt = mulberry32(hash(g * 6007 + t * 37 + 5));
-  const turbo = !scroll && n >= 8 && world >= MECH_INTRO.turbo && extraHere('turbo', rt);
+  // También en las mesas especiales (7 nov 2026, pedido del usuario: se juega como cualquier carta, no tiene cuenta).
+  const turbo = n >= 8 && world >= MECH_INTRO.turbo && extraHere('turbo', rt);
   // Boleto partido: mecánica normal (cuenta en el límite de 2), pero con su propio sorteo como el cometa, para que los
   // niveles que no lo traen queden igual. En su mundo va en todos (sola en los primeros niveles); después, de vez en cuando.
-  // Por ahora solo sin ayudas y sin mesas especiales (los demás, al cerrar la Fase 7).
+  // También en las mesas especiales (7 nov 2026): se juega como cualquier carta.
   const rb = mulberry32(hash(g * 5303 + t * 41 + 3));
-  if (!scroll && n >= 10 && world >= MECH_INTRO.ticket && (world === MECH_INTRO.ticket || rb() < TICKET_ODDS)) {
+  if (n >= 10 && world >= MECH_INTRO.ticket && (world === MECH_INTRO.ticket || rb() < TICKET_ODDS)) {
     const keep = respite || (world === MECH_INTRO.ticket && index < 5) ? 0 : 1;
     const comet = mech.has('comet');
     [...mech].slice(keep).forEach((m) => mech.delete(m));
     mech.add('ticket');
     // El cometa no cuenta en el límite: en el camino sin ayudas se queda (los demás niveles, como estaban).
     if (plan && comet) mech.add('comet');
+  }
+  // Fantasma: su propio sorteo, como el boleto. En su mundo va en todos (solo en los primeros 5); cuenta en el límite de 2.
+  const rgh = mulberry32(hash(g * 7411 + t * 43 + 9));
+  if (n >= 10 && world >= MECH_INTRO.ghost && (world === MECH_INTRO.ghost || rgh() < GHOST_ODDS)) {
+    const keep = respite || (world === MECH_INTRO.ghost && index < 5) ? 0 : 1;
+    const comet = mech.has('comet');
+    [...mech].filter((m) => m !== 'comet').slice(keep).forEach((m) => mech.delete(m));
+    mech.add('ghost');
+    if (!comet) mech.delete('comet');
+  }
+  // Nave ladrona: sorteo propio; en su mundo, en todos (sola en los 5 primeros). Cuenta en el límite de 2.
+  const rsh = mulberry32(hash(g * 8641 + t * 47 + 13));
+  if (n >= 10 && world >= MECH_INTRO.ship && (world === MECH_INTRO.ship || rsh() < SHIP_ODDS)) {
+    const keep = respite || (world === MECH_INTRO.ship && index < 5) ? 0 : 1;
+    [...mech].filter((m) => m !== 'comet').slice(keep).forEach((m) => mech.delete(m));
+    mech.add('ship');
   }
 
   // Carta regalo: una carta especial (sin número) que se activa sola al quedar destapada del todo
@@ -869,7 +897,7 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
 
   const cards = pos.map((p, i) => ({ id: i, ...p, rank: ranks[i], suit: randInt(r, 0, 3), coveredBy: coveredBy[i], ...(under && { under: under[i] }), ...(neb?.[i] && { neb: neb[i] }) }));
   for (const id of [...bombIds, ...cometIds]) delete cards[id].rank;
-  const SPECIAL = ['lock', 'key', 'pack', 'ice', 'alt', 'arrow', 'curtain', 'curtainKey', 'bomb', 'live', 'comet', 'turbo', 'half'];
+  const SPECIAL = ['lock', 'key', 'pack', 'ice', 'alt', 'arrow', 'curtain', 'curtainKey', 'bomb', 'live', 'comet', 'turbo', 'half', 'ghost', 'coin', 'cham'];
   const plain = (id) => SPECIAL.every((f) => cards[id][f] == null);
 
   // Boleto partido (1-2): la referencia juega primero la mitad de arriba (su número de la cadena) y la de abajo al final
@@ -1061,9 +1089,45 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
       cards[play[k]].rank = mod13(ranks[play[k]] - dir * act[k]);
     }
   }
+  // Carta moneda (1-3): al jugarla da monedas (10 + 2 por constelación, tope 60). No cambia las reglas: ganable igual.
+  const rco = mulberry32(hash(g * 9293 + t * 53 + 17));
+  if (n >= 8 && world >= MECH_INTRO.coin && (world === MECH_INTRO.coin || rco() < COIN_ODDS)) {
+    const coins = Math.min(60, 10 + 2 * Math.floor(base / (LEVELS_PER_WORLD * 10)));
+    for (let k2 = randInt(rco, 1, 3); k2 > 0; k2--) {
+      const k = pickPlain(0, np);
+      if (k != null) cards[play[k]].coin = coins;
+    }
+  }
+  // Camaleón (7 nov 2026): una carta que cada 3 jugadas o robos (CHAM_EVERY) cambia entre comodín y su número. Es regalo (como la
+  // moneda: no cuenta en el límite ni cambia otros niveles). Siempre ganable: jugado como comodín deja el descarte
+  // como comodín y la referencia sigue igual. En su mundo, en todos (los 5 primeros con 2).
+  const rcm = mulberry32(hash(g * 6271 + t * 59 + 23));
+  if (n >= 8 && world >= MECH_INTRO.cham && (world === MECH_INTRO.cham || rcm() < CHAM_ODDS)) {
+    for (let k2 = world === MECH_INTRO.cham && index < 5 ? 2 : 1; k2 > 0; k2--) {
+      const k = pickPlain(0, np);
+      if (k != null) cards[play[k]].cham = rcm() < 0.5 ? 1 : 2;
+    }
+  }
+  // Fantasma (1-2): su fase se escoge para que se vea justo cuando la referencia lo juega.
+  if (mech.has('ghost')) {
+    for (let t = r() < 0.4 ? 2 : 1; t > 0; t--) {
+      const k = pickPlain(1, np);
+      if (k != null) cards[play[k]].ghost = Math.floor(act[k] / 2) % 2 === 0 ? 1 : 2;
+    }
+  }
 
+  // Marea: las cartas de la mitad de abajo de cada grupo llevan su franja (1 = la más baja). Se comprueba abajo con
+  // la referencia o el solucionador; si no se puede ganar, se quita.
+  if (marea) {
+    for (const c of cards) {
+      if (c.pack || c.bomb || c.comet) continue;
+      const p = pos[c.id], rel = (p.y + 0.7) / Math.max(1.4, groups[p.group].h);
+      if (rel > 0.78) c.wet = 1;
+      else if (rel > 0.55) c.wet = 2;
+    }
+  }
   const level = {
-    g, world, index, d, template, boss, secret, event: !!ev, fresh, ...(respite && { respite }), ...(scroll && { scroll }),
+    g, world, index, d, template, boss, secret, event: !!ev, fresh, ...(respite && { respite }), ...(scroll && { scroll }), ...(marea && cards.some((c) => c.wet) && { tide: 1 }),
     ...(raw.names && { pieces: raw.names }),
     ...((nebula || fold) && { neb: tramos }),
     ...(grav && { cols: tramos }),
@@ -1081,8 +1145,17 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
   // Si no hay solución: primero se quita la carta viva y luego se le da más margen a la bomba.
   // En el evento los premios de racha van al doble de distancia: se comprueba igual que se juega.
   if (ev) level.rewardStep = 2;
+  if (mech.has('ship')) level.ship = 1;
   // Primero el camino acertado (instantáneo); el solucionador solo si ese no llega a tiempo.
-  const check = () => !cards.some((c) => c.live || c.bomb) || refLeft(level) >= 0 || !!solve(level, initState(level), 60000);
+  const check = () => (!level.ship && !level.tide && !cards.some((c) => c.live || c.bomb || c.ghost)) || refLeft(level) >= 0 || !!solve(level, initState(level), 60000);
+  // La marea es lo primero que se quita (luego la nave y el fantasma).
+  if (level.tide && !check()) {
+    delete level.tide;
+    for (const c of cards) delete c.wet;
+  }
+  // La nave y el fantasma son lo primero que se quita (los niveles sin ellos quedan igual que antes).
+  if (level.ship && !check()) delete level.ship;
+  if (cards.some((c) => c.ghost) && !check()) for (const c of cards) delete c.ghost;
   if (!check()) {
     for (const c of cards) if (c.live) (c.rank = ranks[c.id]), delete c.live;
     for (let extra = 4; !check() && extra <= 40; extra *= 2) for (const c of cards) if (c.bomb) c.bomb += extra;
@@ -1095,7 +1168,7 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
     const best = Math.max(0, refLeft(level));
     level.stars = [Math.ceil(best / 2), Math.max(0, best - T.miss)];
   }
-  level.meta.mechs = MECHANICS.filter((m) => cards.some((c) => c[MECH_FIELD[m]] != null) || (m === 'turbo' && stock.some((c) => c.turbo)));
+  level.meta.mechs = MECHANICS.filter((m) => cards.some((c) => c[MECH_FIELD[m]] != null) || (m === 'turbo' && stock.some((c) => c.turbo)) || (m === 'ship' && level.ship));
   return level;
 }
 
@@ -1210,12 +1283,12 @@ export function fiestaLevel(seed, k, world, n = FIESTA_PER_PLANET) {
 }
 
 // ---------- Mecánicas por mundo ----------
-export const MECHANICS = ['lock', 'pack', 'ice', 'double', 'arrow', 'curtain', 'bomb', 'live', 'ticket', 'comet', 'turbo'];
-const MECH_FIELD = { lock: 'lock', pack: 'pack', ice: 'ice', double: 'alt', arrow: 'arrow', curtain: 'curtain', bomb: 'bomb', live: 'live', ticket: 'half', comet: 'comet', turbo: 'turbo' };
+export const MECHANICS = ['lock', 'pack', 'ice', 'double', 'arrow', 'curtain', 'bomb', 'live', 'ticket', 'comet', 'turbo', 'ghost', 'ship', 'coin', 'cham'];
+const MECH_FIELD = { lock: 'lock', pack: 'pack', ice: 'ice', double: 'alt', arrow: 'arrow', curtain: 'curtain', bomb: 'bomb', live: 'live', ticket: 'half', comet: 'comet', turbo: 'turbo', ghost: 'ghost', ship: 'ship', coin: 'coin', cham: 'cham' };
 // Mundo (índice desde 0) en el que se presenta cada una.
-export const MECH_INTRO = { lock: 1, pack: 2, ice: 4, double: 7, arrow: 11, curtain: 15, bomb: 19, live: 24, ticket: 20, comet: 12, turbo: 16 };
+export const MECH_INTRO = { lock: 1, pack: 2, ice: 4, double: 7, arrow: 11, curtain: 15, bomb: 19, live: 24, ticket: 20, comet: 12, turbo: 16, ghost: 29, ship: 34, coin: 26, cham: 32 };
 export const MECH_NAMES = {
-  lock: 'Candado', pack: 'Carta regalo', ice: 'Hielo', double: 'Carta doble', arrow: 'Flecha', curtain: 'Cortina', bomb: 'Bomba', live: 'Carta viva', ticket: 'Boleto partido', comet: 'Cometa', turbo: 'Cohete turbo',
+  lock: 'Candado', pack: 'Carta regalo', ice: 'Hielo', double: 'Carta doble', arrow: 'Flecha', curtain: 'Cortina', bomb: 'Bomba', live: 'Carta viva', ticket: 'Boleto partido', comet: 'Cometa', turbo: 'Cohete turbo', ghost: 'Fantasma', ship: 'Nave ladrona', coin: 'Carta moneda', cham: 'Camaleón',
 };
 // Cartas de regalo (cometa y cohete turbo): no entran al sorteo de mecánicas, van aparte (buildLevel).
 // En el camino sin ayudas cada una sale de 1 a 4 veces en cada tramo de 30-35 niveles (extraPlan, pedido 6 nov 2026).
@@ -1224,6 +1297,14 @@ export const MECH_NAMES = {
 export const EXTRA = ['comet', 'turbo'];
 // Boleto partido: no entra al sorteo de chooseMechanics (cambiaría los niveles ya probados); va con su propio sorteo.
 export const TICKET_ODDS = 0.12;
+// Fantasma (7 nov 2026): como el boleto partido, con su propio sorteo (los niveles que no lo traen quedan igual).
+export const GHOST_ODDS = 0.14;
+// Nave ladrona (7 nov 2026): igual, con su sorteo. Es del nivel (level.ship), no de una carta.
+export const SHIP_ODDS = 0.1;
+// Carta moneda (7 nov 2026): regalo dentro del tablero (como el cometa: no cuenta en el límite). Sorteo propio.
+export const COIN_ODDS = 0.18;
+// Camaleón (7 nov 2026): regalo como la moneda, con su sorteo.
+export const CHAM_ODDS = 0.12;
 export const EXTRA_ODDS = 0.047;
 // Estreno: el primer nivel de su mundo que no es duro ni mesa especial.
 const debuts = {};
@@ -1249,7 +1330,8 @@ function extraPlan(m) {
   for (let g = extraDebut(m) + 1; g < TOTAL_LEVELS; ) {
     const end = Math.min(TOTAL_LEVELS, g + randInt(r, 30, 35)), ok = [];
     let fixed = 0;
-    for (; g < end; g++) if (hardHelp(g)) fixed += helpExtra(m, g); else if (!scrollKind(g)) ok.push(g);
+    // El cohete turbo también puede caer en mesa especial; el cometa no (tiene cuenta y podría estar escondido).
+    for (; g < end; g++) if (hardHelp(g)) fixed += helpExtra(m, g); else if (m === 'turbo' || !scrollKind(g)) ok.push(g);
     const x = r(), want = x < 0.45 ? 1 : x < 0.8 ? 2 : x < 0.95 ? 3 : 4;
     // Siempre al menos 1 propio: el de un nivel con ayudas es solo el sorteo (puede no salir por la mesa o el tamaño).
     const k = Math.max(1, Math.min(4 - fixed, want - fixed));
@@ -1261,7 +1343,7 @@ export const extraPlanned = (m, g) => (extraAt[m] ||= extraPlan(m)).has(g);
 
 function chooseMechanics(r, world, index, boss, n, ev = null, T = null) {
   if (n < 8) return [];
-  const avail = MECHANICS.filter((m) => !EXTRA.includes(m) && m !== 'ticket' && world >= MECH_INTRO[m]);
+  const avail = MECHANICS.filter((m) => !EXTRA.includes(m) && m !== 'ticket' && m !== 'ghost' && m !== 'ship' && m !== 'coin' && m !== 'cham' && world >= MECH_INTRO[m]);
   if (!avail.length) return [];
   // Evento: siempre trae alguna de las que ya conoces (dos en los jefes). En los últimos planetas
   // la carta viva y la bomba (las más duras) van primero si ya las conoces.

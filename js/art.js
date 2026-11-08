@@ -53,6 +53,30 @@ export const flake = (x, y, r, c = '#bfe8ff', w = 2.2) => {
   return `<g fill="none" stroke-linecap="round" stroke-linejoin="round"><g stroke="${K}" stroke-width="${w + 2.4}">${arms}</g><g stroke="${c}" stroke-width="${w}">${arms}</g></g><circle cx="${x}" cy="${y}" r="${r * 0.18}" fill="#fff" stroke="${K}" stroke-width="${w * 0.8}"/>`;
 };
 const ICONS = {
+  // Ayudas del mazo de ayudas: reloj de arena, ver cartas y llave maestra.
+  // Botón de ayudas de la bandeja (8 nov 2026): un destello grande y dos chicos.
+  ayudas: () => {
+    const sp = (x, y, R) => `M${x} ${y - R}Q${x + R * 0.18} ${y - R * 0.18} ${x + R} ${y}Q${x + R * 0.18} ${y + R * 0.18} ${x} ${y + R}Q${x - R * 0.18} ${y + R * 0.18} ${x - R} ${y}Q${x - R * 0.18} ${y - R * 0.18} ${x} ${y - R}z`;
+    return `${tshape(sp(14, 17, 12), '#fff6c9', '#ffc83d', `<path d="${sp(14, 17, 4.5)}" fill="#ff9c2b"/>`, 2.2)}${tshape(sp(25, 7, 5), '#fff6c9', '#ffc83d', '', 1.8)}${tshape(sp(26, 25, 3.6), '#fff6c9', '#ffc83d', '', 1.6)}`;
+  },
+  arena: () => `${tshape('M8 4h16v3l-6 9 6 9v3H8v-3l6-9-6-9z', '#bfeaff', '#7ec8f0', `<path d="M11 8h10l-5 6.5zM11.5 26.5h9L16 21z" fill="#ffc83d"/><path d="M16 15v6" stroke="#ffc83d" stroke-width="1.6"/>`, 2.2)}${tshape('M6 2.5h20v3.2H6zM6 26.3h20v3.2H6z', '#c98a4b', '#a0602c', '', 1.8)}`,
+  ojo: () => tshape('M2.5 16S8 7 16 7s13.5 9 13.5 9S24 25 16 25 2.5 16 2.5 16z', '#fffaf0', '#e3d6ee', `<circle cx="16" cy="16" r="5.6" fill="#5fc7e8" stroke="${K}" stroke-width="2"/><circle cx="16" cy="16" r="2.4" fill="${K}"/><circle cx="14.2" cy="14.2" r="1.2" fill="#fff"/>`, 2.2),
+  llaveMaestra: () => `<g transform="rotate(-40 16 16)">${tshape('M14.6 13h2.8v15h-2.8zM17.4 21.5h4v2.6h-4zM17.4 25.2h3v2.6h-3z', '#ffc83d', '#ec9a17', '', 1.8)}${tshape(CIRCLE(16, 8.5, 6.5), '#ffc83d', '#ec9a17', `<circle cx="16" cy="8.5" r="2.4" fill="#fff4c7" stroke="${K}" stroke-width="1.6"/><path d="${starPath(16, 8.5, 1.6, 0.7)}" fill="#ff5f7e"/>`, 2)}</g>`,
+  // Carta moneda: montoncito de monedas.
+  monedas: () => `${tshape(CIRCLE(12, 19, 8), '#ffc83d', '#ec9a17', `<path d="${starPath(12, 19.3, 3.6, 1.6)}" fill="#fff4c7"/>`, 2)}${tshape(CIRCLE(20.5, 12.5, 8), '#ffd96b', '#ec9a17', `<path d="${starPath(20.5, 12.8, 3.6, 1.6)}" fill="#fff4c7"/>`, 2)}`,
+  // Nave ladrona: platillo con cúpula y luces.
+  nave: () => `${tshape('M3 19.5c0-3 5.8-5.5 13-5.5s13 2.5 13 5.5-5.8 5.5-13 5.5S3 22.5 3 19.5z', '#9be7ff', '#5fc7e8', `<circle cx="9" cy="20.5" r="1.5" fill="#ffc83d"/><circle cx="16" cy="22" r="1.5" fill="#ffc83d"/><circle cx="23" cy="20.5" r="1.5" fill="#ffc83d"/>`, 2.2)}${tshape('M9.5 16.5a6.5 7 0 0 1 13 0z', '#d9f6ff', '#9be7ff', `<circle cx="14" cy="13" r="1.1" fill="${K}"/><circle cx="18" cy="13" r="1.1" fill="${K}"/>`, 2)}`,
+  // Fantasma (carta que aparece y desaparece).
+  // Misiones del día: tablita con dos palomitas.
+  misiones: () => tshape('M7 5h18a2 2 0 0 1 2 2v20a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z', '#fff6e6', '#e6d6b8', `<path d="M9 13l2.4 2.4L15.5 11M9 21l2.4 2.4 4.1-4.4" fill="none" stroke="#2fae6a" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M18.5 13.5h5M18.5 21.5h5" stroke="${K}" stroke-width="2.4" stroke-linecap="round"/>`, 2.2)
+    + tshape('M11 2.5h10v5H11z', '#ff9c5b', '#e2753a', '', 2),
+  // Camaleón: cuerpo verde con la cola enroscada y un ojo grande.
+  camaleon: () => `<path d="M11 23a5 5 0 1 1 4.2-7.8" fill="none" stroke="${K}" stroke-width="5.6" stroke-linecap="round"/><path d="M11 23a5 5 0 1 1 4.2-7.8" fill="none" stroke="#5cc45a" stroke-width="2.8" stroke-linecap="round"/>`
+    + tshape('M13 17Q15 8 23 9Q30 10 29.5 17Q29 23 22 23.5Q16 24 13 17z', '#6cd66a', '#3fa84a', `<path d="M16 15q3-3 6-1M17 19q3 1 6-1" fill="none" stroke="#3fa84a" stroke-width="1.4" stroke-linecap="round"/>`, 2.2)
+    + `<circle cx="24.5" cy="15" r="3.6" fill="#fff" stroke="${K}" stroke-width="1.8"/><circle cx="25.3" cy="15.2" r="1.6" fill="${K}"/>`,
+  ghost: () => tshape('M6 27V14a10 10 0 0 1 20 0v13l-3.4-2.6L19.3 27l-3.3-2.6L12.7 27l-3.3-2.6z', '#f4f1ff', '#cfc6f2', `<ellipse cx="12.5" cy="14" rx="1.8" ry="2.4" fill="${K}"/><ellipse cx="19.5" cy="14" rx="1.8" ry="2.4" fill="${K}"/><ellipse cx="16" cy="19.5" rx="2" ry="1.4" fill="${K}"/>`, 2.2),
+  // Escoba: premio de racha (barre las cartas más enterradas).
+  escoba: () => `<g transform="rotate(-35 16 16)">${tshape('M14.6 2.5h2.8V16h-2.8z', '#c98a4b', '#a0602c', '', 1.8)}${tshape('M10 16h12l3 12.5H7z', '#ffd54a', '#e8a91a', `<path d="M12.5 19l-1 7.5M16 19v7.5M19.5 19l1 7.5" stroke="${K}" stroke-width="1.4" stroke-linecap="round"/>`, 2)}${tshape('M9.5 15.2h13v2.6h-13z', '#ff5f7e', '#d63d5f', '', 1.6)}</g>`,
   coin: () => tshape(CIRCLE(16, 16, 12.5), '#ffc83d', '#ec9a17', `<circle cx="14.6" cy="13.8" r="8" fill="none" stroke="#ec9a17" stroke-width="2"/><path d="${starPath(14.6, 14.2, 4.8, 2.2)}" fill="#fff4c7"/>`),
   star: () => tshape(starPath(16, 17, 14, 6.6), '#ffc83d', '#ec9a17', `<path d="M10.5 13.5l2.2-3.6" stroke="#fff4c7" stroke-width="2.2" stroke-linecap="round"/>`),
   // Evento del mes: Día de Muertos.
@@ -267,6 +291,13 @@ const ICONS = {
   starOff: () => tshape(starPath(16, 17, 14, 6.6), '#ddd3c0', '#c7baa2'),
   ticket: () => `<g transform="rotate(-12 16 16)">${tshape('M3 10.5a2 2 0 0 1 2-2h22a2 2 0 0 1 2 2v3a2.6 2.6 0 0 0 0 5.2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-3a2.6 2.6 0 0 0 0-5.2z', '#ff6f8e', '#e0496b', `<path d="M21 9v14" stroke="#fff" stroke-width="1.8" stroke-dasharray="2 2"/><path d="${starPath(11.5, 15.6, 4.4, 2)}" fill="#fff"/>`)}</g>`,
   gold: () => `<g transform="rotate(-12 16 16)">${tshape('M3 10.5a2 2 0 0 1 2-2h22a2 2 0 0 1 2 2v3a2.6 2.6 0 0 0 0 5.2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-3a2.6 2.6 0 0 0 0-5.2z', '#ffc83d', '#ec9a17', `<path d="M21 9v14" stroke="#fff" stroke-width="1.8" stroke-dasharray="2 2"/><path d="${starPath(11.5, 15.6, 4.4, 2)}" fill="#fff"/>`)}</g>`,
+  // Boleto de constelación (8 nov 2026): como el dorado, morado y con tres estrellas unidas. Lo da el jefe del último
+  // mundo de cada constelación y abre la siguiente.
+  constTicket: () => `<g transform="rotate(-12 16 16)">${tshape('M3 10.5a2 2 0 0 1 2-2h22a2 2 0 0 1 2 2v3a2.6 2.6 0 0 0 0 5.2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-3a2.6 2.6 0 0 0 0-5.2z', '#a77bff', '#7a4ddb', `<path d="M21 9v14" stroke="#fff" stroke-width="1.8" stroke-dasharray="2 2"/><path d="M7.5 19.5l4.5-6 4.5 4" stroke="#fff" stroke-width="1.3" stroke-dasharray="1.6 1.4"/><path d="${starPath(7.5, 19.5, 2.4, 1.1)}${starPath(12, 13.5, 3, 1.3)}${starPath(16.5, 17.5, 2.2, 1)}" fill="#ffe08a"/>`)}</g>`,
+  // Menú de la columna izquierda plegada: cuatro cuadritos de colores.
+  menu: () => tshape('M5 5h9v9H5z', '#ffb066', '#e8853e', '', 2) + tshape('M18 5h9v9h-9z', '#5ad68c', '#2f9e5c', '', 2) + tshape('M5 18h9v9H5z', '#4aa8de', '#2f86c0', '', 2) + tshape('M18 18h9v9h-9z', '#ff5f7e', '#d63d5f', '', 2),
+  // Vender: etiqueta de precio con una moneda.
+  tag: () => tshape('M4 15.5V6a2 2 0 0 1 2-2h9.5L28 16.5a2 2 0 0 1 0 2.8L19.3 28a2 2 0 0 1-2.8 0z', '#ffb066', '#e8853e', `<circle cx="9.5" cy="9.5" r="2.2" fill="#fff6e6" stroke="${K}" stroke-width="1.6"/>${tshape(CIRCLE(17.5, 17.5, 4.6), '#ffd75a', '#e8a417', '', 1.6)}`),
   bag: () => tshape('M6 13h20v13a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2z', '#ffb066', '#e8853e')
     + tshape('M13 28v-6.5a3 3 0 0 1 6 0V28z', '#9a5a32', '#7a4024')
     + tshape('M4 12.5 6.5 5h19l2.5 7.5c0 2-1.4 3.2-3 3.2S22 14.5 22 12.5c0 2-1.4 3.2-3 3.2S16 14.5 16 12.5c0 2-1.4 3.2-3 3.2S10 14.5 10 12.5c0 2-1.4 3.2-3 3.2S4 14.5 4 12.5z', '#ff6f8e', '#e0496b', '<path d="M10 4v13M22 4v13" stroke="#fff6e6" stroke-width="6"/>'),
@@ -559,6 +590,17 @@ export const BACKS = {
     art: () => `<g transform="translate(14 38) scale(2.1)">${ICONS.meteoro()}</g>` },
   regalo: { a: '#7b4ee6', b: '#6438c8', star: ['#fff6e6', '#e3d3ff'] },
   comodin: { a: '#ffc83d', b: '#eca21f', star: ['#ff9c2b', '#e8761a'], dots: '#fff4c7' },
+  // Cartas de ayuda (8 nov 2026): de la misma baraja que el comodín, cada una con su dibujo grande al centro.
+  hreloj: { a: '#ffb35c', b: '#ec8a2f', dots: '#fff1d6', art: () => `<g transform="translate(19 39) scale(1.95)">${ICONS.arena()}</g>` },
+  hver: { a: '#5fc7e8', b: '#3aa0c8', dots: '#e6fbff', art: () => `<g transform="translate(17 37) scale(2.06)">${ICONS.ojo()}</g>` },
+  hllave: { a: '#8a5cf0', b: '#6c3fd4', dots: '#efe6ff', art: () => `<g transform="translate(17 37) scale(2.06)">${ICONS.llaveMaestra()}</g>` },
+  // Mazo de ayudas (botón de la bandeja): genérico, turquesa con un destello mágico (no es el comodín).
+  ayudas: { a: '#2fb4b0', b: '#1f9490', dots: '#e6fffb',
+    art: () => {
+      const spark = (x, y, R) => `M${x} ${y - R}Q${x + R * 0.16} ${y - R * 0.16} ${x + R} ${y}Q${x + R * 0.16} ${y + R * 0.16} ${x} ${y + R}Q${x - R * 0.16} ${y + R * 0.16} ${x - R} ${y}Q${x - R * 0.16} ${y - R * 0.16} ${x} ${y - R}z`;
+      return `<path d="${spark(50, 70, 30)}" fill="#fff6c9" stroke="${K}" stroke-width="4" stroke-linejoin="round"/><path d="${spark(50, 70, 13)}" fill="#ffc83d"/>`
+        + `<path d="${spark(76, 36, 10)}" fill="#fff6c9" stroke="${K}" stroke-width="3" stroke-linejoin="round"/><path d="${spark(25, 104, 8)}" fill="#fff6c9" stroke="${K}" stroke-width="3" stroke-linejoin="round"/>`;
+    } },
 };
 const backCache = {};
 // La baraja que usa el jugador (la cambia la tienda): cardBackURL() sin nombre la dibuja.

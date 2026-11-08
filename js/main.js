@@ -1,14 +1,15 @@
 import { save, prefs, persist, resetProfile, renameProfile, exportCode, readCode, loadProfile, setDev } from './storage.js';
-import { UNLOCK, EVENTOS, FIESTAS, COLECCIONES, evSoon, isOn, nextEvent, daysToNextCol, plusCols, RACHA_GOALS, RACHA_STEP, rachaGoal, nextIndex, racha, rachaTheme, rachaReady, rachaHot, rachaWin, rachaLose, rachaClaim, msToMidnight, col, colLeft, colWin, colOffers, colBuy, ev, evLeft, evTicketLeft, evPrize, evEnter, evWin, evLose, evAlbum, fiAlbum, EVENT_PLANETS, EVENT_PER_PLANET, EVENT_LEVELS, fiesta, fiestaLeft, nextFiesta, fiEnter, fiWin, fiLose, fiShape } from './events.js';
+import { UNLOCK, EVENTOS, FIESTAS, COLECCIONES, evSoon, isOn, nextEvent, daysToNextCol, plusCols, RACHA_GOALS, RACHA_STEP, rachaGoal, nextIndex, racha, rachaTheme, rachaReady, rachaHot, rachaWin, rachaLose, rachaClaim, msToMidnight, col, colLeft, colWin, colOffers, colBuy, ev, evLeft, evTicketLeft, evTicketPrice, evBuyTicket, evPrize, evEnter, evWin, evLose, evAlbum, fiAlbum, EVENT_PLANETS, EVENT_PER_PLANET, EVENT_LEVELS, fiesta, fiestaLeft, nextFiesta, fiEnter, fiWin, fiLose, fiShape, fiPrice, fiPaid, fiBuy, fiPre, FI_PRE, FI_ENTRY, EV_FIRST } from './events.js';
 import { WORLD_COUNT, LEVELS_PER_WORLD, TOTAL_LEVELS, worldInfo, generateLevel, variantLevel, MECH_INTRO, MECH_NAMES, secretId, isSecret, eventLevel, fiestaLevel } from './levels.js';
 import { Game, faceHTML, backHTML } from './game.js';
-import { DAILY_PATH, dailyState, starsNeeded, TICKET_PRICE, ticketCost, ticketRefund, coinsFor, bossChest, openSurprise, SECRET_MULT, SECRET_PRIZE, MET_OFF, metShopPrice } from './economy.js';
-import { pauseOffscreen, openModal, toast, updateCoins, money, esc, reduced, wait, flyToWallet, spendFromWallet, sparkle, confetti, starsHTML, warp, buzz, balloons, lootBubbles, floatBubbles, rachaWarnHTML, popPrize, popBalloon, countPop } from './ui.js';
+import { HELPS, DAILY_PATH, dailyState, starsNeeded, TICKET_PRICE, ticketCost, ticketRefund, coinsFor, bossChest, rollChest, CONST_PRIZE, openCost, boosted, secretCoins, rollSecret, openSurprise, MET_OFF, metShopPrice } from './economy.js';
+import { missions, misDef, misDone, misReady, misBonusReady, misAllDone, misClaim, misBonus, LOGROS, LOGRO_PRIZES, LOGRO_MEDAL, LOGRO_TOP, logroAt, logroGot, logroStat, logrosVisible, logrosReady, logroClaim } from './missions.js';
+import { pauseOffscreen, openModal, toast, updateCoins, money, esc, reduced, wait, flyToWallet, spendFromWallet, sparkle, confetti, starsHTML, warp, buzz, balloons, lootBubbles, floatBubbles, rachaWarnHTML, popPrize, popBalloon, countPop, HEADS } from './ui.js';
 import { icon, star, coin, miniPlanet, avatarHTML, AVATAR_COLORS, cardBackURL, setDeck, lockIcon, chestBody, chestLid, boxBody, boxLid } from './art.js';
-import { GROUPS, SECTIONS, ITEMS, shopItems, groupOf, owns, equipped, equip, buy, item, lockedUntil, titleHTML, titleIcon } from './shop.js';
+import { GROUPS, SECTIONS, ITEMS, shopItems, groupOf, owns, equipped, equip, buy, item, lockedUntil, titleHTML, titleIcon, sell, sellable, sellPrice } from './shop.js';
 import { BIOMES, biomeKey, EVENT_BIOMES } from './biomes.js';
 import { redeem } from './codes.js';
-import { meteor, metWin, metCoins } from './meteor.js';
+import { meteor, metWin, metCoins, MET_FROM } from './meteor.js';
 import { dev, gallery, attachDevBar, galleryScreen, openDevMenu, planetGal, planetsScreen, casualRate, rateTag } from './dev.js';
 
 document.documentElement.classList.toggle('dev-on', !!prefs.dev);
@@ -27,6 +28,7 @@ function applyLook() {
 applyLook();
 document.documentElement.style.setProperty('--back-gift', cardBackURL('regalo'));
 document.documentElement.style.setProperty('--back-wild', cardBackURL('comodin'));
+document.documentElement.style.setProperty('--back-help', cardBackURL('ayudas'));
 // Escala de la interfaz según el lado corto de la pantalla (390 = alto de un teléfono acostado).
 const setScale = () => document.documentElement.style.setProperty('--k', Math.max(0.85, Math.min(1.3, Math.min(innerWidth, innerHeight) / 390)).toFixed(3));
 setScale();
@@ -55,7 +57,17 @@ const pin = () => {
   for (const e of [document.documentElement, document.body]) if (e.scrollTop || e.scrollLeft) e.scrollTop = e.scrollLeft = 0;
 };
 new ResizeObserver(() => (setScale(), setSafe(), pin())).observe(document.documentElement);
-addEventListener('orientationchange', () => [0, 150, 400, 800].forEach((t) => setTimeout(() => (pin(), setSafe()), t)));
+// 8 nov 2026: al girar con una ventana abierta, iPhone a veces la deja dibujada donde estaba (fuera de la vista, "en el
+// limbo"). Se termina su entrada y se obliga a dibujarla de nuevo en su lugar.
+const refloat = () => document.querySelectorAll('#modal-root .modal-back').forEach((b) => {
+  const m = b.querySelector('.modal');
+  [...b.getAnimations(), ...(m?.getAnimations() || [])].forEach((a) => a.playState === 'running' && a.effect?.getTiming().iterations !== Infinity && a.finish());
+  b.style.display = 'none';
+  void b.offsetHeight;
+  b.style.display = '';
+  if (m) m.scrollTop = 0;
+});
+addEventListener('orientationchange', () => [0, 150, 400, 800].forEach((t) => setTimeout(() => (pin(), setSafe(), t >= 400 && refloat()), t)));
 addEventListener('scroll', pin, { passive: true });
 visualViewport?.addEventListener('resize', pin);
 
@@ -79,10 +91,22 @@ let Universe = null; // todas las constelaciones (mismo módulo)
 
 // ---------- Cambiar de pantalla ----------
 // anim: 'up' = la nueva sube desde abajo (entrar al tablero) · 'down' = la actual baja y deja ver la nueva (salir).
+// Girar el teléfono vuelve a armar el mapa 3D (parado y acostado se acomodan distinto): las ventanas abiertas se
+// quedan (8 nov 2026: antes se borraban y la del evento terminado se perdía).
+let keepModals = false;
+function remount() {
+  keepModals = true;
+  try {
+    current?.();
+  } finally {
+    keepModals = false;
+  }
+}
 function mount(el, anim) {
   game?.destroy();
   game = null;
-  document.getElementById('modal-root').replaceChildren();
+  if (!keepModals) document.getElementById('modal-root').replaceChildren();
+  if (el) initGroups(el);
   const old = [...app.children];
   const drop = () => old.forEach((o) => (o._dispose?.(), o.remove()));
   if (!el) return drop();
@@ -142,6 +166,7 @@ const regionOf = (w) => Math.floor(w / REGION_SIZE);
 
 const wallet = () => `
   ${save.gold ? `<div class="pill info" aria-label="${save.gold} boletos dorados">${icon('gold')}<span>${save.gold}</span></div>` : ''}
+  ${save.cgold ? `<div class="pill info" aria-label="${save.cgold} boletos de constelación">${icon('constTicket')}<span>${save.cgold}</span></div>` : ''}
   <div class="pill info" aria-label="Estrellas">${star(true)}<span>${fmt(totalStars())}</span></div>
   <div class="pill info" aria-label="Boletos">${icon('ticket')}<span data-tickets>${save.tickets}</span></div>
   <div class="pill info" aria-label="Monedas">${coin()}<span data-coins>${money(save.coins)}</span></div>
@@ -187,7 +212,7 @@ const worldsOf = (region, gate) => {
 // start: mundo al que entrar directo (al volver de un nivel) · anim: transición de entrada
 // after: lo que hay que animar al volver de ganar ({ g, w, res }) · unlock: mundo cuyo desbloqueo hay que animar al llegar.
 let map = null; // el mapa en pantalla: { galaxy, region }
-function showMap({ region, start = null, anim, after = null, unlock = null } = {}) {
+function showMap({ region, start = null, anim, after = null, unlock = null, paid = false } = {}) {
   gallery.active = false;
   if (region == null) region = regionOf(start ?? unlock ?? currentWorld());
   current = () => showMap({ region });
@@ -207,7 +232,7 @@ function showMap({ region, start = null, anim, after = null, unlock = null } = {
   </div>`);
   let galaxy = null;
   const cta = el.querySelector('.cta'), phud = el.querySelector('.phud');
-  const paintGalaxyCTA = () => (cta.innerHTML = fiBtn() + playCTA());
+  const paintGalaxyCTA = () => (cta.innerHTML = playCTA());
   const paintPlanet = (w) => {
     const info = worldInfo(w), b = BIOMES[biomeKey(info.place)];
     const mech = Object.entries(MECH_INTRO).find(([, iw]) => iw === w)?.[0];
@@ -222,7 +247,7 @@ function showMap({ region, start = null, anim, after = null, unlock = null } = {
     // Brinca hasta que lo lee (o hasta que vio el "Nuevo: …" del tablero).
     cta.classList.remove('mech-open');
     cta.innerHTML = mech ? `<div class="newmech info"><div><b>Aquí aparece: ${MECH_NAMES[mech].toLowerCase()}</b><span>${MECH_TEXT[mech]}</span></div></div>
-      <button class="mech-tog tb press${save.seen[mech] ? ' seen' : ''}" data-a="mech" aria-expanded="false" aria-label="Qué hay de nuevo en este mundo" title="Nuevo en este mundo">${mechCard(mech)}<i>?</i></button>${fiBtn()}${go}` : fiBtn() + go;
+      <button class="mech-tog tb press${save.seen[mech] ? ' seen' : ''}" data-a="mech" aria-expanded="false" aria-label="Qué hay de nuevo en este mundo" title="Nuevo en este mundo">${mechCard(mech)}<i>?</i></button>${go}` : go;
   };
   const paint = () => (galaxy?.mode === 'planet' && galaxy.sel ? paintPlanet(galaxy.sel.wd.w) : paintGalaxyCTA());
   paintGalaxyCTA();
@@ -292,7 +317,7 @@ function showMap({ region, start = null, anim, after = null, unlock = null } = {
         },
         planet: (w) => openWorldGate(w),
         locked: () => toast(`${icon('lock')} Primero abre los mundos anteriores`),
-        relayout: () => current?.(),
+        relayout: remount,
         level: (w, i) => {
           if (tourStep() === 'planet') setTour('done'), endTouring(el);
           if (i === 10) return enterLevel(secretId(w));
@@ -309,7 +334,7 @@ function showMap({ region, start = null, anim, after = null, unlock = null } = {
       if (map?.galaxy === galaxy) map = null;
     };
     if (after) celebrateWin(galaxy, after, cta, paint, !!anim);
-    else if (unlock != null) wait(500).then(() => playUnlock(unlock));
+    else if (unlock != null) wait(500).then(() => playUnlock(unlock, paid));
   };
   if (Galaxy) requestAnimationFrame(make);
   else loadGalaxy().then(make);
@@ -333,6 +358,9 @@ async function celebrateWin(galaxy, a, cta, paint, slide) {
     side.style.opacity = '';
     if (!reduced()) await side.animate([{ scale: 0.4, opacity: 0 }, { scale: 1.08, opacity: 1, offset: 0.6 }, { scale: 1 }], { duration: 420, easing: 'ease-out' }).finished;
   }
+  if (a.res.racha || misReady() || logrosReady()) openGroup('r', 'open', true);
+  refreshMis();
+  refreshLogros();
   if (a.res.racha) bumpRacha();
   if (a.res.col && col()) bumpCol(a.res.col.n);
   if (worldData(a.w).secret.fresh) await revealSecret(galaxy, a.w);
@@ -364,17 +392,32 @@ async function revealSecret(galaxy, w) {
 
 // Abrir el mundo w: si tienes el boleto dorado y las estrellas, se gasta el boleto y se anima el desbloqueo
 // en la galaxia; si no, sale la ventana que dice qué falta.
-async function playUnlock(w) {
-  const okStars = starsBefore(w) >= starsNeeded(w), okGold = save.gold > 0;
+// paid: ya aceptó pagar en la ventana (el primer mundo de cada constelación cuesta monedas).
+async function playUnlock(w, paid = false) {
+  // El primer mundo de una constelación pide el boleto de constelación (no el dorado) y monedas.
+  const cost = openCost(w), tk = cost ? 'cgold' : 'gold';
+  const okStars = starsBefore(w) >= starsNeeded(w), okGold = save[tk] > 0, okCoins = save.coins >= cost;
+  // Constelación nueva (8 nov 2026): se paga, se sale a las constelaciones, se ve cómo se abre la nueva y se entra
+  // directo a su planeta 1 (antes se entraba con el título todavía con candado).
+  if (cost && paid && okStars && okGold && okCoins) {
+    const r = regionOf(w), was = regionData(r);
+    save[tk]--;
+    save.coins -= cost;
+    save.open = w;
+    persist();
+    if (map?.galaxy?.sel) await map.galaxy.zoomOut();
+    return warp(() => showUniverse({ from: r, opening: { r, was, w } }), { out: true });
+  }
   const galaxy = map?.galaxy;
   if (!galaxy || map.region !== regionOf(w)) {
-    if (okStars && okGold) return showMap({ unlock: w });
+    if (okStars && okGold && okCoins && (!cost || paid)) return showMap({ unlock: w, paid });
     if (galaxy?.sel) await galaxy.zoomOut();
     return openWorldGate(w);
   }
   if (galaxy.sel) await galaxy.zoomOut();
-  if (!(okStars && okGold)) return openWorldGate(w);
-  save.gold--;
+  if (!(okStars && okGold && okCoins) || (cost && !paid)) return openWorldGate(w);
+  save[tk]--;
+  save.coins -= cost;
   save.open = w;
   persist();
   galaxy.busy = true;
@@ -439,8 +482,12 @@ const endTouring = (screen) => screen.classList.toggle('touring', !!tourStep());
 // por abrirse (salen solo durante su paso, con candado) y al final Jugar, que cierra el recorrido y entra al nivel.
 // El círculo se desliza de un lugar a otro. El regalo se reclama de verdad y no se sigue hasta reclamarlo (si hoy
 // ya se reclamó, solo se señala). save.sideTour = paso en el que va (si cierra el juego, sigue ahí) o 'done'.
-const TOUR_EVS = [['racha', 'rocket'], ['col', 'concha'], ['mes', 'star'], ['fiesta', 'flame']];
+const TOUR_EVS = [['mes', 'star'], ['fiesta', 'flame'], ['col', 'concha'], ['racha', 'rocket']];
+// Orden de los botones de eventos (por su data-a), el mismo de eventButtons.
+const EV_ORDER = ['evento', 'fiesta', 'col', 'racha', 'mis', 'logros'];
 const SIDE_TOUR = [
+  // 8 nov 2026: los menús van agrupados; primero el botón que los junta (tocarlo abre su cajón) y luego cada uno.
+  { sel: '.side.l .grp-btn', open: 'l', title: 'Menú', text: () => 'Aquí se juntan el <b>regalo diario</b>, los <b>boletos</b>, la <b>tienda</b>, el <b>álbum</b> y los <b>ajustes</b>. Tócalo para abrirlo; toca afuera para cerrarlo.' },
   { a: 'daily', title: 'Regalo diario', text: () => (dailyState(save.daily).claimed ? 'Cada día te espera un <b>regalo</b>. Hoy ya lo abriste: vuelve mañana por el siguiente.' : 'Cada día te espera un <b>regalo</b>. Tócalo y reclámalo.'), act: () => !dailyState(save.daily).claimed },
   { a: 'dticket', title: 'Boletos de regalo', text: () => 'Cada 24 horas te regalamos <b>boletos</b> para entrar a niveles nuevos.' },
   { a: 'shop', title: 'Tienda', text: () => 'Con tus monedas cambia cómo se ven tus <b>cartas</b>, tu <b>avatar</b> y tu <b>viajero</b>.' },
@@ -450,7 +497,8 @@ const SIDE_TOUR = [
   { sel: '.res .pill[aria-label="Boletos"]', title: 'Tus boletos', text: () => 'Entrar a un nivel nuevo cuesta <b>boletos</b>. Si lo ganas, te los devuelve.' },
   { sel: '.res .pill[aria-label="Monedas"]', title: 'Tus monedas', text: () => 'Las ganas en cada nivel. Con ellas compras <b>comodines</b>, <b>deshacer</b> y cosas de la <b>tienda</b>.' },
   { sel: '.res .me', title: 'Tu perfil', text: () => 'Tu nombre, tu avatar y todo lo que llevas ganado.' },
-  { evs: true, sel: '.tour-evs', title: 'Eventos', text: () => 'Jugando se abren los <b>eventos</b>: la racha, las colecciones, el evento del mes y las festividades. ¡Con premios exclusivos!' },
+  { sel: '.side.r .grp-btn', open: 'r', title: 'Eventos', text: () => 'Tus <b>eventos</b> también van juntos. El botón dorado te enseña el que tiene algo listo y cuántos te esperan.' },
+  { evs: true, sel: '[data-tour-evs]', title: 'Eventos', text: () => 'Jugando se abren los <b>eventos</b>: la racha, las colecciones, el evento del mes y las festividades. ¡Con premios exclusivos!' },
   // Cierre: el círculo pasa al botón de jugar; tocarlo termina el recorrido y hace lo de siempre (jugar, continuar…).
   { go: true, sel: '.cta .go', title: '¡Ahora sí, a jugar!', text: (b) => `Toca <b>${b?.querySelector('b')?.textContent || 'Jugar'}</b> y sigue tu camino.` },
 ];
@@ -461,23 +509,53 @@ function sideTour() {
     const el = h(`<div class="guide side-guide"><div class="g-ring"></div><div class="g-bubble info"><b></b><span></span></div></div>`);
     screen.append(el);
     screen.classList.add('side-touring');
+    // Si el recorrido se retoma a medias, el cajón de lo que señala ya va abierto (en orden se abren al tocar su botón).
+    const resumeOpen = () => {
+      const k = SIDE_TOUR.slice(0, i).findLast((t) => t.open)?.open;
+      if (k) openGroup(k, 'open');
+    };
     const ring = el.querySelector('.g-ring'), bub = el.querySelector('.g-bubble');
     let i = typeof save.sideTour === 'number' ? Math.min(save.sideTour, SIDE_TOUR.length - 1) : 0, busy = false, over = false;
     const btn = () => { const t = SIDE_TOUR[i]; return screen.querySelector(t.sel || `.side.l [data-a="${t.a}"]`); };
     // Eventos que faltan por abrirse: salen en la columna de la derecha, con candado, solo durante su paso.
     const lockedEvs = () => TOUR_EVS.filter(([k]) => !isOn(k));
+    // Los que faltan van en su lugar dentro del cajón de eventos. Si todavía no hay botón que los agrupe, se enseña
+    // cómo será: el botón dorado y su cajón abierto con los que ya tiene y los que faltan (solo durante este paso).
     const addEvs = () => {
       const col = screen.querySelector('.side.r');
-      if (!col || col.querySelector('.tour-evs')) return;
-      const g = h(`<div class="tour-evs">${lockedEvs().map(([, ico]) => `<span class="iconbtn tb ev-btn soon">${icon(ico)}<span class="fi-lock">${icon('lock')}</span></span>`).join('')}</div>`);
-      col.append(g);
-      if (!reduced()) g.querySelectorAll('.iconbtn').forEach((b, k) => b.animate([{ opacity: 0, scale: 0.3 }, { opacity: 1, scale: 1.12, offset: 0.7 }, { opacity: 1, scale: 1 }], { duration: 420, delay: k * 90, easing: 'ease-out', fill: 'backwards' }));
+      if (!col || col.querySelector('.tour-lock')) return;
+      const key = (k) => (k === 'mes' ? 'evento' : k);
+      const locked = lockedEvs().map(([k, ico]) => h(`<span class="iconbtn tb ev-btn soon tour-lock" data-k="${key(k)}">${icon(ico)}<span class="fi-lock">${icon('lock')}</span><em class="grp-name">${GRP_NAMES[key(k)]}</em></span>`));
+      let drawer = col.querySelector('.grp-drawer');
+      if (!drawer) {
+        const own = [...col.querySelectorAll(':scope > .iconbtn')].map((b) => {
+          const c = b.cloneNode(true);
+          c.dataset.k = c.dataset.a;
+          c.removeAttribute('data-a');
+          c.insertAdjacentHTML('beforeend', `<em class="grp-name">${GRP_NAMES[b.dataset.a] || ''}</em>`);
+          return c;
+        });
+        const n = own.length + locked.length;
+        const g = h(`<div class="tour-grp"><span class="iconbtn tb grp-btn">${icon('star')}</span><div class="grp-drawer" style="--gc:${Math.min(3, Math.ceil(n / 2))}"></div></div>`);
+        drawer = g.querySelector('.grp-drawer');
+        own.forEach((c) => drawer.append(c));
+        col.append(g);
+        col.classList.add('tour-demo', 'open');
+      }
+      // Cada uno en su lugar (mes, día, colección, racha, misiones, logros).
+      const rank = (el) => EV_ORDER.indexOf(el.dataset.k || el.dataset.a);
+      for (const el of locked) drawer.insertBefore(el, [...drawer.children].find((x) => rank(x) > rank(el)) || null);
+      drawer.setAttribute('data-tour-evs', '');
+      if (!reduced()) locked.forEach((b, k) => b.animate([{ opacity: 0, scale: 0.3 }, { opacity: 1, scale: 1.12, offset: 0.7 }, { opacity: 1, scale: 1 }], { duration: 420, delay: k * 90, easing: 'ease-out', fill: 'backwards' }));
     };
     const dropEvs = () => {
-      const g = screen.querySelector('.tour-evs');
-      if (!g) return;
-      if (reduced()) return g.remove();
-      g.animate([{ opacity: 1, scale: 1 }, { opacity: 0, scale: 0.6 }], { duration: 220, easing: 'ease-in', fill: 'forwards' }).finished.then(() => g.remove(), () => g.remove());
+      const col = screen.querySelector('.side.r');
+      const gone = [...screen.querySelectorAll('.tour-lock, .tour-grp')];
+      screen.querySelector('[data-tour-evs]')?.removeAttribute('data-tour-evs');
+      const end = () => (gone.forEach((g) => g.remove()), col?.classList.remove('tour-demo', 'open'));
+      if (!gone.length) return;
+      if (reduced()) return end();
+      Promise.all(gone.map((g) => g.animate([{ opacity: 1, scale: 1 }, { opacity: 0, scale: 0.6 }], { duration: 220, easing: 'ease-in', fill: 'forwards' }).finished)).then(end, end);
     };
     const finish = () => {
       over = true;
@@ -486,6 +564,7 @@ function sideTour() {
       dropEvs();
       screen.querySelector('.tour-on')?.classList.remove('tour-on');
       screen.classList.remove('side-touring');
+      closeGroups();
       if (reduced()) el.remove();
       else el.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 220 }).finished.then(() => el.remove());
       done();
@@ -502,7 +581,7 @@ function sideTour() {
       const g = el.getBoundingClientRect(), W = g.width, H = g.height, br = b.getBoundingClientRect();
       const r = { left: br.left - g.left, top: br.top - g.top, right: br.right - g.left, bottom: br.bottom - g.top, width: br.width, height: br.height };
       const cx = r.left + r.width / 2, cy = r.top + r.height / 2, roomR = W - r.right - 24, roomL = r.left - 24;
-      const wide = r.width > r.height * 1.25 || r.height > r.width * 1.25;
+      const wide = r.width > r.height * 1.25 || r.height > r.width * 1.25 || Math.min(r.width, r.height) > 110;
       ring.classList.toggle('wide', wide);
       // Círculo: cuadrado alrededor del botón; cápsula si es alargado. Siempre centrado en el botón: junto a una orilla
       // no se recorre (se veía chueco), se achica hasta lo que cabe (nunca menos que el botón y su borde).
@@ -567,6 +646,11 @@ function sideTour() {
         finish();
         return b?.click();
       }
+      if (t.open) {
+        openGroup(t.open, 'open');
+        await wait(reduced() ? 0 : 380);
+        return next();
+      }
       if (!t.act?.()) return next();
       // El regalo se abre de verdad; al cerrar su ventana se sigue solo si ya se reclamó.
       busy = true;
@@ -579,6 +663,7 @@ function sideTour() {
       if (t.act()) return show();
       next();
     });
+    resumeOpen();
     show();
     loop();
   });
@@ -599,7 +684,8 @@ function regionData(r) {
   const state = w0 > cw ? 'locked' : w0 + REGION_SIZE - 1 < cw ? 'done' : 'current';
   return { r, name: regionName(r), hue: hues[0], hues, worlds, stars, state };
 }
-function showUniverse({ from = regionOf(currentWorld()) } = {}) {
+// opening: constelación que se acaba de comprar ({ r, was: cómo se veía cerrada, w: su primer mundo}).
+function showUniverse({ from = regionOf(currentWorld()), opening = null } = {}) {
   gallery.active = false;
   current = () => showUniverse({ from });
   const el = h(`<div class="screen galaxy universe">
@@ -608,12 +694,15 @@ function showUniverse({ from = regionOf(currentWorld()) } = {}) {
     <div class="side l">${sideButtons()}</div>
     <div class="side r">${eventButtons()}</div>
     <div class="res">${wallet()}</div>
-    <div class="cta">${fiBtn()}${playCTA()}</div>
+    <div class="cta">${playCTA()}</div>
   </div>`);
   let uni = null;
   // Entrar a una constelación: la cámara se lanza hacia ella y el túnel de estrellas lleva a sus planetas.
+  // 8 nov 2026: una constelación cerrada no se abre al tocarla: sale lo que pide (boleto, estrellas y monedas) y solo
+  // se entra cuando se cumple (Abrir).
   const open = (r) => {
     if (!uni || uni.busy) return;
+    if (r * REGION_SIZE > currentWorld()) return openConstGate(r);
     if (tourStep() === 'uni') setTour('galaxy');
     uni.zoomInto(r);
     warp(() => showMap({ region: r }));
@@ -629,16 +718,29 @@ function showUniverse({ from = regionOf(currentWorld()) } = {}) {
   notices();
   const make = () => {
     if (!el.isConnected) return;
-    const regions = Array.from({ length: REGION_COUNT }, (_, r) => regionData(r));
+    const regions = Array.from({ length: REGION_COUNT }, (_, r) => (opening?.r === r ? opening.was : regionData(r)));
     uni = new Universe(el.querySelector('.g3d'), el.querySelector('.glabels'), {
       regions,
       start: from,
       fromZoom: true,
       traveler: equipped('traveler'),
-      on: { open, relayout: () => current?.() },
+      on: { open, relayout: remount },
     });
     el._dispose = () => uni.dispose();
     if (tourStep() === 'uni') wait(1000).then(() => guide(uni, 'uni', el));
+    if (opening) {
+      uni.busy = true;
+      wait(reduced() ? 0 : 1100).then(async () => {
+        if (!el.isConnected) return;
+        await uni.unlockRegion(opening.r, regionData(opening.r));
+        buzz(25);
+        toast(`${constIcon()} ¡${regionName(opening.r)} abierta!`);
+        await wait(reduced() ? 0 : 500);
+        if (!el.isConnected) return;
+        uni.zoomInto(opening.r);
+        warp(() => showMap({ start: opening.w }));
+      });
+    }
   };
   if (Universe) requestAnimationFrame(make);
   else loadGalaxy().then(make);
@@ -683,10 +785,44 @@ const colBtn = () => {
   return `<button class="iconbtn tb press col-btn ${fresh('col')} ${ready ? 'ready' : ''}" data-a="col" aria-label="${c.name}" title="${c.name}">${icon(c.token)}<small class="tl">${shortLeft(colLeft())}</small>${c.state.n ? `<small class="rn">${c.state.n}</small>` : ''}${ready ? '<span class="dot"></span>' : ''}</button>`;
 };
 // res: lo que dejó la victoria (se pinta el número de antes y luego sube).
-const eventButtons = (res) => rachaBtn(res?.racha ? res.racha - 1 : null) + colBtn() + evBtn();
-const sideButtons = () => `${ibtn('gift', 'Regalo diario', 'daily', !dailyState(save.daily).claimed)}${ticketBtn()}${ibtn('bag', 'Tienda', 'shop')}${ibtn('album', 'Álbum de postales', 'album')}${ibtn('gear', 'Ajustes', 'settings')}`;
+// Misiones del día: un puntito por misión (se prende al cumplirla, como los de la racha) y punto rojo si hay algo que
+// reclamar. Todas hechas y el cofre abierto: palomita (8 nov 2026; antes decía "n/3").
+const misPips = (s) => `<small class="rn pips">${s.list.map((x) => `<i class="${x.got ? 'got' : misDone(x) ? 'on' : ''}"></i>`).join('')}</small>`;
+const misBtn = () => {
+  if (!isOn('mis')) return '';
+  const s = missions(ev()?.state?.paid), ready = misReady(), all = misAllDone();
+  return `<button class="iconbtn tb press mis-btn ${fresh('mis')} ${ready ? 'ready' : ''} ${all ? 'all-done' : ''}" data-a="mis" aria-label="Misiones del día" title="Misiones del día">${icon('misiones')}${all ? `<span class="fi-lock">${icon('check')}</span>` : misPips(s)}${ready ? '<span class="dot"></span>' : ''}</button>`;
+};
+const logrosBtn = () => {
+  if (!isOn('logros')) return '';
+  const ready = logrosReady();
+  return `<button class="iconbtn tb press logros-btn ${fresh('logros')} ${ready ? 'ready' : ''}" data-a="logros" aria-label="Logros" title="Logros">${icon('trophy')}${ready ? '<span class="dot"></span>' : ''}</button>`;
+};
+// 8 nov 2026: con más de 3 botones, cada lado se agrupa en un botón dorado con lo más urgente (listo > arde > nuevo) y
+// cuántos tienen algo listo; tocarlo abre su cajón (tarjeta oscura sin título, 3 o 4 renglones y hasta 3 columnas,
+// cada botón con su nombre abajo) y
+// tocar afuera lo cierra.
+// La festividad del día entra a la columna de eventos.
+const GROUP_FROM = 4;
+const grouped = (k, label, html) => {
+  const n = (html.match(/<button /g) || []).length;
+  if (n < GROUP_FROM) return html;
+  // Menú: de 3 o 4 renglones y máximo 3 columnas (hasta 6 en 3 renglones, 7-8 en 4 de 2, más en 3 columnas).
+  // Eventos: máximo 2 renglones (hasta 3 columnas), para que el cajón no llegue al botón de jugar.
+  const cols = k === 'r' ? Math.min(3, Math.ceil(n / 2)) : n <= 6 ? Math.ceil(n / 3) : n <= 8 ? 2 : 3;
+  return `<button class="iconbtn tb press grp-btn" data-a="grp-${k}" aria-label="${label}" aria-expanded="false" title="${label}">${icon(k === 'l' ? 'menu' : 'star')}<span class="grp-n" hidden></span></button><div class="grp-drawer" style="--gc:${cols}">${html}</div>`;
+};
+const eventButtons = (res) => {
+  // Siempre en este orden (8 nov 2026, pedido del usuario): mes, día, colección, racha, misiones, logros.
+  const all = evBtn() + fiBtn() + colBtn() + rachaBtn(res?.racha ? res.racha - 1 : null) + misBtn() + logrosBtn();
+  return grouped('r', 'Eventos', all);
+};
+const sideButtons = () => grouped('l', 'Menú', `${ibtn('gift', 'Regalo diario', 'daily', !dailyState(save.daily).claimed)}${ticketBtn()}${ibtn('bag', 'Tienda', 'shop')}${ibtn('album', 'Álbum de postales', 'album')}${ibtn('gear', 'Ajustes', 'settings')}`);
 function sideAction(a) {
-  const act = { me: () => !document.querySelector('.touring') && openProfile(), shop: () => openShop(), daily: openDaily, dticket: openDailyTicket, racha: openRacha, col: openCol, evento: openEvento, fiesta: openFiesta, album: openAlbum, settings: openSettings, dev: () => openDevMenu({ onGallery: () => showGallery(save.next), onPlanets: showPlanets, onRefresh: boot, card: mechCard }) }[a];
+  if (a === 'grp-r' || a === 'grp-l') return openGroup(a.slice(4)), true;
+  const act = { me: () => !document.querySelector('.touring') && openProfile(), shop: () => openShop(), daily: openDaily, dticket: openDailyTicket, racha: openRacha, mis: openMis, logros: openLogros, col: openCol, evento: openEvento, fiesta: openFiesta, album: openAlbum, settings: openSettings, dev: () => openDevMenu({ onGallery: () => showGallery(save.next), onPlanets: showPlanets, onRefresh: boot, card: mechCard }) }[a];
+  // Usar un botón cierra su cajón (menos durante el recorrido, que los va enseñando).
+  if (act && !document.querySelector('.side-touring')) closeGroups();
   act?.();
   return !!act;
 }
@@ -716,6 +852,10 @@ const MECH_TEXT = {
   arrow: 'Si apunta arriba, la siguiente carta tiene que ser un número más; si apunta abajo, uno menos.',
   curtain: 'Sigue boca abajo hasta que quitas su carta con telón.',
   bomb: 'Destápala antes de que su cuenta llegue a cero, o quema 3 cartas de tu mazo.',
+  coin: 'Se juega como cualquier carta y te da monedas.',
+  ship: 'Cada pocos robos pasa y se lleva una carta de tu mazo. Con racha de 4 te regresa una.',
+  ghost: 'Aparece y desaparece cada 2 jugadas o robos: solo se juega cuando se ve.',
+  cham: 'Cada 3 jugadas o robos cambia: un rato es comodín (va sobre cualquier carta) y otro rato vuelve a su número.',
   live: 'Con la flecha arriba, su número sube cada vez que juegas o robas; con la flecha abajo, baja.',
   ticket: 'Tiene dos números: juégalo con cualquiera. Se parte y la otra mitad queda para después.',
   turbo: 'Al jugarlo, tus 3 jugadas siguientes valen doble en la racha. Si robas, se apaga.',
@@ -729,10 +869,10 @@ const MECH_BOTH = {
 };
 // Ayuda → Cartas especiales, en bloques como "Cómo jugar".
 const MECH_GROUPS = [
-  ['Se abren después', ['lock', 'ice', 'curtain']],
-  ['Cambian el número', ['double', 'arrow', 'live', 'ticket']],
-  ['No se juegan', ['pack', 'bomb']],
-  ['Te ayudan', ['comet', 'turbo']],
+  ['Se abren después', ['lock', 'ice', 'curtain', 'ghost']],
+  ['Cambian el número', ['double', 'arrow', 'live', 'ticket', 'cham']],
+  ['No se juegan', ['pack', 'bomb', 'ship']],
+  ['Te ayudan', ['comet', 'turbo', 'coin']],
 ];
 // Reverso de la baraja del jugador, para los dibujos de la ayuda.
 const helpBack = (x, extra = '') => `<div class="card" style="left:${x}px;${extra};--back:${cardBackURL()}"><div class="inner">${backHTML({})}</div></div>`;
@@ -748,6 +888,10 @@ function mechCard(m, x = 0) {
   if (m === 'live') return mini(x, 'K', 's', { live: 1 });
   if (m === 'ticket') return `<div class="card up" style="left:${x}px">${faceHTML({ rank: 4, half: 9, suit: 1 })}</div>`;
   if (m === 'turbo') return mini(x, '7', 'h', { turbo: true });
+  if (m === 'coin') return mini(x, '5', 'd', { coin: 20 });
+  if (m === 'ship') return `<div class="card up ship-demo" style="left:${x}px">${faceHTML({ rank: 6, suit: 2 })}<span class="ship-mark">${icon('nave')}</span></div>`;
+  if (m === 'ghost') return mini(x, '8', 'h', {}, 'ghost-demo');
+  if (m === 'cham') return mini(x, '7', 'c', { cham: 1 }, 'cham-demo');
   if (m === 'comet') return `<div class="card comet-card up" style="left:${x}px"><div class="inner"><div class="face front"></div></div><span class="comet-face">${icon('comet')}<b>4</b><em>+3</em></span></div>`;
   return '';
 }
@@ -817,7 +961,8 @@ const runRacha = (run) => {
   return rachaWarnHTML(r.n, r.pend.length, 'Si lo abandonas');
 };
 function enterLevel(g) {
-  if (worldOf(g) > save.open && !dev.infinite) return openWorldGate(worldOf(g));
+  // También en modo dev: así se prueba la puerta (y las monedas de la constelación). La galería entra sin puerta.
+  if (worldOf(g) > save.open) return openWorldGate(worldOf(g));
   const run = save.run;
   if (run && run.g === g) return startLevel(g, { resume: true });
   if (run) {
@@ -917,12 +1062,15 @@ function startLevel(g, { resume = false, free = false, anim = 'up' } = {}) {
     meteor: !!met0,
     resume: run?.state,
     saved,
+    // Desde la constelación 2 no hay Guardar y salir (7 nov 2026); si cierra la app tiene RUN_LIMIT para volver.
+    canExit: !(saved && g >= NO_EXIT_FROM),
     free: !!save.stars[g] || isSecret(g) || free || dev.infinite, // intento que no costó boleto
+    noTrack: free, // la galería del modo dev no cuenta para misiones ni logros
     tutorial: g === 0 && !save.tutorial,
     racha: counts && isOn('racha') ? { n: racha().n, ico: rachaTheme().ico, hot: rachaHot() } : null,
     onSave: saved
       ? (state) => {
-          save.run = { g, v, state, sig };
+          save.run = { g, v, state, sig, at: Date.now() };
           persist();
         }
       : free
@@ -965,20 +1113,21 @@ function startLevel(g, { resume = false, free = false, anim = 'up' } = {}) {
     onWin: (stars) => {
       clearRun();
       const w = worldOf(g);
-      // Nivel secreto: el doble que el jefe de su mundo, según las estrellas. Comodín y deshacer
-      // solo la primera vez que se saca con 3 estrellas; con menos, solo monedas.
+      // Nivel secreto: de 1.5 a 2.5 veces el jefe de su mundo, según las estrellas. Comodín y deshacer por
+      // probabilidad, solo la primera vez que se saca con 3 estrellas; con menos, solo monedas.
       if (isSecret(g)) {
         const prev = save.secret[w] || 0;
         const met = metWin(free ? null : meteor()?.id || met0, stars);
-        const coins = metCoins(coinsFor(w * LEVELS_PER_WORLD + LEVELS_PER_WORLD - 1, stars, prev) * SECRET_MULT, met);
-        const bonus = stars >= 3 && prev < 3 ? SECRET_PRIZE : {};
+        const boss = w * LEVELS_PER_WORLD + LEVELS_PER_WORLD - 1;
+        const coins = metCoins(boosted(secretCoins(coinsFor(boss, stars, prev)), save.coins, boss), met);
+        const bonus = stars >= 3 && prev < 3 ? rollSecret() : {};
         const wild = bonus.wild || 0, undo = bonus.undo || 0;
         const fichas = colWin(stars, prev);
         save.secret[w] = Math.max(prev, stars);
         save.coins += coins;
         save.wild += wild;
         save.undo += undo;
-        const racha = counts && isOn('racha') ? rachaWin() : null;
+        const racha = counts && isOn('racha') ? rachaWin(stars) : null;
         persist();
         updateCoins();
         // Primera vez con 3 estrellas: la postal del mundo gana el sello secreto (se celebra al continuar).
@@ -988,32 +1137,41 @@ function startLevel(g, { resume = false, free = false, anim = 'up' } = {}) {
       if (g > save.next) return { coins: 0, tickets: 0, prev: 0, replay: !free };
       const prev = save.stars[g] || 0;
       const met = metWin(free ? null : meteor()?.id || met0, stars);
-      const coins = metCoins(coinsFor(g, stars, prev), met);
+      // Si va corto de monedas para su avance, el nivel paga más (boosted; nunca menos de lo normal).
+      const coins = metCoins(boosted(coinsFor(g, stars, prev), save.coins, g), met);
       // La primera victoria devuelve los boletos que cuesta el nivel.
       const tickets = prev ? 0 : ticketRefund(g);
       // El jefe da el boleto dorado para abrir el mundo siguiente (solo la primera vez).
-      const gold = !prev && level.boss && w + 1 < WORLD_COUNT ? 1 : 0;
+      // El del último mundo de cada constelación da el boleto de constelación (abre la siguiente; 8 nov 2026).
+      const bossTk = !prev && level.boss && w + 1 < WORLD_COUNT ? 1 : 0;
+      const gold = w % 10 === 9 ? 0 : bossTk, cgold = w % 10 === 9 ? bossTk : 0;
       const fichas = colWin(stars, prev);
       save.stars[g] = Math.max(prev, stars);
       save.coins += coins;
       save.tickets += tickets;
       save.gold += gold;
+      save.cgold = (save.cgold || 0) + cgold;
       const rachaOn = isOn('racha'); // la racha cuenta desde el nivel siguiente al que la abre
       if (g >= save.next) save.next = g + 1;
       if (g === 0) save.tutorial = true;
       // Cofre del jefe (primera vez): según el % de estrellas del mundo. Se guarda ya, aunque salgas antes de verlo.
       let chest = null;
       if (level.boss && !prev) {
-        chest = bossChest(worldStars(w));
+        chest = rollChest(worldStars(w));
+        // Último mundo de la constelación: además, el premio de constelación (va en el mismo cofre).
+        if (w % 10 === 9) {
+          chest.constel = true;
+          for (const k of ['coins', 'wild', 'undo']) chest[k] = (chest[k] || 0) + CONST_PRIZE[k];
+        }
         save.coins += chest.coins || 0;
         save.undo += chest.undo || 0;
         save.wild += chest.wild || 0;
       }
-      const racha = counts && !prev && rachaOn ? rachaWin() : null;
+      const racha = counts && !prev && rachaOn ? rachaWin(stars) : null;
       persist();
       updateCoins();
       // Repetir desde la victoria salta el festejo del mapa: no se ofrece si toca abrir el mundo siguiente.
-      return { coins, tickets, prev, gold, chest, wild: met?.prize?.wild || 0, undo: met?.prize?.undo || 0, met, worldStars: worldStars(w), counted: true, first: !prev, racha, replay: !free && !chest, col: fichas ? { n: fichas, ico: col().token } : null };
+      return { coins, tickets, prev, gold, cgold, chest, wild: met?.prize?.wild || 0, undo: met?.prize?.undo || 0, met, worldStars: worldStars(w), counted: true, first: !prev, racha, replay: !free && !chest, col: fichas ? { n: fichas, ico: col().token } : null };
     },
   });
   // El tablero sube y la pantalla anterior se queda atrás.
@@ -1051,6 +1209,7 @@ function playDevLevel(level, look) {
   game = new Game(app, level, {
     dev,
     free: true,
+    noTrack: true,
     event: look,
     onExit: back,
     onAbandon: back,
@@ -1093,12 +1252,14 @@ const ORIGINS = [
   { k: 'fiesta', name: 'Festividades de un día', ico: 'flame' },
   { k: 'codigo', name: 'Tesoro escondido · con código', ico: 'cofre' },
   { k: 'meteoro', name: 'Lluvia de meteoritos', ico: 'meteoro' },
+  { k: 'logro', name: 'Logros', ico: 'trophy' },
 ];
 // De qué evento salió un exclusivo: { g: grupo de ORIGINS, ico, name } (o null si es de la tienda).
 function exFrom(it) {
   if (!it.ev) return null;
   if (it.code) return { g: 'codigo', ico: 'cofre', name: 'Código de regalo' };
   if (it.met) return { g: 'meteoro', ico: 'meteoro', name: 'Lluvia de meteoritos' };
+  if (it.logro) return { g: 'logro', ico: 'trophy', name: 'Logros' };
   const f = FIESTAS.find((x) => x.key === it.ev);
   if (f) return { g: 'fiesta', ico: f.ico, name: f.name };
   const e = Object.values(EVENTOS).find((x) => x.key === it.ev);
@@ -1152,7 +1313,20 @@ function openShop(tab = 'avatar') {
       : lock ? `<span class="s-lock">${icon('lock')}Mundo ${lock}</span>`
       : `<span class="s-price ${save.coins < cost(it) ? 'short' : ''}">${coin()}${cost(it) < it.price ? `<s>${fmt(it.price)}</s>` : ''}${fmt(cost(it))}</span>`;
     const ex = exFrom(it);
-    return `<button class="sitem ${on ? 'on' : ''} ${own ? 'own' : ''} ${lock ? 'locked' : ''}" data-k="${it.k}">${ex ? `<i class="s-ev" title="${ex.name}">${icon(ex.ico)}</i>` : ''}<div class="s-art">${shopPreview(sec, it.k)}</div>${sec === 'title' ? '' : `<b>${it.name}</b>`}${it.text ? `<small>${it.text}</small>` : ''}${foot}</button>`;
+    // Lo tuyo se puede vender (70%): una etiqueta abajo a la derecha.
+    const sale = sellable(sec, it) ? `<span class="s-sell" data-sell role="button" aria-label="Vender" title="Vender">${icon('tag')}</span>` : '';
+    return `<button class="sitem ${on ? 'on' : ''} ${own ? 'own' : ''} ${lock ? 'locked' : ''}" data-k="${it.k}" data-sec="${sec}">${ex ? `<i class="s-ev" title="${ex.name}">${icon(ex.ico)}</i>` : ''}<div class="s-art">${shopPreview(sec, it.k)}</div>${sec === 'title' ? '' : `<b>${it.name}</b>`}${it.text ? `<small>${it.text}</small>` : ''}${foot}${sale}</button>`;
+  };
+  // Confirmar antes de vender (o de comprar un recuerdo): son monedas grandes.
+  const confirm = ({ title, text, label, cls = 'green', onYes }) => {
+    const c = openModal({
+      title,
+      color: 'orange',
+      body: `<p class="lead">${text}</p>`,
+      cls: 'buy-modal',
+      buttons: [{ label, cls: `${cls} grow`, onClick: onYes }, { label: 'Ahora no', cls: 'later' }],
+    });
+    return c;
   };
   const show = (sec, anim = true) => {
     const g = groupOf(sec), newGroup = groupOf(tab) !== g || !tabs.children.length;
@@ -1181,13 +1355,19 @@ function openShop(tab = 'avatar') {
       const fresh = h(card(tab, item(tab, el.dataset.k)));
       el.className = fresh.className;
       el.querySelector('.s-on, .s-use, .s-price, .s-lock').replaceWith(fresh.querySelector('.s-on, .s-use, .s-price, .s-lock'));
+      el.querySelector('.s-sell')?.remove();
+      const sl = fresh.querySelector('.s-sell');
+      if (sl) el.append(sl);
       // El marco se ve sobre tu avatar actual: al cambiar de avatar se redibuja.
       if (tab === 'ring') el.querySelector('.s-art').innerHTML = shopPreview('ring', el.dataset.k);
     });
   };
   m.el.querySelector('.sgroups').addEventListener('click', (e) => {
     const b = e.target.closest('[data-group]');
-    if (b && b.dataset.group !== groupOf(tab).k) show(GROUPS.find((g) => g.k === b.dataset.group).secs[0]);
+    if (!b) return;
+    if (b.dataset.group !== groupOf(tab).k) {
+      show(GROUPS.find((g) => g.k === b.dataset.group).secs[0]);
+    }
   });
   tabs.addEventListener('click', (e) => {
     const b = e.target.closest('[data-tab]');
@@ -1195,7 +1375,29 @@ function openShop(tab = 'avatar') {
   });
   grid.addEventListener('click', async (e) => {
     const el = e.target.closest('.sitem');
-    if (!el || el.classList.contains('on')) return;
+    if (!el) return;
+    const sec = el.dataset.sec || tab;
+    // Vender (70%): regresa a la tienda; un exclusivo de evento se recupera hasta que vuelva su evento.
+    if (e.target.closest('[data-sell]')) {
+      const it = item(sec, el.dataset.k), p = sellPrice(sec, it);
+      return confirm({
+        title: 'Vender',
+        text: `¿Vendes <b>${esc(it.name)}</b> por ${coin()} <b>${fmt(p)}</b>? ${it.ev ? 'Es exclusivo de un evento: lo puedes recuperar <b>el próximo año</b>, cuando vuelva su evento.' : 'Regresa a la tienda.'}`,
+        label: `Vender ${coin()} ${fmt(p)}`,
+        cls: 'orange',
+        onYes: async () => {
+          const r = el.getBoundingClientRect(), was = save.coins;
+          if (!sell(sec, it.k)) return;
+          applyLook();
+          paintMe();
+          await flyToWallet('coins', { x: r.left + r.width / 2, y: r.top + r.height / 2 }, p, was);
+          if (it.ev) show(tab, false);
+          else refresh();
+          toast(`${coin()} +${fmt(p)}`);
+        },
+      });
+    }
+    if (el.classList.contains('on')) return;
     const k = el.dataset.k, it = item(tab, k), art = el.querySelector('.s-art');
     const nope = (msg) => {
       el.animate([{ translate: '0 0' }, { translate: '-6px 0' }, { translate: '5px 0' }, { translate: '-3px 0' }, { translate: '0 0' }], { duration: 300 });
@@ -1229,7 +1431,7 @@ function paintMe() {
 
 // ---------- Regalo diario: se ve una semana (6 días + el día 7 grande con caja sorpresa) ----------
 const prizeIcons = (p) =>
-  [p.coins && `${coin()}<b>${p.coins}</b>`, p.tickets && `${icon('ticket')}<b>×${p.tickets}</b>`, p.undo && `${icon('undo')}<b>×${p.undo}</b>`, p.wild && `${icon('wild')}<b>×${p.wild}</b>`].filter(Boolean);
+  [p.coins && `${coin()}<b>${p.coins}</b>`, p.tickets && `${icon('ticket')}<b>×${p.tickets}</b>`, p.undo && `${icon('undo')}<b>×${p.undo}</b>`, p.wild && `${icon('wild')}<b>×${p.wild}</b>`, ...Object.entries(p.helps || {}).map(([k, n]) => n && `${icon(HELPS[k].ico)}<b>×${n}</b>`)].filter(Boolean);
 // Lo que da un premio, como piezas para la ventana (icono + cantidad).
 const lootHTML = (p) => prizeIcons(p).map((x) => `<span class="loot-it">${x}</span>`).join('');
 // Suma el premio al guardado y lo lanza al monedero desde un punto de la pantalla.
@@ -1240,12 +1442,13 @@ async function grantPrize(p, from, { bubbles = true } = {}) {
   save.tickets += p.tickets || 0;
   save.undo += p.undo || 0;
   save.wild += p.wild || 0;
+  for (const [k, n] of Object.entries(p.helps || {})) save.helps[k] = (save.helps[k] || 0) + n;
   persist();
   const runs = [];
   if (p.coins) runs.push(flyToWallet('coins', from, p.coins));
   if (p.tickets) runs.push(wait(200).then(() => flyToWallet('tickets', from, p.tickets)));
   if (bubbles === 'pop') [p.wild && ['wild', p.wild], p.undo && ['undo', p.undo]].filter(Boolean).forEach(([k, n], i) => wait(i * 450).then(() => popPrize(icon(k), `+${n}`, { x: from.x + (i ? 40 : p.undo && p.wild ? -40 : 0), y: from.y })));
-  else if (bubbles) floatBubbles(prizeIcons({ undo: p.undo, wild: p.wild }), from);
+  else if (bubbles) floatBubbles(prizeIcons({ undo: p.undo, wild: p.wild, helps: p.helps }), from);
   await Promise.all(runs);
 }
 function openDailyTicket() {
@@ -1259,7 +1462,27 @@ function openDailyTicket() {
       ? `<div class="dticket wait"><div class="rays"></div>${pile(n)}</div><p class="tk-clock">${clock(left)}</p>`
       : `<div class="dticket"><div class="rays"></div>${pile(n)}<b>+${n}</b></div>`,
     buttons: left
-      ? []
+      ? [
+          // Sin esperar (7 nov 2026): los mismos boletos a TICKET_PRICE cada uno; el reloj vuelve a empezar.
+          {
+            label: `${n} ${icon('ticket')} ya · ${coin()} ${money(n * TICKET_PRICE)}`,
+            cls: 'green',
+            disabled: save.coins < n * TICKET_PRICE,
+            keep: true,
+            onClick: async (btn) => {
+              const p = n * TICKET_PRICE;
+              if (save.coins < p) return;
+              btn.disabled = true;
+              save.coins -= p;
+              save.ticketAt = Date.now();
+              persist();
+              const r = btn.getBoundingClientRect(), at = { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+              await spendFromWallet('coins', at, p);
+              m.close();
+              grantPrize({ tickets: n }, at);
+            },
+          },
+        ]
       : [
           {
             label: `${icon('ticket')} Reclamar`,
@@ -1357,7 +1580,7 @@ function openRacha() {
     buttons: ready ? [{ label: `${icon('gift')} Reclamar`, cls: 'gold', keep: true, onClick: claim }] : [],
   });
   m.el.querySelectorAll('.rclaim, .rg.ready').forEach((b) => b.addEventListener('click', claim));
-  helpTip(m, 'Gana niveles nuevos seguidos (también los secretos), con las estrellas que sea. Repetir niveles no suma. El evento del mes y las festividades no cuentan: ni suman ni la rompen. Si pierdes o abandonas uno nuevo, o te rindes en uno repetido, vuelves a 0 y se pierden los premios sin reclamar; los que ya alcanzaste no se repiten. Después del 30, hay premio cada 50. A medianoche empieza otra: lo que no reclames antes, se pierde.');
+  helpTip(m, 'Gana niveles nuevos seguidos (también los secretos): cada uno suma sus estrellas. Repetir niveles no suma. El evento del mes y las festividades no cuentan: ni suman ni la rompen. Si pierdes o abandonas uno nuevo, o te rindes en uno repetido, vuelves a 0 y se pierden los premios sin reclamar; los que ya alcanzaste no se repiten. Después de las 240 estrellas, hay premio cada 150. A medianoche empieza otra: lo que no reclames antes, se pierde.');
   const c = m.el.querySelector('.rclock');
   const tick = setInterval(() => (c.isConnected ? (c.textContent = clock(msToMidnight())) : clearInterval(tick)), 1000);
 }
@@ -1366,6 +1589,161 @@ const refreshRacha = () => document.querySelectorAll('[data-a="racha"]').forEach
 function bumpRacha() {
   refreshRacha();
   bumpBtn('racha', '+1', rachaReady());
+}
+// ---------- Misiones del día y logros (7 nov 2026; ver missions.js) ----------
+const refreshMis = () => document.querySelectorAll('[data-a="mis"]').forEach((b) => (b.outerHTML = misBtn()));
+const refreshLogros = () => document.querySelectorAll('[data-a="logros"]').forEach((b) => (b.outerHTML = logrosBtn()));
+const barHTML = (n, goal) => `<span class="mbar"><i style="width:${Math.min(100, (n / goal) * 100)}%"></i><b>${money(Math.min(n, goal))}/${money(goal)}</b></span>`;
+function openMis() {
+  const s = missions(ev()?.state?.paid);
+  // Ya hizo todas (y abrió el cofre): solo festejo y cuándo llegan las de mañana, sin botón de jugar.
+  if (misAllDone()) {
+    const m = openModal({
+      title: 'Misiones del día',
+      color: 'green',
+      cls: 'mis-modal mis-all',
+      body: `<div class="evi-hero"><div class="rays"></div><span class="evi-ico">${icon('misiones', 0, 0, 'big')}<span class="mis-all-ok">${icon('check')}</span></span></div>
+        <p class="lead"><b>¡Cumpliste todas las de hoy!</b> Vuelve mañana por 3 nuevas.</p>
+        <p class="tk-clock mis-clock">${clock(msToMidnight())}</p>`,
+    });
+    const c = m.el.querySelector('.mis-clock');
+    const t = setInterval(() => (c.isConnected ? (c.textContent = clock(msToMidnight())) : clearInterval(t)), 1000);
+    return;
+  }
+  const row = (x, i) => {
+    const m = misDef(x.id), done = misDone(x);
+    const end = x.got ? `<span class="mis-got">${icon('check')}</span>` : done ? `<button class="btn green mis-claim" data-i="${i}">${coin()} ${money(x.coins)}</button>` : `<span class="mis-prize">${coin()}${money(x.coins)}</span>`;
+    return `<li class="mis ${x.got ? 'got' : done ? 'ready' : ''}">${icon(m.ico)}<div><b>${m.text(x.goal)}</b>${barHTML(x.n, x.goal)}</div>${end}</li>`;
+  };
+  // El cofre de las 3: monedas y la probabilidad del comodín (más alta si te tocaron difíciles); a la derecha, un
+  // puntito por misión reclamada.
+  const bonus = () => {
+    const ready = misBonusReady();
+    // 8 nov 2026: lo que trae es sorpresa (no se dice antes de abrirlo).
+    return `<li class="mis bonus ${s.bonus ? 'got' : ready ? 'ready' : ''}">${icon('cofre')}<div><b>Cofre del día</b><small>${s.bonus ? 'Ya lo abriste' : 'Sorpresa al cumplir las 3'}</small></div>${s.bonus ? `<span class="mis-got">${icon('check')}</span>` : ready ? '<button class="btn gold mis-bonus">Abrir</button>' : `<span class="mis-pips">${s.list.map((x) => `<i class="${x.got ? 'on' : ''}"></i>`).join('')}</span>`}</li>`;
+  };
+  const m = openModal({
+    title: 'Misiones del día',
+    color: 'green',
+    cls: 'mis-modal',
+    body: `<p class="tk-clock mis-clock">${clock(msToMidnight())}</p><ul class="mis-list">${s.list.map(row).join('')}${bonus()}</ul>
+      <p class="note">A medianoche llegan otras: lo que no reclames se pierde.</p>`,
+    buttons: [{ label: '¡A jugar!', cls: 'green wide' }],
+    onClose: () => refreshMis(),
+  });
+  const paint = () => (m.el.querySelector('.mis-list').innerHTML = s.list.map(row).join('') + bonus());
+  m.el.addEventListener('click', async (e) => {
+    const b = e.target.closest('.mis-claim, .mis-bonus');
+    if (!b) return;
+    b.disabled = true;
+    const r = b.getBoundingClientRect(), at = { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+    sparkle(at, 16);
+    buzz(15);
+    if (b.classList.contains('mis-claim')) {
+      const p = misClaim(+b.dataset.i);
+      save.coins -= p.coins; // grantPrize los vuelve a sumar con su vuelo
+      grantPrize(p, at);
+    } else {
+      const p = misBonus();
+      save.coins -= p.coins;
+      save.wild -= p.wild || 0;
+      save.undo -= p.undo || 0;
+      grantPrize(p, at, { bubbles: 'pop' });
+      // Ya no queda nada hoy: el botón de jugar se va (la ventana se queda para ver el cofre).
+      m.el.querySelector('.mbtns')?.remove();
+    }
+    paint();
+    if (!reduced()) m.el.querySelectorAll('.mis.ready').forEach((el) => el.animate([{ scale: 1 }, { scale: 1.04 }, { scale: 1 }], { duration: 320 }));
+  });
+  const c = m.el.querySelector('.mis-clock');
+  const t = setInterval(() => (c.isConnected ? (c.textContent = clock(msToMidnight())) : clearInterval(t)), 1000);
+  if (!reduced()) m.el.querySelectorAll('.mis').forEach((el, i) => el.animate([{ opacity: 0, translate: '-16px 0' }, { opacity: 1, translate: '0 0' }], { duration: 300, delay: 120 + i * 90, easing: 'ease-out', fill: 'backwards' }));
+}
+function openLogros() {
+  const list = logrosVisible();
+  const row = (l) => {
+    const T = LOGRO_TOP, at = logroAt(l), got = logroGot(l), next = l.steps[Math.min(got, T - 1)], v = logroStat(l), done = got >= T;
+    const medals = LOGRO_MEDAL.map((x, i) => `<i class="medal m${i} ${i < got ? 'on' : ''}" title="${x}"></i>`).join('');
+    // Premio del escalón que sigue: monedas y, en platino y diamante, comodines y deshacer.
+    const pz = LOGRO_PRIZES[Math.min(got, T - 1)];
+    const prize = `${coin()}${money(pz.coins)}${pz.wild ? ` ${icon('wild')}×${pz.wild}` : ''}${pz.undo ? ` ${icon('undo')}×${pz.undo}` : ''}`;
+    const end = done ? `<span class="mis-got">${icon('check')}</span>` : at > got ? `<button class="btn green lg-claim" data-id="${l.id}">${prize}</button>` : `<span class="mis-prize">${prize}</span>`;
+    return `<li class="mis lg ${done ? 'got' : at > got ? 'ready' : ''}">${icon(l.ico)}<div><b>${l.name} <span class="medals">${medals}</span></b><small>${done ? '¡Diamante!' : `${LOGRO_MEDAL[got]}: ${l.text(next)}`}${l.title && got < 3 ? ` · el oro da el título <b>${item('title', l.title).name}</b>` : ''}</small>${done ? '' : barHTML(v, next)}</div>${end}</li>`;
+  };
+  // Primero lo que se puede reclamar, luego lo que va más avanzado.
+  const step = (l) => l.steps[Math.min(logroGot(l), LOGRO_TOP - 1)];
+  const sorted = () => [...list].sort((a, b) => (logroAt(b) > logroGot(b)) - (logroAt(a) > logroGot(a)) || (logroGot(a) >= LOGRO_TOP) - (logroGot(b) >= LOGRO_TOP) || logroStat(b) / step(b) - logroStat(a) / step(a));
+  const m = openModal({
+    title: 'Logros',
+    ico: 'trophy',
+    color: 'gold',
+    wide: true,
+    cls: 'mis-modal lg-modal',
+    body: `<ul class="mis-list">${sorted().map(row).join('')}</ul>`,
+    onClose: () => refreshLogros(),
+  });
+  m.el.addEventListener('click', (e) => {
+    const b = e.target.closest('.lg-claim');
+    if (!b) return;
+    b.disabled = true;
+    const r = b.getBoundingClientRect(), at = { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+    const p = logroClaim(b.dataset.id);
+    if (!p) return;
+    sparkle(at, 18);
+    buzz(20);
+    save.coins -= p.coins;
+    save.wild -= p.wild || 0;
+    save.undo -= p.undo || 0;
+    grantPrize({ coins: p.coins, ...(p.wild && { wild: p.wild }), ...(p.undo && { undo: p.undo }) }, at, p.wild ? { bubbles: 'pop' } : undefined);
+    if (p.title) toast(`${icon('crown')} ¡Nuevo título! ${item('title', p.title).name}`);
+    const li = b.closest('.mis');
+    li.outerHTML = row(LOGROS.find((x) => x.id === b.dataset.id));
+  });
+}
+// Cajón de un lado ('l' menú, 'r' eventos): 'toggle' / 'open' / 'close'. auto: se cierra solo a los 5 s.
+const grpTimer = { l: 0, r: 0 };
+function openGroup(k, how = 'toggle', auto = false) {
+  const side = document.querySelector(`#app .side.${k}`), btn = side?.querySelector('.grp-btn');
+  if (!btn) return;
+  const open = how === 'toggle' ? !side.classList.contains('open') : how === 'open';
+  clearTimeout(grpTimer[k]);
+  if (open) document.querySelectorAll('#app .side.open').forEach((x) => x !== side && openGroup(x.classList.contains('r') ? 'r' : 'l', 'close'));
+  if (open === side.classList.contains('open')) return;
+  side.classList.toggle('open', open);
+  btn.setAttribute('aria-expanded', open);
+  if (open && !reduced()) side.querySelectorAll('.grp-drawer > *').forEach((b, i) => b.animate([{ opacity: 0, scale: 0.4 }, { opacity: 1, scale: 1.1, offset: 0.7 }, { opacity: 1, scale: 1 }], { duration: 320, delay: 40 + i * 35, easing: 'ease-out', fill: 'backwards' }));
+  if (open && auto) grpTimer[k] = setTimeout(() => openGroup(k, 'close'), 5000);
+}
+const closeGroups = () => ['l', 'r'].forEach((k) => openGroup(k, 'close'));
+// Tocar fuera de un cajón abierto lo cierra (menos durante el recorrido de botones).
+document.addEventListener('pointerdown', (e) => {
+  if (e.target.closest('#app .side.open, .side-touring, .modal-back')) return;
+  closeGroups();
+}, true);
+// Nombre corto de cada botón del cajón (va abajo).
+const GRP_NAMES = { daily: 'Regalo', dticket: 'Boletos', shop: 'Tienda', album: 'Álbum', settings: 'Ajustes', racha: 'Racha', mis: 'Misiones', logros: 'Logros', col: 'Colección', evento: 'Evento', fiesta: 'Festividad' };
+// El botón del grupo enseña lo más urgente de su cajón y cuántos tienen algo listo; se repinta cuando cambian.
+function paintGroup(side) {
+  const btn = side.querySelector('.grp-btn'), drawer = side.querySelector('.grp-drawer');
+  if (!btn || !drawer) return;
+  const btns = [...drawer.querySelectorAll(':scope > .iconbtn')];
+  for (const b of btns) if (!b.querySelector(':scope > .grp-name')) b.insertAdjacentHTML('beforeend', `<em class="grp-name">${GRP_NAMES[b.dataset.a] || b.title}</em>`);
+  const ready = btns.filter((b) => b.classList.contains('ready'));
+  const top = ready[0] || btns.find((b) => b.classList.contains('hot')) || btns.find((b) => b.classList.contains('nuevo'));
+  const ico = top?.querySelector(':scope > .ico');
+  btn.querySelector(':scope > .ico').replaceWith(ico ? ico.cloneNode(true) : h(icon(side.classList.contains('l') ? 'menu' : 'star')));
+  btn.classList.toggle('ready', !!ready.length);
+  const n = btn.querySelector('.grp-n');
+  n.textContent = ready.length || '';
+  n.hidden = !ready.length;
+}
+function initGroups(root) {
+  root.querySelectorAll('.side').forEach((side) => {
+    const drawer = side.querySelector('.grp-drawer');
+    if (!drawer) return;
+    paintGroup(side);
+    new MutationObserver(() => paintGroup(side)).observe(drawer, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
+  });
 }
 const refreshCol = () => document.querySelectorAll('[data-a="col"]').forEach((b) => (b.outerHTML = colBtn()));
 function bumpCol(n) {
@@ -1392,7 +1770,7 @@ const colAvail = (o) => !o.sec || !owns(o.sec, o.item);
 // sec: con segundos (en la tienda de la colección, para que se vea avanzar).
 const daysLeft = (ms, sec = false) => { if (ms <= 864e5) return clock(ms); const t = clock(ms % 864e5); return `${Math.floor(ms / 864e5)} d ${sec ? t : t.replace(/:\d\d$/, '')}`; };
 const COL_KIND = { title: 'Título', frame: 'Postal', space: 'Espacio', ring: 'Marco', avatar: 'Avatar', back: 'Reverso', traveler: 'Viajero' };
-const COL_HELP = { wild: 'Comodín', undo: 'Deshacer', tickets: 'Boletos' };
+const COL_HELP = { wild: 'Comodín', undo: 'Deshacer', tickets: 'Boletos', reloj: 'Reloj de arena', ver3: 'Ver cartas 3 s', llave: 'Llave maestra' };
 function openCol() {
   const c = col();
   if (!c) return;
@@ -1463,7 +1841,7 @@ function openCol() {
 }
 // ---------- Evento del mes ----------
 // 5 planetas de 5 niveles en su propia constelación. Un boleto temático para entrar: ganar lo devuelve,
-// perder lo gasta y el siguiente llega a las 24 h (no se compra). El 5.º nivel de cada planeta da su exclusivo.
+// perder lo gasta y el siguiente llega a las 24 h o se compra (evTicketPrice; el primero de cada edición se paga). El 5.º nivel de cada planeta da su exclusivo.
 const EV_W = 900; // w de los planetas del evento en la vista 3D (solo para sus semillas y para reconocerlos)
 const EV_NODES = [0, 2, 5, 7, 9]; // dónde van sus 5 insignias en el camino del planeta
 // El evento del mes y las festividades (24 h) usan la misma pantalla: EVS dice cuál se está viendo y cómo se juega.
@@ -1479,30 +1857,44 @@ const EVK = {
 };
 let EVS = EVK.mes;
 const kindOf = (e) => (e.date ? 'fiesta' : 'mes');
+// 8 nov 2026: un evento o festividad que se anuncia (aún no empieza) sale como nuevo en la botonera (punto, se mueve,
+// "¡Nuevo!" y abre la columna) hasta que abres su ventana.
+const soonId = (e) => `${e.key}:${new Date().getFullYear()}`;
+const soonNew = (e) => !save.soonSeen?.[soonId(e)];
+const soonTag = (e) => (soonNew(e) ? ' ready nuevo' : '');
+const soonDot = (e) => (soonNew(e) ? '<em class="soon-new outl">¡Nuevo!</em>' : '');
+function seeSoon(e, a) {
+  if (!soonNew(e)) return;
+  (save.soonSeen ||= {})[soonId(e)] = 1;
+  persist();
+  document.querySelectorAll(`[data-a="${a}"]`).forEach((b) => (b.classList.remove('ready', 'nuevo'), b.querySelectorAll('.soon-new, .dot').forEach((x) => x.remove())));
+}
 const evBtn = () => {
   const e = ev();
   // Un día antes del mes con evento: el botón ya sale, gris y con candado, con la cuenta regresiva.
-  if (!e || e.done) { const n = evSoon(); return n ? `<button class="iconbtn tb press ev-btn soon ${fresh('mes')}" data-a="evento" aria-label="${n.name}: mañana" title="${n.name}">${icon(n.ico)}<span class="fi-lock">${icon('lock')}</span><small class="tl">en ${shortLeft(msToMidnight())}</small></button>` : ''; }
+  if (!e || e.done) { const n = evSoon(); return n ? `<button class="iconbtn tb press ev-btn soon ${fresh('mes')}${soonTag(n)}" data-a="evento" aria-label="${n.name}: mañana" title="${n.name}">${icon(n.ico)}<span class="fi-lock">${icon('lock')}</span><small class="tl">en ${shortLeft(msToMidnight())}</small>${soonDot(n)}</button>` : ''; }
   // Arriba, lo que le queda al mes. El reloj del boleto vive adentro: aquí solo se apaga si no hay boleto
   // y se mueve con su punto cuando sí lo hay.
-  const ready = !!(e.state.run || e.state.tk);
+  // Sin pagar todavía el primer boleto también llama (hay algo que hacer adentro).
+  const ready = !!(e.state.run || e.state.tk || !e.state.paid);
   return `<button class="iconbtn tb press ev-btn ${fresh('mes')} ${ready ? 'ready' : 'waiting'}" data-a="evento" aria-label="${e.name}" title="${e.name}">${icon(e.ico)}<small class="tl">${shortLeft(evLeft())}</small>${ready ? '<span class="dot"></span>' : ''}</button>`;
 };
 // Evento del mes: si ya empezó, a su pantalla; si empieza mañana, de qué va y la cuenta regresiva.
 function openEvento() {
-  if (ev() && !ev().done) return warp(() => showEvent({ kind: 'mes' }));
+  // Entrar al mundo del evento ya es haber pagado: si no, primero la entrada (openEntry).
+  if (ev() && !ev().done) return ev().state.paid ? warp(() => showEvent({ kind: 'mes' })) : openEntry('mes');
   const n = evSoon();
   if (!n) return;
+  seeSoon(n, 'evento');
   const m = openModal({
     title: `¡Mañana empieza ${n.name}!`,
     color: n.color,
-    cls: 'fi-soon',
-    body: `<div class="dticket wait"><div class="rays"></div><span style="--i:0">${icon(n.ico, 0, 0, 'big')}</span></div><p class="tk-clock">${clock(msToMidnight())}</p>
-      <p class="note">Todo el mes: <b>${EVENT_PLANETS} planetas</b>, ${EVENT_LEVELS} niveles y premios <b>exclusivos</b>.</p>`,
+    cls: 'entry-modal',
+    body: `${passHTML(n, { ico: n.ico, state: 'soon', label: 'Empieza en', sub: `<span class="ep-clock" data-pclock>${clock(msToMidnight())}</span>` })}
+      <p class="lead">Todo el mes: <b>${EVENT_PLANETS} planetas</b>, ${EVENT_LEVELS} niveles y premios <b>exclusivos</b>.</p>`,
     buttons: [{ label: '¡Ahí estaré!', cls: 'gold wide' }],
   });
-  const c = m.el.querySelector('.tk-clock');
-  const t = setInterval(() => (c.isConnected ? (evSoon() ? (c.textContent = clock(msToMidnight())) : (m.close(), current?.())) : clearInterval(t)), 1000);
+  passClock(m, () => (evSoon() ? msToMidnight() : 0), () => current?.());
 }
 // Festividad (24 h): botón dorado junto a Jugar, del tamaño de los laterales. Desde 3 días antes sale gris, con
 // candado y la cuenta regresiva ("en 2 d", "en 19 h"); el día de la fiesta, a color con "¡Hoy!" y lo que le queda.
@@ -1511,24 +1903,29 @@ const fiBtn = () => {
   if (!f || f.done) return '';
   const left = shortLeft(fiestaLeft());
   return f.soon
-    ? `<button class="iconbtn tb press fi-btn soon ${fresh('fiesta')}" data-a="fiesta" aria-label="${f.name}: ${f.inDays > 1 ? `en ${f.inDays} días` : 'mañana'}" title="${f.name}">${icon(f.ico)}<span class="fi-lock">${icon('lock')}</span><small class="tl">en ${left}</small></button>`
+    ? `<button class="iconbtn tb press fi-btn soon ${fiPre(f) ? 'pre' : ''} ${fresh('fiesta')}${soonTag(f)}" data-a="fiesta" aria-label="${f.name}: ${f.inDays > 1 ? `en ${f.inDays} días` : 'mañana'}" title="${f.name}">${icon(f.ico)}<span class="fi-lock">${icon(fiPre(f) ? 'check' : 'lock')}</span><small class="tl">en ${left}</small>${soonDot(f)}</button>`
     : `<button class="iconbtn tb press fi-btn ready ${fresh('fiesta')}" data-a="fiesta" aria-label="${f.name}" title="${f.name}">${icon(f.ico)}<small class="tl">${left}</small><em class="fi-hoy outl">¡Hoy!</em><span class="dot"></span></button>`;
 };
 // Antes de que empiece: de qué va y la cuenta regresiva (nunca se dice que los niveles piden ayudas). El día de la fiesta, el botón lleva a ella.
 function openFiesta() {
   const f = fiesta();
   if (!f) return;
-  if (!f.soon) return warp(() => showEvent({ kind: 'fiesta' }));
+  if (!f.soon) return fiPaid(f) ? warp(() => showEvent({ kind: 'fiesta' })) : openEntry('fiesta');
+  // Preventa (7 nov 2026): comprada antes cuesta FI_PRE menos; el día de la fiesta ya entras sin pagar.
+  // 8 nov 2026: el mismo pase que la entrada del mes, con la cinta del descuento; ya comprada, el pase lleva el sello
+  // "¡Lista!" y no hay botones (ni "Ahora no" ni "Entrada comprada").
+  const pre = fiPre(f);
+  seeSoon(f, 'fiesta');
+  EVS = EVK.fiesta;
   const m = openModal({
     title: f.inDays > 1 ? `¡En ${f.inDays} días es ${f.name}!` : `¡Mañana es ${f.name}!`,
     color: f.color,
-    cls: 'fi-soon',
-    body: `<div class="dticket wait"><div class="rays"></div><span style="--i:0">${icon(f.ico, 0, 0, 'big')}</span></div><p class="tk-clock">${clock(fiestaLeft())}</p>
-      <p class="note">Solo por ${f.days > 1 ? `${f.days} días` : '24 horas'}: <b>${fiShape(f).P} planetas</b>, ${fiShape(f).L} niveles y premios <b>exclusivos</b>.<br>No necesitas <b>boletos</b>: juega y reintenta las veces que quieras.</p>`,
-    buttons: [{ label: '¡Ahí estaré!', cls: 'gold wide' }],
+    cls: 'entry-modal',
+    body: `${passHTML(f, { ico: f.ico, state: pre ? 'owned' : 'soon', label: 'Empieza en', sub: `<span class="ep-clock" data-pclock>${clock(fiestaLeft())}</span>`, off: pre ? '' : `−${Math.round(FI_PRE * 100)}%` })}
+      <p class="lead">${pre ? 'Ya tienes tu entrada. Ese día entras directo.' : 'Compra tu entrada desde hoy y paga menos.'}</p>`,
+    buttons: pre ? [] : [buyTicketBtn(f, () => m, 'fiesta', () => (toast(`${icon('check')} ¡Entrada lista para ${f.name}!`), current?.()), 'Comprar')],
   });
-  const c = m.el.querySelector('.tk-clock');
-  const t = setInterval(() => (c.isConnected ? (fiesta()?.soon ? (c.textContent = clock(fiestaLeft())) : (m.close(), current?.())) : clearInterval(t)), 1000);
+  passClock(m, () => (fiesta()?.soon ? fiestaLeft() : 0), () => current?.());
 }
 // Los tiempos de los botones avanzan solos (y el del mes vuelve a moverse cuando llega el boleto).
 setInterval(() => {
@@ -1568,6 +1965,8 @@ function evCTA(e) {
   const s = e.state;
   if (e.done) return '';
   if (s.run) return goBtn('Continuar', `Nivel ${s.k + 1}`, 'ev-play');
+  // Entrada sin pagar (no debería pasar: se paga antes de entrar al mundo): Jugar abre la entrada.
+  if (EVS.tk ? !s.tk && !s.paid : !fiPaid(e)) return goBtn('Jugar', `Nivel ${s.k + 1}`, 'ev-buy');
   if (s.tk || !EVS.tk) return goBtn('Jugar', `Nivel ${s.k + 1}`, 'ev-play');
   return `<button class="go wait" data-a="ev-wait">${icon(e.tk)}<span class="t"><b class="outl">Boleto en</b><small data-evclock>${clock(evTicketLeft())}</small></span></button>`;
 }
@@ -1620,6 +2019,7 @@ function showEvent({ anim, after = null, start = null, kind = null } = {}) {
     if (a === 'out') return galaxy?.zoomOut();
     if (a === 'ev-play') return evPlay();
     if (a === 'ev-wait') return openEvWait();
+    if (a === 'ev-buy') return openEntry(kindOf(e), true);
     if (a === 'ev-help') return openEvIntro(EVS.get() || e);
     if (a === 'me') return openProfile();
     if (a === 'dev') return sideAction(a);
@@ -1641,7 +2041,7 @@ function showEvent({ anim, after = null, start = null, kind = null } = {}) {
           if (m === 'planet') paintPlanet(w - EVS.W);
         },
         locked: () => toast(`${icon('lock')} Primero termina el planeta anterior`),
-        relayout: () => current?.(),
+        relayout: remount,
         level: (w, i) => {
           const k = (w - EVS.W) * EVS.N + i, s = EVS.get()?.state;
           if (!s) return;
@@ -1708,19 +2108,19 @@ function openEvIntro(e, go = false) {
     body: `<div class="evi-hero"><div class="rays"></div>${EVENT_BIOMES[e.key].map((b, p, all) => `<span class="evi-pl" style="--i:${all.length === 3 ? [-2, -1, 1][p] : p - (all.length - 1) / 2}">${miniPlanet(b.emblem)}</span>`).join('')}${EVENT_BIOMES[e.key].length === 3 ? `<span class="evi-pl" style="--i:2">${icon(e.deco)}</span>` : ''}<span class="evi-ico">${icon(e.ico, 0, 0, 'big')}</span></div>
       ${kind === 'fiesta' ? `<p class="lead">¡Hoy es <b>${e.name}</b>! ${e.days > 1 ? `Solo por ${e.days} días` : 'Solo por hoy'}: viaja por <b>${K.P} planetas</b> y gana premios <b>exclusivos</b> que no salen en ningún otro lado.</p>
       <ul class="evi-rules">
-        ${rule('ticket', `<b>Sin boletos</b>: entra y reintenta las veces que quieras.`)}
-        ${rule('flame', `${K.L} niveles <b>difíciles</b>. Sin estrellas: solo ganar. No cuentan para tu <b>racha</b> ni tu <b>colección</b>.`)}
-        ${rule('gift', `Gana el <b>nivel ${K.N}</b> de cada planeta y abre su <b>regalo sorpresa</b>. Es tuyo para siempre.`)}
+        ${rule('ticket', `Pagas la entrada <b>una vez</b> y reintentas <b>las veces que quieras</b> ${e.days > 1 ? 'mientras dure' : 'hasta la medianoche'}.`)}
+        ${rule('flame', `${K.L} niveles <b>difíciles</b>. No cuentan para tu <b>racha</b> ni tu <b>colección</b>.`)}
+        ${rule('gift', `El <b>nivel ${K.N}</b> de cada planeta trae un <b>regalo sorpresa</b>: entre más estrellas, más fácil que sea un exclusivo.`)}
         ${rule('flag', `${K.left() > 864e5 ? 'Termina en unos días' : 'Termina hoy a la medianoche'}: te quedan <b>${evDaysOf(K)}</b>.`)}
       </ul>` : `<p class="lead">¡Llegó el evento del mes! Viaja por <b>${EVENT_PLANETS} planetas</b> y gana premios <b>exclusivos</b> que solo salen ahora: avatares, marcos, reversos, postales, fondos, títulos y naves.</p>
       <ul class="evi-rules">
-        ${rule(e.tk, `Entras con <b>1 boleto</b>. Si ganas, lo conservas; si pierdes, el siguiente llega en <b>24 horas</b>.`)}
-        ${rule('gift', `Gana el <b>nivel 5</b> de cada planeta y abre su <b>regalo sorpresa</b>. Es tuyo para siempre.`)}
-        ${rule('flame', `${EVENT_LEVELS} niveles <b>difíciles</b>. Sin estrellas: solo ganar. No cuentan para tu <b>racha</b> ni tu <b>colección</b>.`)}
+        ${rule(e.tk, `Cada nivel se juega con tu <b>boleto</b>. Si ganas, lo conservas; si pierdes, llega otro en <b>48 horas</b> o lo compras en ${coin()} <b>${money(evTicketPrice({ ...e, state: { ...e.state, paid: true } }))}</b>.`)}
+        ${rule('gift', `El <b>nivel 5</b> de cada planeta trae un <b>regalo sorpresa</b>: entre más estrellas, más fácil que sea un exclusivo.`)}
+        ${rule('flame', `${EVENT_LEVELS} niveles <b>difíciles</b>. No cuentan para tu <b>racha</b> ni tu <b>colección</b>.`)}
         ${rule('flag', `Tienes <b>${evDays()}</b> para llegar al último planeta. ¡Entra cada día y no dejes pasar tu boleto!`)}
       </ul>`}`,
     // Botón del mes: con los colores y la flor de la temática (sin el triángulo de Jugar).
-    buttons: [{ label: `${icon(e.deco)}<span>¡A jugar!</span>${icon(e.deco)}`, cls: `wide ev-go ev-go-${e.key}`, onClick: () => go && warp(() => showEvent({ kind })) }],
+    buttons: [{ label: `${icon(e.deco)}<span>¡A jugar!</span>${icon(e.deco)}`, cls: `wide ev-go ev-go-${e.key}`, onClick: () => go && (kind === 'mes' ? openEvento() : openFiesta()) }],
     // Se da por vista al cerrarla (si se gira el teléfono con la ventana abierta, vuelve a salir).
     onClose: () => {
       e.state.intro = true;
@@ -1763,8 +2163,8 @@ function evPlay() {
   const e = EVS.get();
   if (!e || e.done) return;
   if (e.state.run) return startEvent();
-  if (!EVS.tk) return EVS.enter() && startEvent();
-  if (!e.state.tk) return openEvWait();
+  if (!EVS.tk) return fiPaid(e) ? EVS.enter() && startEvent() : openEntry('fiesta', true);
+  if (!e.state.tk) return e.state.paid ? openEvWait() : openEntry('mes', true);
   if (entering) return;
   entering = true;
   evEnter();
@@ -1773,19 +2173,78 @@ function evPlay() {
     startEvent();
   });
 }
+// Pase de entrada (8 nov 2026): un boleto grande con el ícono del evento en el talón, su nombre y una línea abajo
+// (planetas y niveles, o un reloj). Lo usan la entrada, la espera del boleto, la preventa y la cuenta regresiva, así
+// todas se ven igual y caben en una sola vista (también acostado). Las reglas del evento viven en su bienvenida (?).
+// state: 'buy' (para comprar) · 'wait' (sin boleto, gris) · 'soon' (todavía no empieza) · 'owned' (entrada lista).
+// sub: lo de abajo (HTML; un reloj lleva data-pclock). off: descuento ("−20%") en una cinta.
+function passHTML(e, { ico = e.tk || e.ico, state = 'buy', label = 'Boleto de entrada', sub = '', off = '' } = {}) {
+  const [hc, hd] = HEADS[e.color] || HEADS.violet;
+  return `<div class="ev-pass-wrap"><div class="rays"></div><div class="ev-pass ${state}" style="--pc:${hc};--pd:${hd}">
+    <div class="ep-card"><span class="ep-stub">${icon(ico, 0, 0, 'big')}</span>
+    <span class="ep-main"><small>${label}</small><b>${e.name}</b><em>${sub}</em></span></div>
+    ${off ? `<i class="ep-off">${off}</i>` : ''}${state === 'owned' ? `<i class="ep-stamp">${icon('check')}¡Lista!</i>` : ''}
+  </div></div>`;
+}
+// Reloj que corre dentro del pase (cierra la ventana cuando llega a 0). get: ms que faltan (0 = ya).
+function passClock(m, get, done) {
+  const c = m.el.querySelector('[data-pclock]');
+  const t = setInterval(() => (c?.isConnected ? (get() > 0 ? (c.textContent = clock(get())) : (clearInterval(t), m.close(), done?.())) : clearInterval(t)), 1000);
+}
+// Botón para pagar la entrada o el boleto: las monedas salen del monedero. after: qué hacer ya pagado.
+// verb: lo que dice el botón ("Entrar", "Comprar boleto"…). Con descuento se ve el precio de antes tachado.
+function buyTicketBtn(e, modal, kind = kindOf(e), after = () => wait(350).then(evPlay), verb = null) {
+  const K = EVK[kind];
+  const p = K.tk ? evTicketPrice(e) : fiPrice(e);
+  const full = !K.tk && e.soon ? fiPrice({ ...e, soon: false }) : p;
+  const short = save.coins < p;
+  return {
+    label: short ? `Te faltan ${coin()} ${money(p - save.coins)}` : `${verb || (e.state?.paid || e.soon ? 'Comprar' : 'Entrar')} · ${coin()} ${full > p ? `<s>${money(full)}</s> ` : ''}${money(p)}`,
+    cls: 'green wide',
+    disabled: short,
+    keep: true,
+    onClick: async (btn) => {
+      if (!(K.tk ? evBuyTicket() : fiBuy())) return;
+      btn.disabled = true;
+      const r = btn.getBoundingClientRect();
+      await spendFromWallet('coins', { x: r.left + r.width / 2, y: r.top + r.height / 2 }, p);
+      updateCoins();
+      modal().close();
+      after();
+    },
+  };
+}
+// La entrada (7 nov 2026): es como un contrato. Se paga antes de entrar al mundo del evento, así adentro solo se juega.
+// inside: se abrió desde la pantalla del evento (ya pagado se juega el nivel; si no, se entra al mundo).
+// 8 nov 2026: solo el pase y "Compra tu boleto"; sin lista de reglas ni "Ahora no" (la X cierra).
+function openEntry(kind, inside = false) {
+  EVS = EVK[kind];
+  const e = EVS.get();
+  if (!e) return;
+  const fi = kind === 'fiesta';
+  const m = openModal({
+    title: e.name,
+    color: e.color,
+    cls: 'entry-modal',
+    body: `${passHTML(e, { label: fi ? 'Entrada' : 'Boleto de entrada', sub: `${EVS.P} planetas · ${EVS.L} niveles` })}
+      <p class="lead">${fi ? `Compra tu entrada y juega ${e.days > 1 ? 'mientras dure' : 'todo el día'}.` : 'Compra tu boleto y entra al evento.'}</p>`,
+    buttons: [buyTicketBtn(e, () => m, kind, () => (inside ? current?.() : warp(() => showEvent({ kind }))), 'Entrar')],
+  });
+}
+// Perdiste el boleto del mes: el siguiente llega solo (reloj) o se compra ya.
 function openEvWait() {
   const e = ev();
   if (!e) return;
+  EVS = EVK.mes;
   const m = openModal({
     title: 'Sin boleto',
-    ico: e.tk,
     color: e.color,
-    body: `<div class="dticket wait"><div class="rays"></div><span style="--i:0">${icon(e.tk, 0, 0, 'big')}</span></div><p class="tk-clock">${clock(evTicketLeft())}</p>
-      <p class="note">Gastaste tu boleto del evento. El siguiente llega solo, a las 24 horas de perderlo.</p>`,
-    buttons: [{ label: 'Entendido', cls: 'ghost wide' }],
+    cls: 'entry-modal',
+    body: `${passHTML(e, { state: 'wait', label: 'Tu próximo boleto llega en', sub: `<span class="ep-clock" data-pclock>${clock(evTicketLeft())}</span>` })}
+      <p class="lead">Espéralo o cómpralo ya y sigue jugando.</p>`,
+    buttons: [buyTicketBtn(e, () => m, 'mes', () => (current?.(), wait(350).then(evPlay)), 'Comprar boleto')],
   });
-  const c = m.el.querySelector('.tk-clock');
-  const t = setInterval(() => (c.isConnected ? (evTicketLeft() ? (c.textContent = clock(evTicketLeft())) : (m.close(), current?.())) : clearInterval(t)), 1000);
+  passClock(m, evTicketLeft, () => current?.());
 }
 // La partida del evento: mismas reglas, sin estrellas. Perder, rendirse o abandonar gasta el boleto.
 function startEvent() {
@@ -1802,10 +2261,11 @@ function startEvent() {
     dev,
     resume: run.state,
     saved: true,
-    event: { ico: e.ico, table: e.key, boss: run.k % K.N === K.N - 1 },
+    canExit: false, // eventos: sin Guardar y salir (7 nov 2026)
+    event: { ico: e.ico, table: e.key, boss: run.k % K.N === K.N - 1, tk: !!K.tk },
     onSave: (state) => {
       const r = K.get()?.state.run;
-      if (r) (r.state = state), persist();
+      if (r) (r.state = state), (r.at = Date.now()), persist();
     },
     onExit: () => back(),
     onAbandon: lose,
@@ -1814,8 +2274,8 @@ function startEvent() {
       if (res.items?.length) await openEvPrize(e, res);
       back(res.counted ? res : null);
     },
-    onWin: () => {
-      const r = K.win();
+    onWin: (stars) => {
+      const r = K.win(stars);
       if (!r) return { coins: 0, tickets: 0, prev: 0, items: [], title: '¡Nivel superado!' };
       persist();
       return { ...r, coins: r.coins || 0, tickets: 0, prev: 0, counted: true, title: r.last ? (e.date ? '¡Festividad completada!' : '¡Evento completado!') : `¡Nivel ${r.k + 1} de ${K.L}!` };
@@ -1987,8 +2447,9 @@ async function notices() {
     if (!(await calm(gen))) return;
     if (meteor() && !meteor().state.intro) await openMetIntro();
   }
-  for (const k of ['racha', 'col', 'mes', 'col2', 'fiesta', 'col3', 'fiesta2']) {
-    if (!isOn(k) || save.intro?.[k]) continue;
+  for (const k of ['racha', 'mis', 'meteoro', 'logros', 'col', 'mes', 'col2', 'fiesta', 'col3', 'fiesta2']) {
+    // La lluvia: solo si nunca se ha visto una (quien ya la vio caer no necesita la ventana).
+    if (!(k === 'meteoro' ? (save.next || 0) >= MET_FROM && !save.metSeen : isOn(k)) || save.intro?.[k]) continue;
     if (!(await calm(gen))) return;
     await openUnlock(k);
   }
@@ -2014,14 +2475,43 @@ async function notices() {
 // Algo nuevo en la columna de la derecha: su botón entra volando, sale la ventana que lo explica
 // y, al cerrarla, el botón late con un anillo para que se vea dónde quedó.
 const UNLOCK_INFO = {
+  // Lluvia de meteoritos (8 nov 2026): antes se descubría sola, sin aviso; ahora al abrirse sale esta ventana una vez.
+  meteoro: () => ({
+    title: '¡Nueva: Lluvia de meteoritos!', ico: 'meteoro', color: 'orange', hero: icon('meteoro', 0, 0, 'big'),
+    lead: `Ganaste <b>${MET_FROM} niveles</b>: desde hoy pueden caer <b>lluvias de meteoritos</b> sobre tu mapa.`,
+    rules: [
+      ['meteoro', '2 o 3 veces por semana, <b>30 minutos</b> a cualquier hora y <b>sin aviso</b>.'],
+      ['coin', 'Mientras cae, tus niveles dan <b>el doble de monedas</b> y la tienda tiene descuento.'],
+      ['star', 'Tu primer nivel con <b>3 estrellas</b> en cada lluvia trae un <b>premio sorpresa</b>.'],
+      ['flag', '<b>Entre más juegues, más fácil que te toque verla.</b> ¡Entra seguido!'],
+    ],
+  }),
+  mis: () => ({
+    title: '¡Nuevas: Misiones del día!', ico: 'misiones', color: 'green', hero: icon('misiones', 0, 0, 'big'),
+    lead: `Ganaste <b>${UNLOCK.mis} niveles</b>: cada día te tocan <b>3 misiones</b> nuevas.`,
+    rules: [
+      ['check', 'Juega como siempre: cartas, estrellas, rachas, bombas, burbujas… todo cuenta.'],
+      ['coin', 'Cada misión cumplida te da <b>monedas</b>. Las 3 juntas, un <b>cofre</b> con más.'],
+      ['flag', 'A medianoche llegan otras: <b>reclama</b> antes o se pierden. Las encuentras a la <b>derecha</b>.'],
+    ],
+  }),
+  logros: () => ({
+    title: '¡Nuevos: Logros!', ico: 'trophy', color: 'gold', hero: icon('trophy', 0, 0, 'big'),
+    lead: `Ganaste <b>${UNLOCK.logros} niveles</b>: ahora todo lo que haces suma para tus <b>logros</b>, para siempre.`,
+    rules: [
+      ['medal', 'Cada logro tiene <b>bronce, plata, oro, platino y diamante</b>. Los últimos traen <b>comodines</b>.'],
+      ['crown', 'Algunos oros te dan un <b>título</b> que no se compra.'],
+      ['flag', 'Los encuentras a la <b>derecha</b>. ¡Reclámalos cuando quieras!'],
+    ],
+  }),
   racha: () => {
     const t = rachaTheme();
     return {
       title: `¡Nueva: ${t.name}!`, ico: t.ico, color: t.color, hero: icon(t.ico, 0, 0, 'big'),
-      lead: `Ganaste <b>${UNLOCK.racha} niveles</b>: ¡se abrió la racha! Gana niveles seguidos y llévate premios cada día.`,
+      lead: `Ganaste <b>${UNLOCK.racha} niveles</b>: ¡se abrió la racha! Gana niveles seguidos, junta estrellas y llévate premios cada día.`,
       rules: [
-        ['flag', 'Cuenta cada nivel <b>nuevo</b> que ganes (también los secretos), con las estrellas que sea. Repetir no suma.'],
-        ['gift', `Premios a los <b>${RACHA_GOALS.map((g) => g.n).join(', ')}</b> seguidos y luego cada <b>${RACHA_STEP}</b>: monedas, <b>deshacer</b> y <b>comodines</b>.`],
+        ['flag', 'Cada nivel <b>nuevo</b> que ganes (también los secretos) suma sus <b>estrellas</b>: con 3★ avanzas más rápido. Repetir no suma.'],
+        ['gift', `Premios a las <b>${RACHA_GOALS.map((g) => g.n).join(', ')}</b> estrellas y luego cada <b>${RACHA_STEP}</b>: monedas, <b>deshacer</b> y <b>comodines</b>.`],
         ['flame', 'Si pierdes o abandonas un nivel nuevo, o te rindes en uno repetido, la racha <b>vuelve a 0</b> y se pierden los premios sin reclamar.'],
         ['rocket', 'A medianoche empieza otra: <b>reclama tus premios</b> antes o se pierden. La encuentras a la <b>derecha</b>.'],
       ],
@@ -2075,10 +2565,10 @@ const UNLOCK_INFO = {
       title: '¡Nuevas: Leyendas de México!', ico: mid.ico, color: mid.color, hero: nuevas.map((x) => icon(x.ico, 0, 0, x === mid ? 'main' : '')).join(''),
       lead: `Llegaste al <b>nivel ${UNLOCK.fiesta2}</b>: se suman <b>${nuevas.length} festividades</b> nuevas: ${lista}.`,
       rules: [
-        ['ticket', '<b>Sin boletos</b>: entra y reintenta las veces que quieras.'],
-        ['flame', 'Niveles <b>difíciles</b>. Aquí no cuentan las estrellas: solo ganar.'],
-        ['flag', '3 días antes aparece su botón junto a <b>Jugar</b>, con la cuenta regresiva.'],
-        ['gift', f ? (f.soon ? `${f.inDays > 1 ? `En ${f.inDays} días` : 'Mañana'} es <b>${f.name}</b>. ¡No te lo pierdas!` : `¡Hoy es <b>${f.name}</b>! Búscalo junto a <b>Jugar</b>.`) : nx ? `La próxima, <b>${nx.name}</b>, llega en <b>${nx.days} ${nx.days === 1 ? 'día' : 'días'}</b>.` : 'Pronto llega la primera.'],
+        ['ticket', 'Pagas la entrada <b>una vez</b> y reintentas <b>las veces que quieras</b>.'],
+        ['flame', 'Niveles <b>difíciles</b>. Entre más estrellas en el último de cada planeta, más fácil que su regalo sea un exclusivo.'],
+        ['flag', `3 días antes aparece su botón a la <b>derecha</b>: si compras la entrada desde ahí, cuesta <b>${Math.round(FI_PRE * 100)}% menos</b>.`],
+        ['gift', f ? (f.soon ? `${f.inDays > 1 ? `En ${f.inDays} días` : 'Mañana'} es <b>${f.name}</b>. ¡No te lo pierdas!` : `¡Hoy es <b>${f.name}</b>! Búscalo a la <b>derecha</b>.`) : nx ? `La próxima, <b>${nx.name}</b>, llega en <b>${nx.days} ${nx.days === 1 ? 'día' : 'días'}</b>.` : 'Pronto llega la primera.'],
       ],
     };
   },
@@ -2089,10 +2579,10 @@ const UNLOCK_INFO = {
       title: '¡Nuevo: Festividades!', ico: f?.ico || nx?.ico || 'tamal', color: 'gold', hero: evHeroIcons(f?.ico || nx?.ico, FIESTAS),
       lead: 'Los días de fiesta llega un <b>evento especial de 24 horas</b>: 3 planetas, 9 niveles y premios <b>exclusivos</b>.',
       rules: [
-        ['ticket', '<b>Sin boletos</b>: entra y reintenta las veces que quieras.'],
-        ['flame', 'Niveles <b>difíciles</b>. Aquí no cuentan las estrellas: solo ganar.'],
-        ['flag', '3 días antes aparece su botón junto a <b>Jugar</b>, con la cuenta regresiva.'],
-        ['gift', f ? (f.soon ? `${f.inDays > 1 ? `En ${f.inDays} días` : 'Mañana'} es <b>${f.name}</b>. ¡No te lo pierdas!` : `¡Hoy es <b>${f.name}</b>! Búscalo junto a <b>Jugar</b>.`) : nx ? `La próxima, <b>${nx.name}</b>, llega en <b>${nx.days} ${nx.days === 1 ? 'día' : 'días'}</b>.` : 'Pronto llega la primera.'],
+        ['ticket', 'Pagas la entrada <b>una vez</b> y reintentas <b>las veces que quieras</b>.'],
+        ['flame', 'Niveles <b>difíciles</b>. Entre más estrellas en el último de cada planeta, más fácil que su regalo sea un exclusivo.'],
+        ['flag', `3 días antes aparece su botón a la <b>derecha</b>: si compras la entrada desde ahí, cuesta <b>${Math.round(FI_PRE * 100)}% menos</b>.`],
+        ['gift', f ? (f.soon ? `${f.inDays > 1 ? `En ${f.inDays} días` : 'Mañana'} es <b>${f.name}</b>. ¡No te lo pierdas!` : `¡Hoy es <b>${f.name}</b>! Búscalo a la <b>derecha</b>.`) : nx ? `La próxima, <b>${nx.name}</b>, llega en <b>${nx.days} ${nx.days === 1 ? 'día' : 'días'}</b>.` : 'Pronto llega la primera.'],
       ],
     };
   },
@@ -2103,8 +2593,8 @@ const UNLOCK_INFO = {
       title: '¡Nuevo: Evento del mes!', ico: e?.ico || nx?.ico || 'calavera', color: e?.color || 'orange', hero: evHeroIcons(e?.ico || nx?.ico),
       lead: 'Algunos meses llega un <b>evento de temporada</b>: 5 planetas, 25 niveles y premios que <b>solo salen ese mes</b>.',
       rules: [
-        ['flame', 'Niveles <b>difíciles</b>. Aquí no cuentan las estrellas: solo ganar.'],
-        ['gift', 'Gana el <b>nivel 5</b> de cada planeta y abre su <b>regalo sorpresa</b>.'],
+        ['flame', 'Niveles <b>difíciles</b>. Cada uno se juega con tu <b>boleto</b>: si pierdes, llega otro en <b>48 horas</b> o lo compras.'],
+        ['gift', 'Gana el <b>nivel 5</b> de cada planeta y abre su <b>regalo sorpresa</b>: entre más estrellas, más fácil que sea un exclusivo.'],
         ['flag', 'Dura todo el mes. Si lo empiezas tarde, juega lo que alcances.'],
         ['ticket', e ? `¡Este mes hay uno: <b>${e.name}</b>! Búscalo a la <b>derecha</b>.` : nx ? `El próximo, <b>${nx.name}</b>, llega en <b>${nx.days} ${nx.days === 1 ? 'día' : 'días'}</b>.` : 'Pronto llega el primero.'],
       ],
@@ -2119,8 +2609,9 @@ function evHeroIcons(main, list = Object.keys(EVENTOS).map(Number).sort((a, b) =
   return [at(-1), at(0), at(1)].map((x, k) => icon(x, 0, 0, k === 1 ? 'main' : '')).join('');
 }
 async function openUnlock(k) {
-  const sel = k === 'fiesta' || k === 'fiesta2' ? '.cta [data-a="fiesta"]' : `.side.r [data-a="${{ racha: 'racha', col: 'col', mes: 'evento', col2: 'col', col3: 'col' }[k]}"]`;
-  const btn = document.querySelector(sel);
+  const sel = k === 'meteoro' ? null : `.side.r [data-a="${{ racha: 'racha', mis: 'mis', logros: 'logros', col: 'col', mes: 'evento', col2: 'col', col3: 'col', fiesta: 'fiesta', fiesta2: 'fiesta' }[k]}"]`;
+  if (sel) openGroup('r', 'open');
+  const btn = sel && document.querySelector(sel);
   revealed.add(k);
   if (btn) {
     btn.classList.remove('fresh');
@@ -2154,7 +2645,7 @@ async function openUnlock(k) {
     m.el.querySelectorAll('.evi-rules li').forEach((el, i) => el.animate([{ opacity: 0, translate: '-14px 0' }, { opacity: 1, translate: '0 0' }], { duration: 320, delay: 550 + i * 120, easing: 'ease-out', fill: 'backwards' }));
   });
   // El botón pudo volverse a pintar mientras leía (su tiempo avanza solo): se busca el de ahora.
-  const now = document.querySelector(sel);
+  const now = sel && document.querySelector(sel);
   if (now) {
     now.classList.add('spot');
     setTimeout(() => now.classList.remove('spot'), 4200);
@@ -2691,26 +3182,37 @@ async function paintFrame(g, frame, tier, X, Y, Wc, Hc, R) {
 }
 
 // ---------- Abrir un mundo: boleto dorado + estrellas ----------
-function openWorldGate(w, onCancel) {
+// Constelación cerrada (tocada en el universo): lo que pide su primer mundo. Si todavía no llegas a ella, además
+// pide terminar la anterior y no se puede abrir.
+function openConstGate(r) {
+  const w0 = r * REGION_SIZE;
+  openWorldGate(w0, null, pendingWorld() === w0 ? null : r - 1);
+}
+// prior: constelación que falta terminar antes (entonces nada cuenta todavía y Abrir queda apagado).
+function openWorldGate(w, onCancel, prior = null) {
   const need = starsNeeded(w);
   const have = starsBefore(w);
   const okStars = have >= need;
-  const okGold = save.gold > 0;
-  const info = worldInfo(w);
+  // Primer mundo de una constelación: pide el boleto de constelación (no el dorado) y monedas (openCost).
+  const cost = openCost(w), okCoins = save.coins >= cost;
+  const tk = cost ? 'cgold' : 'gold', okGold = prior == null && save[tk] > 0;
+  const info = worldInfo(w), isConst = !!cost;
   openModal({
-    title: `Mundo ${w + 1}`,
+    title: isConst ? regionName(regionOf(w)) : `Mundo ${w + 1}`,
     color: 'gold',
     onClose: onCancel,
-    body: `<div class="gate">${miniPlanet(BIOMES[biomeKey(info.place)].emblem, 'gate-pl')}<b>${esc(info.name)}</b>
+    body: `<div class="gate">${miniPlanet(BIOMES[biomeKey(info.place)].emblem, 'gate-pl')}<b>${isConst ? `Constelación ${regionOf(w) + 1} · ` : ''}${esc(info.name)}</b>
       <div class="rows">
-        <div class="row ${okGold ? 'ok' : ''}">${icon('gold')}<b>Boleto dorado<span>Lo da el jefe del mundo anterior</span></b>${okGold ? icon('check') : '<em>0/1</em>'}</div>
+        ${prior != null ? `<div class="row">${icon('lock')}<b>Constelación anterior<span>Termina ${esc(regionName(prior))} y vence a su último jefe</span></b><em>${icon('lock')}</em></div>` : ''}
+        <div class="row ${okGold ? 'ok' : ''}">${cost ? `${icon('constTicket')}<b>Boleto de constelación<span>Lo da el último jefe de la constelación</span></b>` : `${icon('gold')}<b>Boleto dorado<span>Lo da el jefe del mundo anterior</span></b>`}${okGold ? icon('check') : '<em>0/1</em>'}</div>
         <div class="row ${okStars ? 'ok' : ''}">${star(true)}<b>Estrellas<span>${okStars ? '¡Listo!' : `Te faltan ${need - have}: repite niveles (es gratis)`}</span></b>${okStars ? icon('check') : `<em>${have}/${need}</em>`}</div>
+        ${cost ? `<div class="row ${okCoins ? 'ok' : ''}">${coin()}<b>Monedas<span>${okCoins ? 'Nueva constelación' : `Te faltan ${money(cost - save.coins)}`}</span></b>${okCoins ? `<em>${money(cost)}</em>` : `<em>${money(save.coins)}/${money(cost)}</em>`}</div>` : ''}
       </div></div>`,
     buttons: [
       {
-        label: `${icon('gold')} Abrir`,
-        disabled: !(okStars && okGold),
-        onClick: () => playUnlock(w),
+        label: `${icon(tk === 'cgold' ? 'constTicket' : 'gold')} Abrir${cost ? ` · ${coin()} ${money(cost)}` : ''}`,
+        disabled: prior != null || !(okStars && okGold && okCoins),
+        onClick: () => playUnlock(w, true),
       },
     ],
   });
@@ -3313,8 +3815,13 @@ function openHelp(tab = 'basico', then) {
         <h3 class="help-h">Racha</h3>
         <div class="step"><div class="ill c dots">${'<i></i>'.repeat(4)}<div class="card gift-card"><div class="inner"><div class="face back"></div></div></div></div><p>Juega cartas <b>seguidas</b> sin tocar el mazo. A las <b>6</b> te cae una carta extra al mazo y a las <b>13</b>, un comodín.</p></div>
         <div class="step"><div class="ill c pair"><div class="card gift-card"><div class="inner"><div class="face back"></div></div></div><div class="card up"><div class="inner"><div class="face front wild"></div></div></div></div><p>Si sigues: carta extra a las <b>18</b> y <b>23</b>, y a las <b>31</b> un comodín para guardar.</p></div>
+        <div class="step"><div class="ill c">${icon('escoba')}</div><p>A las <b>20</b> y <b>30</b> pasa la <b>escoba</b> y se lleva las cartas más enterradas de la mesa.</p></div>
         <h3 class="help-h">Ayudas</h3>
+        <div class="step"><div class="ill c"><span class="help-btn gold">${icon('ayudas')}</span></div><p>El <b>botón dorado</b> abre tus ayudas. Abajo de cada una compras <b>+1</b> con un toque; tocar la carta la usa cuando tú quieras. Solo salen las que sirven en ese nivel.</p></div>
         <div class="step"><div class="ill c"><div class="card up"><div class="inner"><div class="face front wild"></div></div></div></div><p><b>Comodín:</b> vale cualquier número. Úsalo cuando no tengas jugada.</p></div>
+        <div class="step"><div class="ill c"><span class="help-card" style="background-image:${cardBackURL('hreloj')}"></span></div><p><b>Reloj de arena:</b> congela 3 turnos todo lo que cuenta: bombas, cometas, cartas vivas, fantasmas y camaleones.</p></div>
+        <div class="step"><div class="ill c"><span class="help-card" style="background-image:${cardBackURL('hver')}"></span></div><p><b>Ver cartas:</b> voltea todas las cartas de la mesa unos segundos.</p></div>
+        <div class="step"><div class="ill c"><span class="help-card" style="background-image:${cardBackURL('hllave')}"></span></div><p><b>Llave maestra:</b> abre todos los candados y cortinas.</p></div>
         <div class="step"><div class="ill c"><span class="help-btn">${icon('undo')}</span></div><p><b>Deshacer:</b> regresa tu última jugada o la carta que robaste.</p></div>
         <div class="step"><div class="ill c"><span class="help-five"><b>+5</b></span></div><p>¿Se acabó el mazo? Toca el <b>+5</b> para comprar 5 cartas. Con ellas te llevas solo 1 estrella.</p></div>
         <h3 class="help-h">Estrellas y boletos</h3>
@@ -3327,6 +3834,7 @@ function openHelp(tab = 'basico', then) {
         <div class="step"><div class="ill"><span class="h-rug"></span>${mini(2, '4', 'c')}${mini(40, '5', 'h')}<span class="h-roll"></span></div><p><b>Mesa enrollada:</b> limpia las cartas del <b>principio</b> y la mesa avanza: salen más cartas del rollo.</p></div>
         <div class="step"><div class="ill">${mini(0, '9', 's')}${mini(34, '10', 'd')}<span class="h-neb"></span></div><p><b>Nebulosa:</b> solo ves 3 grupos. Vacía <b>cualquiera</b> y de la nebulosa sale otro.</p></div>
         <div class="step"><div class="ill"><span class="h-rail" style="left:10px"></span><span class="h-rail" style="left:58px"></span>${helpBack(14, 'top:0px')}${mini(14, '8', 'c', {}, 'h-low')}${helpBack(62, 'top:0px')}${mini(62, 'J', 'h', {}, 'h-low')}</div><p><b>Gravedad:</b> solo juegas la carta de <b>abajo</b> de cada columna. Al quitarla, la columna <b>cae</b>.</p></div>
+        <div class="step"><div class="ill">${mini(10, '7', 's')}${mini(48, '8', 'h')}<span class="h-tide"></span></div><p><b>Marea:</b> cada vez que robas sube el agua y cada carta que juegas la baja. Lo que queda bajo el agua no se juega.</p></div>
         <div class="step"><div class="ill"><span class="h-fold" style="left:4px;transform:perspective(90px) rotateY(55deg);transform-origin:right"></span><span class="h-fold" style="left:40px"></span><span class="h-fold" style="left:76px;transform:perspective(90px) rotateY(-55deg);transform-origin:left"></span>${mini(41, 'Q', 'h')}</div><p><b>Mesa plegable:</b> llega <b>doblada</b>. Limpia el panel de <b>en medio</b> y se desdobla: salen más cartas a los lados.</p></div>
       </div>`
         : `<div class="steps">${MECH_GROUPS.map(([h, ms]) => `<h3 class="help-h">${h}</h3>${ms.map((m) => `<div class="step"><div class="ill c${MECH_BOTH[m] ? ' pair' : ''}">${MECH_BOTH[m]?.() || mechCard(m)}</div><p><b>${MECH_NAMES[m]}:</b> ${MECH_TEXT[m]}</p></div>`).join('')}`).join('')}</div>`;
@@ -3364,7 +3872,41 @@ function hideLoader() {
 // ---------- Arranque ----------
 // La primera vez: presentación y perfil (obligatorias). Después siempre empieza en las constelaciones,
 // con la que vas al frente: ahí salen los avisos. Una partida a medias se retoma con Continuar.
+// ---------- Partidas que no se pueden dejar a medias (7 nov 2026) ----------
+// Eventos y niveles desde la constelación 2: no hay Guardar y salir. Si la app se cierra o se va al fondo, al volver
+// sigue la partida si pasaron menos de RUN_LIMIT; si no, se pierde el intento (y el boleto), como abandonar.
+// El juego no puede saber si la cerró el jugador o el teléfono (una llamada): por eso hay margen.
+const RUN_LIMIT = 30 * 60e3;
+const NO_EXIT_FROM = LEVELS_PER_WORLD * REGION_SIZE; // nivel 101 (antes decía 1000 por error)
+const openRuns = () => [
+  save.run && !save.run.replay && save.run.g >= NO_EXIT_FROM && !isSecret(save.run.g) ? { r: save.run, lose: () => ((save.run = null), isOn('racha') && rachaLose(), persist()) } : null,
+  ev()?.state.run ? { r: ev().state.run, lose: evLose } : null,
+  fiesta()?.state?.run ? { r: fiesta().state.run, lose: fiLose } : null,
+].filter(Boolean);
+// Al irse al fondo se marca la hora; al volver (o al abrir la app) se revisa.
+function stampRuns() {
+  const now = Date.now();
+  openRuns().forEach(({ r }) => (r.at = now));
+  persist();
+}
+function staleRuns() {
+  const old = openRuns().filter(({ r }) => r.at && Date.now() - r.at > RUN_LIMIT);
+  if (!old.length) return false;
+  old.forEach(({ lose }) => lose());
+  if (game) {
+    game.destroy();
+    game = null;
+    document.getElementById('modal-root').replaceChildren();
+    showUniverse();
+  }
+  toast('Pasaron más de 30 minutos: se perdió el intento que dejaste a medias');
+  return true;
+}
+document.addEventListener('visibilitychange', () => (document.hidden ? stampRuns() : staleRuns()));
+addEventListener('pagehide', stampRuns);
+
 function boot() {
+  staleRuns();
   // Reiniciar el perfil, salir del modo dev o volver al punto de partida cambian lo puesto: reverso, frente y fondo.
   applyLook();
   if (save.onboard === 'intro') return showIntro();
@@ -3405,6 +3947,17 @@ window.devPlay = (g) => prefs.dev && startLevel(g, { free: true });
 Object.defineProperty(window, 'devGame', { get: () => (prefs.dev ? game : null) });
 Object.defineProperty(window, 'devMap', { get: () => (prefs.dev ? map : null) });
 
+// 8 nov 2026: probando desde la Mac (npm start, puerto 5173) no hay service worker: se quita con su caché, porque
+// el iPhone mezclaba archivos viejos y nuevos. Publicado, al llegar una versión nueva se recarga una vez para que
+// todos los archivos sean de la misma.
 if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
-  navigator.serviceWorker.register('sw.js').catch(() => {});
+  if (location.port === '5173') {
+    navigator.serviceWorker.getRegistrations().then((rs) => rs.forEach((r) => r.unregister()));
+    caches?.keys().then((ks) => ks.forEach((k) => caches.delete(k)));
+  } else {
+    const had = !!navigator.serviceWorker.controller;
+    let reloaded = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => had && !reloaded && ((reloaded = true), location.reload()));
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
 }

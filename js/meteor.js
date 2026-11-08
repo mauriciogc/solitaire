@@ -9,7 +9,7 @@ import { save, persist } from './storage.js';
 import { hash, mulberry32, randInt, shuffle } from './rng.js';
 import { SECTIONS, ITEMS, owns } from './shop.js';
 
-export const MET_FROM = 40; // niveles ganados para que empiece a caer (sin ventana de desbloqueo: se descubre sola)
+export const MET_FROM = 40; // niveles ganados para que empiece a caer (8 nov 2026: con ventana de desbloqueo, UNLOCK_INFO.meteoro en main.js)
 export const MET_MIN = 30; // minutos que dura
 // Premio de las 3 estrellas (provisional, se revisa con la economía): exclusivo, comodín y si no, deshacer.
 export const MET_ODDS = { item: 0.08, wild: 0.3 };

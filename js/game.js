@@ -1,11 +1,12 @@
 import { save, persist } from './storage.js';
-import { openModal, toast, confetti, updateCoins, money, starsHTML, reduced, buzz, sparkle, wait, spendFromWallet, balloons, lootBubbles, rachaWarnHTML } from './ui.js';
+import { openModal, toast, confetti, updateCoins, money, starsHTML, reduced, buzz, sparkle, wait, spendFromWallet, flyToWallet, balloons, lootBubbles, rachaWarnHTML } from './ui.js';
 import { worldInfo, packGroups, MECH_NAMES, LEVELS_PER_WORLD, scrollStrip, scrollSpan, scrollCover, SCROLL_VIEW, SCROLL_SHOW, NEB_SLOTS, GRAV_SHOWN, W } from './levels.js';
 import * as E from './engine.js';
-import { price, EV_MARKUP, MET_OFF, round5 } from './economy.js';
+import { price, EV_MARKUP, MET_OFF, round5, HELPS, buyable } from './economy.js';
 import { cardBackURL, icon, star, coin, lockIcon, keyIcon, arrowIcon, curtainIcon, suitSVG, avatarHTML } from './art.js';
 import { tableHTML } from './biomes.js';
 import { Coach } from './coach.js';
+import { track, misDef } from './missions.js';
 
 const SUITS = ['s', 'h', 'd', 'c'];
 export const RANKS = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
@@ -25,8 +26,12 @@ const TIPS = {
   turbo: 'El <b>cohete turbo</b> se juega como cualquier carta. Al usarlo, las <b>3 jugadas siguientes</b> valen <b>doble</b> en tu racha. Si robas, se apaga.',
   ticket: 'El <b>boleto partido</b> tiene dos números. Juégalo con cualquiera de las dos mitades: se parte y la otra mitad se queda para jugarla después. Lo de abajo se destapa cuando juegas las dos.',
   live: 'La <b>carta viva</b> cambia de número cada vez que juegas o robas: sube (↑) o baja (↓). Juégala cuando encaje.',
+  coin: 'La <b>carta moneda</b> se juega como cualquier otra y al jugarla te da <b>monedas</b>. ¡Un regalo!',
+  ship: 'En este nivel pasa una <b>nave ladrona</b>: cada pocos robos llega y se lleva una carta de tu mazo. Cada <b>4 de racha</b> se asusta y te regresa una (o te regala una si no se llevó nada). ¡Piensa antes de robar!',
+  cham: 'El <b>camaleón</b> cambia cada <b>3 jugadas o robos</b>: un rato es <b>comodín</b> (va sobre cualquier carta y luego sigues con la que quieras) y otro rato vuelve a su número. ¡Agárralo dorado!',
+  ghost: 'El <b>fantasma</b> aparece y desaparece cada 2 jugadas o robos. Solo lo puedes jugar cuando se ve: ¡atínale al momento!',
 };
-const MECH_FIELD = { lock: 'lock', pack: 'pack', ice: 'ice', double: 'alt', arrow: 'arrow', curtain: 'curtain', bomb: 'bomb', live: 'live', ticket: 'half', comet: 'comet', turbo: 'turbo' };
+const MECH_FIELD = { lock: 'lock', pack: 'pack', ice: 'ice', double: 'alt', arrow: 'arrow', curtain: 'curtain', bomb: 'bomb', live: 'live', ticket: 'half', comet: 'comet', turbo: 'turbo', ghost: 'ghost', ship: 'ship', coin: 'coin', cham: 'cham' };
 
 // Asentarse al aterrizar: un aplastón leve, el protagonismo es el vuelo.
 function squash(el) {
@@ -74,14 +79,16 @@ export function faceHTML(c, rank = c.rank) {
   // Carta viva: en la esquina va la flecha de hacia dónde cambia (el número está al centro).
   // Cohete turbo: en la esquina va el cohete (es el que despega al jugarla); por lo demás, carta normal.
   const corner = c.live ? `<span class="rk dir${c.live < 0 ? ' down' : ''}">${LIVE_DIR[c.live > 0 ? 'up' : 'down']}</span>` : c.turbo ? `<span class="rk tb-rk">${icon('rocket')}</span>` : `<span class="rk${SIXNINE(r)}">${r}</span>`;
-  const kind = c.live ? ' live' : c.arrow ? ' arrowed' : c.lock != null ? ' locked' : c.key != null ? ' keyed' : '';
+  const kind = c.live ? ' live' : c.cham ? ' cham' : c.arrow ? ' arrowed' : c.lock != null ? ' locked' : c.key != null ? ' keyed' : '';
   // Candado y llave: carta del color de su pareja, con su dibujo dentro en el lugar del palo
   // (el palo sale cuando se abre el candado).
   const pair = c.lock ?? c.key;
   const tint = pair != null ? ` style="--kh:${LOCK_HUES[pair]}"` : '';
   const badge = c.lock != null ? `<span class="lk-badge">${lockIcon(LOCK_HUES[c.lock])}</span>` : c.key != null ? `<span class="lk-badge">${keyIcon(LOCK_HUES[c.key])}</span>` : '';
-  return `<div class="face front${red}${kind}"${tint}>${corner}${c.key != null ? '' : `<span class="cs">${s}</span>`}${badge}<span class="big${r === '10' ? ' ten' : ''}${SIXNINE(r)}">${r}</span>${arrow}</div>`;
+  return `<div class="face front${red}${kind}"${tint}>${corner}${c.key != null ? '' : c.coin ? `<span class="cs coin-cs">${icon('monedas')}</span>` : `<span class="cs">${s}</span>`}${badge}<span class="big${r === '10' ? ' ten' : ''}${SIXNINE(r)}">${r}</span>${arrow}${c.cham ? `${CHAM_FACE('cham-eyes')}<span class="cham-ov">${CHAM_FACE('cham-face')}</span>` : ''}</div>`;
 }
+// Camaleón: carita de dos puntitos y una sonrisa chiquita (sutil de carta normal; sobre el comodín, cuando se convierte).
+const CHAM_FACE = (cls) => `<span class="${cls}"><i></i><i></i><b></b></span>`;
 // Giro equivalente entre -90° y 90° (una carta girada 180° se ve igual, pero derecha).
 const upright = (r) => {
   let x = ((r % 360) + 360) % 360;
@@ -124,6 +131,7 @@ const inner = (c) => `<div class="inner">${faceHTML(c)}${backHTML(c)}</div>`;
 const marks = (c) =>
   (c.ice ? `<span class="ice-ov"><b></b></span>` : '') +
   (c.curtainKey != null ? `<span class="curtain-mark">${curtainIcon()}</span>` : '') +
+  (c.wet ? '<span class="tide-ov"><i></i></span>' : '') +
   '';
 
 // opts: onExit, onAbandon(gaveUp), onRetry, onReplay, rachaRisk() → { n, pend } | null, onWin(stars) → { coins, tickets, prev, gold, wild, chest }, onDone(res), onSave(state)?,
@@ -254,6 +262,22 @@ export class Game {
         buttons: [{ label: '¡Entendido!', cls: 'green' }],
       });
     }
+    if (this.level.tide && !save.seen.marea) {
+      save.seen.marea = true;
+      persist();
+      this.modalOpen = true;
+      return openModal({
+        title: 'Nuevo: marea',
+        color: 'blue',
+        body: '<p class="lead">En este planeta sube la <b>marea</b>: cada <b>3 robos</b> el agua sube y tapa las cartas de abajo, y cada <b>3 jugadas</b> baja. Bajo el agua no se pueden jugar. ¡Juega seguido para que no suba!</p>',
+        closable: false,
+        onClose: () => {
+          this.modalOpen = false;
+          setTimeout(() => this.tips(), 300);
+        },
+        buttons: [{ label: '¡Entendido!', cls: 'green' }],
+      });
+    }
     if (this.level.scroll === 'nebulosa' && !save.seen.nebulosa) {
       save.seen.nebulosa = true;
       persist();
@@ -272,6 +296,11 @@ export class Game {
       });
     }
     const next = (this.level.meta.mechs || []).find((m) => TIPS[m] && !save.seen[m]);
+    // Nave ladrona: cada vez que empieza el nivel se avisa (sin decir cuándo llega).
+    if (!next && this.level.ship && !this.shipTold) {
+      this.shipTold = true;
+      this.shipBanner();
+    }
     if (!next) return;
     save.seen[next] = true;
     persist();
@@ -347,7 +376,7 @@ export class Game {
         <button class="tool tb undo-btn" data-a="undo" aria-label="Deshacer" title="Deshacer">${icon('undo')}<b class="badge" data-n="undo"></b></button>
         <div class="stock" data-a="draw" role="button" aria-label="Mazo"></div>
         <div class="pile waste"></div>
-        <button class="tool tb wild-card" data-a="wild" aria-label="Comodín" title="Comodín">${icon('wild')}<b class="badge" data-n="wild"></b></button>
+        <button class="tool tb wild-card" data-a="wild" aria-label="Ayudas" title="Ayudas">${icon('ayudas')}<b class="badge" data-n="wild"></b></button>
       </footer>`;
     this.boardEl = el.querySelector('.board');
     this.wrapEl = el.querySelector('.board-wrap');
@@ -402,7 +431,7 @@ export class Game {
       if (this.busy) return;
       const actions = {
         undo: () => this.undo(),
-        wild: () => this.useWild(),
+        wild: () => this.openHelps(),
         end: () => this.endLevel(),
       };
       actions[a]?.();
@@ -1004,6 +1033,29 @@ export class Game {
         el.querySelector('.ice-ov b').textContent = left || '';
         el.classList.toggle('melted', !left);
       }
+      // Marea: bajo el agua la carta se cubre de ola (sube y baja animada).
+      if (c.wet) el.classList.toggle('wet', E.underWater(c, st));
+      // Fantasma: escondido se desvanece y solo queda su silueta punteada, sin decir qué carta es (sigue tapando).
+      // Se va y vuelve con un desvanecido (sin ícono: se entiende al verlo aparecer y desaparecer).
+      // 8 nov 2026: el desvanecido va en la cara de enfrente, no en .inner. La opacidad (o el desenfoque) en .inner
+      // aplana el 3D y en iPhone dejaba ver el número a través del reverso al aparecer o esconderse.
+      if (c.ghost) {
+        const out = !E.ghostShown(c, st), was = el.classList.contains('ghost-out');
+        el.classList.toggle('ghost-out', out);
+        if (was !== out && !reduced() && el.classList.contains('up')) el.querySelector('.front')?.animate([{ opacity: out ? 1 : 0, filter: 'blur(3px)' }, { opacity: out ? 0 : 1, filter: 'blur(0)' }], { duration: 380, easing: 'ease-out' });
+      }
+      // Camaleón: cuando es comodín se cubre de dorado con su carita; al convertirse la carta se aguada y rebota
+      // (como masa que cambia de forma) y la carita parpadea. De normal la carita es sutil.
+      if (c.cham) {
+        const w = E.chamWild(c, st), was = el.classList.contains('cham-wild');
+        el.classList.toggle('cham-wild', w);
+        if (was !== w && !reduced() && el.classList.contains('up')) {
+          el.querySelector('.cham-ov')?.animate(w ? [{ opacity: 0, clipPath: 'circle(0% at 50% 60%)' }, { opacity: 1, clipPath: 'circle(80% at 50% 60%)' }] : [{ opacity: 1, clipPath: 'circle(80% at 50% 60%)' }, { opacity: 1, clipPath: 'circle(0% at 50% 60%)' }], { duration: 420, easing: 'cubic-bezier(0.5, 0, 0.3, 1)' });
+          el.querySelector('.inner')?.animate([{ scale: '1 1' }, { scale: '1.1 0.86', offset: 0.3 }, { scale: '0.93 1.08', offset: 0.6 }, { scale: '1.03 0.98', offset: 0.8 }, { scale: '1 1' }], { duration: 520, easing: 'ease-out' });
+        }
+      }
+      // Reloj de arena: las cartas con cuenta se ven congeladas mientras dure.
+      if (c.bomb || c.comet || c.live || c.ghost || c.cham) el.classList.toggle('frozen', st.freeze > 0);
       if (c.bomb) {
         const left = E.bombLeft(c, st);
         el.querySelector('.bomb-face b').textContent = left == null ? '' : left;
@@ -1121,7 +1173,8 @@ export class Game {
 
   updateCounts() {
     this.el.querySelector('[data-n="undo"]').textContent = save.undo;
-    this.el.querySelector('[data-n="wild"]').textContent = save.wild;
+    // El mazo de ayudas cuenta todo lo que traes: comodines y las demás ayudas.
+    this.el.querySelector('[data-n="wild"]').textContent = save.wild + Object.values(save.helps || {}).reduce((t, n) => t + (n || 0), 0);
     updateCoins();
   }
 
@@ -1138,7 +1191,7 @@ export class Game {
     // Faltan 1 o 2: el siguiente punto late, el premio se mueve y abajo sale "¡Falta n!".
     const left = at - streak, near = streak > 0 && left <= 2;
     for (let i = from + 1; i < at; i++) dots += `<i class="${i <= streak ? 'on' : near && i === streak + 1 ? 'next' : ''}"></i>`;
-    const prize = kind === 'bank' ? `<span class="prize bank">${icon('wild')}</span>` : `<span class="prize mini ${kind === 'wild' ? 'gift-wild' : 'gift-card'}"></span>`;
+    const prize = kind === 'bank' ? `<span class="prize bank">${icon('wild')}</span>` : E.BROOM[kind] ? `<span class="prize bank broom">${icon('escoba')}</span>` : `<span class="prize mini ${kind === 'wild' ? 'gift-wild' : 'gift-card'}"></span>`;
     // Turbo prendido: cohete con "×2" y cuántas jugadas dobles le quedan (aparece cuando el cohete llega).
     const tb = this.st.turbo > 0 && !this.turboHold;
     const cur = tb ? this.st.turbo : 0, prev = this.turboShown || 0;
@@ -1364,7 +1417,10 @@ export class Game {
     else if (boosted && !ev.reward) this.showStreak(`¡Turbo! ×${before.streak + 2}`);
     // El cometa suma después de la jugada (y de su punto extra si había turbo).
     if (ev.wished?.length) this.flyComets(ev, before.streak + (boosted ? 2 : 1), slots.slice(2));
+    this.caught = (this.caught || 0) + (ev.wished?.length || 0);
     if (ev.turbo) this.launchTurbo(ev);
+    if (ev.shipBack) this.shipGives(ev.shipBack);
+    if (this.cards[ev.id].coin && !ev.split) this.coinCard(this.cards[ev.id]);
     this.burn(ev.boom, burnRects);
     this.cometsGone(ev.gone);
 
@@ -1382,6 +1438,8 @@ export class Game {
       persist();
       this.updateCounts();
       squash(this.el.querySelector('.wild-card'));
+    } else if (r.kind === 'broom') {
+      this.sweep(r.ids);
     } else {
       this.flyReward(r.kind, slot ?? this.stockEls[this.stockEls.length - 1 - r.pos]);
     }
@@ -1391,7 +1449,7 @@ export class Game {
   // Huecos del mazo donde cayeron varios premios de una jugada (el del cometa entra después y puede recorrer
   // a los anteriores). null = premio al inventario o ninguno.
   rewardSlots(list) {
-    const pos = list.map((r) => (r && r.kind !== 'bank' ? r.pos : null));
+    const pos = list.map((r) => (r && r.pos >= 0 ? r.pos : null));
     pos.forEach((p, i) => {
       if (p == null) return;
       for (let j = 0; j < i; j++) if (pos[j] != null && pos[j] >= p) pos[j]++;
@@ -1442,7 +1500,7 @@ export class Game {
       this.comboAt = null;
       sparkle({ x: tx, y: ty }, 18);
       buzz(20);
-      ev.wishes.forEach((w, i) => (w.kind === 'bank' ? squash(this.el.querySelector('.wild-card')) : this.flyReward(w.kind, slots[i])));
+      ev.wishes.forEach((w, i) => (w.kind === 'bank' ? squash(this.el.querySelector('.wild-card')) : w.kind === 'broom' ? this.sweep(w.ids) : this.flyReward(w.kind, slots[i])));
       this.updateCounts();
       this.showStreak(`¡Cometa +${gain}!`);
       if (!reduced()) this.comboEl.animate([{ scale: 1 }, { scale: 1.25 }, { scale: 1 }], { duration: 420, easing: 'cubic-bezier(0.34, 1.45, 0.64, 1)' });
@@ -1699,6 +1757,96 @@ export class Game {
     });
   }
 
+  // Carta moneda: al jugarla, sus monedas saltan al monedero.
+  coinCard(c) {
+    save.coins += c.coin;
+    persist();
+    const [x, y] = center(this.wasteEl.getBoundingClientRect());
+    flyToWallet('coins', { x, y }, c.coin, save.coins - c.coin);
+    this.showStreak(`+${c.coin} monedas`);
+  }
+
+  // ---------- Nave ladrona ----------
+  // Aviso al empezar: la nave cruza el tablero con un letrero.
+  shipBanner() {
+    toast(`${icon('nave')} ¡Aquí pasan naves!`);
+    if (reduced()) return;
+    const b = this.boardEl.getBoundingClientRect();
+    const sh = this.shipEl();
+    sh.animate([{ translate: `${-90}px ${b.top + b.height * 0.3}px` }, { translate: `${innerWidth + 20}px ${b.top + b.height * 0.2}px` }], { duration: 1600, easing: 'ease-in-out' }).finished.then(() => sh.remove());
+  }
+  shipEl() {
+    const sh = document.createElement('div');
+    sh.className = 'ship-fly';
+    sh.innerHTML = `${icon('nave')}<i class="beam"></i>`;
+    this.el.append(sh);
+    return sh;
+  }
+  // Llega, prende su rayo sobre el mazo, sube la carta y se va con ella.
+  shipSteals(st, from) {
+    toast(`${icon('nave')} ¡La nave se llevó una carta!`);
+    buzz(30);
+    if (reduced()) return;
+    const [x, y] = center(from);
+    const sh = this.shipEl();
+    const c = this.flyer(st.card, { left: from.left, top: from.top, width: from.width }, true);
+    c.style.opacity = 0;
+    const stay = { translate: `${x - 40}px ${y - 130}px` };
+    sh.animate([{ translate: `${-100}px ${y - 200}px` }, stay], { duration: 700, easing: 'ease-out', fill: 'forwards' }).finished.then(() => {
+      sh.classList.add('on');
+      c.style.opacity = 1;
+      return c.animate([{ translate: '0 0', scale: 1 }, { translate: `0 ${-110}px`, scale: 0.4 }], { duration: 700, easing: 'ease-in', fill: 'forwards' }).finished;
+    }).then(() => {
+      c.remove();
+      sh.classList.remove('on');
+      return sh.animate([stay, { translate: `${innerWidth + 40}px ${y - 260}px` }], { duration: 700, easing: 'ease-in', fill: 'forwards' }).finished;
+    }).then(() => sh.remove());
+  }
+  // Racha: la nave se asusta y regresa una carta (o regala una); cae a su hueco del mazo.
+  // msg: el aviso (deshacer el robo en que se llevó una carta también la regresa con la nave).
+  shipGives(back, msg = '¡Racha! La nave te regresa una carta') {
+    toast(`${icon('nave')} ${msg}`);
+    this.renderStock();
+    const slot = this.stockEls?.[this.stockEls.length - 1 - back.pos];
+    if (!slot || reduced()) return squash(slot);
+    const to = slot.getBoundingClientRect();
+    const sh = this.shipEl();
+    slot.style.opacity = 0;
+    const [x, y] = center(to);
+    sh.animate([{ translate: `${innerWidth + 40}px ${y - 220}px` }, { translate: `${x - 40}px ${y - 130}px` }], { duration: 600, easing: 'ease-out', fill: 'forwards' }).finished.then(() => {
+      // Baja la carta del mazo misma (no una copia encima de todo): así entra por detrás de las que la tapan y no
+      // brinca de adelante hacia atrás al llegar (8 nov 2026).
+      slot.style.opacity = '';
+      return slot.animate([{ translate: `0 ${y - 110 - to.top}px`, scale: 0.4, opacity: 0.6 }, { translate: '0 0', scale: 1, opacity: 1 }], { duration: 450, easing: 'ease-in' }).finished.then(() => {
+        squash(slot);
+        sh.classList.add('flee');
+        return sh.animate([{ translate: `${x - 40}px ${y - 130}px` }, { translate: `${x + 120}px ${-120}px`, rotate: '25deg' }], { duration: 650, easing: 'ease-in', fill: 'forwards' }).finished;
+      });
+    }).then(() => sh.remove());
+  }
+
+  // Escoba (premio de racha 20 y 30): una escoba cruza el tablero y las cartas más enterradas salen barridas.
+  sweep(ids) {
+    toast(`${icon('escoba')} ¡Escoba!`);
+    const els = ids.map((id) => {
+      const c = this.cards[id], el = c.el;
+      c.el = null;
+      return el;
+    }).filter(Boolean);
+    if (reduced()) return els.forEach((el) => el.remove());
+    const b = this.boardEl.getBoundingClientRect();
+    const br = document.createElement('div');
+    br.className = 'broom-fly';
+    br.innerHTML = icon('escoba');
+    this.el.appendChild(br);
+    const y = els.length ? Math.min(...els.map((e) => e.getBoundingClientRect().top)) : b.top + b.height / 3;
+    br.animate([{ translate: `${b.left - 80}px ${y}px`, rotate: '-20deg' }, { translate: `${b.right + 20}px ${y}px`, rotate: '15deg' }], { duration: 900, easing: 'ease-in-out', fill: 'forwards' }).finished.then(() => br.remove());
+    els.forEach((el, i) => {
+      el.style.zIndex = 9999;
+      el.animate([{ translate: '0 0', rotate: '0deg', opacity: 1 }, { translate: `${this.u * 1.5}px ${-this.u * 0.6}px`, rotate: '40deg', opacity: 0 }], { duration: 520, delay: 250 + i * 220, easing: 'ease-in', fill: 'forwards' }).finished.then(() => el.remove());
+    });
+  }
+
   // Deshacer un premio de racha: la carta sale de su hueco del mazo y regresa a los puntos de racha.
   unflyReward(a, kind) {
     if (!a || reduced()) return;
@@ -1735,6 +1883,7 @@ export class Game {
     this.st = s;
     this.showCombo();
     this.flyFromStock(ev.card, a);
+    if (ev.ship) this.shipSteals(ev.ship, a);
     this.burn(ev.boom, burnRects);
     this.cometsGone(ev.gone);
     // Lo que destapó la explosión (o el cometa que se fue) se activa ya.
@@ -1742,6 +1891,7 @@ export class Game {
     for (const id of ev.packs) this.flyPack(this.cards[id]);
     for (const id of ev.defused) this.defuse(this.cards[id]);
     if (ev.wished.length) this.flyComets(ev, 0, this.rewardSlots(ev.wishes));
+    this.caught = (this.caught || 0) + ev.wished.length;
     if (ev.turbo) this.launchTurbo(ev);
     this.refresh();
     if (missed.length) setTimeout(() => this.warnMissed(missed), FLY_MS);
@@ -1830,6 +1980,8 @@ export class Game {
     if (!inf) save.undo--;
     const h = this.history.pop();
     const ev = h.ev || {};
+    this.usedUndo = true;
+    this.caught = Math.max(0, (this.caught || 0) - (ev.wished?.length || 0));
     // Posiciones actuales (antes de restaurar) de lo que va a regresar.
     const wasteRect = this.wasteEl.getBoundingClientRect();
     const els = this.stockEls || [];
@@ -1854,20 +2006,30 @@ export class Game {
 
     rewards.forEach((r, i) => {
       if (r?.kind === 'bank') save.wild = Math.max(0, save.wild - 1);
-      if (r) this.unflyReward(rewardRects[i], r.kind);
+      if (r && r.kind !== 'broom') this.unflyReward(rewardRects[i], r.kind);
     });
     (ev.packs || []).forEach((id, i) => this.unflyPack(this.cards[id], packRects[i]));
     if (h.t === 'play') {
+      // Carta moneda: se devuelven las monedas.
+      const cc = this.cards[ev.id];
+      if (cc.coin && !ev.split) (save.coins = Math.max(0, save.coins - cc.coin)), updateCoins();
       if (ev.split) this.unsplitTicket(this.cards[ev.id], ev, wasteRect);
       else this.returnToBoard(this.cards[ev.id], wasteRect);
     } else if (h.t === 'draw') {
       this.returnToStock(ev.card, wasteRect);
+      // La nave se había llevado una carta en ese robo: la regresa a su lugar (debajo de la que vuelve arriba).
+      if (ev.ship) setTimeout(() => this.shipGives({ pos: ev.ship.pos + 1 }, 'La nave te regresa la carta'), reduced() ? 0 : 200);
     } else if (h.t === 'wild') {
       this.returnWild(wasteRect);
       if (!inf) save.wild++;
+    } else if (h.t === 'help') {
+      // Reloj de arena o llave maestra: vuelve a tu mazo de ayudas.
+      if (!inf) save.helps[h.k] = (save.helps[h.k] || 0) + 1;
+      squash(this.el.querySelector('.wild-card'));
     }
     // Bombas que se desactivaron o explotaron con esa acción vuelven al tablero (y los cometas, atrapados o idos).
-    for (const id of [...(ev.defused || []), ...(ev.boom || []).map((b) => b.id), ...(ev.wished || []), ...(ev.gone || [])]) {
+    const swept = rewards.flatMap((r) => (r?.kind === 'broom' ? r.ids : []));
+    for (const id of [...(ev.defused || []), ...(ev.boom || []).map((b) => b.id), ...(ev.wished || []), ...(ev.gone || []), ...swept]) {
       const c = this.cards[id];
       if (c.el || c.removed) continue;
       this.makeCardEl(c);
@@ -1881,16 +2043,232 @@ export class Game {
     this.save();
   }
 
-  useWild() {
+  // ---------- Mazo de ayudas (7 nov 2026) ----------
+  // 8 nov 2026: inventario. El botón dorado de la bandeja abre un panel morado como el cajón de los menús del mapa (no
+  // un abanico flotante): cada ayuda es una carta de la
+  // misma baraja que el comodín, con cuántas tienes; abajo su botón de comprar (+1 con un toque, sin otra ventana). Lo
+  // comprado se suma a la carta y tú decides cuándo usarla: tocar la carta la usa y vuela al tablero. Sin tener, la carta
+  // se ve apagada. Solo salen las que sirven en este tablero (reloj si hay algo con cuenta, llave si hay candados o
+  // cortinas cerrados, ver si hay cartas boca abajo; ver 4 y 5 s solo si las tienes). Parado y en PC el panel va sobre la
+  // bandeja; acostado, a la izquierda de la columna. Detrás, un velo separa la capa del tablero.
+  helpKeys() {
+    const { level, st } = this, left = (c) => !st.rem[c.id] && c.el;
+    const useful = {
+      reloj: this.cards.some((c) => left(c) && (c.bomb || c.comet || c.live || c.ghost || c.cham)),
+      llave: this.cards.some((c) => left(c) && ((c.lock != null && !E.lockOpen(level, c, st)) || (c.curtain != null && !E.curtainOpen(level, c, st)))),
+      ver: this.cards.some((c) => left(c) && !this.shownUp(c)),
+    };
+    return ['wild', 'reloj', 'ver2', 'ver3', 'ver4', 'ver5', 'llave'].filter((k) => k === 'wild' || ((buyable(k) || (save.helps[k] || 0) > 0) && useful[HELPS[k].secs ? 'ver' : k]));
+  }
+  helpName(k) {
+    return k === 'wild' ? 'Comodín' : HELPS[k].secs ? `Ver ${HELPS[k].secs} s` : k === 'reloj' ? 'Reloj' : 'Llave';
+  }
+  helpBack(k) {
+    return cardBackURL(k === 'wild' ? 'comodin' : k === 'reloj' ? 'hreloj' : k === 'llave' ? 'hllave' : 'hver');
+  }
+  helpHave(k) {
+    return k === 'wild' ? save.wild : save.helps[k] || 0;
+  }
+  openHelps() {
+    if (this.coach) return;
+    if (this.el.querySelector('.help-sheet')) return this.closeHelps();
+    const keys = this.helpKeys();
+    const scrim = document.createElement('div');
+    scrim.className = 'help-scrim';
+    const sheet = document.createElement('div');
+    sheet.className = 'help-sheet';
+    sheet.setAttribute('role', 'dialog');
+    sheet.setAttribute('aria-label', 'Ayudas');
+    sheet.innerHTML = `<header class="hs-head"><b class="outl">Ayudas</b><button class="hs-x" aria-label="Cerrar">${icon('close')}</button></header>
+      <div class="hs-grid">${keys.map((k) => `<div class="hs-item" data-k="${k}"><button class="hs-card" data-use="${k}" style="background-image:${this.helpBack(k)}"><b class="badge"></b><span class="hs-name">${this.helpName(k)}</span></button><button class="hs-buy" data-buy="${k}"></button></div>`).join('')}</div>`;
+    this.el.append(scrim, sheet);
+    this.paintHelps();
+    // Tamaño: hasta 4 por renglón (7 caben en 2), del tamaño que quepa (más grandes en PC).
+    const r = this.el.querySelector('.wild-card').getBoundingClientRect();
+    const side = innerWidth > innerHeight && innerHeight <= 500; // acostado: la bandeja es una columna a la derecha
+    const big = innerWidth >= 900 && innerHeight >= 700;
+    const n = keys.length, cols = n <= 4 ? n : Math.ceil(n / 2), rows = Math.ceil(n / cols);
+    const gap = 10, pad = 14, head = 44, below = 52; // below: botón de comprar y su espacio
+    // Acostado: a la izquierda de toda la bandeja (no encima del mazo ni de deshacer).
+    const trayL = side ? Math.min(r.left, this.el.querySelector('.tray')?.getBoundingClientRect().left ?? r.left) : r.left;
+    const roomW = side ? trayL - 24 : Math.min(innerWidth - 16, big ? 560 : 460);
+    const roomH = side ? innerHeight - 16 : r.top - 20;
+    const cw = Math.floor(Math.max(54, Math.min(big ? 96 : 82, (roomW - pad * 2 - (cols - 1) * gap) / cols, ((roomH - head - pad - (rows - 1) * gap) / rows - below) / 1.4)));
+    sheet.style.setProperty('--hw', `${cw}px`);
+    sheet.style.setProperty('--cols', cols);
+    const W = sheet.offsetWidth, H = sheet.offsetHeight;
+    const left = side ? Math.max(8, trayL - 14 - W) : Math.max(8, Math.min(innerWidth - W - 8, r.left + r.width / 2 - W / 2));
+    const top = side ? Math.max(8, Math.min(innerHeight - H - 8, r.top + r.height / 2 - H / 2)) : Math.max(8, r.top - H - 14);
+    Object.assign(sheet.style, { left: `${left}px`, top: `${top}px` });
+    if (!reduced()) {
+      scrim.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 200, easing: 'ease-out' });
+      // Sale de la carta de la bandeja y las cartas llegan una tras otra.
+      sheet.style.transformOrigin = side ? '100% 50%' : `${r.left + r.width / 2 - left}px 100%`;
+      sheet.animate([{ scale: 0.4, opacity: 0, translate: side ? '30px 0' : '0 30px' }, { scale: 1, opacity: 1, translate: '0 0' }], { duration: 340, easing: 'cubic-bezier(0.34, 1.3, 0.64, 1)' });
+      sheet.querySelectorAll('.hs-item').forEach((it, i) => it.animate([{ opacity: 0, translate: '0 18px', rotate: '-6deg' }, { opacity: 1, translate: '0 0', rotate: '0deg' }], { duration: 320, delay: 80 + i * 45, easing: 'cubic-bezier(0.34, 1.45, 0.64, 1)', fill: 'backwards' }));
+    }
+    sheet.addEventListener('click', (e) => {
+      if (e.target.closest('.hs-x')) return this.closeHelps();
+      const buy = e.target.closest('[data-buy]'), use = e.target.closest('[data-use]');
+      if (buy) return this.buyHelp(buy.dataset.buy, buy);
+      if (use) return this.tapHelp(use.dataset.use, use);
+    });
+    this.helpOutside = (e) => !e.target.closest('.help-sheet, .wild-card') && this.closeHelps();
+    document.addEventListener('pointerdown', this.helpOutside, true);
+    // Al girar el teléfono cambia dónde va: se cierra.
+    this.helpTurn = () => this.closeHelps();
+    addEventListener('orientationchange', this.helpTurn);
+  }
+  // Cuántas tienes y el botón de comprar de cada carta (gris si no te alcanza; ver 4 y 5 s no se compran).
+  paintHelps() {
+    const sheet = this.el.querySelector('.help-sheet');
+    if (!sheet) return;
+    const inf = this.opts.dev?.infinite;
+    sheet.querySelectorAll('.hs-item').forEach((it) => {
+      const k = it.dataset.k, n = this.helpHave(k), p = this.priceOf(k), off = -this.helpRate(k);
+      it.classList.toggle('none', !n && !inf);
+      it.querySelector('.badge').textContent = inf ? '∞' : n;
+      it.querySelector('.hs-card').setAttribute('aria-label', `${this.helpName(k)}: tienes ${inf ? 'todas' : n}`);
+      const b = it.querySelector('.hs-buy');
+      b.classList.toggle('nobuy', k !== 'wild' && !buyable(k));
+      b.classList.toggle('short', save.coins < p);
+      b.innerHTML = `${coin()}${money(p)}${off > 0 ? `<i class="hs-off">−${Math.round(off * 100)}%</i>` : ''}`;
+      b.setAttribute('aria-label', `Comprar 1 ${this.helpName(k)} por ${p} monedas`);
+    });
+  }
+  // Comprar con un toque: las monedas salen del monedero a la carta y su número sube. No se usa: tú decides cuándo.
+  async buyHelp(k, btn) {
+    const p = this.priceOf(k), card = btn.previousElementSibling;
+    if (save.coins < p) {
+      if (!reduced()) btn.animate([{ translate: '0 0' }, { translate: '-5px 0' }, { translate: '5px 0' }, { translate: '-3px 0' }, { translate: '0 0' }], { duration: 260 });
+      buzz(30);
+      return toast(`Te faltan ${money(p - save.coins)} monedas`);
+    }
+    save.coins -= p;
+    if (k === 'wild') save.wild++;
+    else save.helps[k] = (save.helps[k] || 0) + 1;
+    persist();
+    const r = card.getBoundingClientRect();
+    btn.parentElement.classList.add('got');
+    await spendFromWallet('coins', { x: r.left + r.width / 2, y: r.top + r.height / 2 }, p);
+    this.updateCounts();
+    this.paintHelps();
+    if (reduced()) return;
+    squash(card);
+    sparkle({ x: r.left + r.width / 2, y: r.top + r.height / 2 }, 10);
+    card.querySelector('.badge').animate([{ scale: 1 }, { scale: 1.6 }, { scale: 1 }], { duration: 360, easing: 'cubic-bezier(0.34, 1.6, 0.64, 1)' });
+  }
+  // Tocar la carta la usa. Sin tener, la carta tiembla y su botón de comprar late.
+  tapHelp(k, card) {
+    if (!this.helpHave(k) && !this.opts.dev?.infinite) {
+      const b = card.nextElementSibling;
+      if (!reduced()) {
+        card.animate([{ rotate: '0deg' }, { rotate: '-5deg' }, { rotate: '5deg' }, { rotate: '-3deg' }, { rotate: '0deg' }], { duration: 300 });
+        b.animate([{ scale: 1 }, { scale: 1.12 }, { scale: 1 }], { duration: 300, delay: 120, easing: 'ease-out' });
+      }
+      return;
+    }
+    const why = this.helpUseless(k);
+    if (why) return toast(why);
+    const from = card.getBoundingClientRect();
+    this.closeHelps();
+    this.useHelp(k, from);
+  }
+  // El panel se encoge y se va; el velo se apaga.
+  closeHelps() {
+    const sheet = this.el.querySelector('.help-sheet'), scrim = this.el.querySelector('.help-scrim');
+    document.removeEventListener('pointerdown', this.helpOutside, true);
+    removeEventListener('orientationchange', this.helpTurn);
+    if (scrim) reduced() ? scrim.remove() : scrim.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 180, easing: 'ease-in', fill: 'forwards' }).finished.then(() => scrim.remove());
+    if (!sheet) return;
+    sheet.classList.replace('help-sheet', 'help-sheet-out');
+    if (reduced()) return sheet.remove();
+    sheet.animate([{ opacity: 1, scale: 1 }, { opacity: 0, scale: 0.6 }], { duration: 180, easing: 'ease-in', fill: 'forwards' }).finished.then(() => sheet.remove());
+  }
+  // Que no se gaste en balde.
+  helpUseless(k) {
+    if (k === 'wild') return this.st.top?.wild ? 'Ya tienes un comodín en juego' : null;
+    const { level, st } = this, left = (c) => !st.rem[c.id] && c.el;
+    if (k === 'reloj' && !this.cards.some((c) => left(c) && (c.bomb || c.comet || c.live || c.ghost || c.cham))) return 'Aquí no hay cuentas que congelar';
+    if (k === 'llave' && !this.cards.some((c) => left(c) && ((c.lock != null && !E.lockOpen(level, c, st)) || (c.curtain != null && !E.curtainOpen(level, c, st))))) return 'No hay candados ni cortinas cerrados';
+    if (HELPS[k].secs && !this.cards.some((c) => left(c) && !this.shownUp(c))) return 'Ya ves todas las cartas';
+    return null;
+  }
+  // from: la carta del panel (sale volando de ahí al tablero, crece, gira y se deshace en chispas antes de hacer efecto).
+  async useHelp(k, from) {
+    if (k === 'wild') return this.useWild(from);
+    const why = this.helpUseless(k), inf = this.opts.dev?.infinite;
+    if (why) return toast(why);
+    if (!(save.helps[k] > 0) && !inf) return this.openHelps();
+    if (!inf) save.helps[k]--;
+    persist();
+    this.updateCounts();
+    this.busy = true;
+    await this.helpFly(k, from);
+    this.busy = false;
+    // Ver cartas no cambia la partida (no se deshace): solo enseña.
+    if (HELPS[k].secs) return this.peekAll(HELPS[k].secs);
+    const st = this.st;
+    this.history.push({ t: 'help', k, before: st, best: this.best, bonus: this.bonus });
+    this.st = k === 'reloj' ? E.useClock(st) : E.useMaster(st);
+    toast(k === 'reloj' ? `${icon('arena')} ¡Todo congelado ${E.CLOCK_TURNS} turnos!` : `${icon('llaveMaestra')} ¡Candados y cortinas abiertos!`);
+    this.refresh();
+    this.updateCounts();
+    this.save();
+  }
+  // Ver cartas: todas las del tablero se voltean unos segundos (con cuenta grande) y regresan.
+  peekAll(secs) {
+    this.busy = true;
+    const hidden = this.cards.filter((c) => !c.removed && c.el && !this.st.rem[c.id] && !this.shownUp(c));
+    hidden.forEach((c, i) => setTimeout(() => c.el?.classList.add('up', 'peek-all'), reduced() ? 0 : i * 25));
+    const big = document.createElement('div');
+    big.className = 'peek-count outl';
+    this.el.append(big);
+    for (let i = 0; i < secs; i++) setTimeout(() => (big.textContent = secs - i), i * 1000);
+    setTimeout(() => {
+      big.remove();
+      hidden.forEach((c) => c.el?.classList.remove('peek-all'));
+      this.busy = false;
+      this.refresh();
+    }, secs * 1000);
+  }
+  helpFly(k, from) {
+    const br = this.boardEl.getBoundingClientRect();
+    const [bx, by] = center(br);
+    if (reduced() || !from) return Promise.resolve(sparkle({ x: bx, y: by }, 18));
+    const f = document.createElement('div');
+    f.className = 'help-fly';
+    f.style.cssText = `left:${from.left}px;top:${from.top}px;width:${from.width}px;height:${from.height}px;background-image:${this.helpBack(k)}`;
+    document.body.append(f);
+    const dx = bx - (from.left + from.width / 2), dy = by - (from.top + from.height / 2);
+    return f
+      .animate(
+        [
+          { transform: 'translate(0, 0) rotate(0deg) scale(1)', opacity: 1 },
+          { transform: `translate(${dx * 0.55}px, ${dy * 0.55 - 40}px) rotate(-14deg) scale(1.25)`, opacity: 1, offset: 0.45 },
+          { transform: `translate(${dx}px, ${dy}px) rotate(8deg) scale(1.7)`, opacity: 1, offset: 0.75 },
+          { transform: `translate(${dx}px, ${dy}px) rotate(0deg) scale(2.3)`, opacity: 0, filter: 'brightness(2.2)' },
+        ],
+        { duration: 640, easing: 'cubic-bezier(0.3, 0.7, 0.4, 1)' },
+      )
+      .finished.then(() => {
+        f.remove();
+        sparkle({ x: bx, y: by }, 22);
+      });
+  }
+
+  useWild(from) {
     if (this.coach) return;
     if (this.st.top?.wild) return toast('Ya tienes un comodín en juego');
     if (save.wild <= 0 && !this.opts.dev?.infinite) return save.coins < this.priceOf('wild') ? this.noWayOut('wild') : this.offerBuy('wild');
     if (!this.opts.dev?.infinite) save.wild--;
     persist();
+    this.usedWild = true;
     this.history.push({ t: 'wild', before: this.st, best: this.best, bonus: this.bonus });
-    this.st = { ...E.cloneState(this.st), top: { wild: true } };
+    // Marea: el comodín cuenta como jugada (baja el agua).
+    this.st = E.setTide(this.level, { ...E.cloneState(this.st), top: { wild: true } }, -1);
     this.updateStuck(); // con el comodín arriba ya hay jugada: se quita el aviso de atorado
-    const a = this.el.querySelector('.wild-card').getBoundingClientRect();
+    const a = from || this.el.querySelector('.wild-card').getBoundingClientRect();
     const b = this.wasteEl.getBoundingClientRect();
     const f = this.flyer({ wild: true }, { left: a.left + (a.width - b.width) / 2, top: a.top + (a.height - b.height) / 2, width: b.width }, true);
     toss(f, {}, { x1: b.left - a.left - (a.width - b.width) / 2, y1: b.top - a.top - (a.height - b.height) / 2 }, 360).then(() => {
@@ -1948,7 +2326,7 @@ export class Game {
     const text = {
       wild: 'El <b>comodín</b> vale cualquier número: úsalo cuando te atores.',
       undo: 'Con <b>deshacer</b> regresas tu última jugada o robo.',
-      extra: 'Llegan <b>5 cartas</b> a tu mazo. Con +5 siempre te llevas al menos 1 estrella.',
+      extra: `Llegan <b>5 cartas</b> a tu mazo. ${this.opts.event ? 'Te pueden salvar el nivel.' : 'Con +5 siempre te llevas al menos 1 estrella.'}`,
     }[kind];
     openModal({
       title: { wild: '¡Te quedaste sin comodines!', undo: '¡Te quedaste sin deshacer!', extra: '¿Comprar +5 cartas?' }[kind],
@@ -1960,7 +2338,6 @@ export class Game {
         ${save.coins < cost ? '<p class="note">No te alcanzan las monedas.</p>' : ''}`,
       onClose: () => (this.modalOpen = false),
       buttons: [
-        { label: 'Ahora no', cls: 'ghost grow' },
         {
           label: `Comprar ${coin()} ${sale ? `<s>${this.basePrice(kind)}</s> ` : ''}${cost}`,
           cls: 'green grow',
@@ -1973,6 +2350,7 @@ export class Game {
             this.buyFx(kind, cost, n);
           },
         },
+        { label: 'Ahora no', cls: 'later' },
       ],
     });
   }
@@ -2100,8 +2478,8 @@ export class Game {
       body: `<div class="evi-hero"><div class="rays"></div><span class="evi-ico">${icon(kind === 'undo' ? 'undo' : 'wild', 0, 0, 'big')}</span></div>
         <p class="lead">${lead}</p>
         <ul class="evi-rules">
-          <li>${icon('gift')}<span>Reclama tu <b>regalo diario</b>: trae monedas y a veces comodines.${this.opts.saved ? ' <b>Guarda y sal</b>: tu partida te espera.' : ''}</span></li>
-          <li>${icon('star')}<span>${this.opts.saved ? 'Para juntar monedas en <b>otros niveles</b> tienes que <b>abandonar</b> este.' : 'Junta monedas en <b>otros niveles</b>: cada estrella nueva paga.'}</span></li>
+          <li>${icon('gift')}<span>Reclama tu <b>regalo diario</b>: trae monedas y a veces comodines.${this.opts.saved && this.opts.canExit !== false ? ' <b>Guarda y sal</b>: tu partida te espera.' : ''}</span></li>
+          <li>${this.opts.event ? icon(this.opts.event.ico) : icon('star')}<span>${this.opts.event ? 'Junta monedas en los niveles de <b>tu camino</b> y regresa con más.' : this.opts.saved ? 'Para juntar monedas en <b>otros niveles</b> tienes que <b>abandonar</b> este.' : 'Junta monedas en <b>otros niveles</b>: cada estrella nueva paga.'}</span></li>
         </ul>`,
       onClose: () => (this.modalOpen = false),
       buttons: this.pauseButtons(),
@@ -2144,7 +2522,7 @@ export class Game {
       onClose: () => (this.modalOpen = false),
       buttons: [
         !this.opts.event && { label: this.opts.free ? 'Reintentar' : 'Reintentar · nuevo boleto', cls: 'ghost wide', onClick: () => this.opts.onRetry() },
-        { label: 'Rendirse', cls: 'pink grow', onClick: () => this.opts.onAbandon(true) },
+        { label: 'Rendirse', cls: 'pink grow', onClick: () => (this.trackEnd(false), this.opts.onAbandon(true)) },
         { label: 'Seguir jugando', cls: 'ghost grow' },
       ].filter(Boolean),
     });
@@ -2164,6 +2542,32 @@ export class Game {
     return rachaWarnHTML(r.n, r.pend, when);
   }
 
+  // Misiones y logros (missions.js): lo que se hizo en el nivel, al terminarlo (no en la galería del modo dev).
+  // Se cuenta del estado final (deshacer ya lo dejó como quedó); los cometas atrapados se llevan aparte.
+  trackEnd(won, stars = 0, left = 0, coins = 0) {
+    if (this.tracked || this.opts.noTrack) return;
+    this.tracked = true;
+    const { level, st } = this, gone = (f) => level.cards.filter((c) => c[f] != null && st.rem[c.id]).length;
+    let rewards = 0, brooms = 0;
+    for (let n = 1; n <= this.best; n++) {
+      const r = E.streakReward(n, level.rewardStep ?? 1);
+      if (r) rewards++;
+      if (E.BROOM[r]) brooms++;
+    }
+    const turboLeft = st.stock.filter((c) => c.turbo).length;
+    const stats = {
+      cards: st.plays, streak: this.best, rewards, locks: gone('lock'), packs: gone('pack'), ice: gone('ice'),
+      bombs: level.cards.filter((c) => c.bomb && st.rem[c.id] && !st.boom.includes(c.id)).length, comets: this.caught || 0,
+      turbo: gone('turbo') + Math.max(0, level.stock.filter((c) => c.turbo).length - turboLeft), halves: gone('half'),
+      coincards: gone('coin'), ghosts: gone('ghost'), cham: gone('cham'),
+      arrows: gone('arrow'), doubles: gone('alt'), lives: gone('live'), curtains: gone('curtain'), brooms,
+      ...(won && { win: 1, stars, three: +(stars === 3), noundo: +!this.usedUndo, noextra: +!this.extras, nowild: +!this.usedWild, left, boss: +!!(level.boss && !level.secret), event: +!!this.opts.event, secret: +!!level.secret, coins,
+        boss3: +!!(level.boss && !level.secret && stars === 3), pure: +(stars === 3 && !this.usedUndo && !this.usedWild && !this.extras) }),
+    };
+    const done = track(stats);
+    done.forEach((x, i) => setTimeout(() => toast(`${icon('check')} ¡Misión cumplida! ${misDef(x.id).text(x.goal)}`), 900 + i * 1600));
+  }
+
   win() {
     this.done = true;
     this.coach?.end();
@@ -2171,11 +2575,12 @@ export class Game {
     const stars = this.extras ? 1 : E.starsFor(this.level, left);
     const shown = save.coins;
     const res = this.opts.onWin(stars);
+    this.trackEnd(true, stars, left, res.coins || 0);
     // Las monedas del nivel se suman al volver al mapa, volando al monedero: detrás de la ventana la ficha se queda
     // como estaba (onWin ya las guardó y las pintaba de golpe).
     const pill = this.el.querySelector('.hud-r [data-coins]');
     if (pill) pill.textContent = money(shown);
-    const { coins, tickets, prev, gold, wild, undo, col } = res;
+    const { coins, tickets, prev, gold, cgold, wild, undo, col } = res;
     const ev = this.opts.event;
     const title = ev ? res.title : this.level.secret ? '¡Nivel secreto!' : this.level.boss ? '¡Jefe derrotado!' : '¡Nivel superado!';
     // Los premios son burbujas (icono + cantidad, sin texto) que salen de las estrellas y suben despacio; se pueden
@@ -2186,10 +2591,12 @@ export class Game {
       coins && (res.met ? `${bub(coin(), coins)}<i class="x2">×2</i>` : bub(coin(), coins)),
       tickets && bub(icon('ticket'), tickets),
       gold && bub(icon('gold'), 1),
+      cgold && bub(icon('constTicket'), 1),
       wild && bub(icon('wild'), wild),
       undo && bub(icon('undo'), undo),
       col && bub(icon(col.ico), col.n),
       ev && res.items?.length && bub(icon('gift'), res.items.length),
+      ...Object.entries(res.helps || {}).map(([k, n]) => bub(icon(HELPS[k].ico), n)),
     ].filter(Boolean);
     const note = ev ? (res.repeat ? '<p class="note">Ya tenías los exclusivos de este planeta: te tocan ayudas.</p>' : '')
       : !coins && prev >= 3
@@ -2204,12 +2611,12 @@ export class Game {
         color: 'gold',
         closable: false,
         cls: 'win',
-        body: `<div class="win-top"><div class="rays"></div>${ev ? `<div class="ev-win">${icon(ev.ico, 0, 0, 'big')}</div>` : `<div class="big-stars">${starsHTML(stars)}</div>`}</div>${note}`,
+        body: `<div class="win-top"><div class="rays"></div>${ev ? `<div class="ev-win${ev.boss ? ' boss' : ''}">${icon(ev.ico, 0, 0, 'big')}</div>` : `<div class="big-stars">${starsHTML(stars)}</div>`}</div>${note}`,
         // Sin las 3 estrellas puede repetirlo ahí mismo (gratis: ya lo ganó). Se queda su mejor resultado.
         // Repetir es solo el ícono; Continuar ocupa el resto del renglón (o todo, si no hay Repetir).
         buttons: [
-          res.replay && stars < 3 && { label: icon('replay'), cls: 'ghost sq', title: 'Repetir', onClick: () => this.opts.onReplay() },
-          { label: `Continuar ${icon('next')}`, cls: `green ${res.replay && stars < 3 ? 'grow' : 'wide'}`, onClick: () => this.opts.onDone?.(res) },
+          !ev && res.replay && stars < 3 && { label: icon('replay'), cls: 'ghost sq', title: 'Repetir', onClick: () => this.opts.onReplay() },
+          { label: `Continuar ${icon('next')}`, cls: `green ${!ev && res.replay && stars < 3 ? 'grow' : 'wide'}`, onClick: () => this.opts.onDone?.(res) },
         ].filter(Boolean),
       });
       // Jefe sin cofre (el del evento o uno ya ganado): los globos salen aquí. Si hay cofre, salen en su ventana.
@@ -2242,12 +2649,13 @@ export class Game {
         title: '¿Abandonar el nivel?',
         color: 'pink',
         onClose: free,
-        body: `<p class="lead">${this.opts.event ? 'Se gasta tu boleto del evento: el siguiente llega en 24 horas.' : this.opts.free ? 'Se pierde este intento.' : 'Pierdes los boletos y lo que gastaste en este intento.'}</p>${this.rachaWarn()}`,
-        buttons: [{ label: 'Seguir jugando', cls: 'ghost' }, { label: 'Abandonar', cls: 'pink', onClick: () => this.opts.onAbandon(true) }],
+        body: `<p class="lead">${this.opts.event ? (this.opts.event.tk ? 'Se gasta tu boleto del evento: el siguiente llega en 48 horas.' : 'Pierdes este intento; puedes volver a jugarlo.') : this.opts.free ? 'Se pierde este intento.' : 'Pierdes los boletos y lo que gastaste en este intento.'}</p>${this.rachaWarn()}`,
+        buttons: [{ label: 'Seguir jugando', cls: 'ghost' }, { label: 'Abandonar', cls: 'pink', onClick: () => (this.trackEnd(false), this.opts.onAbandon(true)) }],
       });
     return [
       { label: `${icon('play')} Continuar`, cls: 'green wide' },
-      this.opts.saved && { label: `${icon('door')} Guardar y salir`, cls: 'ghost wide', onClick: () => this.opts.onExit() },
+      // Sin Guardar y salir (canExit: false) en eventos y desde la constelación 2 (7 nov 2026).
+      this.opts.saved && this.opts.canExit !== false && { label: `${icon('door')} Guardar y salir`, cls: 'ghost wide', onClick: () => this.opts.onExit() },
       { label: this.opts.saved ? 'Abandonar nivel' : `${icon('door')} Salir`, cls: 'pink wide', onClick: () => setTimeout(() => ((this.modalOpen = true), confirmLeave()), 0) },
     ].filter(Boolean);
   }
@@ -2262,7 +2670,7 @@ export class Game {
       title: 'Pausa',
       color: 'gray',
       onClose: free,
-      body: (this.opts.saved ? '<p class="note">Tu partida se guarda: al volver sigues donde te quedaste.</p>' : this.level.secret && this.opts.rachaRisk?.()?.isNew ? '<p class="note">Si sales del nivel secreto, se pierde este intento.</p>' : '<p class="note">Estás repitiendo un nivel: si sales, se pierde este intento.</p>')
+      body: (this.opts.saved ? (this.opts.canExit === false ? '<p class="note">Este nivel no se puede dejar a medias: termínalo o abandónalo. Si cierras el juego, tienes 30 minutos para volver.</p>' : '<p class="note">Tu partida se guarda: al volver sigues donde te quedaste.</p>') : this.level.secret && this.opts.rachaRisk?.()?.isNew ? '<p class="note">Si sales del nivel secreto, se pierde este intento.</p>' : '<p class="note">Estás repitiendo un nivel: si sales, se pierde este intento.</p>')
         + (this.opts.saved ? '' : this.rachaWarn()),
       buttons: this.pauseButtons(),
       cls: 'pause',

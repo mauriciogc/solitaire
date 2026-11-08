@@ -163,7 +163,31 @@ button:disabled { cursor: default; }
 .region .arr .ico { width: 55%; height: 55%; }
 .region .arr:disabled { opacity: .4; }
 .galaxy .res { position: absolute; top: calc(10px + var(--st)); right: calc(10px + var(--cr)); display: flex; gap: 6px; }
-.galaxy .side { position: absolute; top: 50%; translate: 0 -50%; display: flex; flex-direction: column; gap: calc(10px * var(--k)); }
+.galaxy .side { position: absolute; top: 50%; translate: 0 -50%; display: flex; flex-direction: column; align-items: center; gap: calc(16px * var(--k)); }
+/* 8 nov 2026: las dos columnas iguales (mismo tamaño de botón y separación) en una tarjeta oscura, sin títulos ni
+   nombres. Sin botones, no se ve. Con más de 3 se agrupan en un botón dorado que abre su cajón (ver .grp-drawer). */
+.galaxy .side { --bs: calc(52px * var(--k)); padding: calc(10px * var(--k)) calc(8px * var(--k)); border-radius: calc(24px * var(--k)); background: #1a1240d9; border: 3px solid var(--ink); box-shadow: inset 0 0 0 2px #ffffff1f, 0 10px 24px #0b062a77; }
+.galaxy .side:empty { display: none; }
+.galaxy .side .iconbtn { width: var(--bs); height: var(--bs); flex: none; }
+/* Agrupado: arriba, debajo del título; solo el botón dorado (con lo más urgente y cuántos están listos). */
+.galaxy .side:has(.grp-btn) { top: calc(116px * var(--k) + var(--st)); translate: none; display: block; padding: 0; background: none; border: 0; box-shadow: none; }
+.grp-btn { background: linear-gradient(#ffe08a, #ffc83d); box-shadow: inset 0 -5px 0 #e89a17, inset 0 2px 0 #fff3c4, 0 3px 0 var(--ink), 0 8px 14px #0b062a55; }
+.grp-btn .grp-n { position: absolute; top: -8px; right: -8px; min-width: 22px; height: 22px; padding: 0 5px; border-radius: 11px; background: #ff4d6d; border: 2.5px solid var(--ink); color: #fff; font: 400 13px/17px 'Lilita One'; text-align: center; }
+.side.l .grp-btn .grp-n { right: auto; left: -8px; }
+.grp-btn .grp-n[hidden] { display: none; }
+.side.open .grp-btn { animation: none; }
+/* El cajón: tarjeta oscura pegada al botón, hasta 4 por fila (--gc), con su piquito. Cerrado se encoge hacia el botón. */
+.grp-drawer { position: absolute; top: calc(var(--bs) + 14px); display: grid; grid-template-columns: repeat(var(--gc, 3), var(--bs)); gap: 46px 26px; padding: 22px 20px 38px; border-radius: 22px;
+  background: #1a1240eb; border: 3px solid var(--ink); box-shadow: inset 0 0 0 2px #ffffff1f, 0 12px 28px #0b062a99; transition: scale .32s var(--spring), opacity .2s, visibility 0s .32s; }
+.grp-drawer::before { content: ''; position: absolute; top: -11px; width: 16px; height: 16px; background: #1a1240; border: solid var(--ink); border-width: 3px 0 0 3px; rotate: 45deg; }
+.side.r .grp-drawer { right: 0; transform-origin: calc(100% - var(--bs) / 2) -14px; }
+.side.r .grp-drawer::before { right: calc(var(--bs) / 2 - 8px); }
+.side.l .grp-drawer { left: 0; transform-origin: calc(var(--bs) / 2) -14px; }
+.side.l .grp-drawer::before { left: calc(var(--bs) / 2 - 8px); }
+.side:not(.open) .grp-drawer { scale: .15; opacity: 0; visibility: hidden; pointer-events: none; }
+.side.open .grp-drawer { transition: scale .32s var(--spring), opacity .2s; }
+/* Nombre abajo de cada botón del cajón (8 nov 2026). */
+.grp-name { position: absolute; top: calc(100% + 14px); left: 50%; translate: -50% 0; font: 800 12px/1 'Baloo 2', sans-serif; font-style: normal; color: #fff; white-space: nowrap; text-shadow: 0 1.5px 0 var(--ink); pointer-events: none; }
 .galaxy .side.l { left: calc(10px + var(--cl)); }
 /* Eventos: columna de la derecha (solo los activos). */
 .galaxy .side.r { right: calc(10px + var(--cr)); }
@@ -397,6 +421,9 @@ html.dev-on .galaxy .res .me { display: none; }
 .combo .prize { display: grid; place-items: center; margin-left: 2px; transition: scale 260ms var(--spring); }
 .combo .prize.mini { width: calc(20px * var(--k)); height: calc(28px * var(--k)); border-radius: 4px; }
 .combo .prize.bank .ico { width: 24px; height: 24px; }
+/* Escoba (premio de racha 20 y 30): cruza el tablero barriendo. */
+.broom-fly { position: fixed; left: 0; top: 0; width: 64px; height: 64px; z-index: 10000; pointer-events: none; }
+.broom-fly .ico { width: 100%; height: 100%; }
 .combo { position: relative; }
 /* Faltan 2: el punto que sigue late y el premio se mueve. Falta 1: además la ficha brilla y el premio salta más. */
 .combo i.next { border-color: var(--ink); animation: dot-next .9s ease-in-out infinite; }
@@ -429,9 +456,9 @@ html.dev-on .galaxy .res .me { display: none; }
 .tool { position: relative; width: calc(54px * var(--k)); height: calc(54px * var(--k)); border-radius: calc(17px * var(--k)); display: grid; place-items: center; flex: none; margin-bottom: 4px; transition: translate var(--press); }
 .tool .ico { width: 60%; height: 60%; }
 /* Comodín: una carta dorada de la baraja (no un botón cuadrado), un poco ladeada. */
-.tool.wild-card { width: var(--cw); height: calc(var(--cw) * 1.4); margin: 0 0 0 calc(16px * var(--k)); border: 0; border-radius: calc(var(--cw) * 0.14); rotate: 7deg; background: var(--back-wild) center / 100% 100%; box-shadow: 2px 4px 0 #0b062a44, 4px 9px 12px #0b062a40; }
-.tool.wild-card .ico { display: none; }
-.tool.wild-card .badge { right: -11px; top: -11px; }
+/* Ayudas (8 nov 2026): botón cuadrado como el de deshacer, dorado como el botón que agrupa los menús del mapa. */
+.tool.wild-card { margin: 0 0 4px calc(16px * var(--k)); background: linear-gradient(#ffe08a, #ffc83d); box-shadow: inset 0 -5px 0 #e89a17, inset 0 2px 0 #fff3c4, 0 3px 0 var(--ink), 0 8px 14px #0b062a55; }
+.tool.wild-card .ico { width: 66%; height: 66%; }
 .badge { position: absolute; right: -9px; top: -9px; z-index: 5; min-width: 24px; height: 24px; padding: 0 5px; border-radius: 12px; background: #ff4d6d; border: 2.5px solid var(--ink); color: #fff; font: 400 14px/19px 'Lilita One'; text-align: center; }
 .stock { position: relative; height: calc(var(--cw) * 1.4); min-width: var(--cw); flex: none; cursor: pointer; touch-action: manipulation; }
 .stock .card { top: 0; transition: left 260ms var(--ease-out); }
@@ -465,9 +492,14 @@ html.dev-on .galaxy .res .me { display: none; }
 }
 /* Teléfono acostado: la columna del mapa empieza bajo la barra de arriba y los botones se achican para que quepan los 5. */
 @media (orientation: landscape) and (max-height: 500px) {
-  .galaxy .side.l { top: calc(64px * var(--k) + var(--st)); bottom: calc(10px + var(--sb)); translate: none; justify-content: space-evenly; gap: 6px; }
-  .galaxy .side.r { gap: 14px; }
-  .galaxy .side .iconbtn { width: min(calc(50px * var(--k)), calc((100dvh - 64px * var(--k) - 40px) / 5.6)); height: auto; aspect-ratio: 1; }
+  /* Acostado: las dos columnas en tarjetas de 2 columnas × 3 filas (la de la derecha empieza por la orilla), bajo la
+     barra de arriba; así no llegan a Jugar. */
+  .galaxy .side { --bs: min(calc(50px * var(--k)), calc((100dvh - 64px * var(--k) - var(--st) - var(--sb) - 90px * var(--k) - 40px) / 3)); top: calc(62px * var(--k) + var(--st)); translate: none; display: grid; grid-auto-flow: column; grid-template-rows: repeat(3, auto); gap: 12px; padding: 8px; }
+  .galaxy .side.r { direction: rtl; }
+  .galaxy .side.r > * { direction: ltr; }
+  .galaxy .side:has(.grp-btn) { top: calc(62px * var(--k) + var(--st)); display: block; padding: 0; }
+  .grp-drawer { --bs: min(calc(50px * var(--k)), calc((100dvh - var(--st) - var(--sb) - 112px * var(--k) - 150px) / 3)); top: calc(50px * var(--k) + 12px); gap: 38px 22px; padding: 16px 18px 32px; }
+  .grp-name { top: calc(100% + 11px); font-size: 11px; }
 }
 .empty-slot { position: absolute; inset: 0 0 0 auto; width: var(--cw); border: 2.5px dashed #fff9; border-radius: calc(var(--cw) * 0.14); display: grid; place-items: center; font: 400 20px 'Lilita One'; color: #fff; }
 
@@ -708,6 +740,10 @@ html.dev-on .galaxy .res .me { display: none; }
 .step .ill.pair > .card + .card { rotate: 8deg; margin-left: -6px; }
 .help-btn { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 14px; background: var(--cream); border: 2.5px solid var(--ink); box-shadow: inset 0 -4px 0 var(--cream-d), 0 3px 0 var(--ink); }
 .help-btn .ico { width: 28px; height: 28px; }
+.help-btn.gold { background: linear-gradient(#ffe08a, #ffc83d); box-shadow: inset 0 -4px 0 #e89a17, 0 2px 0 var(--ink); }
+/* Ayuda (8 nov 2026): las cartas de las ayudas y la marea. */
+.help-card { display: block; width: 40px; height: 56px; border-radius: 6px; background: center / 100% 100% no-repeat; box-shadow: 1px 3px 0 #0b062a33; }
+.step .ill .h-tide { position: absolute; left: 0; right: 0; bottom: 0; height: 22px; border-radius: 0 0 8px 8px; background: linear-gradient(#5fc7e8cc, #2f86c0dd); border-top: 2.5px solid #e6fbff; }
 .help-five { display: grid; place-items: center; width: 36px; height: 50px; border-radius: 6px; border: 2.5px dashed var(--gold); background: #ffc83d33; }
 .help-five b { font: 400 16px / 1 'Lilita One'; color: var(--ink); }
 .step .ill.c > .i-ticket { width: 44px; height: 44px; }
@@ -1092,11 +1128,15 @@ html.dev-on .galaxy .res .me { display: none; }
    transparente atrapa los toques; el círculo se desliza de botón en botón. */
 .side-guide { pointer-events: auto; }
 .side-guide .g-bubble { transition: top .45s cubic-bezier(.45,0,.2,1), left .45s cubic-bezier(.45,0,.2,1); }
-.side-touring :is(.side.l, .side.r, .res, .cta) > :not(.tour-on), .side-touring .out-btn { opacity: .3; pointer-events: none; transition: opacity .3s; }
+.side-touring :is(.side.l, .side.r, .res, .cta) > :not(.tour-on, .grp-drawer, .tour-grp), .side-touring .out-btn { opacity: .3; pointer-events: none; transition: opacity .3s; }
+/* Recorrido con cajones (8 nov 2026): dentro del cajón solo se apaga lo que no se señala; lo señalado resalta. */
+.side-touring .grp-drawer:not(.tour-on) > :not(.tour-on, .tour-lock) { opacity: .3; transition: opacity .3s; }
+.side-touring .tour-on:is(.iconbtn) { opacity: 1; filter: drop-shadow(0 0 10px #ffe08acc); }
+/* Ejemplo del cajón de eventos cuando todavía no hay botón que los agrupe: solo durante su paso. */
+.side.tour-demo > .iconbtn:not(.grp-btn) { display: none; }
+.tour-grp { display: contents; }
 /* Eventos que faltan por abrirse: solo durante su paso del recorrido, en la columna de la derecha. */
 /* Juntos (no con el espacio de la columna) para que su círculo no llegue al botón de Jugar. */
-.tour-evs { display: flex; flex-direction: column; gap: calc(10px * var(--k)); }
-.tour-evs .iconbtn { display: grid; }
 /* Cierre: el círculo se vuelve una cápsula alrededor del botón de jugar. */
 .side-guide .g-ring.wide { border-radius: 30px; animation: ring-wide 1.1s var(--ease-out) infinite; }
 @keyframes ring-wide { 0%, 100% { scale: .97; } 50% { scale: 1.03; } }
@@ -1107,14 +1147,18 @@ html.dev-on .galaxy .res .me { display: none; }
 
 /* Comprar comodín o deshacer: lo que compras, en grande. */
 .buy-hero { position: relative; height: 150px; display: grid; place-items: center; margin: 2px 0 6px; }
-.buy-hero .rays { width: 220px; height: 220px; }
+.buy-hero .rays { width: 220px; height: 220px; z-index: 0; }
+.buy-hero > :not(.rays) { position: relative; z-index: 1; }
 .hero-card { position: relative; width: 82px; height: 115px; border-radius: 12px; background: var(--back-wild) center / 100% 100%; box-shadow: 3px 6px 0 #0b062a33, 0 0 30px #ffc83d99; animation: hero-float 2.4s ease-in-out infinite; }
 @keyframes hero-float { 0%, 100% { translate: 0 0; rotate: -6deg; } 50% { translate: 0 -8px; rotate: 6deg; } }
 .hero-undo { position: relative; width: 150px; height: 90px; }
 .hero-undo span { position: absolute; left: calc(var(--k) * 44px); top: calc(var(--k) * 8px - 4px); width: 62px; height: 62px; border-radius: 20px; display: grid; place-items: center; background: var(--cream); border: 3px solid var(--ink); box-shadow: inset 0 -5px 0 var(--cream-d), 0 3px 0 var(--ink); rotate: calc(var(--k) * 10deg - 10deg); animation: hero-float 2.4s ease-in-out infinite; animation-delay: calc(var(--k) * -0.4s); }
 .hero-undo span .ico { width: 64%; height: 64%; }
 .buy-hero .qty { position: absolute; right: calc(50% - 92px); bottom: 10px; font: 400 32px 'Lilita One'; color: #fff; rotate: -8deg; }
-.buy-modal .mbtns .btn { flex: 1; }
+.buy-modal .mbtns { flex-direction: column; gap: 4px; }
+.buy-modal .mbtns .btn { flex: none; width: 100%; }
+/* "Ahora no": texto discreto debajo del botón de comprar (8 nov 2026). */
+.btn.later { min-height: 40px; border: 0; box-shadow: none; background: none; font: 800 15px 'Baloo 2'; color: #8a80b0; }
 
 /* Pantallas bajas (teléfono acostado): el regalo diario cabe completo, sin cortar el texto de abajo. */
 @media (max-height: 460px) {
@@ -1596,6 +1640,21 @@ html:not(.dev-on) .dev-pill { display: none; }
   .modal > .mbody { flex: none; overflow: clip; padding-top: 12px; }
   .mbtns { padding: 8px 20px 12px; }
 }
+/* Acostado (8 nov 2026): los botones de abajo en un solo renglón (apilados gastaban el alto y la ventana se desplazaba);
+   las ventanas chicas, un poco más anchas para que quepan. Comprar y "Ahora no" siguen uno sobre otro. */
+@media (orientation: landscape) and (max-height: 500px) {
+  .modal:not(.wide) { width: min(540px, 100%); }
+  .modal:not(.buy-modal) .mbtns { flex-wrap: nowrap; }
+  .modal:not(.buy-modal) .mbtns .btn { flex: 1 1 0; min-width: 0; padding: 0 12px 3px; font-size: 17px; white-space: nowrap; }
+  .modal:not(.buy-modal) .mbtns .btn.sq { flex: 0 0 50px; }
+  .modal:not(.buy-modal) .mbtns .btn.link { flex: 0 0 auto; }
+  .mbody:last-child { padding-bottom: 14px; }
+  /* Misiones: las 3 y el cofre en 2 columnas, para que quepan sin desplazarse. */
+  .mis-modal:not(.lg-modal) { width: min(680px, 100%); }
+  .mis-modal:not(.lg-modal) .mis-list { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .mis-modal:not(.lg-modal) .mis-list > li { margin: 0; }
+  .prof { gap: 8px 18px; }
+}
 /* Acostado, las ventanas con un dibujo grande arriba (boletos, cuentas regresivas, comprar ayuda): el mismo orden,
    con el dibujo más chico para que quepan completas sin desplazarse. */
 @media (orientation: landscape) and (max-height: 500px) {
@@ -1694,6 +1753,9 @@ html:not(.dev-on) .dev-pill { display: none; }
 .ev-tk span { font-variant-numeric: tabular-nums; }
 .ev-win { position: relative; z-index: 1; display: flex; justify-content: center; margin: 4px 0 12px; }
 .ev-win .ico { width: 96px; height: 96px; animation: starpop 560ms var(--spring) both 300ms; filter: drop-shadow(0 4px 0 #0b062a33); }
+/* En eventos nunca hay estrellas: el ícono del evento (el jefe, más grande). Acostado, más chico para que quepa. */
+.ev-win.boss .ico { width: 116px; height: 116px; }
+@media (max-height: 500px) { .ev-win { margin: 0 0 4px; } .ev-win .ico, .ev-win.boss .ico { width: 62px; height: 62px; } }
 .galaxy.event .res .pill.ev-tk { display: flex; }
 .gift-top { display: flex; justify-content: center; margin: 2px 0 4px; }
 .gift-top .ico { width: 74px; height: 74px; animation: wobble 2.4s ease-in-out infinite; filter: drop-shadow(0 4px 0 #0b062a33); }
@@ -1799,7 +1861,6 @@ html:not(.dev-on) .dev-pill { display: none; }
 /* Etiqueta arriba del botón: lo que le queda a la colección o al mes (abajo va su contador, como la racha). */
 .iconbtn .tl { position: absolute; top: -9px; left: 50%; translate: -50% 0; min-width: 24px; padding: 0 6px 1px; border-radius: 9px; background: #17a88f; border: 2px solid var(--ink); color: #fff; font: 400 13px 'Lilita One'; line-height: 1.3; text-align: center; white-space: nowrap; word-spacing: -1px; }
 /* Las etiquetas salen por abajo: más aire entre botones para que no se encimen. */
-.galaxy .side.r { gap: calc(26px * var(--k)); }
 /* Con etiqueta arriba, el punto rojo baja al costado para no taparla. */
 .iconbtn:has(.tl) .dot { top: 14px; right: -8px; }
 /* Recién desbloqueado: no se ve hasta que entra volando con su ventana. */
@@ -1810,6 +1871,7 @@ html:not(.dev-on) .dev-pill { display: none; }
 .fi-btn.ready { background: linear-gradient(#ffe08a, #ffc83d); box-shadow: inset 0 -5px 0 #e89a17, inset 0 2px 0 #fff3c4, 0 3px 0 var(--ink), 0 8px 14px #0b062a55; }
 .fi-btn.ready::after { content: ''; position: absolute; inset: 3px; border-radius: inherit; pointer-events: none; background: linear-gradient(115deg, transparent 35%, #fff9 50%, transparent 65%) -150% 0 / 250% 100% no-repeat; animation: fi-shine 3.2s ease-in-out infinite; }
 @keyframes fi-shine { 0%, 55% { background-position: -150% 0; } 100% { background-position: 150% 0; } }
+.iconbtn .soon-new { position: absolute; top: -10px; left: 50%; translate: -50% 0; z-index: 1; padding: 0 5px 1px; border-radius: 8px; background: #2fae6a; border: 2px solid var(--ink); color: #fff; font: 400 11px 'Lilita One'; font-style: normal; line-height: 1.3; white-space: nowrap; }
 .fi-btn .fi-hoy { position: absolute; bottom: -9px; left: 50%; translate: -50% 0; padding: 0 6px 1px; border-radius: 8px; background: #e8434f; border: 2px solid var(--ink); color: #fff; font: 400 12px 'Lilita One'; font-style: normal; line-height: 1.3; white-space: nowrap; }
 .fi-btn.soon { background: #d9d3e6; box-shadow: inset 0 -5px 0 #b9b0cc, inset 0 2px 0 #f4f1fa, 0 3px 0 var(--ink), 0 8px 14px #0b062a55; }
 .fi-btn.soon > .ico { filter: grayscale(1); opacity: .6; }
@@ -2078,3 +2140,183 @@ html:not(.dev-on) .dev-pill { display: none; }
 .postcard.fr-meteoros { padding: 20px 22px 18px 18px; box-shadow: inset 0 0 0 12px #fff4e6, 0 4px 0 var(--ink); }
 .postcard.fr-meteoros::after { content: ''; position: absolute; inset: 3px; border-radius: 11px; padding: 7px; pointer-events: none; z-index: 1; -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; background: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20width%3D'16'%20height%3D'16'%3E%3Crect%20width%3D'16'%20height%3D'16'%20fill%3D'%232a1f66'%2F%3E%3Cpath%20d%3D'M4%203.2l.7%201.6%201.6.7-1.6.7L4%207.8l-.7-1.6-1.6-.7%201.6-.7z'%20fill%3D'%23ffd85a'%2F%3E%3Ccircle%20cx%3D'12'%20cy%3D'11.5'%20r%3D'1.1'%20fill%3D'%23e3d8ff'%2F%3E%3C%2Fsvg%3E") 0 0 / 16px 16px; }
 .postcard.fr-meteoros::before { content: ''; position: absolute; right: -8px; top: -12px; width: 42px; height: 42px; pointer-events: none; z-index: 2; background: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2032%2032'%3E%3CclipPath%20id%3D'ts0'%3E%3Cpath%20d%3D'M6.5%2015.5Q15%206%2030%202Q23.5%2013%2017%2025.5z'%2F%3E%3C%2FclipPath%3E%3Cg%20clip-path%3D'url(%23ts0)'%3E%3Cpath%20d%3D'M6.5%2015.5Q15%206%2030%202Q23.5%2013%2017%2025.5z'%20fill%3D'%23ff6a2e'%2F%3E%3Cpath%20d%3D'M6.5%2015.5Q15%206%2030%202Q23.5%2013%2017%2025.5z'%20fill%3D'%23ff9c3d'%20transform%3D'translate(-1.4%20-2.2)'%2F%3E%3Cpath%20d%3D'M11%2016.5Q18%209.5%2026.5%205.5Q21.5%2013.5%2017%2021.5z'%20fill%3D'%23ffd85a'%2F%3E%3C%2Fg%3E%3Cpath%20d%3D'M6.5%2015.5Q15%206%2030%202Q23.5%2013%2017%2025.5z'%20fill%3D'none'%20stroke%3D'%232a1f5c'%20stroke-width%3D'2'%20stroke-linejoin%3D'round'%2F%3E%3CclipPath%20id%3D'ts1'%3E%3Cpath%20d%3D'M12%2013.4a7.6%207.6%200%201%201%200%2015.2a7.6%207.6%200%201%201%200%20-15.2z'%2F%3E%3C%2FclipPath%3E%3Cg%20clip-path%3D'url(%23ts1)'%3E%3Cpath%20d%3D'M12%2013.4a7.6%207.6%200%201%201%200%2015.2a7.6%207.6%200%201%201%200%20-15.2z'%20fill%3D'%237a6a9e'%2F%3E%3Cpath%20d%3D'M12%2013.4a7.6%207.6%200%201%201%200%2015.2a7.6%207.6%200%201%201%200%20-15.2z'%20fill%3D'%23a493bd'%20transform%3D'translate(-1.4%20-2.2)'%2F%3E%3Ccircle%20cx%3D'9.4'%20cy%3D'19.6'%20r%3D'1.9'%20fill%3D'%237a6a9e'%2F%3E%3Ccircle%20cx%3D'14.6'%20cy%3D'24'%20r%3D'1.3'%20fill%3D'%237a6a9e'%2F%3E%3Ccircle%20cx%3D'14.4'%20cy%3D'17.6'%20r%3D'1'%20fill%3D'%237a6a9e'%2F%3E%3Cpath%20d%3D'M7.4%2018.4a5%205%200%200%201%203-3.2'%20stroke%3D'%23e4dcf2'%20stroke-width%3D'1.6'%20fill%3D'none'%20stroke-linecap%3D'round'%2F%3E%3C%2Fg%3E%3Cpath%20d%3D'M12%2013.4a7.6%207.6%200%201%201%200%2015.2a7.6%207.6%200%201%201%200%20-15.2z'%20fill%3D'none'%20stroke%3D'%232a1f5c'%20stroke-width%3D'2.2'%20stroke-linejoin%3D'round'%2F%3E%3C%2Fsvg%3E") center / contain no-repeat; filter: drop-shadow(0 0 5px #ff8a3d); animation: pc-wobble 3s ease-in-out infinite; }
+
+/* Mazo de ayudas (7 nov 2026): abanico sobre la carta dorada del comodín. */
+/* Mazo de ayudas (8 nov 2026): inventario en un panel sobre la bandeja (acostado, a su izquierda). Cada ayuda es una carta
+   de la misma baraja que el comodín con cuántas tienes; abajo, comprar +1 con un toque. Sin tener, la carta se ve apagada. */
+.help-sheet, .help-sheet-out { position: fixed; z-index: 9001; --hw: 72px; padding: 0 14px 14px; border-radius: 22px; color: #fff;
+  background: linear-gradient(170deg, #3d2d8c, #261b5e); border: 3px solid var(--ink); box-shadow: inset 0 0 0 2px #ffffff1f, 0 5px 0 var(--ink), 0 18px 40px #0b062a99; }
+.help-sheet-out { pointer-events: none; }
+/* Velo (8 nov 2026): oscurece el tablero mientras el panel está abierto (encima de la mesa, debajo de las ventanas).
+   Tocarlo cierra el panel. */
+.help-scrim { position: fixed; inset: 0; z-index: 9000; background: radial-gradient(120% 90% at 50% 100%, #0b062ab3, #0b062a73); }
+.hs-head { display: flex; align-items: center; justify-content: space-between; height: 44px; }
+.hs-head b { font: 400 20px 'Lilita One', sans-serif; letter-spacing: .02em; }
+.hs-x { width: 40px; height: 40px; margin-right: -8px; display: grid; place-items: center; border: 0; background: none; padding: 0; }
+.hs-x .ico { width: 26px; height: 26px; }
+.hs-grid { display: grid; grid-template-columns: repeat(var(--cols), var(--hw)); gap: 10px; justify-content: center; }
+.hs-item { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.hs-card { position: relative; width: var(--hw); height: calc(var(--hw) * 1.4); padding: 0 0 calc(var(--hw) * .09); border: 0; display: flex; align-items: flex-end; justify-content: center;
+  border-radius: calc(var(--hw) * .14); background: center / 100% 100% no-repeat; box-shadow: 2px 4px 0 #0b062a66, 0 8px 14px #0b062a55; transition: scale var(--press), filter .3s, opacity .3s; }
+.hs-card:active { scale: .94; }
+@media (hover: hover) and (pointer: fine) { .hs-card:hover { scale: 1.05; } }
+.hs-name { background: #fff; border: 2px solid var(--ink); border-radius: 8px; padding: 0 6px; font: 400 calc(var(--hw) * .17) 'Lilita One', sans-serif; color: var(--ink); white-space: nowrap; line-height: 1.35; }
+.hs-card .badge { right: -9px; top: -9px; }
+/* Sin tener: apagada y sin número (se nota que no la tienes); al comprar se prende. */
+.hs-item.none .hs-card { filter: grayscale(.9) brightness(.7); opacity: .75; }
+.hs-item.none .badge { display: none; }
+.hs-item.got .hs-card { filter: none; opacity: 1; }
+.hs-buy { position: relative; width: calc(var(--hw) + 6px); min-height: 40px; padding: 0 4px 2px; display: flex; align-items: center; justify-content: center; gap: 3px; border-radius: 12px;
+  background: #5ad68c; border: 2.5px solid var(--ink); box-shadow: inset 0 -4px 0 #2f9e5c, inset 0 2px 0 #a8f0c4, 0 2px 0 var(--ink); color: #fff; text-shadow: 0 1.5px 0 #2a7a3d;
+  font: 400 clamp(13px, calc(var(--hw) * .2), 17px) 'Lilita One', sans-serif; white-space: nowrap; transition: translate var(--press); }
+.hs-buy:active { translate: 0 2px; }
+.hs-buy .coin { width: 1.15em; height: 1.15em; flex: none; }
+.hs-buy.short { background: #8a80b0; box-shadow: inset 0 -4px 0 #6a6090, 0 2px 0 var(--ink); text-shadow: none; color: #ebe6f7; }
+.hs-buy.nobuy { visibility: hidden; }
+.hs-off { position: absolute; right: -8px; top: -11px; padding: 0 4px; border-radius: 7px; border: 2px solid var(--ink); background: #ff5f7e; font: 400 11px 'Lilita One', sans-serif; font-style: normal; text-shadow: none; line-height: 1.3; }
+/* La carta usada vuela al tablero, crece, gira y se deshace en chispas. */
+.help-fly { position: fixed; z-index: 9002; pointer-events: none; border-radius: 10px; background: center / 100% 100% no-repeat; box-shadow: 0 0 24px #fff6, 2px 6px 0 #0b062a55; }
+.hero-help { width: 96px; height: 96px; display: grid; place-items: center; }
+.hero-help .ico { width: 100%; height: 100%; }
+.peek-count { position: fixed; left: 50%; top: 40%; translate: -50% -50%; z-index: 70; font-family: 'Lilita One', sans-serif; font-size: 84px; color: #ffd54a; pointer-events: none; }
+.card.peek-all { box-shadow: 0 0 0 4px #7ef0ff, 0 3px 0 #2a1f5c; }
+.card.frozen { filter: saturate(.6) hue-rotate(160deg) brightness(1.08); box-shadow: 0 0 0 3px #7ef0ff, 0 0 14px #7ef0ff; }
+
+/* Fantasma (7 nov 2026): escondido casi no se ve; su marca en la esquina se queda para planear. */
+/* Solo la cara de enfrente se desvanece (opacidad en .inner aplana el 3D y deja ver el número por el reverso). */
+.card.up.ghost-out .front { opacity: 0; }
+.card.up.ghost-out::before { content: ''; position: absolute; inset: 0; border-radius: calc(var(--cw) * 0.14); border: 2.5px dashed #fff6e666; background: #ffffff0d; pointer-events: none; }
+.card.ghost-demo .inner { animation: ghost-blink 2.4s infinite; }
+@keyframes ghost-blink { 0%, 40% { opacity: 1; } 50%, 90% { opacity: .15; } 100% { opacity: 1; } }
+
+/* Nave ladrona (7 nov 2026). */
+.ship-fly { position: fixed; left: 0; top: 0; width: 80px; height: 80px; z-index: 10000; pointer-events: none; }
+.ship-fly .ico { width: 100%; height: 100%; position: relative; z-index: 1; }
+.ship-fly .beam { position: absolute; left: 25%; top: 60%; width: 50%; height: 0; background: linear-gradient(#fff6a8ee, #fff6a800); clip-path: polygon(30% 0, 70% 0, 100% 100%, 0 100%); transition: height .35s; }
+.ship-fly.on .beam { height: 140px; }
+.card .ship-mark { position: absolute; top: -18%; right: -18%; width: 55%; aspect-ratio: 1; }
+.card .ship-mark .ico { width: 100%; height: 100%; }
+
+
+/* Carta moneda (7 nov 2026): las monedas en lugar del palo, sin decir cuánto da (8 nov 2026). */
+.front .cs.coin-cs { width: calc(var(--cw) * 0.32); height: auto; right: 5%; top: 5%; }
+.face .cs.coin-cs .ico { width: 100%; height: auto; }
+/* Entrada a eventos (8 nov 2026): un pase con talón del color del evento, su nombre y una línea (planetas o reloj).
+   Mismo dibujo en la entrada del mes y de la festividad, la espera del boleto, la preventa y la cuenta regresiva. */
+.entry-modal .lead { margin: 2px 0 0; text-align: center; }
+.ev-pass-wrap { position: relative; height: 140px; display: grid; place-items: center; margin: -2px 0 4px; }
+.ev-pass-wrap .rays { z-index: 0; }
+.ev-pass { position: relative; z-index: 1; width: min(320px, 100%); height: 104px; rotate: -3deg; filter: drop-shadow(0 4px 0 var(--ink)) drop-shadow(0 10px 12px #0b062a40);
+  animation: pass-in 560ms cubic-bezier(0.34, 1.45, 0.64, 1) 120ms backwards, pass-float 3.2s ease-in-out 900ms infinite; }
+/* Muescas del boleto: dos medios círculos recortados a la altura del picado (con máscara; la sombra va en .ev-pass). */
+.ep-card { position: relative; display: flex; height: 100%; overflow: hidden; border-radius: 16px; border: 3px solid var(--ink); background: linear-gradient(170deg, #fffdf6, #fff1d6); box-shadow: inset 0 -5px 0 #f0dcb4;
+  -webkit-mask: radial-gradient(circle 9px at 96px 0, #0000 98%, #000) top / 100% 51% no-repeat, radial-gradient(circle 9px at 96px 100%, #0000 98%, #000) bottom / 100% 51% no-repeat;
+  mask: radial-gradient(circle 9px at 96px 0, #0000 98%, #000) top / 100% 51% no-repeat, radial-gradient(circle 9px at 96px 100%, #0000 98%, #000) bottom / 100% 51% no-repeat; }
+.ep-stub { flex: none; width: 93px; display: grid; place-items: center; background: linear-gradient(170deg, var(--pc), var(--pd)); border-right: 3px dashed var(--ink); }
+.ep-stub .ico { width: 64px; height: 64px; filter: drop-shadow(0 3px 0 #2a1f5c55); animation: wobble 2.6s ease-in-out infinite; }
+.ep-main { min-width: 0; flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 1px; padding: 6px 12px 8px 14px; text-align: left; }
+.ep-main small { font-weight: 800; font-size: 12px; color: #6e66a3; text-transform: uppercase; letter-spacing: .04em; }
+.ep-main b { font: 400 22px/1.05 'Lilita One'; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ep-main em { font-style: normal; font-weight: 800; font-size: 14px; color: #4a3f73; }
+.ep-clock { font: 400 24px 'Lilita One'; color: var(--ink); font-variant-numeric: tabular-nums; }
+/* Brillo que cruza el pase de vez en cuando (dan ganas de tocarlo). */
+.ev-pass.buy .ep-card::after, .ev-pass.soon .ep-card::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(105deg, transparent 35%, #ffffffb0 48%, transparent 60%) -150% 0 / 60% 100% no-repeat; animation: pass-shine 3.4s ease-in-out 1s infinite; }
+.ev-pass.wait .ep-stub { filter: grayscale(1) opacity(.65); }
+.ev-pass.wait .ep-stub .ico { animation: none; }
+.ep-off { position: absolute; right: -6px; top: 8px; z-index: 2; padding: 2px 12px 3px 10px; border-radius: 8px 0 0 8px; background: #ff5f7e; border: 2.5px solid var(--ink); border-right: 0; box-shadow: inset 0 -3px 0 #d63d5f; color: #fff; font: 400 16px 'Lilita One'; font-style: normal; text-shadow: 0 1.5px 0 #b02a49; }
+.ep-stamp { position: absolute; right: 10px; bottom: 8px; z-index: 2; display: flex; align-items: center; gap: 3px; padding: 2px 9px 3px 6px; border-radius: 10px; border: 3px solid #2f9e5c; color: #2f9e5c; font: 400 17px 'Lilita One'; font-style: normal; rotate: -10deg; background: #f2fff4d9; animation: stamp-in 420ms cubic-bezier(0.5, 0, 0.75, 0) 600ms backwards; }
+.ep-stamp .ico { width: 18px; height: 18px; }
+.btn s { opacity: .7; font-size: .85em; margin-right: 2px; }
+@keyframes pass-in { from { opacity: 0; scale: .6; rotate: -14deg; translate: 0 30px; } }
+@keyframes pass-float { 50% { translate: 0 -5px; rotate: -1.5deg; } }
+@keyframes pass-shine { 0% { background-position: -150% 0; } 45%, 100% { background-position: 260% 0; } }
+@keyframes stamp-in { from { scale: 2.4; rotate: -30deg; opacity: 0; } }
+@media (orientation: landscape) and (max-height: 500px) {
+  .ev-pass-wrap { height: 104px; margin: -4px 0 2px; }
+  .ev-pass { height: 86px; }
+  .ep-stub .ico { width: 50px; height: 50px; }
+  .ep-main b { font-size: 19px; }
+}
+@media (prefers-reduced-motion: reduce) { .ev-pass, .ep-stub .ico, .ep-card::after, .ep-stamp { animation: none !important; } }
+.fi-btn.soon.pre .fi-lock { background: #2fae6a; }
+/* Camaleón (7 nov 2026): carta verdecita con el camaleón en lugar del palo; cuando es comodín, se cubre de dorado
+   (el reverso del comodín) con el camaleón encima. */
+.front.cham { background: linear-gradient(170deg, #f6fff2, #d6f5cf); }
+.front .cham-ov { position: absolute; inset: 0; border-radius: inherit; background: var(--back-wild) center / 100% 100%; opacity: 0; pointer-events: none; }
+.card.cham-wild .cham-ov { opacity: 1; }
+/* Carita del camaleón (8 nov 2026): dos puntitos y una sonrisa chiquita, como masa que se volvió otra cosa. De carta
+   normal, chiquita y suave abajo del número; sobre el comodín, clarita y parpadea de vez en cuando. */
+.cham-eyes, .cham-face { position: absolute; left: 50%; translate: -50% 0; width: 34%; aspect-ratio: 2.2; pointer-events: none; }
+.cham-eyes { bottom: 7%; width: 26%; opacity: .45; }
+.cham-face { top: 58%; }
+.cham-eyes i, .cham-face i { position: absolute; top: 0; width: 17%; aspect-ratio: 1; border-radius: 50%; background: var(--ink); animation: cham-wink 4.6s ease-in-out infinite; }
+.cham-eyes i:first-child, .cham-face i:first-child { left: 14%; }
+.cham-eyes i:nth-child(2), .cham-face i:nth-child(2) { right: 14%; }
+.cham-eyes b, .cham-face b { position: absolute; left: 50%; top: 42%; translate: -50% 0; width: 30%; height: 34%; border: solid var(--ink); border-width: 0 0 2px; border-radius: 0 0 50% 50%; }
+.cham-face i { width: 15%; box-shadow: 0 0 0 1.5px #fff8; }
+.cham-face b { border-bottom-width: 2.5px; }
+.card.cham-wild .cham-eyes { opacity: 0; }
+@keyframes cham-wink { 0%, 92%, 100% { scale: 1 1; } 95% { scale: 1 .15; } }
+.card.cham-demo .cham-ov { animation: cham-blink 2.4s infinite; }
+@keyframes cham-blink { 0%, 45% { opacity: 0; scale: 0 1; } 55%, 95% { opacity: 1; scale: 1 1; } 100% { opacity: 0; } }
+/* Tienda: 4 grupos (el 4.º, Recuerdos), vender y los recuerdos (7 nov 2026). */
+.shop-modal .sgroup { font-size: 15px; gap: 4px; padding: 0 4px 1px; }
+.shop-modal .sgroup .ico { width: 24px; height: 24px; }
+/* Vender (8 nov 2026): un botón redondo con la etiqueta de precio, de 38 px (antes una etiqueta de texto chiquita
+   que costaba atinarle). Su área de toque crece 6 px más alrededor. */
+.sitem .s-sell { position: absolute; right: 4px; top: 4px; z-index: 1; width: 38px; height: 38px; display: grid; place-items: center; border-radius: 50%; background: #fff; border: 2.5px solid var(--ink); box-shadow: inset 0 -3px 0 var(--cream-d), 0 2px 0 var(--ink); }
+.sitem .s-sell::before { content: ''; position: absolute; inset: -8px; }
+.sitem .s-sell .ico { width: 24px; height: 24px; }
+.sitem .s-sell:active { translate: 0 2px; box-shadow: none; }
+.s-empty { grid-column: 1 / -1; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 24px 12px; color: #5d5385; font-weight: 700; text-align: center; }
+.s-empty .ico { width: 56px; height: 56px; }
+/* Títulos de logros (7 nov 2026): medalla de oro con brillo. */
+.title-chip:is(.t-perfeccionista, .t-imparable, .t-artificiero, .t-cazafantasmas, .t-cumplidor, .t-explorador_secreto) { --tc: #fff; --td: #8a5a00; background: linear-gradient(160deg, #ffd85a, #e8a417); font-family: 'Lilita One'; font-weight: 400; text-shadow: 0 1.5px 0 #8a5a00; box-shadow: inset 0 -3px 0 #b87a0c, 0 0 0 2px #fff3b8; }
+/* Misiones y logros */
+.mis-modal .mis-clock { margin: 0 0 6px; }
+.mis-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.mis { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 14px; background: #fff; border: 2.5px solid var(--ink); box-shadow: inset 0 -4px 0 var(--cream-d); text-align: left; }
+.mis > .ico { flex: none; width: 34px; height: 34px; }
+.mis > div { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.mis b { font: 400 15px/1.15 'Lilita One'; color: var(--ink); }
+.mis small { font-size: 12px; font-weight: 700; color: #5d5385; line-height: 1.2; }
+.mis.ready { background: #eaffef; box-shadow: inset 0 -4px 0 #b9ecc8, 0 0 0 3px #5ad68c66; }
+.mis.got { opacity: .65; }
+.mis.bonus { background: linear-gradient(170deg, #fff8e0, #ffe8a8); }
+.mbar { position: relative; display: block; height: 16px; border-radius: 8px; background: #ece6f7; border: 2px solid var(--ink); overflow: hidden; }
+.mbar i { position: absolute; inset: 0 auto 0 0; background: linear-gradient(#7fe0a2, #3fbf73); }
+.mbar b { position: relative; display: block; font: 400 11px/12px 'Lilita One'; text-align: center; color: var(--ink); }
+.mis-prize, .mis-got { flex: none; display: inline-flex; align-items: center; gap: 3px; font: 400 14px 'Lilita One'; color: var(--ink); }
+.mis-prize .coin { width: 18px; height: 18px; }
+.mis-got .ico { width: 28px; height: 28px; }
+.mis .btn { flex: none; min-height: 38px; padding: 4px 10px; font-size: 14px; }
+.mis .btn .coin { width: 18px; height: 18px; }
+.medals { display: inline-flex; gap: 3px; vertical-align: middle; margin-left: 4px; }
+.medal { width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--ink); background: #e6e0f0; }
+.medal.on.m0 { background: #d98c4a; } .medal.on.m1 { background: #cfd6e6; } .medal.on.m2 { background: #ffc83d; }
+.medal.on.m3 { background: linear-gradient(135deg, #f4f7ff, #a9c6e8); } .medal.on.m4 { background: linear-gradient(135deg, #c6f3ff, #6fd3ff 45%, #b98cff); box-shadow: 0 0 6px #7fe3ff; }
+.lg .btn .ico, .lg .mis-prize .ico { width: 16px; height: 16px; }
+/* Misiones (8 nov 2026): un puntito por misión en el botón del mapa y en el cofre (como los de la racha). */
+.mis-btn .rn.pips { position: absolute; bottom: -7px; left: 50%; translate: -50% 0; display: flex; gap: 3px; padding: 3px 5px; border-radius: 9px; background: #2f9e5c; border: 2px solid var(--ink); }
+.pips i, .mis-pips i { display: block; width: 8px; height: 8px; border-radius: 50%; background: #ffffff55; border: 1.5px solid var(--ink); }
+.pips i.on { background: #ffd75a; } .pips i.got { background: #fff; }
+.mis-btn.all-done > .ico { opacity: .55; }
+.mis-btn .fi-lock { position: absolute; right: -6px; bottom: -6px; width: 22px; height: 22px; display: grid; place-items: center; border-radius: 50%; background: #2fae6a; border: 2px solid var(--ink); }
+.mis-btn .fi-lock .ico { width: 70%; height: 70%; }
+.mis-pips { flex: none; display: flex; gap: 4px; }
+.mis-pips i { width: 13px; height: 13px; background: #fff; border-width: 2px; }
+.mis-pips i.on { background: #ffc83d; animation: lootpop 360ms var(--spring) both; }
+.mis-loot { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 10px; }
+.mis-loot span { display: inline-flex; align-items: center; gap: 2px; }
+.mis-loot .ico, .mis-loot .coin { width: 17px; height: 17px; }
+.mis-all .evi-ico { position: relative; }
+.mis-all-ok { position: absolute; right: -10px; bottom: -6px; width: 40px; height: 40px; display: grid; place-items: center; border-radius: 50%; background: #2fae6a; border: 3px solid var(--ink); animation: stamp-in 420ms cubic-bezier(0.5, 0, 0.75, 0) 400ms backwards; }
+.mis-all-ok .ico { width: 70%; height: 70%; }
+.mis-all .lead { text-align: center; }
+.lg-modal .mis-list { max-height: 60dvh; overflow: auto; padding: 2px; }
+/* Marea (7 nov 2026): las cartas de abajo llevan una rayita de agua; bajo el agua, la ola las cubre (sube con
+   espuma y se mece) y no se juegan. Al bajar la marea, el agua se va. */
+.card .tide-ov { position: absolute; inset: 0; z-index: 4; pointer-events: none; border-radius: calc(var(--cw) * 0.14); overflow: hidden; }
+.card .tide-ov i { position: absolute; left: -10%; right: -10%; bottom: 0; height: 10%; background: linear-gradient(#7fd4ffdd, #2f86d0ee); border-top: 3px solid #e6f7ff; border-radius: 40% 45% 0 0 / 30% 30% 0 0; transition: height .6s cubic-bezier(.3, 1.3, .5, 1); animation: tide-sway 2.4s ease-in-out infinite; }
+.card.wet .tide-ov i { height: 112%; }
+@keyframes tide-sway { 0%, 100% { translate: -4% 0; rotate: -2deg; } 50% { translate: 4% 0; rotate: 2deg; } }

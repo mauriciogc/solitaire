@@ -138,6 +138,13 @@ export const ITEMS = {
   ],
   title: [
     { k: 'novato', name: 'Novato', price: 0 },
+    // Títulos de logros (7 nov 2026): el oro de algunos logros los da; no se compran ni se venden.
+    { k: 'perfeccionista', name: 'Perfeccionista', ev: 'logro', logro: 1 },
+    { k: 'imparable', name: 'Imparable', ev: 'logro', logro: 1 },
+    { k: 'artificiero', name: 'Artificiero', ev: 'logro', logro: 1 },
+    { k: 'cazafantasmas', name: 'Cazafantasmas', ev: 'logro', logro: 1 },
+    { k: 'cumplidor', name: 'Cumplidor', ev: 'logro', logro: 1 },
+    { k: 'explorador_secreto', name: 'Explorador secreto', ev: 'logro', logro: 1 },
     { k: 'explorador', name: 'Explorador', price: 250 },
     { k: 'cazacometas', name: 'Cazacometas', price: 400 },
     { k: 'maestro', name: 'Maestro de picos', price: 600, need: 5 },
@@ -389,6 +396,38 @@ export const ITEMS = {
   ],
 };
 
+// Tienda a lo largo de todo el universo (7 nov 2026): los candados se reparten por las 52 constelaciones (need × 5:
+// antes todo se abría en el mundo 101 y se compraba completo hacia el planeta 110) y el precio sube un poco según la
+// constelación donde se abre (+2% por constelación: el del mundo 500 cuesta el doble). Así siempre hay algo que comprar.
+export const NEED_X = 5, PRICE_UP = 0.02;
+const round5 = (n) => Math.round(n / 5) * 5;
+for (const list of Object.values(ITEMS))
+  for (const it of list) {
+    if (!it.need) continue;
+    it.need *= NEED_X;
+    it.price = round5(it.price * (1 + PRICE_UP * Math.floor(it.need / 10)));
+  }
+// Lo que vale un exclusivo (no se compran en la tienda normal): vender da el 70%. Vendido, se recupera hasta que vuelve
+// su evento (8 nov 2026: ya no hay tienda de exclusivos pasados).
+export const EX_VALUE = { title: 1000, frame: 1300, space: 1600, ring: 2000, avatar: 2600, back: 3000, traveler: 4000, face: 3000 };
+export const SELL = 0.7;
+export const sellPrice = (sec, it) => round5((it.ev ? EX_VALUE[sec] || 1500 : it.price) * SELL);
+// ¿Se puede vender? Lo que tienes y no es gratis ni de código de regalo.
+export const sellable = (sec, it) => !!it && owns(sec, it.k) && it.price !== 0 && !it.code && !it.logro;
+// Vender: lo quitas de lo tuyo (si lo traías puesto, vuelves al de siempre), te dan las monedas y regresa a su tienda
+// (los exclusivos, a su evento).
+export function sell(sec, k) {
+  const it = item(sec, k);
+  if (!sellable(sec, it)) return 0;
+  const p = sellPrice(sec, it);
+  delete save.owned[`${sec}:${k}`];
+  if (sec === 'avatar' && save.char === k) save.look = 'letter';
+  if (save.equip[sec] === k) delete save.equip[sec];
+  save.coins += p;
+  persist();
+  return p;
+}
+
 export const item = (sec, k) => ITEMS[sec].find((x) => x.k === k);
 export const owns = (sec, k) => !!item(sec, k) && (item(sec, k).price === 0 || !!save.owned[`${sec}:${k}`]);
 // Lo que se ve en la tienda normal: los exclusivos de colección solo si ya son tuyos (para usarlos).
@@ -420,7 +459,7 @@ export function buy(sec, k, cost = item(sec, k)?.price) {
 }
 
 // Cada título se ve distinto: color, icono y forma (los más caros, más vistosos).
-const TITLE_ICO = { novato: 'star', explorador: 'flag', cazacometas: 'rocket', maestro: 'trophy', viajero: 'planet', bombas: 'bomb', leyenda: 'crown', buscaconchas: 'concha', cazagemas: 'gema', guardabosques: 'bellota', golosito: 'caramelo', paleontologo: 'fosil', inventor: 'tuerca', tamalero: 'tamal', taquero: 'taco', heroeverde: 'tierra', jugueton: 'pinata', consentido: 'clavel', orgullo: 'corbata', amigomichi: 'gatito', mejoramigo: 'hueso', catrin: 'calavera', duende: 'esfera', buscador: 'rosca', flechazo: 'corazon', jardinero: 'tulipan', olas: 'sol', mariachi: 'sombrero', hechicero: 'calabaza', jefefinal: 'control', cerobugs: 'llaves', bromista: 'bufon', propositos: 'reloj', artista: 'gota', estrellarock: 'nota', director: 'claqueta', nahual: 'nahual', guiaalmas: 'xolito', almadelrio: 'velita', elegancia: 'catrina', valiente: 'locomotora', cazatesoros: 'cofre', cazaestrellas: 'meteoro' };
+const TITLE_ICO = { novato: 'star', explorador: 'flag', cazacometas: 'rocket', maestro: 'trophy', viajero: 'planet', bombas: 'bomb', leyenda: 'crown', buscaconchas: 'concha', cazagemas: 'gema', guardabosques: 'bellota', golosito: 'caramelo', paleontologo: 'fosil', inventor: 'tuerca', tamalero: 'tamal', taquero: 'taco', heroeverde: 'tierra', jugueton: 'pinata', consentido: 'clavel', orgullo: 'corbata', amigomichi: 'gatito', mejoramigo: 'hueso', catrin: 'calavera', duende: 'esfera', buscador: 'rosca', flechazo: 'corazon', jardinero: 'tulipan', olas: 'sol', mariachi: 'sombrero', hechicero: 'calabaza', jefefinal: 'control', cerobugs: 'llaves', bromista: 'bufon', propositos: 'reloj', artista: 'gota', estrellarock: 'nota', director: 'claqueta', nahual: 'nahual', guiaalmas: 'xolito', almadelrio: 'velita', elegancia: 'catrina', valiente: 'locomotora', cazatesoros: 'cofre', cazaestrellas: 'meteoro', perfeccionista: 'crown', imparable: 'flame', artificiero: 'bomb', cazafantasmas: 'ghost', cumplidor: 'check', explorador_secreto: 'starSecret' };
 export const titleName = (k = equipped('title')) => item('title', k).name;
 export const titleIcon = (k) => icon(TITLE_ICO[k] || 'star');
 export const titleHTML = (k = equipped('title'), cls = '', tag = 'span', attrs = '') =>

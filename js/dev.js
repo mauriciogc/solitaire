@@ -1,8 +1,9 @@
 // Modo dev: probar niveles rápido sin jugarlos a mano.
 // Se prende y apaga con los botones de pruebas de Ajustes (8 toques seguidos al título). Queda guardado en el navegador.
-import { save, prefs, persist, resetProfile, backupOnce, restoreBackup, setDev } from './storage.js';
+import { save, prefs, persist, resetProfile, backupOnce, restoreBackup, setDev, backupInfo } from './storage.js';
+import { missions, misDone, LOGROS } from './missions.js';
 import { rachaWin, rachaLose, racha, nextGoal, col, daysToNextCol, ev, daysToNextEvent, evEnter, evWin, EVENT_PER_PLANET, EVENT_LEVELS, fiesta, fiEnter, fiWin, nextFiesta, daysToNextFiesta, daysToFiesta, fiShape, isOn, UNLOCK } from './events.js';
-import { TIERS, generateLevel, hardHelp, fiestaPick, fiestaLevel, eventLevel, eventGroup, EVENT_WORLDS, packGroups, worldInfo, specials, specialGroup, SPECIAL_ID, TOTAL_LEVELS, LEVELS_PER_WORLD, MECH_NAMES, MECHANICS, MECH_INTRO, SCROLL_FROM, EXTRA, extraDebut } from './levels.js';
+import { TIERS, generateLevel, hardHelp, fiestaPick, fiestaLevel, eventLevel, eventGroup, EVENT_WORLDS, packGroups, worldInfo, specials, specialGroup, SPECIAL_ID, TOTAL_LEVELS, LEVELS_PER_WORLD, MECH_NAMES, MECHANICS, MECH_INTRO, SCROLL_FROM, EXTRA, extraDebut, mareaFirst } from './levels.js';
 import { playCasual, solve, initState } from './engine.js';
 import { openModal, toast, updateCoins, popGoal } from './ui.js';
 import { mulberry32 } from './rng.js';
@@ -161,9 +162,13 @@ const TABLE_ICONS = {
   gravedad: SV('<rect x="4" y="3" width="10" height="26" rx="3" fill="#c9bff0"/><rect x="18" y="3" width="10" height="26" rx="3" fill="#c9bff0"/><rect x="5.5" y="17" width="7" height="10" rx="1.6" fill="#fff"/><rect x="19.5" y="17" width="7" height="10" rx="1.6" fill="#fff"/><path d="M9 7v6l-2-2M9 13l2-2M23 7v6l-2-2M23 13l2-2" stroke-width="1.6" stroke-linecap="round"/>'),
   nebulosa: SV('<circle cx="16" cy="16" r="13" fill="#8a5cf0"/><path d="M16 16c0-3 4-3 4 0s-3 6-7 5-6-5-4-9 8-6 12-3" stroke="#fff" stroke-width="2" stroke-linecap="round"/>'),
   plegable: SV('<path d="M2 9l9 3v14l-9-3z" fill="#6fc6cc"/><rect x="11" y="7" width="10" height="19" rx="1.6" fill="#3fa0a8"/><path d="M30 9l-9 3v14l9-3z" fill="#6fc6cc"/>'),
+  // Mesas sobre un tablero normal (8 nov 2026: faltaban en el recuento y en los filtros).
+  marea: SV('<rect x="5" y="3" width="22" height="26" rx="3" fill="#fff6e6"/><path d="M5 18c4-3 7 3 11 0s7 3 11 0v8a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3z" fill="#4aa8de"/>'),
 };
 const tableIcon = (t) => TABLE_ICONS[t] || '';
 const SCROLL_NAMES = { mesa: 'mesa enrollada', gravedad: 'gravedad', nebulosa: 'nebulosa', plegable: 'mesa plegable' };
+// Mesas que van sobre un tablero normal (no son tira): se filtran por su bandera del nivel.
+const OVERLAY_TABLES = [['marea', 'Marea', mareaFirst() + 1, (L) => !!L.tide]];
 const PIECES = [['steps', 3], ['cross', 3], ['crown', 8], ['rosette', 13], ['sandwich', 16], ['tiltFan', 21]];
 // Nombres en español de formas y piezas (galería e Info).
 const TPL_NAMES = { pyramid: 'Pirámide', peaks: 'Picos', clusters: 'Grupitos', star: 'Estrella', layers: 'Capas', wall: 'Muro', towers: 'Torres', butterfly: 'Mariposa', diamond: 'Diamante', spiral: 'Espiral', mesa: 'Mesa enrollada', heart: 'Corazón', gravedad: 'Gravedad', scatter: 'Dispersas', nebulosa: 'Nebulosa', plegable: 'Mesa plegable', invPyramid: 'Pirámide invertida', hourglass: 'Reloj de arena' };
@@ -171,13 +176,13 @@ const PIECE_NAMES = { steps: 'escalerita', cross: 'cruz', crown: 'corona', roset
 // Filtro de tablero, en grupos: formas, mesas especiales y piezas (cada una con el nivel donde sale primero).
 const TPL_GROUPS = [
   ['Formas', [...TEMPLATES.filter(([t]) => !SCROLL_NAMES[t]).map(([t, n]) => [t, `${TPL_NAMES[t]} · ${n}`]), ['respiros', 'Respiros · 12']]],
-  ['Mesas especiales', TEMPLATES.filter(([t]) => SCROLL_NAMES[t]).map(([t, n]) => [t, `${TPL_NAMES[t]} · ${n}`])],
+  ['Mesas especiales', [...TEMPLATES.filter(([t]) => SCROLL_NAMES[t]).map(([t, n]) => [t, `${TPL_NAMES[t]} · ${n}`]), ...OVERLAY_TABLES.map(([k, name, n]) => [`ov:${k}`, `${name} · ${n}`])]],
   ['Piezas', PIECES.map(([k, n]) => [`pz:${k}`, `${PIECE_NAMES[k]} · ${n}`])],
 ];
 // Cartas en el orden en que salen (nivel de estreno: el primero de su mundo; cometa y turbo, el primero normal).
 const mechDebut = (m) => (EXTRA.includes(m) ? extraDebut(m) : MECH_INTRO[m] * LEVELS_PER_WORLD) + 1;
 const MECH_ORDER = MECHANICS.slice().sort((a, b) => mechDebut(a) - mechDebut(b));
-const okTpl = (L, t) => t === 'todas' || (t === 'respiros' ? !!L.respite : t.startsWith('pz:') ? !!L.pieces?.includes(t.slice(3)) : L.template === t);
+const okTpl = (L, t) => t === 'todas' || (t === 'respiros' ? !!L.respite : t.startsWith('pz:') ? !!L.pieces?.includes(t.slice(3)) : t.startsWith('ov:') ? OVERLAY_TABLES.find(([k]) => k === t.slice(3))[3](L) : L.template === t);
 const tplName = (L) => (TPL_NAMES[L.template] || L.template) + (L.pieces ? ` + ${L.pieces.map((k) => PIECE_NAMES[k] || k).join(', ')}` : '');
 // Etiqueta según el % del bot casual: fácil ≥75, medio ≥50, difícil ≥25, muy difícil ≥14, extremo ≥6 y demasiado
 // extremo (los niveles duros del camino buscan 18, 10 y 3%, ver TIERS).
@@ -294,7 +299,7 @@ export function galleryScreen({ onPlay, onPlayLevel, onBack }) {
   // Tarjeta: el tablero grande con su número y lo que lo distingue encima; abajo forma, cartas y dificultad.
   // pickI: índice en la lista del mes/día (se juega el tablero tal cual); si no, el id del nivel.
   const tile = (L, pickI) => {
-    const badges = [L.boss && `<i class="gb gb-boss">${icon('crown')}Jefe</i>`, L.tier && `<i class="gb gb-tier gb-t${L.tier}">${TIERS[L.tier].name}</i>`, L.respite && '<i class="gb gb-rest">Respiro</i>', L.scroll && `<i class="gb gb-mesa">${tableIcon(L.scroll)}${TPL_NAMES[L.scroll]}</i>`].filter(Boolean).join('');
+    const badges = [L.boss && `<i class="gb gb-boss">${icon('crown')}Jefe</i>`, L.tier && `<i class="gb gb-tier gb-t${L.tier}">${TIERS[L.tier].name}</i>`, L.respite && '<i class="gb gb-rest">Respiro</i>', L.scroll && `<i class="gb gb-mesa">${tableIcon(L.scroll)}${TPL_NAMES[L.scroll]}</i>`, L.tide && `<i class="gb gb-mesa">${tableIcon('marea')}Marea</i>`].filter(Boolean).join('');
     const inSet = pickI != null;
     const uses = !inSet && L.special != null ? [...(useBy[L.special]?.values() || [])] : [];
     const num = inSet ? L.k + 1 : L.special != null ? L.special + 1 : L.g + 1;
@@ -568,6 +573,7 @@ export function openDevMenu({ onGallery, onPlanets, onRefresh, card }) {
     ...UN.map(([name, l, ico, sub, note]) => ({ n: l + 1, k: 'ev', name, pic: icon(ico), sub, note })),
     ...MECH_ORDER.map((m) => ({ n: mechDebut(m), k: 'card', name: MECH_NAMES[m], pic: `<span class="dmc">${card(m)}</span>` })),
     ...Object.entries(SCROLL_FROM).map(([t, g]) => ({ n: g + 1, k: 'mesa', name: SCROLL_NAMES[t], pic: tableIcon(t) })),
+    ...OVERLAY_TABLES.map(([k, name, n]) => ({ n, k: 'mesa', name: name.toLowerCase(), pic: tableIcon(k) })),
   ].sort((a, b) => a.n - b.n || Object.keys(KINDS).indexOf(a.k) - Object.keys(KINDS).indexOf(b.k));
   const subRow = (i) => ([ico, name, when, go]) => `<tr class="dsub" data-of="${i}" hidden><td></td><td class="dpic">${icon(ico)}</td><td class="dname">${name}</td><td colspan="2">${when}</td><td>${go ? `<button class="dgo" data-go="${go}" title="Mueve el reloj al día en que empieza">Ir</button>` : ''}</td></tr>`;
   const line = (r, i) => `<tr${r.sub ? ` class="dacc" data-acc="${i}"` : ''}><td><i class="dkind k-${r.k}" title="${KINDS[r.k]}">${KINDS[r.k][0]}</i></td><td class="dpic">${r.pic}</td><td class="dname">${r.name}${r.sub ? ` <b class="dnum">${r.sub.length}</b><span class="dchev">${icon('chev')}</span>` : ''}</td><td>${r.n}</td><td>${Math.ceil(r.n / LEVELS_PER_WORLD)}</td><td>${opens(r.n - 1)}</td></tr>${r.note ? `<tr class="dsub dnote" data-of="${i}" hidden><td></td><td colspan="5">${r.note}</td></tr>` : ''}${(r.sub || []).map(subRow(i)).join('')}`;
@@ -594,6 +600,8 @@ export function openDevMenu({ onGallery, onPlanets, onRefresh, card }) {
     { t: 'Volver a explicar', items: [
       { l: 'Explicar mecánicas', title: 'Las explicaciones de cada mecánica salen otra vez', fn: () => ((save.seen = {}), persist(), toast('Las explicaciones saldrán otra vez')) },
       { l: 'Recorrido de botones', title: 'El recorrido de los botones (izquierda, arriba, eventos y Jugar) sale otra vez al cerrar este menú', fn: () => { delete save.sideTour; persist(); onRefresh(); } },
+      // 8 nov 2026: los avisos de desbloqueo salen una sola vez por jugador (Reiniciar progreso los conserva).
+      { l: 'Avisos de desbloqueo', title: 'Racha, misiones, lluvia de meteoritos, logros, colecciones, evento del mes y festividades: sus ventanas de "¡Nuevo!" salen otra vez (las que ya tengas abiertas, al volver al mapa)', fn: () => { save.intro = {}; delete save.metSeen; persist(); toast('Los avisos de desbloqueo saldrán otra vez'); onRefresh(); } },
     ] },
     { t: 'Avance', sub: `vas en el mundo ${w + 1}`, items: [
       { l: `Abrir mundo ${w + 1}`, fn: () => (completeWorlds(w, w), onRefresh()) },
@@ -607,8 +615,9 @@ export function openDevMenu({ onGallery, onPlanets, onRefresh, card }) {
         // Si era el jefe: el mundo siguiente se vuelve a cerrar (o se quita el boleto dorado que dio y no se gastó),
         // así al ganarlo otra vez salen el cofre y la apertura del mundo como la primera vez.
         if (g % LEVELS_PER_WORLD === LEVELS_PER_WORLD - 1) {
+          const tk = wg % 10 === 9 ? 'cgold' : 'gold';
           if (save.open > wg) save.open = wg;
-          else if (save.gold > 0) save.gold--;
+          else if (save[tk] > 0) save[tk]--;
         }
         if (save.run?.g === g) save.run = null;
         persist();
@@ -625,10 +634,31 @@ export function openDevMenu({ onGallery, onPlanets, onRefresh, card }) {
         toast(`Siguiente: el jefe del mundo ${w + 1}`);
         onRefresh();
       } },
-      { l: 'Reiniciar progreso', fn: () => (resetProfile(), onRefresh()) },
+      // Para probar cómo se abre la siguiente constelación (boleto de constelación y monedas).
+      { l: `Ir al último jefe de la constelación ${r + 1}`, title: 'Gana con 3★ todo hasta el jefe del mundo 10 de esta constelación', fn: () => {
+        const last = r * REGION + REGION - 1, boss = last * LEVELS_PER_WORLD + LEVELS_PER_WORLD - 1;
+        if (save.next >= boss) return toast('Ya estás en el último jefe');
+        if (last > w) completeWorlds(w, last - 1);
+        for (let g = save.next; g < boss; g++) save.stars[g] = 3;
+        save.next = boss;
+        save.open = Math.max(save.open, last);
+        save.run = null;
+        persist();
+        toast(`Siguiente: el jefe del mundo ${last + 1}, el último de la constelación`);
+        onRefresh();
+      } },
+      // En pruebas, empezar de cero también vuelve a enseñar los avisos de desbloqueo (el Reiniciar de Ajustes no).
+      { l: 'Reiniciar progreso', title: 'Desde el nivel 1, con los avisos de desbloqueo otra vez', fn: () => (resetProfile(), (save.intro = {}), delete save.metSeen, persist(), onRefresh()) },
+    ] },
+    // Misiones del día y logros (7 nov 2026).
+    { t: 'Misiones y logros', sub: `misiones ${missions().list.filter(misDone).length}/3`, items: [
+      { l: 'Cumplir las misiones de hoy', fn: () => { for (const x of missions().list) x.n = x.goal; persist(); onRefresh(); } },
+      { l: 'Otras misiones', title: 'Escoge 3 nuevas (como si fuera otro día, sin mover la fecha)', fn: () => { save.misSeed = (save.misSeed || 0) + 1; save.mis = null; missions(); onRefresh(); } },
+      { l: 'Logros: subir todo un escalón', fn: () => { const st = (save.stats ||= {}); for (const l of LOGROS) { const k = l.best ? `${l.k}Best` : l.k; st[k] = Math.max(st[k] || 0, l.steps.find((n) => n > (st[k] || 0)) || st[k]); } persist(); onRefresh(); } },
+      { l: 'Logros: borrar', fn: () => ((save.stats = {}), (save.logros = {}), persist(), onRefresh()) },
     ] },
     { t: 'Racha', sub: `va en ${racha().n}`, items: [
-      { l: '+1 victoria', fn: () => (rachaWin(), onRefresh()) },
+      { l: '+1 victoria (3★)', fn: () => (rachaWin(3), onRefresh()) },
       { l: 'Al siguiente premio', fn: () => { const g = nextGoal(); while (racha().n < g.n) rachaWin(); onRefresh(); } },
       { l: 'Perderla', fn: () => (rachaLose(), onRefresh()) },
       { l: 'Pasar al otro día', fn: () => ((save.devDay = (save.devDay || 0) + 1), persist(), onRefresh()) },
@@ -647,7 +677,7 @@ export function openDevMenu({ onGallery, onPlanets, onRefresh, card }) {
     { t: 'Evento del mes', sub: evNow ? `${evNow.name} · nivel ${Math.min(evNow.state.k + 1, EVENT_LEVELS)} de ${EVENT_LEVELS} · ${evNow.state.tk ? 'con boleto' : 'sin boleto'}` : 'no hay este mes', items: [
       { l: evNow ? 'Siguiente evento' : 'Ir al próximo', fn: () => ((save.devDay = (save.devDay || 0) + daysToNextEvent()), persist(), onRefresh()) },
       { l: 'Día antes del próximo', title: 'Mueve el reloj al último día del mes anterior: su botón sale gris con candado y la cuenta regresiva', fn: () => ((save.devDay = (save.devDay || 0) + daysToNextEvent() - 1), persist(), onRefresh()) },
-      evNow && { l: 'Boleto ya', title: 'Da el boleto sin esperar las 24 horas', fn: () => evSet({}) },
+      evNow && { l: 'Boleto ya', title: 'Da el boleto sin esperar las 48 horas', fn: () => evSet({}) },
       evNow && { l: 'Ir al jefe del planeta', fn: () => evSet({ k: Math.min(EVENT_LEVELS - 1, Math.floor(evNow.state.k / EVENT_PER_PLANET) * EVENT_PER_PLANET + EVENT_PER_PLANET - 1) }) },
       evNow && { l: 'Siguiente planeta', fn: () => evSet({ k: Math.min(EVENT_LEVELS - 1, (Math.floor(evNow.state.k / EVENT_PER_PLANET) + 1) * EVENT_PER_PLANET) }) },
       evNow && { l: 'Ganar todo hasta el último jefe', title: 'Gana los niveles que faltan (con sus premios) y te deja en el jefe del último planeta', fn: () => (ev().state.tk = 1, ev().state.run = null, winTo(ev, evEnter, evWin, EVENT_LEVELS - 1)) },
@@ -672,7 +702,7 @@ export function openDevMenu({ onGallery, onPlanets, onRefresh, card }) {
       metNow && { l: 'Que el premio sea un exclusivo', title: 'El siguiente nivel con 3★ da uno de los exclusivos de meteoro que te faltan (con su ventana)', fn: () => { if (!metItems().some((x) => !owns(x.sec, x.k))) return toast('Ya tienes los 5 exclusivos'); metNow.state.prize = false; save.devMetItem = 1; persist(); toast('Gana un nivel con 3★: te cae un exclusivo'); } },
       { l: 'Darme los 5 exclusivos', title: 'Para verlos en tu perfil y en la tienda', fn: () => { metItems().forEach((x) => (save.owned[`${x.sec}:${x.k}`] = 1)); persist(); toast('Ya tienes los 5 exclusivos de meteoro'); } },
       { l: 'Quitarme los exclusivos', fn: () => { metItems().forEach((x) => delete save.owned[`${x.sec}:${x.k}`]); persist(); toast('Sin exclusivos de meteoro'); } },
-      { l: 'Aviso de primera vez', title: 'El aviso de la siguiente lluvia vuelve a explicar que cae sin avisar', fn: () => (delete save.metSeen, persist(), toast('Saldrá el aviso completo')) },
+      { l: 'Aviso de primera vez', title: 'Vuelven a salir la ventana de desbloqueo (al volver al mapa) y la explicación completa de la siguiente lluvia', fn: () => (delete save.metSeen, save.intro && delete save.intro.meteoro, persist(), toast('Saldrán la ventana de desbloqueo y el aviso completo')) },
     ] },
     // Una por festividad: mueve el reloj al día en que empieza (la de este año). Las de leyendas, solo desde el nivel 200.
   ].map((sec) => ({ ...sec, items: sec.items.filter(Boolean) }));
@@ -685,7 +715,7 @@ export function openDevMenu({ onGallery, onPlanets, onRefresh, card }) {
     // Dos pestañas: los botones primero (lo que más se usa) y el recuento aparte.
     body: `<div class="dtabs"><button class="dtab on" data-tab="btns">Pruebas</button><button class="dtab" data-tab="count">Recuento</button></div>
       <div class="dpane" data-pane="count" hidden><section class="dsec">${recuento}</section></div>
-      <div class="dpane" data-pane="btns"><p class="note">Todo lo que hagas aquí es de prueba: al salir del modo dev vuelve tu partida.</p>
+      <div class="dpane" data-pane="btns"><p class="note">Todo lo que hagas aquí es de prueba: al salir del modo dev vuelve tu partida.${(() => { const b = backupInfo(); return b ? `<br>Tu partida guardada: <b>nivel ${b.next + 1}</b>, mundo ${b.open + 1}, ${b.coins.toLocaleString('es-MX')} monedas.` : '<br><b>No hay copia de tu partida</b>: sal y vuelve a entrar al modo dev.'; })()}</p>
       ${S.map(secHTML).join('')}</div>`,
     buttons: [
       { label: 'Empezar de cero las pruebas', cls: 'green', onClick: () => { restoreBackup(); backupOnce(); toast('Tu partida volvió a como estaba'); onRefresh(); } },

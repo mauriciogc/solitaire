@@ -1,10 +1,23 @@
 // Economía: boletos de entrada y monedas por estrellas.
 import { difficulty, LEVELS_PER_WORLD } from './levels.js';
 
-export const TICKET_PRICE = 40; // monedas por boleto
+// Precio de un boleto normal (7 nov 2026: antes 40; el usuario: "homologar todos los precios").
+export const TICKET_PRICE = 250;
 // Boosters: el comodín, el pack de 3 deshacer y +5 cartas suben con el avance, en los mismos escalones que los boletos
-// (1, 2 o 3 boletos por nivel).
-const TIERS = { wild: [250, 350, 450], undo: [50, 75, 100], extra: [100, 150, 200] };
+// (1, 2 o 3 boletos por nivel). Subidos el 7 nov 2026 (antes 250/350/450, 50/75/100 y 100/150/200): el usuario
+// gastaba +5 "a granel" y le seguían sobrando monedas; que duela.
+const TIERS = { wild: [500, 650, 800], undo: [150, 200, 250], extra: [300, 400, 500], reloj: [300, 400, 500], ver2: [150, 200, 250], ver3: [250, 325, 400], llave: [2000, 2500, 3000] };
+// Mazo de ayudas (7 nov 2026): la carta dorada del tablero abre el comodín y estas. save.helps = clave -> cuántas.
+// Las que no tienen precio solo se ganan (ver 4 y 5 s; la de 5 casi solo en eventos). La llave maestra es cara a propósito.
+export const HELPS = {
+  reloj: { name: 'Reloj de arena', ico: 'arena', text: 'Congela <b>3 turnos</b> todo lo que cuenta: bombas, cometas y cartas vivas. No toca tu racha.' },
+  ver2: { name: 'Ver cartas', secs: 2, ico: 'ojo', text: 'Voltea <b>todas</b> las cartas del tablero por <b>2 segundos</b>.' },
+  ver3: { name: 'Ver cartas', secs: 3, ico: 'ojo', text: 'Voltea <b>todas</b> las cartas del tablero por <b>3 segundos</b>.' },
+  ver4: { name: 'Ver cartas', secs: 4, ico: 'ojo', text: 'Voltea <b>todas</b> las cartas del tablero por <b>4 segundos</b>.' },
+  ver5: { name: 'Ver cartas', secs: 5, ico: 'ojo', text: 'Voltea <b>todas</b> las cartas del tablero por <b>5 segundos</b>.' },
+  llave: { name: 'Llave maestra', ico: 'llaveMaestra', text: 'Abre <b>todos</b> los candados y cortinas del tablero.' },
+};
+export const buyable = (k) => !!TIERS[k];
 
 // Boletos para entrar a un nivel: por tercios del universo (52 constelaciones de 10 mundos):
 // constelaciones 1-17 → 1 boleto, 18-35 → 2, 36-52 → 3. Ganar el nivel por primera vez los devuelve
@@ -15,12 +28,23 @@ export function ticketCost(g) {
 }
 export const ticketRefund = ticketCost;
 
-// Monedas que vale un nivel con 3 estrellas. Sube con la dificultad; los jefes dan +50%.
+// Monedas que vale un nivel con 3 estrellas. Sube con la dificultad y un poquito con cada constelación (que no se
+// note); los jefes dan +50%. 7 nov 2026: más o menos a la mitad (antes 45 + 75·d: con 3★ en todo alcanzaba para la
+// tienda entera en el mundo 68).
 export function levelReward(g) {
   const boss = g % LEVELS_PER_WORLD === LEVELS_PER_WORLD - 1;
-  const base = Math.round((45 + 75 * difficulty(g)) / 5) * 5;
+  const c = Math.floor(g / (LEVELS_PER_WORLD * 10));
+  const base = Math.max(5, Math.round((20 + 35 * difficulty(g) + 0.4 * c) / 5) * 5);
   return boss ? Math.round((base * 1.5) / 5) * 5 : base;
 }
+// Ajuste por jugador (7 nov 2026): si va corto de monedas para lo que lleva, los niveles pagan más (×1.25, o ×1.5 si
+// tiene menos de la mitad). Nunca paga menos de lo normal. Lo normal para su avance: lo que cuestan un comodín y un +5
+// ahí, y sube con cada constelación.
+export function poorBoost(coins, g) {
+  const ref = price('wild', g) + price('extra', g) + 25 * Math.floor(g / (LEVELS_PER_WORLD * 10));
+  return coins < ref / 2 ? 1.5 : coins < ref ? 1.25 : 1;
+}
+export const boosted = (n, coins, g) => Math.round((n * poorBoost(coins, g)) / 5) * 5 || n;
 
 const part = (g, stars) => Math.round((levelReward(g) * stars) / 3);
 
@@ -79,22 +103,40 @@ export function starsNeeded(w) {
   return Math.ceil(w * LEVELS_PER_WORLD * 3 * pct);
 }
 
+// ---------- Constelaciones (7 nov 2026) ----------
+// Terminar una constelación (el jefe del mundo 10 de cada una, primera vez) da CONST_PRIZE. Abrir la siguiente pide,
+// además del boleto dorado y las estrellas, CONST_OPEN monedas.
+export const CONST_PRIZE = { coins: 2000, wild: 1, undo: 1 };
+export const CONST_OPEN = 1000;
+export const openCost = (w) => (w > 0 && w % (LEVELS_PER_WORLD) === 0 ? CONST_OPEN : 0);
+
 // ---------- Cofre del jefe ----------
 // Al ganar el jefe por primera vez: premio según el % de estrellas del mundo (tope 100% = 30/30).
+// 7 nov 2026: las monedas salen al azar entre un mínimo y un máximo, y los comodines y deshacer por probabilidad
+// (odds); el comodín solo en el de oro. bossChest dice el sello (para la postal); rollChest sortea el premio al ganar.
 const CHEST = [
-  [1, { coins: 50, undo: 2, wild: 1 }, 'oro'],
-  [0.9, { coins: 40, undo: 2 }, 'plata'],
-  [0.75, { coins: 30, undo: 1 }, 'bronce'],
-  [0.5, { coins: 20, undo: 1 }, 'sello'],
-  [0, { coins: 10 }, 'sello'],
+  [1, { coins: [40, 80], undo: 2, wild: 1, odds: 0.5 }, 'oro'],
+  [0.9, { coins: [30, 60], undo: 2, odds: 0.5 }, 'plata'],
+  [0.75, { coins: [20, 45], undo: 1, odds: 0.5 }, 'bronce'],
+  [0.5, { coins: [15, 30], undo: 1, odds: 0.3 }, 'sello'],
+  [0, { coins: [5, 15] }, 'sello'],
 ];
+const between = ([a, b], r) => Math.round((a + r() * (b - a)) / 5) * 5;
+const chance = (n = 0, odds = 0, r) => Array.from({ length: n }).reduce((k) => k + (r() < odds), 0);
 export function bossChest(worldStars) {
   const pct = worldStars / (LEVELS_PER_WORLD * 3);
   const [, prize, tier] = CHEST.find(([min]) => pct >= min);
   return { ...prize, tier, pct };
 }
+export function rollChest(worldStars, r = Math.random) {
+  const c = bossChest(worldStars);
+  return { tier: c.tier, pct: c.pct, coins: between(c.coins, r), undo: chance(c.undo, c.odds, r), wild: chance(c.wild, c.odds, r) };
+}
 
-// Nivel secreto: paga el doble que el jefe de su mundo (según estrellas). La primera vez con 3★ regala además
-// 1 comodín y 2 deshacer; con menos estrellas, solo monedas.
-export const SECRET_MULT = 2;
+// Nivel secreto: paga entre 1.5 y 2.5 veces lo del jefe de su mundo (según estrellas; antes justo el doble). La primera
+// vez con 3★ puede dar además 1 comodín (40%) y hasta 2 deshacer (50% cada uno); antes siempre los daba.
+export const SECRET_MULT = [1.5, 2.5];
 export const SECRET_PRIZE = { wild: 1, undo: 2 };
+export const SECRET_ODDS = { wild: 0.4, undo: 0.5 };
+export const secretCoins = (n, r = Math.random) => Math.round((n * (SECRET_MULT[0] + r() * (SECRET_MULT[1] - SECRET_MULT[0]))) / 5) * 5;
+export const rollSecret = (r = Math.random) => ({ wild: chance(SECRET_PRIZE.wild, SECRET_ODDS.wild, r), undo: chance(SECRET_PRIZE.undo, SECRET_ODDS.undo, r) });

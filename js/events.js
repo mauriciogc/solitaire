@@ -1,5 +1,5 @@
 // Eventos (Fase 6): la racha diaria, la colección semanal y el evento del mes.
-// Racha: cuenta victorias seguidas de niveles nuevos (cualquier estrella). Perder o abandonar uno nuevo, o rendirse
+// Racha: cuenta las estrellas de victorias seguidas en niveles nuevos (desde el 7 nov 2026; antes 1 por victoria). Perder o abandonar uno nuevo, o rendirse
 // en uno repetido, la regresa a 0. A medianoche (hora del teléfono) empieza otra. Siempre es la racha cohete (cambiar
 // de temática cada día confundía, porque la colección también tiene temáticas). Los premios se reclaman a mano:
 // los reclamados son tuyos; los que no, se pierden si la racha se reinicia o si pasa la medianoche.
@@ -12,20 +12,21 @@ import { EVENT_LEVELS, EVENT_PER_PLANET, EVENT_PLANETS, FIESTA_LEVELS, FIESTA_PE
 // col3: al nivel 150 se suman 3 más (arte, música y cine) y hay colección todas las semanas.
 // fiesta2: al nivel 200 se suman las festividades de leyendas mexicanas (local: true).
 // fiesta: festividades de 24 h (ver más abajo).
-export const UNLOCK = { racha: 20, col: 50, mes: 80, col2: 100, fiesta: 120, col3: 150, fiesta2: 200 };
+export const UNLOCK = { racha: 20, mis: 30, logros: 40, col: 50, mes: 80, col2: 100, fiesta: 120, col3: 150, fiesta2: 200 };
 export const isOn = (k) => (save.next || 0) >= UNLOCK[k];
 
-// Primera fila: 3/5/10/15/20/30. Luego una fila sin fin cada 50 (50, 100, 150…): se turnan comodín y deshacer,
-// con monedas que suben poco a poco. Las monedas son provisionales: se revisan en la fase de economía.
+// En estrellas (7 nov 2026: llegaba a 30 victorias sin problema porque contaba cualquiera): cada victoria suma sus
+// estrellas. Primera fila: 15/30/60/90/150/240 (= 5, 10, 20, 30, 50 y 80 niveles con 3★). Luego una fila sin fin
+// cada 150 (150, 300, 450…): se turnan comodín y deshacer, con monedas que suben poco a poco.
 export const RACHA_GOALS = [
-  { n: 3, coins: 20 },
-  { n: 5, coins: 30 },
-  { n: 10, coins: 40, undo: 1 },
-  { n: 15, coins: 50 },
-  { n: 20, coins: 60 },
-  { n: 30, coins: 80, wild: 1 },
+  { n: 15, coins: 20 },
+  { n: 30, coins: 30 },
+  { n: 60, coins: 40, undo: 1 },
+  { n: 90, coins: 50 },
+  { n: 150, coins: 60 },
+  { n: 240, coins: 80, wild: 1 },
 ];
-export const RACHA_STEP = 50;
+export const RACHA_STEP = 150;
 // Premio i (índice global): los primeros son la fila de arriba; del 6 en adelante, la fila de 50 en 50.
 export function rachaGoal(i) {
   if (i < RACHA_GOALS.length) return RACHA_GOALS[i];
@@ -64,8 +65,8 @@ export const nextGoal = () => rachaGoal(nextIndex(racha()));
 export function rachaHot() {
   const r = racha(), i = nextIndex(r);
   const from = i ? rachaGoal(i - 1).n : 0, left = rachaGoal(i).n - r.n;
-  // En la fila de 50 en 50 arde solo en las últimas 2.
-  return left <= (i >= RACHA_GOALS.length ? 2 : Math.max(1, Math.ceil((rachaGoal(i).n - from) * 0.2)));
+  // En la fila sin fin arde solo en las últimas 2 victorias perfectas (6 estrellas).
+  return left <= (i >= RACHA_GOALS.length ? 6 : Math.max(3, Math.ceil((rachaGoal(i).n - from) * 0.2)));
 }
 export const msToMidnight = () => {
   const d = new Date();
@@ -73,11 +74,11 @@ export const msToMidnight = () => {
   return d - Date.now();
 };
 
-// Ganó un nivel nuevo: suma 1 y aparta los premios que alcanzó.
-export function rachaWin() {
+// Ganó un nivel nuevo: suma sus estrellas y aparta los premios que alcanzó.
+export function rachaWin(stars = 1) {
   if (!isOn('racha')) return null;
   const r = racha();
-  r.n++;
+  r.n += stars;
   for (let i = 0; i < goalIndex(r.n); i++) if (!r.got.includes(i)) r.got.push(i), r.pend.push(i);
   persist();
   return r.n;
@@ -139,7 +140,10 @@ export const COLECCIONES = [
     ex: { back: 'peliculas', title: 'director', avatar: 'mapache', ring: 'rollo', traveler: 'proyector', frame: 'cine', space: 'estreno' } },
 ];
 // Precio en fichas de cada exclusivo (igual en todas las temáticas). Suman 560: más de lo que se junta en una semana.
-const EX_PRICE = { title: 40, frame: 50, space: 60, ring: 70, avatar: 90, back: 110, traveler: 140 };
+// 7 nov 2026: todo 60% más caro (COL_UP; primero 25%, luego más: son de los pocos lugares donde se consiguen ayudas y exclusivos).
+const COL_UP = 1.6;
+const HELP_UP = 4;
+const EX_PRICE = Object.fromEntries(Object.entries({ title: 40, frame: 50, space: 60, ring: 70, avatar: 90, back: 110, traveler: 140 }).map(([k, v]) => [k, Math.round((v * COL_UP) / 5) * 5]));
 const DAY = 864e5;
 // Lunes de esta semana (en días locales) y si esa semana hay colección.
 const mondayOf = (day) => day - ((day + 3) % 7); // el día 0 (1 ene 1970) fue jueves
@@ -200,11 +204,18 @@ export function colOffers(tier = 1) {
   const c = col();
   if (!c) return [];
   const ex = Object.entries(EX_PRICE).map(([sec, price]) => ({ k: sec, sec, item: c.ex[sec], price }));
+  // Ayudas (8 nov 2026): ×HELP_UP más, para que cuesten como un exclusivo de en medio o más (el usuario: "deben ser
+  // nivel medio/difícil de comprar"; antes el comodín costaba 19 fichas y un título 65).
+  const hp = (n) => Math.round((n * tier * COL_UP * HELP_UP) / 5) * 5;
   return [
     ...ex,
-    { k: 'wild', prize: { wild: 1 }, price: 12 * tier },
-    { k: 'undo', prize: { undo: 3 }, price: 8 * tier },
-    { k: 'tickets', prize: { tickets: 2 }, price: 5 * tier },
+    { k: 'wild', prize: { wild: 1 }, price: hp(12) },
+    { k: 'undo', prize: { undo: 3 }, price: hp(8) },
+    { k: 'tickets', prize: { tickets: 2 }, price: hp(5) },
+    // Ayudas del mazo de ayudas (7 nov 2026): de los pocos lugares donde se consiguen sin comprarlas.
+    { k: 'reloj', prize: { helps: { reloj: 1 } }, price: hp(9) },
+    { k: 'ver3', prize: { helps: { ver3: 1 } }, price: hp(6) },
+    { k: 'llave', prize: { helps: { llave: 1 } }, price: hp(60) },
   ].sort((a, b) => a.price - b.price);
 }
 // Cambia fichas por una oferta. Devuelve la oferta (para entregar el premio) o null si no alcanza o ya es tuya.
@@ -273,7 +284,14 @@ export const EVENTOS = {
 // 6 nov 2026 (antes 20-40 y 300/600), cuando sus niveles duros dejaron de pedir ayudas.
 export const EV_COINS = [30, 40, 45, 55, 60];
 export const EV_REPEAT = [{ coins: 450 }, { undo: 3 }, { wild: 1 }, { wild: 2, coins: 450 }, { wild: 3, coins: 900 }];
-export const EV_TICKET_WAIT = DAY;
+// El boleto que se pierde vuelve a las 48 h (7 nov 2026: antes 24 h; así comprarlo tienta más).
+export const EV_TICKET_WAIT = 2 * DAY;
+// Boletos que se pagan (7 nov 2026): el primero del evento del mes 1,000 y los siguientes (si no quieres esperar las
+// 48 h) 500; la festividad 800 una vez. Si ya tienes todos los exclusivos de ese evento, 30% menos.
+// La festividad se puede comprar antes (los días en que su botón sale con candado) con FI_PRE de descuento.
+export const EV_FIRST = 1000, EV_AGAIN = 500, FI_ENTRY = 800, ALL_EX_OFF = 0.3, FI_PRE = 0.2;
+const allEx = (e) => e.ex.every((x) => Object.entries(x).every(([sec, it]) => save.owned[`${sec}:${it}`]));
+const tkPrice = (e, base) => Math.round((base * (allEx(e) ? 1 - ALL_EX_OFF : 1)) / 5) * 5;
 
 // Fecha del teléfono (el modo dev la mueve con save.devDay).
 const now = () => new Date(Date.now() + (save.devDay || 0) * DAY);
@@ -289,11 +307,13 @@ export function ev() {
   if (!e) return null;
   if (save.ev?.id !== e.id) {
     evRecord();
-    save.ev = { id: e.id, k: 0, world: save.open || 0, tk: 1, at: 0, run: null, tries: {} };
+    save.ev = { id: e.id, k: 0, world: save.open || 0, tk: 0, at: 0, paid: false, run: null, tries: {} };
     persist();
   }
   const s = save.ev;
-  // El boleto que se gastó vuelve a las 24 h.
+  // Ediciones empezadas antes del boleto pagado: ya entraron gratis.
+  if (s.paid == null) s.paid = true;
+  // El boleto que se gastó vuelve a las 48 h.
   if (!s.tk && s.at && Date.now() - s.at >= EV_TICKET_WAIT) {
     s.tk = 1;
     s.at = 0;
@@ -307,10 +327,23 @@ export function evSoon() {
   const d = now(), t = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1);
   return t.getMonth() !== d.getMonth() ? eventOf(t) : null;
 }
-// Cuánto falta para el siguiente boleto (0 = ya tienes).
+// Precio del boleto del evento ahora: el primero de la edición o uno para no esperar.
+export const evTicketPrice = (e) => tkPrice(e, e.state.paid ? EV_AGAIN : EV_FIRST);
+// Comprar el boleto (el primero o para no esperar las 48 h). false si no alcanzan las monedas.
+export function evBuyTicket() {
+  const e = ev();
+  if (!e || e.state.tk) return false;
+  const p = evTicketPrice(e);
+  if (save.coins < p) return false;
+  save.coins -= p;
+  Object.assign(e.state, { tk: 1, at: 0, paid: true });
+  persist();
+  return p;
+}
+// Cuánto falta para el siguiente boleto (0 = ya tienes; también 0 si aún no se compra el primero).
 export const evTicketLeft = () => {
   const e = ev();
-  return !e || e.state.tk ? 0 : Math.max(0, e.state.at + EV_TICKET_WAIT - Date.now());
+  return !e || e.state.tk || !e.state.paid ? 0 : Math.max(0, e.state.at + EV_TICKET_WAIT - Date.now());
 };
 // Cuánto falta para que termine el mes.
 export const evLeft = () => {
@@ -337,11 +370,37 @@ export function nextEvent() {
 }
 // Premio del nivel k (0..24): monedas en los niveles 1-4; en el 5.º, los exclusivos del planeta
 // (o EV_REPEAT si ya los tienes todos). Devuelve { coins?, undo?, wild?, items: [{ sec, k }] }.
-export function evPrize(e, k) {
+export function evPrize(e, k, stars = 3) {
   const p = Math.floor(k / EVENT_PER_PLANET);
   if (k % EVENT_PER_PLANET !== EVENT_PER_PLANET - 1) return { coins: EV_COINS[p], items: [] };
-  const items = Object.entries(e.ex[p]).filter(([sec, it]) => !save.owned[`${sec}:${it}`]).map(([sec, it]) => ({ sec, k: it }));
-  return items.length ? { items } : { ...EV_REPEAT[p], items: [], repeat: true };
+  return lastPrize(e.ex[p], EV_REPEAT[p], EV_COINS[p] * 3, stars);
+}
+// Premio del último nivel de un planeta (evento del mes y festividades; 7 nov 2026). Antes daba todos los exclusivos
+// del planeta juntos: ahora puede salir UNO que aún no tienes (nunca dos a la vez; así no salen todos en un año).
+// Van en el orden de siempre, del más fácil al más difícil (fondo, marco, anillo, avatar, reverso, título, viajero):
+// cada uno tiene su probabilidad (EX_ODDS) y las estrellas del nivel la multiplican (STAR_K: 1★ menos de la mitad).
+// Si no sale, da el premio de repetido (rep) con sus ayudas por probabilidad: HELP_ODDS[0] cada una si trae
+// una sola, HELP_ODDS[1] si trae varias. Si al final no queda nada, `least` monedas. Se sortea al ganar.
+export const EX_ODDS = { space: 0.5, frame: 0.45, ring: 0.4, avatar: 0.3, back: 0.3, title: 0.25, traveler: 0.15 };
+export const STAR_K = [0.4, 0.4, 0.7, 1];
+const EX_ORDER = Object.keys(EX_ODDS);
+export const HELP_ODDS = [0.4, 0.2];
+// Ayudas que pueden caer en ese premio, en orden (se toma la primera que salga): ver 5 s 5%, ver 4 s 12%, reloj 20%.
+const HELP_DROP = [['ver5', 0.05], ['ver4', 0.12], ['reloj', 0.2]];
+function lastPrize(ex, rep, least, stars = 3, r = Math.random) {
+  const left = Object.entries(ex).filter(([sec, it]) => !save.owned[`${sec}:${it}`]).sort((a, b) => EX_ORDER.indexOf(a[0]) - EX_ORDER.indexOf(b[0]));
+  if (left.length && r() < EX_ODDS[left[0][0]] * STAR_K[Math.max(0, Math.min(3, stars))]) {
+    const [sec, it] = left[0];
+    return { items: [{ sec, k: it }] };
+  }
+  const odds = HELP_ODDS[(rep.wild || 0) + (rep.undo || 0) > 1 ? 1 : 0];
+  const roll = (n = 0) => Array.from({ length: n }).reduce((a) => a + (r() < odds), 0);
+  const out = { coins: rep.coins || 0, wild: roll(rep.wild), undo: roll(rep.undo), items: [], repeat: !left.length };
+  // Ayudas del mazo de ayudas, raras (HELP_DROP): ver cartas 5 s casi solo sale aquí.
+  const drop = HELP_DROP.find(([, p]) => r() < p);
+  if (drop) out.helps = { [drop[0]]: 1 };
+  if (!out.coins && !out.wild && !out.undo && !out.helps) out.coins = least;
+  return out;
 }
 // Entrar a un nivel: gasta el boleto (si es partida nueva). Devuelve false si no hay boleto.
 export function evEnter() {
@@ -356,10 +415,10 @@ export function evEnter() {
   return true;
 }
 // Ganó el nivel: el boleto vuelve, se avanza y se entrega el premio (los exclusivos no se ponen solos: se cambian en el perfil).
-export function evWin() {
+export function evWin(stars = 3) {
   const e = ev();
   if (!e?.state.run) return null;
-  const k = e.state.run.k, prize = evPrize(e, k);
+  const k = e.state.run.k, prize = evPrize(e, k, stars);
   e.state.run = null;
   e.state.tk = 1;
   e.state.at = 0;
@@ -368,6 +427,7 @@ export function evWin() {
   save.coins += prize.coins || 0;
   save.undo += prize.undo || 0;
   save.wild += prize.wild || 0;
+  for (const [k, n] of Object.entries(prize.helps || {})) save.helps[k] = (save.helps[k] || 0) + n;
   for (const it of prize.items) {
     save.owned[`${it.sec}:${it.k}`] = 1;
   }
@@ -516,7 +576,8 @@ export function fiesta() {
   if (x.soon) return base;
   if (save.fi?.id !== id) {
     fiRecord(); // la de antes, si se ganó completa, se queda en el álbum
-    save.fi = { id, k: 0, world: save.open || 0, run: null, tries: {} };
+    // Si la compró antes (preventa), ya entra pagada.
+    save.fi = { id, k: 0, world: save.open || 0, paid: save.fiPre === id, run: null, tries: {} };
     persist();
   }
   return { ...base, state: save.fi, done: save.fi.k >= fiShape(x.f).L };
@@ -542,32 +603,52 @@ export function nextFiesta(skip = 0) {
   const next = [...fiestaDays(y), ...fiestaDays(y + 1)].find((x) => x.day > day + skip);
   return next ? { ...next.f, days: next.day - day } : null;
 }
-export function fiPrize(f, k) {
+export function fiPrize(f, k, stars = 3) {
   const { P, N } = fiShape(f), p = Math.floor(k / N);
   if (k % N !== N - 1) return { coins: FI_COINS[p], items: [] };
-  const items = Object.entries(f.ex[p]).filter(([sec, it]) => !save.owned[`${sec}:${it}`]).map(([sec, it]) => ({ sec, k: it }));
   // Repetida: el último planeta da el premio grande; los de en medio, el del 2.º.
-  return items.length ? { items } : { ...FI_REPEAT[p === P - 1 ? 2 : Math.min(p, 1)], items: [], repeat: true };
+  return lastPrize(f.ex[p], FI_REPEAT[p === P - 1 ? 2 : Math.min(p, 1)], FI_COINS[p] * 3, stars);
 }
 // Entrar al nivel que sigue (sin boleto): cada intento cambia las cartas.
+// Entrada a la festividad: se paga una vez (FI_ENTRY) y luego se juega todo el día.
+// Antes de que empiece (soon) cuesta FI_PRE menos; comprada así queda en save.fiPre.
+export const fiPrice = (f) => tkPrice(f, f.soon ? FI_ENTRY * (1 - FI_PRE) : FI_ENTRY);
+export const fiPre = (f) => f?.soon && save.fiPre === f.id;
+export function fiPaid(f) {
+  // Festividades empezadas antes de la entrada pagada: ya entraron gratis.
+  if (f.state.paid == null) f.state.paid = true;
+  return f.state.paid;
+}
+export function fiBuy() {
+  const f = fiesta();
+  if (!f || (f.soon ? fiPre(f) : fiPaid(f))) return false;
+  const p = fiPrice(f);
+  if (save.coins < p) return false;
+  save.coins -= p;
+  if (f.soon) save.fiPre = f.id;
+  else f.state.paid = true;
+  persist();
+  return p;
+}
 export function fiEnter() {
   const f = fiesta();
-  if (!f || f.soon || f.done) return false;
+  if (!f || f.soon || f.done || !fiPaid(f)) return false;
   if (f.state.run) return true;
   f.state.run = { k: f.state.k, v: f.state.tries[f.state.k] || 0, state: null };
   f.state.tries[f.state.k] = f.state.run.v + 1;
   persist();
   return true;
 }
-export function fiWin() {
+export function fiWin(stars = 3) {
   const f = fiesta();
   if (!f?.state?.run) return null;
-  const k = f.state.run.k, prize = fiPrize(f, k);
+  const k = f.state.run.k, prize = fiPrize(f, k, stars);
   f.state.run = null;
   f.state.k = k + 1;
   save.coins += prize.coins || 0;
   save.undo += prize.undo || 0;
   save.wild += prize.wild || 0;
+  for (const [k, n] of Object.entries(prize.helps || {})) save.helps[k] = (save.helps[k] || 0) + n;
   for (const it of prize.items) {
     save.owned[`${it.sec}:${it.k}`] = 1;
   }

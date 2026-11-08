@@ -1,5 +1,6 @@
 import { save, persist } from './storage.js';
 import { star, icon, coin } from './art.js';
+import { track } from './missions.js';
 
 // Monedero: hasta 9,999 completo; después abreviado para que quepa (12.5K, 250K, 1.2M).
 export function money(n) {
@@ -29,7 +30,7 @@ export const buzz = (ms = 30) => navigator.vibrate?.(ms);
 export const wait = (ms) => new Promise((ok) => setTimeout(ok, ms));
 
 // Colores de cabecera por tipo de ventana.
-const HEADS = {
+export const HEADS = {
   violet: ['#8a5cf0', '#6c3fd4'], blue: ['#4aa8de', '#2f86c0'], green: ['#47c27a', '#2f9e5c'], orange: ['#ff9c5b', '#e2753a'],
   gold: ['#ffc83d', '#e89a17'], pink: ['#ff5f7e', '#d63d5f'], red: ['#e8434f', '#c22c3c'], gray: ['#9188c0', '#6e66a3'],
 };
@@ -355,7 +356,7 @@ export function popBalloon(b, [c, d], { remove = true } = {}) {
 }
 // Aviso de que se pierde la racha (abandonar, rendirse, reintentar): el cohete con el número tiembla.
 export const rachaWarnHTML = (n, pend, when) =>
-  `<div class="racha-warn"><span class="rw-ico">${icon('rocket')}<b class="outl">${n}</b></span><p><b>¡Pierdes tu racha de ${n}!</b> ${when}, vuelve a 0${pend ? ' y se pierden los premios sin reclamar' : ''}.</p></div>`;
+  `<div class="racha-warn"><span class="rw-ico">${icon('rocket')}<b class="outl">${n}</b></span><p><b>¡Pierdes tu racha de ${n} estrellas!</b> ${when}, vuelve a 0${pend ? ' y se pierden los premios sin reclamar' : ''}.</p></div>`;
 
 // Globos y burbujas truenados (save.pops). Se acumulan entre niveles. A los 100 globos regala 1 comodín y la cuenta
 // vuelve a 0; el siguiente pide 200, luego 400, 800 y vuelve a 100 (siempre 1 comodín). Las burbujas de premios (las de
@@ -372,6 +373,7 @@ export const popGoal = (kind, lvl) => {
   return from * 2 ** ((lvl - (intro ? 1 : 0)) % (Math.floor(Math.log2(POP_TOP / from)) + 1));
 };
 export function countPop(kind, at) {
+  track({ [kind]: 1 }); // misiones y logros: burbujas, globos y meteoros
   const p = ((save.pops ||= {})[kind] ||= { n: 0, lvl: 0 });
   if (++p.n < popGoal(kind, p.lvl)) return persist();
   p.n = 0;

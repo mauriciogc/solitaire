@@ -4,7 +4,8 @@
 const KEY = 'solitario-mundos-v3';
 const OLD = ['solitario-mundos-v2', 'solitario-mundos-v1']; // v2: { active, profiles, prefs } · v1: una partida con prefs adentro
 
-export const START = { coins: 300, wild: 3, undo: 5, tickets: 5 };
+// tickets: el que usa el nivel 1 y uno de regalo (7 nov 2026; antes 5).
+export const START = { coins: 300, wild: 3, undo: 5, tickets: 2 };
 
 const fresh = (name, avatar = 0) => ({
   name,
@@ -14,6 +15,7 @@ const fresh = (name, avatar = 0) => ({
   next: 0, // primer nivel sin completar
   open: 0, // último mundo abierto (para pasar de mundo hace falta boleto dorado y estrellas)
   gold: 0, // boletos dorados (los da cada jefe la primera vez)
+  cgold: 0, // boletos de constelación (8 nov 2026): los da el jefe del último mundo de cada constelación y abren la siguiente
   tries: {}, // intentos por nivel (cambia las cartas de cada intento)
   run: null, // partida en curso de un nivel nuevo (se retoma al volver)
   tutorial: false,
@@ -31,6 +33,8 @@ const fresh = (name, avatar = 0) => ({
   char: 'nino', // Nico y Lila son gratis
   owned: {}, // tienda: 'seccion:clave' -> 1 (ver shop.js)
   equip: {}, // tienda: seccion -> clave que usa
+  soonSeen: {}, // eventos anunciados cuya ventana ya abrió (dejan de salir como nuevos en la botonera)
+  helps: {}, // mazo de ayudas: clave -> cuántas (reloj, ver2…ver5, llave; ver HELPS en economy.js). El comodín sigue en wild.
   codes: {}, // códigos de regalo ya canjeados (ver codes.js): no se borran al reiniciar el perfil
 });
 
@@ -69,6 +73,14 @@ if (p0.look === 'char' && p0.char === 'astro') (p0.owned ||= {})['avatar:astro']
 export const prefs = root.prefs;
 export const save = {};
 Object.assign(save, fresh(''), p0);
+// Boleto de constelación (8 nov 2026): quien ya venció al jefe del último mundo de una constelación y no ha abierto la
+// siguiente tiene un boleto dorado de ese jefe; se vuelve de constelación (es el que ahora pide la puerta).
+function fixConst(p) {
+  if (p.cgFix) return;
+  p.cgFix = 1;
+  if (p.open % 10 === 9 && (p.next || 0) > p.open * 10 + 9 && p.gold > 0) (p.gold--, (p.cgold = (p.cgold || 0) + 1));
+}
+fixConst(save);
 
 export function persist() {
   root.player = { ...save };
@@ -85,6 +97,7 @@ persist();
 function replaceWith(p) {
   for (const k of Object.keys(save)) delete save[k];
   Object.assign(save, fresh(''), p);
+  fixConst(save);
   persist();
 }
 
@@ -139,6 +152,16 @@ export function loadProfile(p) {
 // compras, eventos) se juega sobre esa copia, y al apagarlo tu partida vuelve tal como estaba.
 const BACKUP = 'solitario-mundos-respaldo-dev';
 export const hasBackup = () => !!localStorage.getItem(BACKUP);
+// Lo que se guardó de tu partida real (para enseñarlo en el menú dev): nivel, mundo abierto y monedas.
+export function backupInfo() {
+  try {
+    const b = JSON.parse(localStorage.getItem(BACKUP) || 'null');
+    const p = b?.v ? b.p : b;
+    return p ? { next: p.next || 0, open: p.open || 0, coins: p.coins || 0 } : null;
+  } catch {
+    return null;
+  }
+}
 export function backupOnce() {
   if (hasBackup()) return;
   try {

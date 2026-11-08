@@ -468,7 +468,14 @@ export class Galaxy {
       g.closePath(); g.fillStyle = on ? fillOn : '#ddd3c0'; g.fill(); g.lineWidth = 5; g.strokeStyle = K; g.stroke();
     };
     // Evento: sin estrellas; el jefe lleva encima el ícono del evento (gift = imagen ya cargada; apagado si ya se ganó).
-    if (gift) { if (boss && gift.complete) { g.save(); if (lv.kind === 'done') g.globalAlpha = 0.55; g.drawImage(gift, cx - 31, cy - 104, 62, 62); g.restore(); } }
+    // Los demás ya ganados, en lugar de estrellas, una palomita verde (8 nov 2026: en el evento no cuentan las estrellas).
+    if (gift) {
+      if (boss && gift.complete) { g.save(); if (lv.kind === 'done') g.globalAlpha = 0.55; g.drawImage(gift, cx - 31, cy - 104, 62, 62); g.restore(); }
+      else if (!boss && lv.kind === 'done') {
+        g.beginPath(); g.arc(cx, 40, 19, 0, 7); g.fillStyle = '#56c96b'; g.fill(); g.lineWidth = 5; g.strokeStyle = K; g.stroke();
+        g.beginPath(); g.moveTo(cx - 9, 40); g.lineTo(cx - 2, 47); g.lineTo(cx + 10, 33); g.lineWidth = 6; g.lineCap = 'round'; g.strokeStyle = '#fff'; g.stroke(); g.lineCap = 'butt';
+      }
+    }
     // Solo las estrellas ganadas (las apagadas no se distinguían contra el planeta), en arco y más grandes si son menos.
     else if (lv.kind === 'done') {
       const at = { 1: [[0, 38, 19]], 2: [[-17, 42, 17], [17, 42, 17]], 3: [[-30, 46, 15], [0, 36, 18], [30, 46, 15]] }[Math.min(3, lv.stars)] || [];
@@ -494,7 +501,7 @@ export class Galaxy {
   }
   chipHTML(wd) {
     if (wd.chip) return wd.chip;
-    return { done: `<span class="chip info">${wd.secret?.stars ? icon('starSecret') : star(true)}${wd.stars + (wd.secret?.stars || 0)}/30</span>`, current: `<span class="chip info">${icon('flag')}${wd.done + 1}/10</span>`, gate: `<span class="chip info opening">${icon('gold')}${star(true)}${wd.need}</span>`, locked: `<span class="lk">${icon('lock')}</span>` }[wd.state];
+    return { done: `<span class="chip info">${wd.secret?.stars ? icon('starSecret') : star(true)}${wd.stars + (wd.secret?.stars || 0)}/30</span>`, current: `<span class="chip info">${icon('flag')}${wd.done + 1}/10</span>`, gate: `<span class="chip info opening">${icon(wd.w > 0 && wd.w % 10 === 0 ? 'constTicket' : 'gold')}${star(true)}${wd.need}</span>`, locked: `<span class="lk">${icon('lock')}</span>` }[wd.state];
   }
   drawLabels() {
     this.labelsEl.innerHTML = '';
@@ -1040,6 +1047,29 @@ export class Universe {
     return new Promise((ok) => this.tw.push({ t0: performance.now(), dur, fn, ok }));
   }
   screenOf(kind, i) { const o = this.objs[i]; return o && this.proj(o.g.position.x, o.g.position.y); }
+  // Se abre una constelación (8 nov 2026): la cámara va hacia ella, la vieja (gris, con candado) se encoge y en su lugar
+  // brota la nueva con su color y rebote; el candado del nombre salta y se va.
+  async unlockRegion(i, reg) {
+    this.busy = true;
+    const o = this.objs[i], c0 = this.cam, c1 = this.clampCam(this.spots[i].u);
+    await this.tween(650, (k) => (this.cam = c0 + (c1 - c0) * ease(k)));
+    const lock = this.labels[i].querySelector('b .ico');
+    if (lock && !reduced()) lock.animate([{ scale: 1, rotate: '0deg' }, { scale: 1.6, rotate: '-20deg', offset: 0.4 }, { scale: 0, rotate: '40deg', opacity: 0 }], { duration: 520, easing: 'ease-in', fill: 'forwards' });
+    await this.tween(420, (k) => o.g.scale.setScalar(1 - 0.75 * ease(k)));
+    this.scene.remove(o.g);
+    this.regions[i] = reg;
+    const n = this.cluster(reg, this.spots[i]);
+    n.ph = o.ph;
+    n.sq = -0.75; n.sv = 0; // brota con rebote (el resorte de frame)
+    n.g.scale.setScalar(0.25);
+    this.objs[i] = n;
+    const el = this.labels[i];
+    el.className = `ulabel ${reg.state}`;
+    el.innerHTML = `<b class="outl">${reg.name}</b><small class="info">${reg.r + 1} de ${this.regions.length} · ${star(true)}${reg.stars}/300</small>`;
+    if (!reduced()) el.animate([{ scale: 0.6 }, { scale: 1.2, offset: 0.6 }, { scale: 1 }], { duration: 520, easing: 'ease-out' });
+    await this.tween(900, () => {});
+    this.busy = false;
+  }
   // Zoom hacia una constelación (antes de entrar a ella).
   async zoomInto(i) {
     this.busy = true;
