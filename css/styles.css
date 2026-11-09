@@ -2675,3 +2675,6 @@ html:not(.dev-on) .dev-pill { display: none; }
 @media (prefers-reduced-motion: reduce) { .sh-slot.miss, .sh-slot.got .ico { animation: none; } }
 /* Cofre del jefe ganado con apuesta: su ×N (el mismo de Jugar) pegado al cofre. */
 .chest .chest-bet { top: -6px; right: -16px; z-index: 3; font-size: 20px; }
+/* ×N en Tu camino y en Cómo jugar: la etiqueta de Jugar, quieta. */
+.rd-pic .go-bet.dbet { font-size: 18px; padding: 1px 6px 2px; }
+.step .ill .go-bet.dbet { font-size: 17px; margin: 0 2px; rotate: 6deg; }

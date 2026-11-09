@@ -2,7 +2,7 @@ import { save, prefs, persist, resetProfile, deleteProfile, renameProfile, expor
 import { UNLOCK, EVENTOS, FIESTAS, COLECCIONES, evSoon, isOn, nextEvent, daysToNextCol, plusCols, RACHA_GOALS, RACHA_STEP, rachaGoal, nextIndex, racha, rachaTheme, rachaReady, rachaHot, rachaWin, rachaLose, rachaClaim, msToMidnight, col, colLeft, colWin, colOffers, colBuy, ev, evLeft, evTicketLeft, evTicketPrice, evBuyTicket, evPrize, evEnter, evWin, evLose, evAlbum, fiAlbum, EVENT_PLANETS, EVENT_PER_PLANET, EVENT_LEVELS, fiesta, fiestaLeft, fiestaSoon, soonLeft, evPrePrice, evPreOwned, evPreBuy, nextFiesta, fiEnter, fiWin, fiLose, fiShape, fiPrice, fiPaid, fiBuy, fiPre, FI_PRE, FI_ENTRY, EV_FIRST } from './events.js';
 import { WORLD_COUNT, LEVELS_PER_WORLD, TOTAL_LEVELS, worldInfo, generateLevel, variantLevel, MECH_INTRO, MECH_NAMES, MECHANICS, EXTRA, extraDebut, SCROLL_FROM, mareaFirst, hoyoFirst, puertasFirst, bandaFirst, secretId, isSecret, eventLevel, fiestaLevel } from './levels.js';
 import { Game, faceHTML, backHTML } from './game.js';
-import { maxBet, betFee, betSteps, HELPS, DAILY_PATH, dailyState, starsNeeded, TICKET_PRICE, ticketCost, ticketRefund, coinsFor, bossChest, rollChest, CONST_PRIZE, openCost, boosted, secretCoins, rollSecret, openSurprise, MET_OFF, metShopPrice } from './economy.js';
+import { maxBet, betFee, betSteps, BET_STEPS, HELPS, DAILY_PATH, dailyState, starsNeeded, TICKET_PRICE, ticketCost, ticketRefund, coinsFor, bossChest, rollChest, CONST_PRIZE, openCost, boosted, secretCoins, rollSecret, openSurprise, MET_OFF, metShopPrice } from './economy.js';
 import { missions, misDef, misDone, misReady, misBonusReady, misAllDone, misClaim, misBonus, LOGROS, LOGRO_PRIZES, LOGRO_MEDAL, LOGRO_TOP, logroAt, logroGot, logroStat, logrosVisible, logrosReady, logroClaim } from './missions.js';
 import { pauseOffscreen, openModal, toast, updateCoins, money, esc, reduced, wait, flyToWallet, spendFromWallet, sparkle, confetti, starsHTML, warp, buzz, balloons, lootBubbles, floatBubbles, rachaWarnHTML, popPrize, popBalloon, countPop, HEADS, betLoseHTML } from './ui.js';
 import { icon, iconURL, star, coin, miniPlanet, avatarHTML, AVATAR_COLORS, cardBackURL, setDeck, lockIcon, curtainIcon, chestBody, chestLid, boxBody, boxLid } from './art.js';
@@ -212,6 +212,8 @@ function paintBetSticker() {
     if (sm) sm.textContent = playSub();
   });
 }
+// Primer nivel (índice) donde se abre cada ×N: [[2, 100], [3, 200]…].
+const betStarts = () => BET_STEPS.slice(1).map((m) => { let g = 0; while (g < TOTAL_LEVELS && maxBet(g) < m) g += LEVELS_PER_WORLD; return [m, g]; });
 // Lo que da el nivel al ganarlo con 3★, cada cosa con su número (n) o solo su ×N: monedas, la devolución de boletos,
 // fichas de la colección y el cofre del jefe (la lluvia va en las monedas: tachado y ×2).
 const betLoot = (g) => [
@@ -1051,6 +1053,9 @@ function roadItems() {
     ['col3', UNLOCK.col3, 'Arte, Música y Cine', 'nota', 'Colecciones nuevas: ya hay colección todas las semanas.'],
     ['fiesta2', UNLOCK.fiesta2, 'Leyendas mexicanas', 'catrina', 'Festividades nuevas de leyendas mexicanas.'],
   ].map(([id, n, name, ico, text]) => ({ id, n: n + 1, k: 'ev', name, pic: icon(ico), text }));
+  // Apuesta (9 nov 2026): una parada por cada ×N, con su etiqueta.
+  const BET_TXT = { 2: 'En los niveles nuevos apuesta al tocar Jugar: si ganas, te llevas el doble de todo. Tu primer ×2 va por nuestra cuenta.', 3: 'Ya puedes apostar ×3 y ganar el triple. Tu primer ×3, gratis.' };
+  const bets = betStarts().map(([m, g]) => ({ id: `apuesta${m}`, n: g + 1, k: 'ev', name: m === 2 ? 'Apuestas' : `Apuesta ×${m}`, pic: `<i class="go-bet dbet b${m}">×${m}</i>`, text: BET_TXT[m] || `Ya puedes apostar ×${m} y ganar ×${m} de todo. Tu primer ×${m}, gratis.` }));
   const cards = MECHANICS.map((m) => ({ id: m, n: (EXTRA.includes(m) ? extraDebut(m) : MECH_INTRO[m] * LEVELS_PER_WORLD) + 1, k: 'card', name: MECH_NAMES[m], pic: `<span class="rd-card">${mechCard(m)}</span>`, text: MECH_TEXT[m] }));
   const tables = [
     ...ROAD_TABLES.map(([id, name, text]) => ({ id, n: SCROLL_FROM[id] + 1, name, text })),
@@ -1060,7 +1065,7 @@ function roadItems() {
     { id: 'hoyo', n: hoyoFirst() + 1, name: 'Agujero negro', text: 'Cada 4 jugadas o robos se traga sus cartas y las escupe con los números revueltos.' },
   ].map((x) => ({ ...x, k: 'mesa', pic: tableIcon(x.id) }));
   const order = Object.keys(ROAD_KINDS);
-  return [...evs, ...cards, ...tables].sort((a, b) => a.n - b.n || order.indexOf(a.k) - order.indexOf(b.k));
+  return [...evs, ...bets, ...cards, ...tables].sort((a, b) => a.n - b.n || order.indexOf(a.k) - order.indexOf(b.k));
 }
 // Nivel en que vas (el siguiente por jugar) y cuántas paradas ya alcanzaste (siempre son las primeras de la lista).
 const roadAt = () => Math.min((save.next || 0) + 1, TOTAL_LEVELS);
@@ -4243,8 +4248,22 @@ async function installApp() {
 }
 
 // ---------- Ayuda ----------
+// 9 nov 2026: la ayuda crece con el jugador. Cada bloque con data-u (id de Tu camino: carta, mesa, meteoro, apuesta2;
+// varios con "|") sale solo si ya lo alcanzó; los títulos que se quedan sin bloques y las pestañas vacías se esconden.
 function openHelp(tab = 'basico', then) {
-  const body = (t) =>
+  const reached = new Set(roadItems().filter((x) => x.n <= roadAt()).map((x) => x.id));
+  const prune = (html) => {
+    const d = document.createElement('div');
+    d.innerHTML = html;
+    d.querySelectorAll('[data-u]').forEach((el) => !el.dataset.u.split('|').some((u) => reached.has(u)) && el.remove());
+    d.querySelectorAll('.help-h').forEach((h) => (!h.nextElementSibling || h.nextElementSibling.matches('.help-h')) && h.remove());
+    return d.innerHTML;
+  };
+  const tabs = ['basico', 'cartas', 'mesas'].filter((t) => t === 'basico' || /class="step"/.test(prune(raw(t))));
+  if (!tabs.includes(tab)) tab = 'basico';
+  const body = (t) => prune(raw(t));
+  function raw(t) {
+    return (
     t === 'basico'
       ? `<div class="steps">
         <h3 class="help-h">Jugar</h3>
@@ -4258,35 +4277,39 @@ function openHelp(tab = 'basico', then) {
         <h3 class="help-h">Ayudas</h3>
         <div class="step"><div class="ill c"><span class="help-btn gold">${icon('ayudas')}</span></div><p>El <b>botón dorado</b> abre tus ayudas. Abajo de cada una compras <b>+1</b> con un toque; tocar la carta la usa cuando tú quieras. Solo salen las que sirven en ese nivel.</p></div>
         <div class="step"><div class="ill c"><div class="card up"><div class="inner"><div class="face front wild"></div></div></div></div><p><b>Comodín:</b> vale cualquier número. Úsalo cuando no tengas jugada.</p></div>
-        <div class="step"><div class="ill c"><span class="help-card" style="background-image:${cardBackURL('hreloj')}"></span></div><p><b>Reloj de arena:</b> congela 3 turnos todo lo que cuenta: bombas, cometas, cartas vivas, fantasmas y camaleones.</p></div>
+        <div class="step" data-u="bomb|comet|live|ghost|cham"><div class="ill c"><span class="help-card" style="background-image:${cardBackURL('hreloj')}"></span></div><p><b>Reloj de arena:</b> congela 3 turnos todo lo que cuenta: bombas, cometas, cartas vivas, fantasmas y camaleones.</p></div>
         <div class="step"><div class="ill c"><span class="help-card" style="background-image:${cardBackURL('hver')}"></span></div><p><b>Ver cartas:</b> voltea todas las cartas de la mesa unos segundos.</p></div>
-        <div class="step"><div class="ill c"><span class="help-card" style="background-image:${cardBackURL('hllave')}"></span></div><p><b>Llave maestra:</b> abre todos los candados y cortinas.</p></div>
+        <div class="step" data-u="lock|curtain"><div class="ill c"><span class="help-card" style="background-image:${cardBackURL('hllave')}"></span></div><p><b>Llave maestra:</b> abre todos los candados y cortinas.</p></div>
         <div class="step"><div class="ill c"><span class="help-btn">${icon('undo')}</span></div><p><b>Deshacer:</b> regresa tu última jugada o la carta que robaste.</p></div>
         <div class="step"><div class="ill c"><span class="help-five"><b>+5</b></span></div><p>¿Se acabó el mazo? Toca el <b>+5</b> para comprar 5 cartas. Con ellas te llevas solo 1 estrella.</p></div>
         <h3 class="help-h">Estrellas y boletos</h3>
         <div class="step"><div class="ill c">${star(true)}${star(true, 'big')}${star(true)}</div><p>Ganas al <b>vaciar la mesa</b>. Si te queda la <b>mitad del mazo</b> o más: 3 estrellas. Una cuarta parte: 2. Menos: 1.</p></div>
         <div class="step"><div class="ill c">${icon('ticket')}</div><p>Un nivel nuevo cuesta <b>boletos</b>. Si lo ganas, te los regresamos; si pierdes o lo dejas, se gastan.</p></div>
+        <h3 class="help-h">Para ganar más</h3>
+        <div class="step" data-u="meteoro"><div class="ill c">${icon('meteoro')}</div><p><b>Lluvia de meteoritos:</b> cae sin aviso por 30 minutos. Las monedas valen <b>el doble</b> y con 3 estrellas te cae un <b>premio sorpresa</b>.</p></div>
+        <div class="step" data-u="apuesta2"><div class="ill c"><i class="go-bet dbet b2">×2</i><i class="go-bet dbet b10">×10</i></div><p><b>Apuesta:</b> al tocar <b>Jugar</b> escoge tu ×N. Si ganas, <b>todo</b> lo que da el nivel se multiplica por ese número.</p></div>
       </div>`
       : t === 'mesas'
         ? `<div class="steps">
         <h3 class="help-h">Mesas que se descubren</h3>
-        <div class="step"><div class="ill"><span class="h-rug"></span>${mini(2, '4', 'c')}${mini(40, '5', 'h')}<span class="h-roll"></span></div><p><b>Mesa enrollada:</b> limpia las cartas del <b>principio</b> y la mesa avanza: salen más cartas del rollo.</p></div>
-        <div class="step"><div class="ill">${mini(0, '9', 's')}${mini(34, '10', 'd')}<span class="h-neb"></span></div><p><b>Nebulosa:</b> solo ves 3 grupos. Vacía <b>cualquiera</b> y de la nebulosa sale otro.</p></div>
-        <div class="step"><div class="ill"><span class="h-rail" style="left:10px"></span><span class="h-rail" style="left:58px"></span>${helpBack(14, 'top:0px')}${mini(14, '8', 'c', {}, 'h-low')}${helpBack(62, 'top:0px')}${mini(62, 'J', 'h', {}, 'h-low')}</div><p><b>Gravedad:</b> solo juegas la carta de <b>abajo</b> de cada columna. Al quitarla, la columna <b>cae</b>.</p></div>
-        <div class="step"><div class="ill">${mini(10, '7', 's')}${mini(48, '8', 'h')}<span class="h-tide"></span></div><p><b>Marea:</b> cada vez que robas sube el agua y cada carta que juegas la baja. Lo que queda bajo el agua no se juega.</p></div>
-        <div class="step"><div class="ill">${mini(6, '4', 'd')}${mini(44, '9', 's')}<span class="h-hole"></span></div><p><b>Agujero negro:</b> atrapa muchas cartas (no se sabe cuáles) y cada <b>4 jugadas o robos</b> se las traga y las escupe con los <b>números revueltos</b>. Su número dice cuánto falta.</p></div>
-        <div class="step"><div class="ill"><span class="h-door"><i></i><i></i></span>${mini(56, '6', 'h', { marks: `<span class="door-key">${icon('door')}</span>` })}</div><p><b>Puertas:</b> cada <b>carta llave</b> te da una llave y tú escoges qué puerta abrir: suelta su premio y sus cartas. Hay menos llaves que puertas; las que no abras no cuentan.</p></div>
-        <div class="step"><div class="ill"><span class="h-belt"><i></i></span>${mini(24, 'K', 'c', {}, 'h-belt-c')}${mini(58, '2', 'h', {}, 'h-belt-c')}</div><p><b>Banda transportadora:</b> sus cartas dan vueltas y solo ves <b>4</b> a la vez. Con cada jugada o robo avanza un lugar. ¡Atrápala cuando pase!</p></div>
-        <div class="step"><div class="ill"><span class="h-fold" style="left:4px;transform:perspective(90px) rotateY(55deg);transform-origin:right"></span><span class="h-fold" style="left:40px"></span><span class="h-fold" style="left:76px;transform:perspective(90px) rotateY(-55deg);transform-origin:left"></span>${mini(41, 'Q', 'h')}</div><p><b>Mesa plegable:</b> llega <b>doblada</b>. Limpia el panel de <b>en medio</b> y se desdobla: salen más cartas a los lados.</p></div>
+        <div class="step" data-u="mesa"><div class="ill"><span class="h-rug"></span>${mini(2, '4', 'c')}${mini(40, '5', 'h')}<span class="h-roll"></span></div><p><b>Mesa enrollada:</b> limpia las cartas del <b>principio</b> y la mesa avanza: salen más cartas del rollo.</p></div>
+        <div class="step" data-u="nebulosa"><div class="ill">${mini(0, '9', 's')}${mini(34, '10', 'd')}<span class="h-neb"></span></div><p><b>Nebulosa:</b> solo ves 3 grupos. Vacía <b>cualquiera</b> y de la nebulosa sale otro.</p></div>
+        <div class="step" data-u="gravedad"><div class="ill"><span class="h-rail" style="left:10px"></span><span class="h-rail" style="left:58px"></span>${helpBack(14, 'top:0px')}${mini(14, '8', 'c', {}, 'h-low')}${helpBack(62, 'top:0px')}${mini(62, 'J', 'h', {}, 'h-low')}</div><p><b>Gravedad:</b> solo juegas la carta de <b>abajo</b> de cada columna. Al quitarla, la columna <b>cae</b>.</p></div>
+        <div class="step" data-u="marea"><div class="ill">${mini(10, '7', 's')}${mini(48, '8', 'h')}<span class="h-tide"></span></div><p><b>Marea:</b> cada vez que robas sube el agua y cada carta que juegas la baja. Lo que queda bajo el agua no se juega.</p></div>
+        <div class="step" data-u="hoyo"><div class="ill">${mini(6, '4', 'd')}${mini(44, '9', 's')}<span class="h-hole"></span></div><p><b>Agujero negro:</b> atrapa muchas cartas (no se sabe cuáles) y cada <b>4 jugadas o robos</b> se las traga y las escupe con los <b>números revueltos</b>. Su número dice cuánto falta.</p></div>
+        <div class="step" data-u="puertas"><div class="ill"><span class="h-door"><i></i><i></i></span>${mini(56, '6', 'h', { marks: `<span class="door-key">${icon('door')}</span>` })}</div><p><b>Puertas:</b> cada <b>carta llave</b> te da una llave y tú escoges qué puerta abrir: suelta su premio y sus cartas. Hay menos llaves que puertas; las que no abras no cuentan.</p></div>
+        <div class="step" data-u="banda"><div class="ill"><span class="h-belt"><i></i></span>${mini(24, 'K', 'c', {}, 'h-belt-c')}${mini(58, '2', 'h', {}, 'h-belt-c')}</div><p><b>Banda transportadora:</b> sus cartas dan vueltas y solo ves <b>4</b> a la vez. Con cada jugada o robo avanza un lugar. ¡Atrápala cuando pase!</p></div>
+        <div class="step" data-u="plegable"><div class="ill"><span class="h-fold" style="left:4px;transform:perspective(90px) rotateY(55deg);transform-origin:right"></span><span class="h-fold" style="left:40px"></span><span class="h-fold" style="left:76px;transform:perspective(90px) rotateY(-55deg);transform-origin:left"></span>${mini(41, 'Q', 'h')}</div><p><b>Mesa plegable:</b> llega <b>doblada</b>. Limpia el panel de <b>en medio</b> y se desdobla: salen más cartas a los lados.</p></div>
       </div>`
-        : `<div class="steps">${MECH_GROUPS.map(([h, ms]) => `<h3 class="help-h">${h}</h3>${ms.map((m) => `<div class="step"><div class="ill c${MECH_BOTH[m] ? ' pair' : ''}">${MECH_BOTH[m]?.() || mechCard(m)}</div><p><b>${MECH_NAMES[m]}:</b> ${MECH_TEXT[m]}</p></div>`).join('')}`).join('')}</div>`;
+        : `<div class="steps">${MECH_GROUPS.map(([h, ms]) => `<h3 class="help-h">${h}</h3>${ms.map((m) => `<div class="step" data-u="${m}"><div class="ill c${MECH_BOTH[m] ? ' pair' : ''}">${MECH_BOTH[m]?.() || mechCard(m)}</div><p><b>${MECH_NAMES[m]}:</b> ${MECH_TEXT[m]}</p></div>`).join('')}`).join('')}</div>`);
+  }
   const m = openModal({
     title: 'Ayuda',
     ico: 'help',
     color: 'blue',
     wide: true,
     onClose: then,
-    body: `<div class="tabs" role="tablist"><button role="tab" data-t="basico" aria-selected="${tab === 'basico'}">${icon('help')}Cómo jugar</button><button role="tab" data-t="cartas" aria-selected="${tab === 'cartas'}">${icon('wild')}Cartas especiales</button><button role="tab" data-t="mesas" aria-selected="${tab === 'mesas'}">${icon('planet')}Mesas</button></div><div class="tab-body">${body(tab)}</div>`,
+    body: `${tabs.length < 2 ? '' : `<div class="tabs" role="tablist">${[['basico', 'help', 'Cómo jugar'], ['cartas', 'wild', 'Cartas especiales'], ['mesas', 'planet', 'Mesas']].filter(([t]) => tabs.includes(t)).map(([t, ico, name]) => `<button role="tab" data-t="${t}" aria-selected="${tab === t}">${icon(ico)}${name}</button>`).join('')}</div>`}<div class="tab-body">${body(tab)}</div>`,
   });
   m.el.addEventListener('click', (e) => {
     const t = e.target.closest('[data-t]');
