@@ -165,7 +165,7 @@ const TABLE_ICONS = {
   // Mesas sobre un tablero normal (8 nov 2026: faltaban en el recuento y en los filtros).
   marea: SV('<rect x="5" y="3" width="22" height="26" rx="3" fill="#fff6e6"/><path d="M5 18c4-3 7 3 11 0s7 3 11 0v8a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3z" fill="#4aa8de"/>'),
 };
-const tableIcon = (t) => TABLE_ICONS[t] || '';
+export const tableIcon = (t) => TABLE_ICONS[t] || '';
 const SCROLL_NAMES = { mesa: 'mesa enrollada', gravedad: 'gravedad', nebulosa: 'nebulosa', plegable: 'mesa plegable' };
 // Mesas que van sobre un tablero normal (no son tira): se filtran por su bandera del nivel.
 const OVERLAY_TABLES = [['marea', 'Marea', mareaFirst() + 1, (L) => !!L.tide]];
@@ -559,6 +559,8 @@ export function openDevMenu({ onGallery, onPlanets, onRefresh, card }) {
   // Todo lo que sale en el camino, en el orden en que aparece (nivel = el primero donde lo ves; los eventos se abren al ganar el anterior).
   const UN = [
     ['Racha cohete', UNLOCK.racha, 'rocket'],
+    ['Misiones del día', UNLOCK.mis, 'misiones', null, '3 cada día (las de cartas especiales, cuando ya llegaste a su mundo). Se cambian a medianoche.'],
+    ['Logros', UNLOCK.logros, 'trophy', null, 'Para siempre. Los de cartas especiales salen al llegar al mundo de su carta.'],
     // Las próximas lluvias del horario: iguales en todos los teléfonos, a la misma hora de cada uno.
     ['Lluvia de meteoritos', MET_FROM, 'meteoro', nextShowers(6).map((x) => ['meteoro', when(x), until(x), '']), '2 o 3 veces por semana, 30 minutos a cualquier hora, sin aviso. Es igual en todos los teléfonos.'],
     ['Colecciones', UNLOCK.col, 'concha', colsOf(0), 'Se turnan: 2 semanas al mes (la del 1.er y la del 3.er lunes)'],
@@ -575,11 +577,16 @@ export function openDevMenu({ onGallery, onPlanets, onRefresh, card }) {
     ...Object.entries(SCROLL_FROM).map(([t, g]) => ({ n: g + 1, k: 'mesa', name: SCROLL_NAMES[t], pic: tableIcon(t) })),
     ...OVERLAY_TABLES.map(([k, name, n]) => ({ n, k: 'mesa', name: name.toLowerCase(), pic: tableIcon(k) })),
   ].sort((a, b) => a.n - b.n || Object.keys(KINDS).indexOf(a.k) - Object.keys(KINDS).indexOf(b.k));
+  // Choques: dos ventanas de desbloqueo (eventos) en el mismo nivel salen una tras otra. Se marcan en rojo.
+  const evAt = {};
+  for (const r of rows) if (r.k === 'ev') evAt[r.n] = (evAt[r.n] || 0) + 1;
+  const clash = (r) => r.k === 'ev' && evAt[r.n] > 1;
+  const clashes = Object.entries(evAt).filter(([, n]) => n > 1).map(([n]) => n);
   const subRow = (i) => ([ico, name, when, go]) => `<tr class="dsub" data-of="${i}" hidden><td></td><td class="dpic">${icon(ico)}</td><td class="dname">${name}</td><td colspan="2">${when}</td><td>${go ? `<button class="dgo" data-go="${go}" title="Mueve el reloj al día en que empieza">Ir</button>` : ''}</td></tr>`;
-  const line = (r, i) => `<tr${r.sub ? ` class="dacc" data-acc="${i}"` : ''}><td><i class="dkind k-${r.k}" title="${KINDS[r.k]}">${KINDS[r.k][0]}</i></td><td class="dpic">${r.pic}</td><td class="dname">${r.name}${r.sub ? ` <b class="dnum">${r.sub.length}</b><span class="dchev">${icon('chev')}</span>` : ''}</td><td>${r.n}</td><td>${Math.ceil(r.n / LEVELS_PER_WORLD)}</td><td>${opens(r.n - 1)}</td></tr>${r.note ? `<tr class="dsub dnote" data-of="${i}" hidden><td></td><td colspan="5">${r.note}</td></tr>` : ''}${(r.sub || []).map(subRow(i)).join('')}`;
+  const line = (r, i) => `<tr class="${r.sub || r.note ? 'dacc' : ''}${clash(r) ? ' dclash' : ''}"${r.sub || r.note ? ` data-acc="${i}"` : ''}${clash(r) ? ' title="Se abre en el mismo nivel que otra cosa: salen dos ventanas seguidas"' : ''}><td><i class="dkind k-${r.k}" title="${KINDS[r.k]}">${KINDS[r.k][0]}</i></td><td class="dpic">${r.pic}</td><td class="dname">${r.name}${r.sub ? ` <b class="dnum">${r.sub.length}</b>` : ''}${r.sub || r.note ? `<span class="dchev">${icon('chev')}</span>` : ''}</td><td>${r.n}</td><td>${Math.ceil(r.n / LEVELS_PER_WORLD)}</td><td>${opens(r.n - 1)}</td></tr>${r.note ? `<tr class="dsub dnote" data-of="${i}" hidden><td></td><td colspan="5">${r.note}</td></tr>` : ''}${(r.sub || []).map(subRow(i)).join('')}`;
   const lastNeed = Math.max(...Object.values(ITEMS).flat().map((it) => it.need || 0));
   const shopLocked = sum((k) => ITEMS[k].filter((it) => lockedUntil(k, it.k)).length);
-  const recuento = `<table class="dtable dorder"><tr><th></th><th></th><th>Qué</th><th>Nivel</th><th>Mundo</th><th>Tú</th></tr>${rows.map(line).join('')}</table>
+  const recuento = `<p class="dline ${clashes.length ? 'd-no' : 'd-yes'}">${clashes.length ? `<b>Choque:</b> en el nivel ${clashes.join(', ')} se abren dos cosas a la vez (en rojo).` : 'Sin choques: cada ventana de desbloqueo sale en su propio nivel.'}</p><table class="dtable dorder"><tr><th></th><th></th><th>Qué</th><th>Nivel</th><th>Mundo</th><th>Tú</th></tr>${rows.map(line).join('')}</table>
     <p class="dline"><b>Tienda: tienes ${sum((k) => ITEMS[k].filter((it) => owns(k, it.k)).length)} de ${Object.values(ITEMS).flat().length}</b> (tuyas / que hay)</p>
     <table class="dtable dshop"><tr><th></th>${ORI.map(([, n]) => `<th>${n}</th>`).join('')}<th>Total</th></tr>${GROUPS.map((g) => `<tr class="dshop-g dacc" data-acc="s${g.k}"><td class="dname">${icon(g.ico)}${g.name}<span class="dchev">${icon('chev')}</span></td>${ORI.map(([o]) => `<td>${g.secs.reduce((n, k) => n + mine(k, o), 0)}/${g.secs.reduce((n, k) => n + cnt(k, o), 0)}</td>`).join('')}<td>${have(g.secs.reduce((n, k) => n + ITEMS[k].filter((it) => owns(k, it.k)).length, 0), g.secs.reduce((n, k) => n + ITEMS[k].length, 0))}</td></tr>${g.secs.map((k) => `<tr class="dsub" data-of="s${g.k}" hidden><td class="dname">${icon(SEC_ICO[k])}${SECTIONS.find((x) => x.k === k).name}</td>${ORI.map(([o]) => `<td>${cell(k, o)}</td>`).join('')}<td>${have(ITEMS[k].filter((it) => owns(k, it.k)).length, ITEMS[k].length)}</td></tr>`).join('')}`).join('')}<tr class="dtot"><td><b>Total</b></td>${ORI.map(([o]) => `<td>${have(sum((k) => mine(k, o)), sum((k) => cnt(k, o)))}</td>`).join('')}<td>${have(sum((k) => ITEMS[k].filter((it) => owns(k, it.k)).length), Object.values(ITEMS).flat().length)}</td></tr></table>
     <p class="dline">De la tienda, ${shopLocked} siguen con candado por mundo; lo último se abre en el mundo ${lastNeed + 1} (nivel ${lastNeed * LEVELS_PER_WORLD + 1}).</p>`;

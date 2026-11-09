@@ -1,16 +1,16 @@
-import { save, prefs, persist, resetProfile, renameProfile, exportCode, readCode, loadProfile, setDev } from './storage.js';
+import { save, prefs, persist, resetProfile, deleteProfile, renameProfile, exportCode, readCode, loadProfile, setDev } from './storage.js';
 import { UNLOCK, EVENTOS, FIESTAS, COLECCIONES, evSoon, isOn, nextEvent, daysToNextCol, plusCols, RACHA_GOALS, RACHA_STEP, rachaGoal, nextIndex, racha, rachaTheme, rachaReady, rachaHot, rachaWin, rachaLose, rachaClaim, msToMidnight, col, colLeft, colWin, colOffers, colBuy, ev, evLeft, evTicketLeft, evTicketPrice, evBuyTicket, evPrize, evEnter, evWin, evLose, evAlbum, fiAlbum, EVENT_PLANETS, EVENT_PER_PLANET, EVENT_LEVELS, fiesta, fiestaLeft, nextFiesta, fiEnter, fiWin, fiLose, fiShape, fiPrice, fiPaid, fiBuy, fiPre, FI_PRE, FI_ENTRY, EV_FIRST } from './events.js';
-import { WORLD_COUNT, LEVELS_PER_WORLD, TOTAL_LEVELS, worldInfo, generateLevel, variantLevel, MECH_INTRO, MECH_NAMES, secretId, isSecret, eventLevel, fiestaLevel } from './levels.js';
+import { WORLD_COUNT, LEVELS_PER_WORLD, TOTAL_LEVELS, worldInfo, generateLevel, variantLevel, MECH_INTRO, MECH_NAMES, MECHANICS, EXTRA, extraDebut, SCROLL_FROM, mareaFirst, secretId, isSecret, eventLevel, fiestaLevel } from './levels.js';
 import { Game, faceHTML, backHTML } from './game.js';
 import { HELPS, DAILY_PATH, dailyState, starsNeeded, TICKET_PRICE, ticketCost, ticketRefund, coinsFor, bossChest, rollChest, CONST_PRIZE, openCost, boosted, secretCoins, rollSecret, openSurprise, MET_OFF, metShopPrice } from './economy.js';
 import { missions, misDef, misDone, misReady, misBonusReady, misAllDone, misClaim, misBonus, LOGROS, LOGRO_PRIZES, LOGRO_MEDAL, LOGRO_TOP, logroAt, logroGot, logroStat, logrosVisible, logrosReady, logroClaim } from './missions.js';
 import { pauseOffscreen, openModal, toast, updateCoins, money, esc, reduced, wait, flyToWallet, spendFromWallet, sparkle, confetti, starsHTML, warp, buzz, balloons, lootBubbles, floatBubbles, rachaWarnHTML, popPrize, popBalloon, countPop, HEADS } from './ui.js';
-import { icon, star, coin, miniPlanet, avatarHTML, AVATAR_COLORS, cardBackURL, setDeck, lockIcon, chestBody, chestLid, boxBody, boxLid } from './art.js';
+import { icon, star, coin, miniPlanet, avatarHTML, AVATAR_COLORS, cardBackURL, setDeck, lockIcon, curtainIcon, chestBody, chestLid, boxBody, boxLid } from './art.js';
 import { GROUPS, SECTIONS, ITEMS, shopItems, groupOf, owns, equipped, equip, buy, item, lockedUntil, titleHTML, titleIcon, sell, sellable, sellPrice } from './shop.js';
 import { BIOMES, biomeKey, EVENT_BIOMES } from './biomes.js';
 import { redeem } from './codes.js';
 import { meteor, metWin, metCoins, MET_FROM } from './meteor.js';
-import { dev, gallery, attachDevBar, galleryScreen, openDevMenu, planetGal, planetsScreen, casualRate, rateTag } from './dev.js';
+import { dev, gallery, attachDevBar, galleryScreen, openDevMenu, planetGal, planetsScreen, casualRate, rateTag, tableIcon } from './dev.js';
 
 document.documentElement.classList.toggle('dev-on', !!prefs.dev);
 // Reversos de los premios de racha (carta regalo violeta y comodín dorado), para todo el documento:
@@ -487,11 +487,12 @@ const TOUR_EVS = [['mes', 'star'], ['fiesta', 'flame'], ['col', 'concha'], ['rac
 const EV_ORDER = ['evento', 'fiesta', 'col', 'racha', 'mis', 'logros'];
 const SIDE_TOUR = [
   // 8 nov 2026: los menús van agrupados; primero el botón que los junta (tocarlo abre su cajón) y luego cada uno.
-  { sel: '.side.l .grp-btn', open: 'l', title: 'Menú', text: () => 'Aquí se juntan el <b>regalo diario</b>, los <b>boletos</b>, la <b>tienda</b>, el <b>álbum</b> y los <b>ajustes</b>. Tócalo para abrirlo; toca afuera para cerrarlo.' },
+  { sel: '.side.l .grp-btn', open: 'l', title: 'Menú', text: () => 'Aquí se juntan el <b>regalo diario</b>, los <b>boletos</b>, la <b>tienda</b>, el <b>álbum</b>, <b>tu camino</b> y los <b>ajustes</b>. Tócalo para abrirlo; toca afuera para cerrarlo.' },
   { a: 'daily', title: 'Regalo diario', text: () => (dailyState(save.daily).claimed ? 'Cada día te espera un <b>regalo</b>. Hoy ya lo abriste: vuelve mañana por el siguiente.' : 'Cada día te espera un <b>regalo</b>. Tócalo y reclámalo.'), act: () => !dailyState(save.daily).claimed },
   { a: 'dticket', title: 'Boletos de regalo', text: () => 'Cada 24 horas te regalamos <b>boletos</b> para entrar a niveles nuevos.' },
   { a: 'shop', title: 'Tienda', text: () => 'Con tus monedas cambia cómo se ven tus <b>cartas</b>, tu <b>avatar</b> y tu <b>viajero</b>.' },
   { a: 'album', title: 'Álbum', text: () => 'Cada planeta que terminas te da una <b>postal</b> para tu álbum.' },
+  { a: 'camino', title: 'Tu camino', text: () => 'Aquí ves <b>todo lo que se abre</b> jugando y <b>en qué nivel</b> llega: eventos, cartas especiales y mesas.' },
   { a: 'settings', title: 'Ajustes', text: () => 'Aquí está cómo jugar, el sonido y tu respaldo.' },
   { sel: '.res .pill[aria-label="Estrellas"]', title: 'Tus estrellas', text: () => 'Cada nivel te da hasta <b>3 estrellas</b>. Las necesitas para abrir mundos nuevos.' },
   { sel: '.res .pill[aria-label="Boletos"]', title: 'Tus boletos', text: () => 'Entrar a un nivel nuevo cuesta <b>boletos</b>. Si lo ganas, te los devuelve.' },
@@ -817,10 +818,11 @@ const eventButtons = (res) => {
   const all = evBtn() + fiBtn() + colBtn() + rachaBtn(res?.racha ? res.racha - 1 : null) + misBtn() + logrosBtn();
   return grouped('r', 'Eventos', all);
 };
-const sideButtons = () => grouped('l', 'Menú', `${ibtn('gift', 'Regalo diario', 'daily', !dailyState(save.daily).claimed)}${ticketBtn()}${ibtn('bag', 'Tienda', 'shop')}${ibtn('album', 'Álbum de postales', 'album')}${ibtn('gear', 'Ajustes', 'settings')}`);
+// Tu camino (8 nov 2026) va en el menú después del álbum, con su puntito cuando hay algo nuevo que ver.
+const sideButtons = () => grouped('l', 'Menú', `${ibtn('gift', 'Regalo diario', 'daily', !dailyState(save.daily).claimed)}${ticketBtn()}${ibtn('bag', 'Tienda', 'shop')}${ibtn('album', 'Álbum de postales', 'album')}${roadBtn()}${ibtn('gear', 'Ajustes', 'settings')}`);
 function sideAction(a) {
   if (a === 'grp-r' || a === 'grp-l') return openGroup(a.slice(4)), true;
-  const act = { me: () => !document.querySelector('.touring') && openProfile(), shop: () => openShop(), daily: openDaily, dticket: openDailyTicket, racha: openRacha, mis: openMis, logros: openLogros, col: openCol, evento: openEvento, fiesta: openFiesta, album: openAlbum, settings: openSettings, dev: () => openDevMenu({ onGallery: () => showGallery(save.next), onPlanets: showPlanets, onRefresh: boot, card: mechCard }) }[a];
+  const act = { me: () => !document.querySelector('.touring') && openProfile(), camino: openRoad, shop: () => openShop(), daily: openDaily, dticket: openDailyTicket, racha: openRacha, mis: openMis, logros: openLogros, col: openCol, evento: openEvento, fiesta: openFiesta, album: openAlbum, settings: openSettings, dev: () => openDevMenu({ onGallery: () => showGallery(save.next), onPlanets: showPlanets, onRefresh: boot, card: mechCard }) }[a];
   // Usar un botón cierra su cajón (menos durante el recorrido, que los va enseñando).
   if (act && !document.querySelector('.side-touring')) closeGroups();
   act?.();
@@ -853,7 +855,7 @@ const MECH_TEXT = {
   curtain: 'Sigue boca abajo hasta que quitas su carta con telón.',
   bomb: 'Destápala antes de que su cuenta llegue a cero, o quema 3 cartas de tu mazo.',
   coin: 'Se juega como cualquier carta y te da monedas.',
-  ship: 'Cada pocos robos pasa y se lleva una carta de tu mazo. Con racha de 4 te regresa una.',
+  ship: 'Cada pocos robos pasa y se lleva una carta de tu mazo. Con racha de 4 te regresa la última que se llevó (si no se llevó nada, no regresa nada).',
   ghost: 'Aparece y desaparece cada 2 jugadas o robos: solo se juega cuando se ve.',
   cham: 'Cada 3 jugadas o robos cambia: un rato es comodín (va sobre cualquier carta) y otro rato vuelve a su número.',
   live: 'Con la flecha arriba, su número sube cada vez que juegas o robas; con la flecha abajo, baja.',
@@ -861,9 +863,10 @@ const MECH_TEXT = {
   turbo: 'Al jugarlo, tus 3 jugadas siguientes valen doble en la racha. Si robas, se apaga.',
   comet: 'Destápalo antes de que su cuenta llegue a cero y suma a tu racha los puntos que marca. Si no, se va.',
 };
-// Flecha y carta viva: se enseñan los dos casos (arriba y abajo).
+// Flecha y carta viva: se enseñan los dos casos (arriba y abajo). Candado y cortina: con la carta que los abre.
 const MECH_BOTH = {
   lock: () => mini(0, '8', 'c', { key: 0 }) + mini(0, '9', 'd', { lock: 0 }),
+  curtain: () => mini(0, '5', 's', { marks: `<span class="curtain-mark">${curtainIcon()}</span>` }, 'curtain-key-demo') + mechCard('curtain'),
   arrow: () => mini(0, '6', 'd', { arrow: 1 }) + mini(0, '6', 'c', { arrow: -1 }),
   live: () => mini(0, 'K', 's', { live: 1 }) + mini(0, '4', 'h', { live: -1 }),
 };
@@ -883,7 +886,7 @@ function mechCard(m, x = 0) {
   if (m === 'ice') return mini(x, 'Q', 'c', { marks: '<span class="ice-ov"><b>2</b></span>' });
   if (m === 'double') return `<div class="card up" style="left:${x}px">${faceHTML({ rank: 4, alt: 7, suit: 1 })}</div>`;
   if (m === 'arrow') return mini(x, '6', 'd', { arrow: 1 });
-  if (m === 'curtain') return `<div class="card curtain" style="left:${x}px;${back}"><div class="inner">${backHTML({ curtain: 0 })}</div></div>`;
+  if (m === 'curtain') return `<div class="card curtain curtain-demo" style="left:${x}px;${back}"><div class="inner">${backHTML({ curtain: 0 })}</div></div>`;
   if (m === 'bomb') return `<div class="card bomb-card up" style="left:${x}px"><div class="inner"><div class="face front"></div></div><span class="bomb-face">${icon('bomb')}<b>3</b></span></div>`;
   if (m === 'live') return mini(x, 'K', 's', { live: 1 });
   if (m === 'ticket') return `<div class="card up" style="left:${x}px">${faceHTML({ rank: 4, half: 9, suit: 1 })}</div>`;
@@ -894,6 +897,166 @@ function mechCard(m, x = 0) {
   if (m === 'cham') return mini(x, '7', 'c', { cham: 1 }, 'cham-demo');
   if (m === 'comet') return `<div class="card comet-card up" style="left:${x}px"><div class="inner"><div class="face front"></div></div><span class="comet-face">${icon('comet')}<b>4</b><em>+3</em></span></div>`;
   return '';
+}
+
+// Misiones y logros de una carta especial (8 nov 2026): llevan la carta misma de ejemplo (la de la ayuda), no un ícono.
+const misIco = (m) => (m.mech ? `<span class="mis-card">${mechCard(m.mech)}</span>` : icon(m.ico));
+
+// ---------- Tu camino (8 nov 2026) ----------
+// Todo lo que se abre jugando (eventos, cartas especiales y mesas) en el orden en que sale. Lo que ya alcanzaste se ve
+// completo; lo que falta sale con "?" y el nivel en que llega. "Tú" marca el nivel en que vas.
+// n: el nivel (contando desde 1) en que se ve por primera vez: los eventos, al ganar UNLOCK[k] niveles.
+const ROAD_KINDS = { ev: 'Evento', card: 'Carta nueva', mesa: 'Mesa nueva' };
+const ROAD_TABLES = [
+  ['mesa', 'Mesa enrollada', 'Limpia las cartas del principio y la mesa avanza: salen más cartas del rollo.'],
+  ['gravedad', 'Gravedad', 'Solo juegas la carta de abajo de cada columna. Al quitarla, la columna cae.'],
+  ['nebulosa', 'Nebulosa', 'Solo ves 3 grupos. Vacía cualquiera y de la nebulosa sale otro.'],
+  ['plegable', 'Mesa plegable', 'Llega doblada. Limpia el panel de en medio y se desdobla.'],
+];
+function roadItems() {
+  const t = rachaTheme();
+  const evs = [
+    ['racha', UNLOCK.racha, t.name, t.ico, 'Gana niveles seguidos, junta estrellas y llévate premios cada día.'],
+    ['mis', UNLOCK.mis, 'Misiones del día', 'misiones', 'Cada día 3 misiones con monedas, y un cofre si cumples las 3.'],
+    ['logros', UNLOCK.logros, 'Logros', 'trophy', 'Todo suma para siempre: bronce, plata, oro, platino y diamante.'],
+    ['meteoro', MET_FROM, 'Lluvia de meteoritos', 'meteoro', 'Cae sin aviso 30 minutos: doble de monedas y un premio sorpresa.'],
+    ['col', UNLOCK.col, 'Colecciones', 'concha', 'Junta fichas con tus estrellas y cámbialas por exclusivos.'],
+    ['mes', UNLOCK.mes, 'Eventos del mes', 'planet', 'Cada mes un evento con sus planetas y premios que solo salen ahí.'],
+    ['col2', UNLOCK.col2, 'Más colecciones', 'fosil', 'Llegan colecciones nuevas y hay colección 3 semanas al mes.'],
+    ['fiesta', UNLOCK.fiesta, 'Festividades', 'pinata', 'Fiestas de un día con sus niveles y sus premios.'],
+    ['col3', UNLOCK.col3, 'Arte, Música y Cine', 'nota', 'Colecciones nuevas: ya hay colección todas las semanas.'],
+    ['fiesta2', UNLOCK.fiesta2, 'Leyendas mexicanas', 'catrina', 'Festividades nuevas de leyendas mexicanas.'],
+  ].map(([id, n, name, ico, text]) => ({ id, n: n + 1, k: 'ev', name, pic: icon(ico), text }));
+  const cards = MECHANICS.map((m) => ({ id: m, n: (EXTRA.includes(m) ? extraDebut(m) : MECH_INTRO[m] * LEVELS_PER_WORLD) + 1, k: 'card', name: MECH_NAMES[m], pic: `<span class="rd-card">${mechCard(m)}</span>`, text: MECH_TEXT[m] }));
+  const tables = [
+    ...ROAD_TABLES.map(([id, name, text]) => ({ id, n: SCROLL_FROM[id] + 1, name, text })),
+    { id: 'marea', n: mareaFirst() + 1, name: 'Marea', text: 'Cada robo sube el agua y cada carta que juegas la baja.' },
+  ].map((x) => ({ ...x, k: 'mesa', pic: tableIcon(x.id) }));
+  const order = Object.keys(ROAD_KINDS);
+  return [...evs, ...cards, ...tables].sort((a, b) => a.n - b.n || order.indexOf(a.k) - order.indexOf(b.k));
+}
+// Nivel en que vas (el siguiente por jugar) y cuántas paradas ya alcanzaste (siempre son las primeras de la lista).
+const roadAt = () => Math.min((save.next || 0) + 1, TOTAL_LEVELS);
+const roadGot = (items = roadItems()) => items.filter((x) => x.n <= roadAt()).length;
+// Puntito: nunca lo ha abierto, o alcanzó algo desde la última vez.
+const roadNew = () => save.roadSeen == null || roadGot() > save.roadSeen;
+const roadBtn = () => `<button class="iconbtn tb press road-btn${roadNew() ? ' nuevo' : ''}" data-a="camino" aria-label="Tu camino" title="Tu camino">${icon('camino')}${roadNew() ? '<span class="dot"></span>' : ''}</button>`;
+const fmtLvl = (n) => n.toLocaleString('es-MX');
+
+function openRoad() {
+  const items = roadItems(), at = roadAt(), got = roadGot(items);
+  // Lo que alcanzó desde la última vez que lo abrió lleva "¡Nuevo!" (la primera vez, nada).
+  const seen = save.roadSeen ?? got;
+  save.roadSeen = got;
+  persist();
+  document.querySelectorAll('#app .road-btn').forEach((b) => (b.classList.remove('nuevo'), b.querySelector('.dot')?.remove()));
+  const next = items[got];
+  const left = (x) => x.n - at;
+  // Rediseño (8 nov 2026): sin tarjeta por parada. El dibujo va sobre la línea; al lado, el nombre y su nivel.
+  // Lo alcanzado lleva palomita en el dibujo; lo que falta, "?" y cuántos niveles faltan. Tocar despliega qué es.
+  const faltan = (x) => (left(x) === 1 ? 'falta 1' : `faltan ${fmtLvl(left(x))}`);
+  const row = (x, i) => {
+    const on = i < got;
+    const more = on ? `<span class="rd-more"><span><em class="rd-kind">${ROAD_KINDS[x.k]}</em> ${x.text}</span></span>` : '';
+    return `<li class="rd k-${x.k}${on ? ' got' : ' lock'}${x === next ? ' next' : ''}${on && i >= seen ? ' fresh' : ''}" data-k="${x.k}" style="--d:${i % 6}">
+      <button class="rd-box"${on ? ' aria-expanded="false"' : ''}>
+        <span class="rd-pic">${on ? x.pic : '<b class="rd-q">?</b>'}</span>
+        <span class="rd-txt"><b>${on ? x.name : '? ? ? ? ?'}${on && i >= seen ? ' <i class="rd-new">¡Nuevo!</i>' : ''}</b><small>Nivel ${fmtLvl(x.n)}${on ? '' : ` · ${faltan(x)}`}</small>${more}</span>
+      </button></li>`;
+  };
+  const me = `<li class="rd-me"><span class="rd-av">${avatarHTML(save)}</span><p class="rd-me-txt"><b>Vas en el nivel ${fmtLvl(at)}</b><small>${next ? `Lo siguiente: en ${left(next) === 1 ? '1 nivel' : `${fmtLvl(left(next))} niveles`}` : '¡Ya descubriste todo!'}</small></p></li>`;
+  // Filtros: lo único arriba. Cada uno dice cuántos llevas (antes además había un resumen y una barra: lo mismo 3 veces).
+  const chip = (k, label, ico) => {
+    const all = k ? items.filter((x) => x.k === k) : items;
+    const n = all.filter((x) => x.n <= at).length;
+    return `<button class="rd-chip${k ? '' : ' on'}" data-f="${k}" aria-pressed="${!k}"><span class="rd-cl">${ico}<span>${label}</span></span><i>${n}/${all.length}</i></button>`;
+  };
+  const list = items.map(row);
+  list.splice(got, 0, me);
+  let io = null;
+  const m = openModal({
+    title: 'Tu camino',
+    color: 'blue',
+    wide: true,
+    cls: 'road-modal',
+    onClose: () => io?.disconnect(),
+    body: `<div class="rd-top"><div class="rd-seg" style="--i:0"><span class="rd-ind"></span>${chip('', 'Todo', icon('camino'))}${chip('ev', 'Eventos', icon('star'))}${chip('card', 'Cartas', icon('card'))}${chip('mesa', 'Mesas', icon('planet'))}</div></div>
+      <ol class="road" data-f=""><span class="rd-line"></span><span class="rd-fill"></span>${list.join('')}<li class="rd-end">${icon('flag')}<small>¡Y aún hay más por venir!</small></li></ol>`,
+  });
+  const body = m.el.querySelector('.mbody'), road = m.el.querySelector('.road'), meEl = road.querySelector('.rd-me');
+  // La línea dorada llega hasta ti (se recalcula al filtrar).
+  const fill = (anim) => {
+    const f = road.querySelector('.rd-fill');
+    const h = meEl.offsetTop + meEl.offsetHeight / 2;
+    if (anim && !reduced()) f.classList.add('grow');
+    f.style.height = `${h}px`;
+  };
+  const toMe = (smooth) => {
+    const r = meEl.getBoundingClientRect(), b = body.getBoundingClientRect();
+    body.scrollTo({ top: Math.max(0, body.scrollTop + r.top - b.top - body.clientHeight / 2 + r.height / 2), behavior: smooth && !reduced() ? 'smooth' : 'auto' });
+  };
+  // En pantalla ancha el camino va en zigzag: cada parada visible a un lado de la línea (se recalcula al filtrar).
+  const sides = () => {
+    let k = 0, prev = null;
+    for (const x of road.children) {
+      if (x.hidden || x.tagName !== 'LI') continue;
+      if (x.classList.contains('rd')) {
+        x.classList.toggle('alt', k++ % 2 === 1);
+        x.classList.toggle('tuck', !!prev?.classList.contains('rd'));
+      }
+      prev = x;
+    }
+  };
+  sides();
+  // Cada parada entra cuando se ve (en cascada); sin animaciones, todas de una vez.
+  if (reduced() || !('IntersectionObserver' in window)) road.classList.add('all-in');
+  else {
+    io = new IntersectionObserver((es) => {
+      es.filter((e) => e.isIntersecting).forEach((e, k) => {
+        e.target.style.setProperty('--in', `${k * 55}ms`);
+        e.target.classList.add('in');
+        io.unobserve(e.target);
+      });
+    }, { root: body, threshold: 0.1 });
+    road.querySelectorAll('.rd, .rd-me, .rd-end').forEach((x) => io.observe(x));
+  }
+  setTimeout(() => (toMe(true), fill(true)), reduced() ? 0 : 560);
+  // Las nuevas brillan al llegar a ellas.
+  setTimeout(() => road.querySelectorAll('.rd.fresh .rd-pic').forEach((p) => {
+    const r = p.getBoundingClientRect();
+    if (r.top > 0 && r.bottom < innerHeight) sparkle({ x: r.left + r.width / 2, y: r.top + r.height / 2 }, 14);
+  }), reduced() ? 0 : 1300);
+  m.el.addEventListener('click', (e) => {
+    const c = e.target.closest('.rd-chip');
+    if (c) {
+      m.el.querySelectorAll('.rd-chip').forEach((x, k) => (x.classList.toggle('on', x === c), x.setAttribute('aria-pressed', x === c), x === c && m.el.querySelector('.rd-seg').style.setProperty('--i', k)));
+      road.dataset.f = c.dataset.f;
+      road.querySelectorAll('.rd').forEach((x) => {
+        const show = !c.dataset.f || x.dataset.k === c.dataset.f;
+        x.hidden = !show;
+        if (show && !reduced()) x.animate([{ opacity: 0, scale: 0.92 }, { opacity: 1, scale: 1 }], { duration: 260, easing: 'cubic-bezier(0.23, 1, 0.32, 1)' });
+      });
+      sides();
+      fill(false);
+      // Se vuelve arriba del todo (la lista cambió de alto y el scroll quedaba en cualquier lado).
+      body.scrollTo({ top: 0, behavior: 'auto' });
+      return;
+    }
+    const box = e.target.closest('.rd-box');
+    if (!box) return;
+    const li = box.closest('.rd');
+    // Lo que falta no se abre (diría lo mismo en todas): su "?" tiembla.
+    if (li.classList.contains('lock')) {
+      if (!reduced()) li.querySelector('.rd-q').animate([{ rotate: '0deg' }, { rotate: '-14deg' }, { rotate: '12deg' }, { rotate: '-6deg' }, { rotate: '0deg' }], { duration: 420, easing: 'ease-out' });
+      return buzz(8);
+    }
+    const open = !li.classList.contains('open');
+    li.classList.toggle('open', open);
+    box.setAttribute('aria-expanded', open);
+    buzz(8);
+    // La línea dorada sigue a la marca aunque cambie el alto de las de arriba.
+    setTimeout(() => fill(false), 260);
+  });
 }
 
 // ---------- Entrar a un nivel: boletos y partida a medias ----------
@@ -1613,7 +1776,7 @@ function openMis() {
   const row = (x, i) => {
     const m = misDef(x.id), done = misDone(x);
     const end = x.got ? `<span class="mis-got">${icon('check')}</span>` : done ? `<button class="btn green mis-claim" data-i="${i}">${coin()} ${money(x.coins)}</button>` : `<span class="mis-prize">${coin()}${money(x.coins)}</span>`;
-    return `<li class="mis ${x.got ? 'got' : done ? 'ready' : ''}">${icon(m.ico)}<div><b>${m.text(x.goal)}</b>${barHTML(x.n, x.goal)}</div>${end}</li>`;
+    return `<li class="mis ${x.got ? 'got' : done ? 'ready' : ''}">${misIco(m)}<div><b>${m.text(x.goal)}</b>${barHTML(x.n, x.goal)}</div>${end}</li>`;
   };
   // El cofre de las 3: monedas y la probabilidad del comodín (más alta si te tocaron difíciles); a la derecha, un
   // puntito por misión reclamada.
@@ -1668,7 +1831,7 @@ function openLogros() {
     const pz = LOGRO_PRIZES[Math.min(got, T - 1)];
     const prize = `${coin()}${money(pz.coins)}${pz.wild ? ` ${icon('wild')}×${pz.wild}` : ''}${pz.undo ? ` ${icon('undo')}×${pz.undo}` : ''}`;
     const end = done ? `<span class="mis-got">${icon('check')}</span>` : at > got ? `<button class="btn green lg-claim" data-id="${l.id}">${prize}</button>` : `<span class="mis-prize">${prize}</span>`;
-    return `<li class="mis lg ${done ? 'got' : at > got ? 'ready' : ''}">${icon(l.ico)}<div><b>${l.name} <span class="medals">${medals}</span></b><small>${done ? '¡Diamante!' : `${LOGRO_MEDAL[got]}: ${l.text(next)}`}${l.title && got < 3 ? ` · el oro da el título <b>${item('title', l.title).name}</b>` : ''}</small>${done ? '' : barHTML(v, next)}</div>${end}</li>`;
+    return `<li class="mis lg ${done ? 'got' : at > got ? 'ready' : ''}">${misIco(l)}<div><b>${l.name} <span class="medals">${medals}</span></b><small>${done ? '¡Diamante!' : `${LOGRO_MEDAL[got]}: ${l.text(next)}`}${l.title && got < 3 ? ` · el oro da el título <b>${item('title', l.title).name}</b>` : ''}</small>${done ? '' : barHTML(v, next)}</div>${end}</li>`;
   };
   // Primero lo que se puede reclamar, luego lo que va más avanzado.
   const step = (l) => l.steps[Math.min(logroGot(l), LOGRO_TOP - 1)];
@@ -1721,18 +1884,17 @@ document.addEventListener('pointerdown', (e) => {
   closeGroups();
 }, true);
 // Nombre corto de cada botón del cajón (va abajo).
-const GRP_NAMES = { daily: 'Regalo', dticket: 'Boletos', shop: 'Tienda', album: 'Álbum', settings: 'Ajustes', racha: 'Racha', mis: 'Misiones', logros: 'Logros', col: 'Colección', evento: 'Evento', fiesta: 'Festividad' };
+const GRP_NAMES = { daily: 'Regalo', dticket: 'Boletos', shop: 'Tienda', album: 'Álbum', camino: 'Camino', settings: 'Ajustes', racha: 'Racha', mis: 'Misiones', logros: 'Logros', col: 'Colección', evento: 'Evento', fiesta: 'Festividad' };
 // El botón del grupo enseña lo más urgente de su cajón y cuántos tienen algo listo; se repinta cuando cambian.
 function paintGroup(side) {
   const btn = side.querySelector('.grp-btn'), drawer = side.querySelector('.grp-drawer');
   if (!btn || !drawer) return;
   const btns = [...drawer.querySelectorAll(':scope > .iconbtn')];
-  for (const b of btns) if (!b.querySelector(':scope > .grp-name')) b.insertAdjacentHTML('beforeend', `<em class="grp-name">${GRP_NAMES[b.dataset.a] || b.title}</em>`);
   const ready = btns.filter((b) => b.classList.contains('ready'));
   const top = ready[0] || btns.find((b) => b.classList.contains('hot')) || btns.find((b) => b.classList.contains('nuevo'));
   const ico = top?.querySelector(':scope > .ico');
   btn.querySelector(':scope > .ico').replaceWith(ico ? ico.cloneNode(true) : h(icon(side.classList.contains('l') ? 'menu' : 'star')));
-  btn.classList.toggle('ready', !!ready.length);
+  btn.classList.toggle('ready', !!ready.length || btns.some((b) => b.querySelector(':scope > .dot')));
   const n = btn.querySelector('.grp-n');
   n.textContent = ready.length || '';
   n.hidden = !ready.length;
@@ -2447,7 +2609,7 @@ async function notices() {
     if (!(await calm(gen))) return;
     if (meteor() && !meteor().state.intro) await openMetIntro();
   }
-  for (const k of ['racha', 'mis', 'meteoro', 'logros', 'col', 'mes', 'col2', 'fiesta', 'col3', 'fiesta2']) {
+  for (const k of ['racha', 'mis', 'logros', 'meteoro', 'col', 'mes', 'col2', 'fiesta', 'col3', 'fiesta2']) {
     // La lluvia: solo si nunca se ha visto una (quien ya la vio caer no necesita la ventana).
     if (!(k === 'meteoro' ? (save.next || 0) >= MET_FROM && !save.metSeen : isOn(k)) || save.intro?.[k]) continue;
     if (!(await calm(gen))) return;
@@ -3251,7 +3413,7 @@ function openProfile() {
     buttons: [
       {
         label: 'Reiniciar perfil',
-        cls: 'link',
+        cls: 'link duo',
         onClick: () =>
           openModal({
             title: '¿Reiniciar tu perfil?',
@@ -3263,6 +3425,7 @@ function openProfile() {
             ],
           }),
       },
+      { label: 'Eliminar perfil', cls: 'link duo', onClick: askDelete },
     ],
   });
   document.querySelectorAll('.modal [data-a="edit"]').forEach((b) => (b.onclick = () => {
@@ -3867,6 +4030,43 @@ function hideLoader() {
   setLoad(1);
   b.classList.add('done');
   setTimeout(() => b.remove(), 450);
+}
+
+// Eliminar perfil (8 nov 2026): pregunta dos veces y vuelve a empezar desde la presentación, como la primera vez.
+// La segunda ventana no deja eliminar hasta que pasan 3 segundos (para no tocarlo de corrido).
+function askDelete() {
+  openModal({
+    title: '¿Eliminar tu perfil?',
+    color: 'pink',
+    body: `<p class="lead">Se borra <b>todo</b>: tu nombre, tu avatar, niveles, estrellas, monedas y lo comprado. El juego empieza otra vez <b>desde el principio</b>.</p>
+      <p class="note">Si quieres guardar tu avance, antes saca tu código en Ajustes → Respaldo.</p>`,
+    buttons: [
+      { label: 'Cancelar', cls: 'ghost', onClick: openProfile },
+      { label: 'Sí, eliminar', cls: 'pink', onClick: askDeleteAgain },
+    ],
+  });
+}
+function askDeleteAgain() {
+  const m = openModal({
+    title: '¿Seguro?',
+    color: 'pink',
+    body: `<p class="lead">Última pregunta: <b>${esc(save.name || 'tu perfil')}</b> se elimina para siempre. No se puede deshacer.</p>`,
+    buttons: [
+      { label: 'No, me quedo', cls: 'green', onClick: openProfile },
+      { label: 'Eliminar para siempre', cls: 'pink', disabled: true, onClick: () => (deleteProfile(), location.reload()) },
+    ],
+  });
+  const b = m.el.querySelector('.mbtns .pink'), txt = b.innerHTML;
+  let n = 3;
+  b.innerHTML = `${txt} (${n})`;
+  const t = setInterval(() => {
+    if (!b.isConnected) return clearInterval(t);
+    if (--n > 0) return void (b.innerHTML = `${txt} (${n})`);
+    clearInterval(t);
+    b.innerHTML = txt;
+    b.disabled = false;
+    if (!reduced()) b.animate([{ scale: 1 }, { scale: 1.08 }, { scale: 1 }], { duration: 260, easing: 'ease-out' });
+  }, 1000);
 }
 
 // ---------- Arranque ----------

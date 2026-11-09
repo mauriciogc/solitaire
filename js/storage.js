@@ -111,6 +111,13 @@ export function resetProfile() {
   replaceWith({ ...fresh(name, avatar), named, onboard, ...learned, ...(free ? { look, char: save.char } : {}) });
 }
 
+// Eliminar perfil (8 nov 2026): todo desde cero, también nombre, avatar y lo que ya se le enseñó (vuelve la
+// presentación). Solo se quedan los códigos canjeados: valen una vez por teléfono.
+export function deleteProfile() {
+  const { codes } = save;
+  replaceWith({ ...fresh(''), codes });
+}
+
 // look: { look, char } del avatar (opcional).
 export function renameProfile(name, avatar, look) {
   save.name = name;

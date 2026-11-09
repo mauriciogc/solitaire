@@ -63,7 +63,9 @@ const ICONS = {
   ojo: () => tshape('M2.5 16S8 7 16 7s13.5 9 13.5 9S24 25 16 25 2.5 16 2.5 16z', '#fffaf0', '#e3d6ee', `<circle cx="16" cy="16" r="5.6" fill="#5fc7e8" stroke="${K}" stroke-width="2"/><circle cx="16" cy="16" r="2.4" fill="${K}"/><circle cx="14.2" cy="14.2" r="1.2" fill="#fff"/>`, 2.2),
   llaveMaestra: () => `<g transform="rotate(-40 16 16)">${tshape('M14.6 13h2.8v15h-2.8zM17.4 21.5h4v2.6h-4zM17.4 25.2h3v2.6h-3z', '#ffc83d', '#ec9a17', '', 1.8)}${tshape(CIRCLE(16, 8.5, 6.5), '#ffc83d', '#ec9a17', `<circle cx="16" cy="8.5" r="2.4" fill="#fff4c7" stroke="${K}" stroke-width="1.6"/><path d="${starPath(16, 8.5, 1.6, 0.7)}" fill="#ff5f7e"/>`, 2)}</g>`,
   // Carta moneda: montoncito de monedas.
-  monedas: () => `${tshape(CIRCLE(12, 19, 8), '#ffc83d', '#ec9a17', `<path d="${starPath(12, 19.3, 3.6, 1.6)}" fill="#fff4c7"/>`, 2)}${tshape(CIRCLE(20.5, 12.5, 8), '#ffd96b', '#ec9a17', `<path d="${starPath(20.5, 12.8, 3.6, 1.6)}" fill="#fff4c7"/>`, 2)}`,
+  // Sin clipPath (8 nov 2026): dentro de la carta (con giro 3D) Safari a veces no recorta y la moneda salía doble.
+  // La de atrás va primero y la de adelante la tapa.
+  monedas: () => [[18, 11, '#ffd96b'], [14, 20, '#ffc83d']].map(([x, y, base]) => `<circle cx="${x}" cy="${y}" r="8" fill="#ec9a17"/><circle cx="${x - 0.9}" cy="${y - 1.3}" r="6.4" fill="${base}"/><path d="${starPath(x - 0.6, y - 0.9, 3.6, 1.6)}" fill="#fff4c7"/><circle cx="${x}" cy="${y}" r="8" fill="none" stroke="${K}" stroke-width="2"/>`).join(''),
   // Nave ladrona: platillo con cúpula y luces.
   nave: () => `${tshape('M3 19.5c0-3 5.8-5.5 13-5.5s13 2.5 13 5.5-5.8 5.5-13 5.5S3 22.5 3 19.5z', '#9be7ff', '#5fc7e8', `<circle cx="9" cy="20.5" r="1.5" fill="#ffc83d"/><circle cx="16" cy="22" r="1.5" fill="#ffc83d"/><circle cx="23" cy="20.5" r="1.5" fill="#ffc83d"/>`, 2.2)}${tshape('M9.5 16.5a6.5 7 0 0 1 13 0z', '#d9f6ff', '#9be7ff', `<circle cx="14" cy="13" r="1.1" fill="${K}"/><circle cx="18" cy="13" r="1.1" fill="${K}"/>`, 2)}`,
   // Fantasma (carta que aparece y desaparece).
@@ -320,6 +322,11 @@ const ICONS = {
   check: () => glyph('M6 17l6 6 14-14', 7) + glyph('M6 17l6 6 14-14', 3.4, '#5ad68c'),
   door: () => tshape('M7 4h14v24H7z', '#c9893a', '#a86a22', '', 2.2) + `<circle cx="17.5" cy="16.5" r="1.6" fill="${K}"/>` + glyph('M23 16h7M27 12.5l3.5 3.5-3.5 3.5', 3.2),
   backup: () => tshape('M5 13h22v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2z', '#5ad68c', '#3bb26c', '', 2.2) + glyph('M16 3v15M11 13l5 5 5-5', 3.2),
+  // Tu camino (8 nov 2026): una carretera que serpentea con sus paradas y la bandera al final.
+  camino: () => {
+    const d = 'M7 29c0-6 17-4 17-10S9 15 10 9';
+    return `<path d="${d}" fill="none" stroke="${K}" stroke-width="7.4" stroke-linecap="round"/><path d="${d}" fill="none" stroke="#f2c879" stroke-width="4.2" stroke-linecap="round"/><path d="${d}" fill="none" stroke="#fff8e6" stroke-width="1.2" stroke-dasharray="2 2.6" stroke-linecap="round"/>${[[7, 28.6, '#5ad68c'], [22.2, 19.6, '#4aa8de']].map(([x, y, c]) => `<circle cx="${x}" cy="${y}" r="2.6" fill="${c}" stroke="${K}" stroke-width="1.6"/>`).join('')}<path d="M10 9V2" stroke="${K}" stroke-width="2.2" stroke-linecap="round"/>${tshape('M10.6 2.4h10l-2.6 3 2.6 3h-10z', '#ff5f7e', '#d63d5f', '', 1.8)}`;
+  },
   flag: () => `<path d="M8 4v25" stroke="${K}" stroke-width="3.4" stroke-linecap="round"/>` + tshape('M9 5h16l-4 5.5 4 5.5H9z', '#ff5f7e', '#d63d5f', '', 2),
   planet: () => planetInner('#86cf5c', '#4d9f45', '#2f86c8', '#ffc83d'),
   crown: () => tshape('M4 26 3 8l7 6 6-9 6 9 7-6-1 18z', '#ffc83d', '#ec9a17', '<circle cx="16" cy="18" r="2.6" fill="#ff5f7e"/>', 2.2),

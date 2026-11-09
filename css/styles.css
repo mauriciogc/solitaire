@@ -177,7 +177,7 @@ button:disabled { cursor: default; }
 .grp-btn .grp-n[hidden] { display: none; }
 .side.open .grp-btn { animation: none; }
 /* El cajón: tarjeta oscura pegada al botón, hasta 4 por fila (--gc), con su piquito. Cerrado se encoge hacia el botón. */
-.grp-drawer { position: absolute; top: calc(var(--bs) + 14px); display: grid; grid-template-columns: repeat(var(--gc, 3), var(--bs)); gap: 46px 26px; padding: 22px 20px 38px; border-radius: 22px;
+.grp-drawer { --bs: calc(64px * var(--k)); position: absolute; top: calc(52px * var(--k) + 14px); display: grid; grid-template-columns: repeat(var(--gc, 3), var(--bs)); gap: 14px; padding: 16px; border-radius: 24px;
   background: #1a1240eb; border: 3px solid var(--ink); box-shadow: inset 0 0 0 2px #ffffff1f, 0 12px 28px #0b062a99; transition: scale .32s var(--spring), opacity .2s, visibility 0s .32s; }
 .grp-drawer::before { content: ''; position: absolute; top: -11px; width: 16px; height: 16px; background: #1a1240; border: solid var(--ink); border-width: 3px 0 0 3px; rotate: 45deg; }
 .side.r .grp-drawer { right: 0; transform-origin: calc(100% - var(--bs) / 2) -14px; }
@@ -187,7 +187,8 @@ button:disabled { cursor: default; }
 .side:not(.open) .grp-drawer { scale: .15; opacity: 0; visibility: hidden; pointer-events: none; }
 .side.open .grp-drawer { transition: scale .32s var(--spring), opacity .2s; }
 /* Nombre abajo de cada botón del cajón (8 nov 2026). */
-.grp-name { position: absolute; top: calc(100% + 14px); left: 50%; translate: -50% 0; font: 800 12px/1 'Baloo 2', sans-serif; font-style: normal; color: #fff; white-space: nowrap; text-shadow: 0 1.5px 0 var(--ink); pointer-events: none; }
+/* 8 nov 2026: sin nombres (los botones se veían chiquitos); el cajón es como la columna suelta, con botones grandes. */
+.grp-name { display: none; position: absolute; top: calc(100% + 14px); left: 50%; translate: -50% 0; font: 800 12px/1 'Baloo 2', sans-serif; font-style: normal; color: #fff; white-space: nowrap; text-shadow: 0 1.5px 0 var(--ink); pointer-events: none; }
 .galaxy .side.l { left: calc(10px + var(--cl)); }
 /* Eventos: columna de la derecha (solo los activos). */
 .galaxy .side.r { right: calc(10px + var(--cr)); }
@@ -308,7 +309,7 @@ html.dev-on .galaxy .res .me { display: none; }
 .hint-chip { padding: 8px 14px; border-radius: 14px; background: #0b062a99; color: #fff; font-weight: 800; font-size: calc(14px * var(--k)); pointer-events: none; animation: chip-life 4.5s var(--ease-out) forwards; }
 @keyframes chip-life { 0% { opacity: 0; translate: 0 14px; } 8% { opacity: 1; translate: 0 0; } 75% { opacity: 1; translate: 0 0; } 100% { opacity: 0; translate: 0 6px; } }
 /* Regalo y boleto listos para cobrar: se mueven (como la carta de mecánica nueva) con su punto rojo. */
-.iconbtn.ready { animation: ready-wiggle 2.8s ease-in-out infinite; }
+.iconbtn.ready, .road-btn.nuevo { animation: ready-wiggle 2.8s ease-in-out infinite; }
 .iconbtn.ready:nth-child(2) { animation-delay: -1.4s; }
 @keyframes ready-wiggle { 0%, 62%, 100% { rotate: 0deg; scale: 1; } 68% { rotate: -9deg; scale: 1.1; } 74% { rotate: 8deg; scale: 1.1; } 80% { rotate: -5deg; scale: 1.05; } 86% { rotate: 3deg; scale: 1; } }
 /* Boleto ya cobrado: el botón sigue rojo y dice cuánto falta. */
@@ -498,7 +499,7 @@ html.dev-on .galaxy .res .me { display: none; }
   .galaxy .side.r { direction: rtl; }
   .galaxy .side.r > * { direction: ltr; }
   .galaxy .side:has(.grp-btn) { top: calc(62px * var(--k) + var(--st)); display: block; padding: 0; }
-  .grp-drawer { --bs: min(calc(50px * var(--k)), calc((100dvh - var(--st) - var(--sb) - 112px * var(--k) - 150px) / 3)); top: calc(50px * var(--k) + 12px); gap: 38px 22px; padding: 16px 18px 32px; }
+  .grp-drawer { --bs: min(calc(58px * var(--k)), calc((100dvh - var(--st) - var(--sb) - 112px * var(--k) - 64px) / 3)); top: calc(50px * var(--k) + 12px); gap: 12px; padding: 12px; }
   .grp-name { top: calc(100% + 11px); font-size: 11px; }
 }
 .empty-slot { position: absolute; inset: 0 0 0 auto; width: var(--cw); border: 2.5px dashed #fff9; border-radius: calc(var(--cw) * 0.14); display: grid; place-items: center; font: 400 20px 'Lilita One'; color: #fff; }
@@ -677,6 +678,7 @@ html.dev-on .galaxy .res .me { display: none; }
 .btn.sq small { font-size: 12px; margin-top: -4px; }
 .btn.wide { flex: 1 1 100%; }
 .btn.grow { flex: 1; }
+.btn.link.duo { flex-basis: auto; margin: 0 8px; }
 .btn.link { min-height: 0; padding: 4px; border: 0; box-shadow: none; background: none; font: 800 14px 'Baloo 2'; color: #c22c49; text-decoration: underline; text-underline-offset: 3px; flex-basis: 100%; }
 .btn:active:not(:disabled) { translate: 0 3px; }
 .btn:disabled { opacity: 0.5; filter: grayscale(0.5); }
@@ -1102,7 +1104,7 @@ html.dev-on .galaxy .res .me { display: none; }
 
 /* ---------- Menos movimiento ---------- */
 @media (prefers-reduced-motion: reduce) {
-  .hero-card, .hero-undo span, .hero-fan i, .g-ring, .card.shake, .undo-btn.nudge, .streak.pop, .confetti, .day.today, .iconbtn.ready, .racha-btn.hot, .racha-pill.hot, .fire, .rg.ready > i, .rclaim, .rw-ico, .combo i.next, .combo.near .prize, .combo.hot, .turbo-chip, .comet-hot .ico, .combo .need, .rh-ico .ico, .dticket span, .logo-bands, .big-stars .ico, .rays, .gbox, .loot-it { animation: none !important; }
+  .hero-card, .hero-undo span, .hero-fan i, .g-ring, .card.shake, .undo-btn.nudge, .streak.pop, .confetti, .day.today, .iconbtn.ready, .road-btn.nuevo, .racha-btn.hot, .racha-pill.hot, .fire, .rg.ready > i, .rclaim, .rw-ico, .combo i.next, .combo.near .prize, .combo.hot, .turbo-chip, .comet-hot .ico, .combo .need, .rh-ico .ico, .dticket span, .logo-bands, .big-stars .ico, .rays, .gbox, .loot-it { animation: none !important; }
   .card .inner, .stock .card { transition-duration: 0.01ms !important; }
 }
 
@@ -1844,6 +1846,8 @@ html:not(.dev-on) .dev-pill { display: none; }
 .devmenu .dtab.on { background: #8a5cf0; color: #fff; }
 .devmenu .dtable em { font-style: normal; padding: 0 6px; border-radius: 99px; color: #fff; }
 .devmenu .d-no { color: #d62f4f; font-weight: 800; } .devmenu .d-yes { color: #23a05e; font-weight: 800; }
+/* Recuento: dos ventanas de desbloqueo en el mismo nivel (8 nov 2026). */
+.devmenu .dorder tr.dclash td { background: #ffe1e7; } .devmenu .dorder tr.dclash td:first-child { box-shadow: inset 4px 0 0 #d62f4f; }
 .devmenu .dtable + .dline { margin-top: 10px; }
 .devmenu .dbtns { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 6px; }
 .devmenu .dbtns .btn { min-height: 38px; padding: 4px 8px 6px; font-size: 14px; line-height: 1.15; border-radius: 12px; white-space: normal; }
@@ -2186,8 +2190,18 @@ html:not(.dev-on) .dev-pill { display: none; }
 /* Solo la cara de enfrente se desvanece (opacidad en .inner aplana el 3D y deja ver el número por el reverso). */
 .card.up.ghost-out .front { opacity: 0; }
 .card.up.ghost-out::before { content: ''; position: absolute; inset: 0; border-radius: calc(var(--cw) * 0.14); border: 2.5px dashed #fff6e666; background: #ffffff0d; pointer-events: none; }
-.card.ghost-demo .inner { animation: ghost-blink 2.4s infinite; }
-@keyframes ghost-blink { 0%, 40% { opacity: 1; } 50%, 90% { opacity: .15; } 100% { opacity: 1; } }
+/* Ayuda (8 nov 2026): la carta de ejemplo no lleva .inner; se desvanece su cara y queda la silueta punteada, como en el tablero. */
+.card.ghost-demo .front { animation: ghost-blink 2.4s ease-in-out infinite; }
+.card.ghost-demo::before { content: ''; position: absolute; inset: 0; border-radius: calc(var(--cw) * 0.14); border: 2px dashed #6e66a3; background: #2a1f5c0d; pointer-events: none; animation: ghost-trace 2.4s ease-in-out infinite; }
+@keyframes ghost-blink { 0%, 38% { opacity: 1; scale: 1; } 50%, 88% { opacity: 0; scale: .9; } 100% { opacity: 1; scale: 1; } }
+@keyframes ghost-trace { 0%, 38% { opacity: 0; } 50%, 88% { opacity: 1; } 100% { opacity: 0; } }
+/* Cortina en la ayuda: el telón se asoma (se abre un poco y se vuelve a cerrar) y la carta del telón brinca. */
+.card.curtain-demo .drape { animation: drape-peek 2.8s ease-in-out infinite; }
+.card.curtain-demo .valance { animation: valance-peek 2.8s ease-in-out infinite; }
+.card.curtain-key-demo .curtain-mark { animation: wobble 2.8s ease-in-out infinite; }
+@keyframes drape-peek { 0%, 30%, 100% { scale: 1 1; } 50%, 70% { scale: .45 1; } }
+@keyframes valance-peek { 0%, 30%, 100% { translate: 0 0; } 50%, 70% { translate: 0 -60%; } }
+@media (prefers-reduced-motion: reduce) { .card.ghost-demo .front, .card.ghost-demo::before, .card.curtain-demo .drape, .card.curtain-demo .valance, .card.curtain-key-demo .curtain-mark { animation: none; } }
 
 /* Nave ladrona (7 nov 2026). */
 .ship-fly { position: fixed; left: 0; top: 0; width: 80px; height: 80px; z-index: 10000; pointer-events: none; }
@@ -2199,8 +2213,9 @@ html:not(.dev-on) .dev-pill { display: none; }
 
 
 /* Carta moneda (7 nov 2026): las monedas en lugar del palo, sin decir cuánto da (8 nov 2026). */
-.front .cs.coin-cs { width: calc(var(--cw) * 0.32); height: auto; right: 5%; top: 5%; }
-.face .cs.coin-cs .ico { width: 100%; height: auto; }
+/* 8 nov 2026: alto fijo (con height:auto Safari hacía el dibujo alto y las monedas caían al centro de la carta). */
+.front .cs.coin-cs { width: calc(var(--cw) * 0.3); height: calc(var(--cw) * 0.3); right: 6%; top: 5%; }
+.face .cs.coin-cs .ico { display: block; width: 100%; height: 100%; }
 /* Entrada a eventos (8 nov 2026): un pase con talón del color del evento, su nombre y una línea (planetas o reloj).
    Mismo dibujo en la entrada del mes y de la festividad, la espera del boleto, la preventa y la cuenta regresiva. */
 .entry-modal .lead { margin: 2px 0 0; text-align: center; }
@@ -2277,6 +2292,9 @@ html:not(.dev-on) .dev-pill { display: none; }
 .mis-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
 .mis { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 14px; background: #fff; border: 2.5px solid var(--ink); box-shadow: inset 0 -4px 0 var(--cream-d); text-align: left; }
 .mis > .ico { flex: none; width: 34px; height: 34px; }
+/* Misión o logro de carta especial: la carta de ejemplo de la ayuda, chiquita y ladeada. */
+.mis-card { position: relative; flex: none; width: 34px; height: 38px; }
+.mis-card > .card { position: absolute; left: 4px !important; top: 0; --cw: 26px; rotate: -6deg; }
 .mis > div { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
 .mis b { font: 400 15px/1.15 'Lilita One'; color: var(--ink); }
 .mis small { font-size: 12px; font-weight: 700; color: #5d5385; line-height: 1.2; }
@@ -2320,3 +2338,111 @@ html:not(.dev-on) .dev-pill { display: none; }
 .card .tide-ov i { position: absolute; left: -10%; right: -10%; bottom: 0; height: 10%; background: linear-gradient(#7fd4ffdd, #2f86d0ee); border-top: 3px solid #e6f7ff; border-radius: 40% 45% 0 0 / 30% 30% 0 0; transition: height .6s cubic-bezier(.3, 1.3, .5, 1); animation: tide-sway 2.4s ease-in-out infinite; }
 .card.wet .tide-ov i { height: 112%; }
 @keyframes tide-sway { 0%, 100% { translate: -4% 0; rotate: -2deg; } 50% { translate: 4% 0; rotate: 2deg; } }
+
+/* Tu camino (8 nov 2026; rehecho dos veces el mismo día: primero se veía cargado y luego muy vacío).
+   Arriba un selector de 4 partes iguales (siempre cabe) con un indicador que se desliza. Cada parada: su dibujo sobre
+   la línea y el texto en un globo suave. La línea dorada crece hasta "Tú". Ancho: zigzag encajado por en medio. */
+.road-modal .mbody { padding: 0 14px 18px; text-align: left; }
+/* contain: el selector nunca empuja el ancho de la ventana (en vertical se salía de la pantalla). */
+.rd-top { position: sticky; top: 0; z-index: 3; margin: 0 -14px; padding: 10px 14px; contain: inline-size; background: var(--cream); box-shadow: 0 6px 8px -8px #2a1f5c66; }
+.rd-seg { position: relative; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); padding: 4px; border-radius: 16px; background: #efe4cc; box-shadow: inset 0 2px 0 #2a1f5c1a; }
+.rd-ind { position: absolute; top: 4px; bottom: 4px; left: 4px; width: calc((100% - 8px) / 4); border-radius: 12px; background: #4aa8de; border: 2px solid var(--ink); box-shadow: inset 0 -3px 0 #2f86c0, 0 2px 0 var(--ink); translate: calc(var(--i) * 100%) 0; transition: translate .35s var(--ease-out); }
+.rd-chip { position: relative; z-index: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; height: 46px; padding: 0 2px; border: 0; background: none; color: var(--ink); font: 800 13px/1.1 'Baloo 2', sans-serif; transition: color .25s; }
+.rd-cl { display: flex; align-items: center; gap: 4px; max-width: 100%; }
+.rd-cl > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rd-chip .ico { flex: none; width: 17px; height: 17px; }
+.rd-chip i { font-style: normal; font-size: 11px; font-variant-numeric: tabular-nums; color: #6e66a3; transition: color .25s; }
+.rd-chip.on { color: #fff; }
+.rd-chip.on i { color: #e6f4ff; }
+.rd-chip:active .rd-cl { scale: .94; }
+/* Muy angosto: sin iconos, para que quepa el nombre. */
+@media (max-width: 359px) { .rd-chip .ico { display: none; } }
+
+.road { --lx: 27px; position: relative; list-style: none; margin: 14px 0 0; padding: 0; }
+.rd-line, .rd-fill { position: absolute; left: calc(var(--lx) - 3px); top: 0; width: 6px; border-radius: 3px; }
+.rd-line { bottom: 20px; background: repeating-linear-gradient(#d9cbab 0 7px, transparent 7px 13px); }
+.rd-fill { height: 0; background: linear-gradient(#ffe08a, #ffb31a); box-shadow: 0 0 0 1.5px #c98a12; }
+.rd-fill.grow { transition: height 1.2s cubic-bezier(.22, 1, .36, 1); }
+.road > li { position: relative; min-width: 0; }
+.road > li + li { margin-top: 14px; }
+.rd-box { width: 100%; min-width: 0; display: flex; align-items: flex-start; gap: 10px; padding: 0 0 0 3px; background: none; border: 0; color: var(--ink); text-align: left; font: inherit; }
+/* El dibujo tapa la línea (va encima) con su contorno toon. */
+.rd-pic { position: relative; z-index: 1; flex: none; width: 48px; height: 48px; display: grid; place-items: center; border-radius: 14px; border: 2.5px solid var(--ink); box-shadow: inset 0 -4px 0 #0000001a, 0 2px 0 var(--ink); }
+.k-ev .rd-pic { background: #fff1d6; } .k-card .rd-pic { background: #efe8ff; } .k-mesa .rd-pic { background: #def1ff; }
+.rd-pic > .ico { width: 34px; height: 34px; }
+.rd-card { position: relative; width: 28px; height: 39px; }
+.rd-card > .card { position: absolute; left: 0 !important; top: 0; --cw: 28px; rotate: -6deg; }
+/* El texto va en un globo suave (sin contorno de tinta: el que pesa es el dibujo). */
+.rd-txt { position: relative; min-width: 0; flex: 1; display: flex; flex-direction: column; min-height: 48px; justify-content: center; padding: 6px 12px; border-radius: 14px; background: #fff; box-shadow: 0 2px 0 #2a1f5c14, 0 0 0 1.5px #2a1f5c12; transition: background .2s, box-shadow .2s; }
+.rd-box:active .rd-txt { background: #f7f1e3; }
+@media (hover: hover) { .rd-box:hover .rd-txt { box-shadow: 0 2px 0 #2a1f5c1f, 0 0 0 1.5px #2a1f5c2e; } }
+.rd-txt b { font: 400 17px/1.15 'Lilita One'; overflow-wrap: anywhere; }
+.rd-txt small { margin-top: 1px; font-weight: 700; font-size: 13px; color: #6e66a3; font-variant-numeric: tabular-nums; }
+.rd-new { display: inline-block; vertical-align: 2px; margin-left: 4px; padding: 0 7px 1px; border-radius: 99px; background: #ff4d6d; color: #fff; font: 400 12px 'Lilita One'; font-style: normal; animation: rd-new .9s ease-in-out infinite alternate; }
+@keyframes rd-new { to { scale: 1.08; rotate: -4deg; } }
+.rd-more { display: grid; grid-template-rows: 0fr; min-width: 0; transition: grid-template-rows .3s var(--ease-out); }
+.rd-more > span { min-height: 0; min-width: 0; overflow: hidden; font-size: 14px; font-weight: 600; line-height: 1.35; color: #4a3f73; }
+.rd.open .rd-more { grid-template-rows: 1fr; }
+.rd.open .rd-more > span { padding: 5px 0 2px; }
+.rd-kind { display: block; font-style: normal; font-weight: 800; font-size: 12px; color: #6e66a3; }
+/* Lo que falta: el "?" flota y el globo se apaga; no se despliega. */
+.rd.lock .rd-box { cursor: default; }
+.rd.lock .rd-pic { background: linear-gradient(160deg, #8a5cf0, #5b3cc4); }
+.rd.lock .rd-txt { background: #f5eedd; box-shadow: 0 0 0 1.5px #2a1f5c12; }
+.rd.lock .rd-txt b { color: #a49bc6; letter-spacing: 1px; }
+.rd-q { display: inline-block; font: 400 28px/1 'Lilita One'; color: #fff; text-shadow: 0 2px 0 var(--ink); animation: rd-bob 2.4s ease-in-out infinite; animation-delay: calc(var(--d) * -.4s); }
+@keyframes rd-bob { 50% { translate: 0 -3px; rotate: 6deg; } }
+/* Lo siguiente: anillo dorado que late alrededor del dibujo y su globo dorado clarito. */
+.rd.next .rd-pic { animation: rd-glow 1.6s ease-in-out infinite; }
+.rd.next .rd-txt { background: #fff6d8; box-shadow: 0 0 0 2px #ffc83d; }
+.rd.next .rd-txt small { color: #b06d00; }
+@keyframes rd-glow { 0%, 100% { box-shadow: 0 2px 0 var(--ink), 0 0 0 3px #ffc83d; } 50% { box-shadow: 0 2px 0 var(--ink), 0 0 0 3px #ffc83d, 0 0 14px 5px #ffc83d99; } }
+/* Tú: tu avatar sobre la línea y, al lado, tu nivel y cuánto falta para lo siguiente. */
+.rd-me { display: flex; align-items: center; gap: 12px; padding: 10px 0; z-index: 2; }
+.rd-av { position: relative; flex: none; width: 54px; height: 54px; animation: rd-hop 2.2s ease-in-out infinite; }
+.rd-av .avatar { width: 100%; height: 100%; font-size: 24px; }
+.rd-av::after { content: ''; position: absolute; inset: -4px; border-radius: 50%; border: 3px solid #4aa8de; animation: rd-ring 1.8s ease-out infinite; pointer-events: none; }
+@keyframes rd-hop { 0%, 60%, 100% { translate: 0 0; } 30% { translate: 0 -5px; } }
+@keyframes rd-ring { from { scale: .9; opacity: 1; } to { scale: 1.45; opacity: 0; } }
+.rd-me-txt { min-width: 0; margin: 0 !important; padding: 7px 14px 8px; border-radius: 16px; background: #4aa8de; color: #fff; box-shadow: inset 0 -4px 0 #2f86c0, 0 2px 0 var(--ink); border: 2.5px solid var(--ink); }
+.rd-me-txt b { display: block; font: 400 19px/1.1 'Lilita One'; text-shadow: 0 1.5px 0 #1f5f8f; }
+.rd-me-txt small { display: block; font-weight: 700; font-size: 13px; color: #e6f4ff; }
+.rd-end { display: flex; align-items: center; gap: 12px; padding: 8px 0 0 11px; color: #6e66a3; font-weight: 700; font-size: 14px; }
+.rd-end .ico { flex: none; width: 32px; height: 32px; animation: wobble 2.6s ease-in-out infinite; }
+/* Pantalla ancha (PC, tableta, iPhone acostado): la línea por en medio y las paradas se turnan de lado, encajadas
+   (cada una sube a media altura de la anterior, que está del otro lado). El dibujo va pegado a la línea y un
+   puntito sobre ella marca la parada. */
+@media (min-width: 600px) {
+  .rd-chip { flex-direction: row; gap: 8px; height: 38px; font-size: 14px; }
+  .road { --lx: 50%; }
+  .road > li.rd { width: 50%; }
+  .road > li.rd:not(.alt) { margin-right: auto; padding-right: 16px; }
+  .road > li.rd:not(.alt) .rd-box { flex-direction: row-reverse; text-align: right; padding: 0; }
+  .road > li.rd:not(.alt) .rd-txt { align-items: flex-end; }
+  .road > li.rd.alt { margin-left: 50%; padding-left: 16px; }
+  .road > li.rd.alt .rd-box { padding: 0; }
+  .road > li.rd.tuck { margin-top: -6px; }
+  .road > li.rd::after { content: ''; position: absolute; top: 18px; width: 12px; height: 12px; border-radius: 50%; background: #d9cbab; border: 2px solid var(--ink); }
+  .road > li.rd.got::after { background: #ffc83d; }
+  .road > li.rd:not(.alt)::after { right: -6px; }
+  .road > li.rd.alt::after { left: -6px; }
+  .rd-me { padding-left: calc(50% - 27px); margin: 6px 0; }
+  .rd-end { justify-content: center; padding-left: 0; flex-direction: column; gap: 4px; }
+}
+@media (orientation: landscape) and (max-height: 500px) {
+  .rd-top { padding: 6px 14px; }
+  .rd-chip { height: 32px; font-size: 13px; }
+}
+/* Cada parada entra cuando se ve, en cascada. */
+.road > li:not(.in) { opacity: 0; translate: 0 10px; }
+.road.all-in > li { opacity: 1; translate: none; }
+.road > li.in { transition: opacity .3s ease-out var(--in, 0ms), translate .45s var(--ease-out) var(--in, 0ms); }
+@media (prefers-reduced-motion: reduce) { .rd-q, .rd.next .rd-pic, .rd-av, .rd-av::after, .rd-new, .rd-end .ico { animation: none !important; } }
+
+/* Selectores con indicador que se desliza (8 nov 2026): ayuda, álbum y tienda, igual que Tu camino. La elegida queda
+   transparente con letra blanca y la pastilla azul (.seg-ind, ver ui.js) se mueve detrás de ella. */
+.seg { position: relative; }
+.seg > :not(.seg-ind) { position: relative; z-index: 1; }
+.seg-ind { position: absolute; left: 0; top: 0; z-index: 0; box-sizing: border-box; border-radius: 12px; background: #4aa8de; border: 2px solid var(--ink); box-shadow: inset 0 -3px 0 #2f86c0, 0 2px 0 var(--ink); pointer-events: none; transition: translate .35s var(--ease-out), width .35s var(--ease-out), height .35s var(--ease-out); }
+.stabs .seg-ind { border-radius: 11px; } .sgroups .seg-ind { border-radius: 13px; }
+.seg > .on, .seg > [aria-selected="true"] { background: none !important; border-color: transparent !important; box-shadow: none !important; color: #fff !important; text-shadow: 0 1.5px 0 #1f5f8f !important; transition: color .25s; }

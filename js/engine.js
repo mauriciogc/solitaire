@@ -44,7 +44,7 @@ function tick(s) {
 // ---------- Nave ladrona (7 nov 2026) ----------
 // Nivel con level.ship: la nave llega cada 3 a 5 robos (no se sabe cuándo; fijo por nivel) y se lleva del mazo una
 // carta que te servía (la primera que conecta con alguna carta libre del tablero; si ninguna, la que sigue). Cada
-// SHIP_STREAK de racha se asusta y te regresa la última que se llevó; si no se llevó nada, te da una carta útil.
+// SHIP_STREAK de racha se asusta y te regresa la última que se llevó; si no se llevó nada, no pasa nada (8 nov 2026).
 export const SHIP_STREAK = 4;
 const shipGap = (level, n) => 3 + (hash(level.g * 911 + n * 37 + 5) % 3);
 function steal(level, s) {
@@ -59,8 +59,9 @@ function steal(level, s) {
   return { card, pos: i };
 }
 function giveBack(level, s, at) {
-  const card = s.stolen?.length ? s.stolen[s.stolen.length - 1] : rewardCard(level, s, 'card');
-  if (s.stolen?.length) s.stolen = s.stolen.slice(0, -1);
+  if (!s.stolen?.length) return null;
+  const card = s.stolen[s.stolen.length - 1];
+  s.stolen = s.stolen.slice(0, -1);
   const h = hash(level.g * 577 + at * 13 + s.stock.length);
   const pos = s.stock.length < 3 ? s.stock.length : 3 + (h % (s.stock.length - 2));
   s.stock.splice(pos, 0, { ...card, back: true });
@@ -346,9 +347,9 @@ export function play(level, s0, id, low = false) {
   const boom = checkBombs(level, s);
   const gone = checkComets(level, s);
   if (boom.length || gone.length) activateAfter(level, s, act, wishes);
-  // Nave ladrona: cada SHIP_STREAK de racha regresa una carta (o da una).
+  // Nave ladrona: cada SHIP_STREAK de racha regresa la última carta que se llevó (si no se llevó nada, nada).
   let shipBack = null;
-  if (level.ship) for (let k = at; k <= s.streak; k++) if (k % SHIP_STREAK === 0) shipBack = giveBack(level, s, k);
+  if (level.ship) for (let k = at; k <= s.streak; k++) if (k % SHIP_STREAK === 0) shipBack = giveBack(level, s, k) || shipBack;
   setTide(level, s, -1);
   return { s, ev: { t: 'play', id, rank: r, packs, defused, reward, boost, boom, wished, wishes, gone, ...(c.turbo && { turbo: true }), ...(split && { split }), ...(shipBack && { shipBack }) } };
 }

@@ -27,7 +27,7 @@ const TIPS = {
   ticket: 'El <b>boleto partido</b> tiene dos números. Juégalo con cualquiera de las dos mitades: se parte y la otra mitad se queda para jugarla después. Lo de abajo se destapa cuando juegas las dos.',
   live: 'La <b>carta viva</b> cambia de número cada vez que juegas o robas: sube (↑) o baja (↓). Juégala cuando encaje.',
   coin: 'La <b>carta moneda</b> se juega como cualquier otra y al jugarla te da <b>monedas</b>. ¡Un regalo!',
-  ship: 'En este nivel pasa una <b>nave ladrona</b>: cada pocos robos llega y se lleva una carta de tu mazo. Cada <b>4 de racha</b> se asusta y te regresa una (o te regala una si no se llevó nada). ¡Piensa antes de robar!',
+  ship: 'En este nivel pasa una <b>nave ladrona</b>: cada pocos robos llega y se lleva una carta de tu mazo. Cada <b>4 de racha</b> se asusta y te regresa la última que se llevó. ¡Piensa antes de robar!',
   cham: 'El <b>camaleón</b> cambia cada <b>3 jugadas o robos</b>: un rato es <b>comodín</b> (va sobre cualquier carta y luego sigues con la que quieras) y otro rato vuelve a su número. ¡Agárralo dorado!',
   ghost: 'El <b>fantasma</b> aparece y desaparece cada 2 jugadas o robos. Solo lo puedes jugar cuando se ve: ¡atínale al momento!',
 };
@@ -1802,7 +1802,7 @@ export class Game {
       return sh.animate([stay, { translate: `${innerWidth + 40}px ${y - 260}px` }], { duration: 700, easing: 'ease-in', fill: 'forwards' }).finished;
     }).then(() => sh.remove());
   }
-  // Racha: la nave se asusta y regresa una carta (o regala una); cae a su hueco del mazo.
+  // Racha: la nave se asusta y regresa la última carta que se llevó; cae a su hueco del mazo.
   // msg: el aviso (deshacer el robo en que se llevó una carta también la regresa con la nave).
   shipGives(back, msg = '¡Racha! La nave te regresa una carta') {
     toast(`${icon('nave')} ${msg}`);

@@ -494,3 +494,38 @@ export function balloons(m, { max = 7 } = {}) {
   };
   setTimeout(spawn, 500);
 }
+
+// ---------- Selectores con indicador que se desliza (8 nov 2026, como el de Tu camino) ----------
+// Pestañas de la ayuda y del álbum, grupos y secciones de la tienda: la elegida no se pinta sola; una pastilla azul
+// detrás se desliza hasta ella. Se vigila #modal-root, así sirve aunque las pestañas se vuelvan a dibujar.
+const SEG = '.tabs, .sgroups, .stabs';
+const SEG_ON = ':scope > :is([aria-selected="true"], .on)';
+const segLast = new Map(); // tipo de selector -> { modal, x, y, w, h }: si se vuelve a dibujar, sale de donde estaba
+function paintSegs() {
+  document.querySelectorAll(`#modal-root :is(${SEG})`).forEach((g) => {
+    const key = g.classList[0], modal = g.closest('.modal');
+    let ind = g.querySelector(':scope > .seg-ind');
+    const on = g.querySelector(SEG_ON);
+    if (!ind) {
+      if (!on) return;
+      g.classList.add('seg');
+      ind = document.createElement('span');
+      ind.className = 'seg-ind';
+      g.prepend(ind);
+      const last = segLast.get(key);
+      if (last?.modal === modal) Object.assign(ind.style, { width: `${last.w}px`, height: `${last.h}px`, translate: `${last.x}px ${last.y}px`, transition: 'none' });
+      else ind.dataset.fresh = '1';
+    }
+    if (!on) return void (ind.style.opacity = 0);
+    const to = { modal, x: on.offsetLeft, y: on.offsetTop, w: on.offsetWidth, h: on.offsetHeight };
+    const set = () => Object.assign(ind.style, { opacity: 1, width: `${to.w}px`, height: `${to.h}px`, translate: `${to.x}px ${to.y}px` });
+    if (ind.dataset.fresh || reduced()) (ind.style.transition = 'none'), set(), delete ind.dataset.fresh, requestAnimationFrame(() => (ind.style.transition = ''));
+    else if (ind.style.transition === 'none') requestAnimationFrame(() => ((ind.style.transition = ''), set()));
+    else set();
+    segLast.set(key, to);
+  });
+}
+let segQueued = 0;
+const queueSegs = () => segQueued || (segQueued = requestAnimationFrame(() => ((segQueued = 0), paintSegs())));
+new MutationObserver(queueSegs).observe(document.getElementById('modal-root'), { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'aria-selected'] });
+addEventListener('resize', queueSegs);
