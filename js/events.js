@@ -13,7 +13,9 @@ import { EVENT_LEVELS, EVENT_PER_PLANET, EVENT_PLANETS, FIESTA_LEVELS, FIESTA_PE
 // col3: al nivel 150 se suman 3 más (arte, música y cine) y hay colección todas las semanas.
 // fiesta2: al nivel 200 se suman las festividades de leyendas mexicanas (local: true).
 // fiesta: festividades de 24 h (ver más abajo).
-export const UNLOCK = { racha: 20, mis: 30, logros: 40, col: 50, mes: 80, col2: 100, fiesta: 120, col3: 150, fiesta2: 200 };
+// 8 nov 2026: separados a 10 niveles o más de las cartas y mesas que estrenan (antes racha 20, mis 30, logros 40, col 50,
+// mes 80, col2 100, fiesta 120, col3 150, fiesta2 200). Los números de los comentarios de abajo son los de antes.
+export const UNLOCK = { racha: 30, mis: 40, logros: 70, col: 90, mes: 130, col2: 159, fiesta: 180, col3: 230, fiesta2: 290 };
 export const isOn = (k) => (save.next || 0) >= UNLOCK[k];
 
 // En estrellas (7 nov 2026: llegaba a 30 victorias sin problema porque contaba cualquiera): cada victoria suma sus
@@ -192,8 +194,9 @@ export function daysToNextCol() {
   return 0;
 }
 // Ganó un nivel: 1 ficha por cada estrella nueva (respecto a su mejor resultado).
-export function colWin(stars, prev) {
-  const c = col(), n = Math.max(0, stars - prev);
+// mult: apuesta del nivel (las fichas también se multiplican).
+export function colWin(stars, prev, mult = 1) {
+  const c = col(), n = Math.max(0, stars - prev) * mult;
   if (!c || !n) return 0;
   c.state.n += n;
   persist();
@@ -309,7 +312,9 @@ export function ev() {
   if (!e) return null;
   if (save.ev?.id !== e.id) {
     evRecord();
-    save.ev = { id: e.id, k: 0, world: save.open || 0, tk: 0, at: 0, paid: false, run: null, tries: {} };
+    // Preventa (9 nov 2026): si compró la entrada en los días de antes, ya empieza pagado y con su boleto.
+    const pre = save.evPre === e.id;
+    save.ev = { id: e.id, k: 0, world: save.open || 0, tk: pre ? 1 : 0, at: 0, paid: pre, run: null, tries: {} };
     persist();
   }
   const s = save.ev;
@@ -323,11 +328,29 @@ export function ev() {
   }
   return { ...e, state: s, done: s.k >= EVENT_LEVELS };
 }
-// El evento del mes que empieza mañana (el último día del mes anterior): su botón sale bloqueado. null si no.
+// El evento del mes que viene, desde EV_SOON días antes (9 nov 2026; antes solo el último día): su botón sale junto al
+// del mes que termina, gris y con candado, y su entrada se puede comprar antes con FI_PRE de descuento (save.evPre).
+// inDays: días que faltan. null si no.
+export const EV_SOON = 3;
 export function evSoon() {
   if (!isOn('mes')) return null;
-  const d = now(), t = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1);
-  return t.getMonth() !== d.getMonth() ? eventOf(t) : null;
+  const d = now(), t = new Date(d.getFullYear(), d.getMonth() + 1, 1), ms = t - d;
+  if (ms > EV_SOON * DAY) return null;
+  const e = eventOf(t);
+  return e ? { ...e, soon: true, inDays: Math.ceil(ms / DAY) } : null;
+}
+// Preventa del mes que viene: la entrada (su primer boleto) con FI_PRE menos. pre = false: el precio de siempre.
+export const evPrePrice = (e, pre = true) => tkPrice(e, EV_FIRST * (pre ? 1 - FI_PRE : 1));
+export const evPreOwned = (e) => !!e && save.evPre === e.id;
+export function evPreBuy() {
+  const n = evSoon();
+  if (!n || evPreOwned(n)) return false;
+  const p = evPrePrice(n);
+  if (save.coins < p) return false;
+  save.coins -= p;
+  save.evPre = n.id;
+  persist();
+  return p;
 }
 // Precio del boleto del evento ahora: el primero de la edición o uno para no esperar.
 export const evTicketPrice = (e) => tkPrice(e, e.state.paid ? EV_AGAIN : EV_FIRST);
@@ -586,6 +609,20 @@ export function fiesta() {
 }
 // Cuánto falta para que empiece (si todavía no) o para que termine (hoy).
 export const fiestaLeft = () => { const x = fiestaNow(); return msToMidnight() + (x?.soon ? Math.max(0, x.inDays - 1) : x?.endIn || 0) * DAY; };
+// Festividades pegadas (9 nov 2026): mientras dura una, la siguiente que cae en los próximos FIESTA_SOON días ya sale
+// en su propio botón (gris, con candado y su preventa). null si no hay o si hoy no hay fiesta (entonces la que viene
+// ya es fiesta()).
+export function fiestaSoon() {
+  if (!isOn('fiesta')) return null;
+  const x = fiestaNow();
+  if (!x || x.soon) return null;
+  const day = today(), y = new Date((day + FIESTA_SOON) * DAY).getUTCFullYear();
+  const next = [...fiestaDays(y - 1), ...fiestaDays(y)].filter((o) => o.day > x.day + (x.f.days || 1) - 1 && o.day <= day + FIESTA_SOON).sort((a, b) => a.day - b.day)[0];
+  if (!next) return null;
+  return { ...next.f, id: `${next.f.key}-${next.day}`, day: next.day, year: new Date(next.day * DAY).getUTCFullYear(), soon: true, inDays: next.day - day };
+}
+// Lo que falta para que empiece una festividad que todavía no llega.
+export const soonLeft = (f) => msToMidnight() + Math.max(0, f.inDays - 1) * DAY;
 // Días para la siguiente fiesta (modo dev: saltar al día de antes).
 export function daysToNextFiesta() {
   const day = today(), y = new Date(day * DAY).getUTCFullYear();
@@ -621,8 +658,7 @@ export function fiPaid(f) {
   if (f.state.paid == null) f.state.paid = true;
   return f.state.paid;
 }
-export function fiBuy() {
-  const f = fiesta();
+export function fiBuy(f = fiesta()) {
   if (!f || (f.soon ? fiPre(f) : fiPaid(f))) return false;
   const p = fiPrice(f);
   if (save.coins < p) return false;

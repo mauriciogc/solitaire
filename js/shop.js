@@ -3,6 +3,7 @@
 // El avatar es aparte: save.look = 'letter' | 'char' y save.char = clave del personaje.
 import { save, persist } from './storage.js';
 import { icon } from './art.js';
+import { themeItems, TRAVELER_VARIANTS } from './themes.js';
 
 // Las secciones van en 3 grupos para que las pestañas quepan en un teléfono.
 export const GROUPS = [
@@ -51,6 +52,13 @@ export const ITEMS = {
     { k: 'vampiro', name: 'Vladi', text: 'Vampiro', price: 1400, need: 60 },
     { k: 'dragoncito', name: 'Chispa', text: 'Dragoncito', price: 1800, need: 80 },
     { k: 'unicornio', name: 'Brisa', text: 'Unicornio', price: 2200, need: 100 },
+    // 8 nov 2026: personajes nuevos (propios).
+    { k: 'ninja', name: 'Kage', text: 'Ninja', price: 1100, need: 30 },
+    { k: 'voltio', name: 'Voltio', text: 'Ratoncito eléctrico', price: 1300, need: 45 },
+    { k: 'tic', name: 'Tic', text: 'Viajero del tiempo', price: 1500, need: 55 },
+    { k: 'guardian', name: 'Bruno', text: 'Guardián del anillo', price: 1700, need: 65 },
+    { k: 'mago', name: 'Zafiro', text: 'Mago de las estrellas', price: 2000, need: 75 },
+    { k: 'caballero', name: 'Sir Galleta', text: 'Caballero', price: 2500, need: 95 },
     // Exclusivos de la colección (ev).
     { k: 'cangrejo', name: 'Pinzas', text: 'Cangrejo', ev: 'mar' },
     { k: 'topo', name: 'Topacio', text: 'Topo minero', ev: 'gemas' },
@@ -100,6 +108,11 @@ export const ITEMS = {
     { k: 'estrellas', name: 'Estrellas', price: 600, need: 5 },
     { k: 'orbita', name: 'Órbita', price: 1000, need: 10 },
     { k: 'arcoiris', name: 'Arcoíris', price: 1500, need: 20 },
+    // 8 nov 2026: marcos nuevos.
+    { k: 'petalos', name: 'Pétalos', price: 800, need: 12 },
+    { k: 'rayos', name: 'Rayos', price: 1200, need: 30 },
+    { k: 'relojes', name: 'Manecillas', price: 1500, need: 45 },
+    { k: 'runas', name: 'Anillo de oro', price: 2400, need: 70 },
     { k: 'burbujas', name: 'Burbujas', ev: 'mar' },
     { k: 'gemas', name: 'Gemas', ev: 'gemas' },
     { k: 'hojas', name: 'Hojas', ev: 'bosque' },
@@ -151,6 +164,13 @@ export const ITEMS = {
     { k: 'viajero', name: 'Viajero estelar', price: 900, need: 10 },
     { k: 'bombas', name: 'Domador de bombas', price: 1200, need: 20 },
     { k: 'leyenda', name: 'Leyenda del cosmos', price: 3000, need: 40 },
+    // 8 nov 2026: títulos nuevos.
+    { k: 'chispa', name: 'Pura chispa', price: 500, need: 3 },
+    { k: 'estratega', name: 'Gran estratega', price: 800, need: 15 },
+    { k: 'cronista', name: 'Viajero del tiempo', price: 1100, need: 25 },
+    { k: 'guardiananillo', name: 'Guardián del anillo', price: 1500, need: 35 },
+    { k: 'magocartas', name: 'Mago de las cartas', price: 2000, need: 50 },
+    { k: 'invencible', name: 'Invencible', price: 4000, need: 70 },
     { k: 'buscaconchas', name: 'Buscador de conchas', ev: 'mar' },
     { k: 'cazagemas', name: 'Cazador de gemas', ev: 'gemas' },
     { k: 'guardabosques', name: 'Guardián del bosque', ev: 'bosque' },
@@ -204,6 +224,12 @@ export const ITEMS = {
     { k: 'galaxia', name: 'Galaxia', price: 1400, need: 35 },
     { k: 'eclipse', name: 'Eclipse', price: 1600, need: 45 },
     { k: 'fuegos', name: 'Fuegos artificiales', price: 1800, need: 55 },
+    // 8 nov 2026: reversos nuevos.
+    { k: 'hongos', name: 'Hongos', price: 600, need: 8 },
+    { k: 'olas', name: 'Olas', price: 750, need: 12 },
+    { k: 'rayo', name: 'Rayo', price: 1300, need: 25 },
+    { k: 'reloj', name: 'Reloj', price: 1500, need: 35 },
+    { k: 'anillo', name: 'Anillo dorado', price: 2200, need: 65 },
     // Exclusivos de la colección (ev): solo se consiguen con fichas en su tienda temporal.
     { k: 'arrecife', name: 'Arrecife', ev: 'mar' },
     { k: 'cristales', name: 'Cristales', ev: 'gemas' },
@@ -399,6 +425,13 @@ export const ITEMS = {
 // Tienda a lo largo de todo el universo (7 nov 2026): los candados se reparten por las 52 constelaciones (need × 5:
 // antes todo se abría en el mundo 101 y se compraba completo hacia el planeta 110) y el precio sube un poco según la
 // constelación donde se abre (+2% por constelación: el del mundo 500 cuesta el doble). Así siempre hay algo que comprar.
+// Temáticas (8 nov 2026, themes.js): un reverso, una cara, un fondo y un marco de cada una; y los viajeros de otros
+// colores. Se agregan antes del ×5 de abajo, como todo lo de la tienda.
+{
+  const tm = themeItems();
+  for (const sec in tm) ITEMS[sec].push(...tm[sec].filter((it) => !ITEMS[sec].some((x) => x.k === it.k)));
+  ITEMS.traveler.push(...TRAVELER_VARIANTS.map(({ k, name, text, price, need }) => ({ k, name, text, price, need })));
+}
 export const NEED_X = 5, PRICE_UP = 0.02;
 const round5 = (n) => Math.round(n / 5) * 5;
 for (const list of Object.values(ITEMS))
@@ -459,7 +492,7 @@ export function buy(sec, k, cost = item(sec, k)?.price) {
 }
 
 // Cada título se ve distinto: color, icono y forma (los más caros, más vistosos).
-const TITLE_ICO = { novato: 'star', explorador: 'flag', cazacometas: 'rocket', maestro: 'trophy', viajero: 'planet', bombas: 'bomb', leyenda: 'crown', buscaconchas: 'concha', cazagemas: 'gema', guardabosques: 'bellota', golosito: 'caramelo', paleontologo: 'fosil', inventor: 'tuerca', tamalero: 'tamal', taquero: 'taco', heroeverde: 'tierra', jugueton: 'pinata', consentido: 'clavel', orgullo: 'corbata', amigomichi: 'gatito', mejoramigo: 'hueso', catrin: 'calavera', duende: 'esfera', buscador: 'rosca', flechazo: 'corazon', jardinero: 'tulipan', olas: 'sol', mariachi: 'sombrero', hechicero: 'calabaza', jefefinal: 'control', cerobugs: 'llaves', bromista: 'bufon', propositos: 'reloj', artista: 'gota', estrellarock: 'nota', director: 'claqueta', nahual: 'nahual', guiaalmas: 'xolito', almadelrio: 'velita', elegancia: 'catrina', valiente: 'locomotora', cazatesoros: 'cofre', cazaestrellas: 'meteoro', perfeccionista: 'crown', imparable: 'flame', artificiero: 'bomb', cazafantasmas: 'ghost', cumplidor: 'check', explorador_secreto: 'starSecret' };
+const TITLE_ICO = { novato: 'star', explorador: 'flag', cazacometas: 'rocket', maestro: 'trophy', viajero: 'planet', bombas: 'bomb', leyenda: 'crown', buscaconchas: 'concha', cazagemas: 'gema', guardabosques: 'bellota', golosito: 'caramelo', paleontologo: 'fosil', inventor: 'tuerca', tamalero: 'tamal', taquero: 'taco', heroeverde: 'tierra', jugueton: 'pinata', consentido: 'clavel', orgullo: 'corbata', amigomichi: 'gatito', mejoramigo: 'hueso', catrin: 'calavera', duende: 'esfera', buscador: 'rosca', flechazo: 'corazon', jardinero: 'tulipan', olas: 'sol', mariachi: 'sombrero', hechicero: 'calabaza', jefefinal: 'control', cerobugs: 'llaves', bromista: 'bufon', propositos: 'reloj', artista: 'gota', estrellarock: 'nota', director: 'claqueta', nahual: 'nahual', guiaalmas: 'xolito', almadelrio: 'velita', elegancia: 'catrina', valiente: 'locomotora', cazatesoros: 'cofre', cazaestrellas: 'meteoro', perfeccionista: 'crown', imparable: 'flame', artificiero: 'bomb', cazafantasmas: 'ghost', cumplidor: 'check', explorador_secreto: 'starSecret', chispa: 'flame', estratega: 'card', cronista: 'reloj', guardiananillo: 'gema', magocartas: 'wild', invencible: 'trophy' };
 export const titleName = (k = equipped('title')) => item('title', k).name;
 export const titleIcon = (k) => icon(TITLE_ICO[k] || 'star');
 export const titleHTML = (k = equipped('title'), cls = '', tag = 'span', attrs = '') =>

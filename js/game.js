@@ -1,6 +1,6 @@
 import { save, persist } from './storage.js';
-import { openModal, toast, confetti, updateCoins, money, starsHTML, reduced, buzz, sparkle, wait, spendFromWallet, flyToWallet, balloons, lootBubbles, rachaWarnHTML } from './ui.js';
-import { worldInfo, packGroups, MECH_NAMES, LEVELS_PER_WORLD, scrollStrip, scrollSpan, scrollCover, SCROLL_VIEW, SCROLL_SHOW, NEB_SLOTS, GRAV_SHOWN, W } from './levels.js';
+import { openModal, toast, confetti, updateCoins, money, starsHTML, reduced, buzz, sparkle, wait, spendFromWallet, flyToWallet, balloons, lootBubbles, rachaWarnHTML, betLoseHTML } from './ui.js';
+import { worldInfo, packGroups, MECH_NAMES, LEVELS_PER_WORLD, scrollStrip, scrollSpan, scrollCover, SCROLL_VIEW, SCROLL_SHOW, NEB_SLOTS, GRAV_SHOWN, W, H } from './levels.js';
 import * as E from './engine.js';
 import { price, EV_MARKUP, MET_OFF, round5, HELPS, buyable } from './economy.js';
 import { cardBackURL, icon, star, coin, lockIcon, keyIcon, arrowIcon, curtainIcon, suitSVG, avatarHTML } from './art.js';
@@ -132,6 +132,7 @@ const marks = (c) =>
   (c.ice ? `<span class="ice-ov"><b></b></span>` : '') +
   (c.curtainKey != null ? `<span class="curtain-mark">${curtainIcon()}</span>` : '') +
   (c.wet ? '<span class="tide-ov"><i></i></span>' : '') +
+  (c.doorKey ? `<span class="door-key">${icon('door')}</span>` : '') +
   '';
 
 // opts: onExit, onAbandon(gaveUp), onRetry, onReplay, rachaRisk() → { n, pend } | null, onWin(stars) → { coins, tickets, prev, gold, wild, chest }, onDone(res), onSave(state)?,
@@ -176,6 +177,9 @@ export class Game {
     window.addEventListener('keydown', this.onKey);
     this.layout();
     this.cards.forEach((c) => !c.removed && this.makeCardEl(c));
+    this.makeHole();
+    this.makeDoors();
+    this.makeBelt();
     this.renderPiles();
     this.updateCounts();
     this.showCombo();
@@ -278,6 +282,57 @@ export class Game {
         buttons: [{ label: '¡Entendido!', cls: 'green' }],
       });
     }
+    if (this.level.belt && !save.seen.banda) {
+      save.seen.banda = true;
+      persist();
+      this.modalOpen = true;
+      return openModal({
+        title: 'Nuevo: banda transportadora',
+        color: 'blue',
+        body: '<p class="lead">Estas cartas dan vueltas en una <b>banda</b>: solo ves <b>4</b> a la vez y con cada jugada o robo avanza un lugar. La que se va regresa después de dar la vuelta. ¡Atrápala cuando pase!</p>',
+        closable: false,
+        onClose: () => {
+          this.modalOpen = false;
+          if (!reduced()) this.beltEl?.animate([{ scale: 1 }, { scale: 1.05 }, { scale: 1 }], { duration: 450, iterations: 2 });
+          setTimeout(() => this.tips(), 300);
+        },
+        buttons: [{ label: '¡Entendido!', cls: 'green' }],
+      });
+    }
+    if (this.level.doors && !save.seen.puertas) {
+      save.seen.puertas = true;
+      persist();
+      this.modalOpen = true;
+      return openModal({
+        title: 'Nuevo: puertas',
+        color: 'orange',
+        body: `<p class="lead">Detrás de cada <b>puerta</b> hay unas cartas y un premio (${coin()} monedas, ${icon('comet')} cometa o ${icon('rocket')} cohete). Juega una <b>carta llave</b> ${icon('door')} y tú escoges qué puerta abrir: se activa su premio y sus cartas salen al tablero. Hay <b>menos llaves que puertas</b>. Las que no abras <b>no cuentan</b> para ganar.</p>`,
+        closable: false,
+        onClose: () => {
+          this.modalOpen = false;
+          if (!reduced()) this.doorEls?.forEach((d) => d?.animate([{ scale: 1 }, { scale: 1.12 }, { scale: 1 }], { duration: 450, iterations: 2 }));
+          setTimeout(() => this.tips(), 300);
+        },
+        buttons: [{ label: '¡Entendido!', cls: 'green' }],
+      });
+    }
+    if (this.level.hole && !save.seen.hoyo) {
+      save.seen.hoyo = true;
+      persist();
+      this.modalOpen = true;
+      return openModal({
+        title: 'Nuevo: agujero negro',
+        color: 'violet',
+        body: `<p class="lead">Este <b>agujero negro</b> atrapó muchas cartas del tablero con su remolino, boca arriba y boca abajo: no sabes cuáles. Cada <b>${E.HOLE_EVERY} jugadas o robos</b> se las traga y las escupe con los <b>números revueltos</b>. Su número dice cuánto falta. ¡Juega lo que ves antes de que cambie!</p>`,
+        closable: false,
+        onClose: () => {
+          this.modalOpen = false;
+          if (!reduced()) this.holeEl?.animate([{ scale: 1 }, { scale: 1.3 }, { scale: 1 }], { duration: 500, iterations: 2 });
+          setTimeout(() => this.tips(), 300);
+        },
+        buttons: [{ label: '¡Entendido!', cls: 'green' }],
+      });
+    }
     if (this.level.scroll === 'nebulosa' && !save.seen.nebulosa) {
       save.seen.nebulosa = true;
       persist();
@@ -368,7 +423,7 @@ export class Game {
       <header class="hud">
         <button class="tb hbtn" data-a="exit" aria-label="Pausa" title="Pausa">${icon('pause')}</button>
         <div class="hud-mid"><div class="combo info"></div></div>
-        <div class="hud-r">${this.opts.racha ? `<div class="pill info racha-pill ${this.opts.racha.hot ? 'hot' : ''}" aria-label="Racha">${this.opts.racha.hot ? `<span class="fire">${icon('flame')}</span>` : ''}${icon(this.opts.racha.ico)}<span>${this.opts.racha.n}</span></div>` : ''}<div class="pill info${this.opts.meteor ? ' met-pill' : ''}">${coin()}<span data-coins>${money(save.coins)}</span>${this.opts.meteor ? '<i class="x2">×2</i><small class="met-clock"></small>' : ''}</div>${avatarHTML(save, 'hud-av')}</div>
+        <div class="hud-r">${level.doors ? `<div class="pill info key-pill" aria-label="Llaves" title="Llaves: abre la puerta que quieras">${icon('door')}<b>0</b></div>` : ''}${this.opts.bet > 1 ? `<div class="pill info bet-pill b${this.opts.bet}" aria-label="Apuesta ×${this.opts.bet}" title="Apuesta: premios y ayudas ×${this.opts.bet}">×${this.opts.bet}</div>` : ''}${this.opts.racha ? `<div class="pill info racha-pill ${this.opts.racha.hot ? 'hot' : ''}" aria-label="Racha">${this.opts.racha.hot ? `<span class="fire">${icon('flame')}</span>` : ''}${icon(this.opts.racha.ico)}<span>${this.opts.racha.n}</span></div>` : ''}<div class="pill info${this.opts.meteor ? ' met-pill' : ''}">${coin()}<span data-coins>${money(save.coins)}</span>${this.opts.meteor ? '<i class="x2">×2</i><small class="met-clock"></small>' : ''}</div>${avatarHTML(save, 'hud-av')}</div>
       </header>
       <div class="board-wrap"><div class="board"></div><div class="streak"></div></div>
       <footer class="tray">
@@ -445,7 +500,7 @@ export class Game {
   intro() {
     // Las bombas y los cometas no se reparten: se presentan aparte al final (presentBombs).
     for (const c of this.cards) if ((c.bomb || c.comet) && c.el && !reduced()) c.el.style.opacity = 0;
-    const live = this.cards.filter((c) => c.el && !c.bomb && !c.comet && !c.nebPos?.hid);
+    const live = this.cards.filter((c) => c.el && !c.bomb && !c.comet && !c.nebPos?.hid && !this.inDoor(c));
     if (reduced() || !live.length) return Promise.resolve();
     if (this.level.scroll === 'mesa') return this.unroll(live);
     // Plegable: las de los lados no se reparten (esperan dobladas).
@@ -537,6 +592,7 @@ export class Game {
           : `<div class="inner">${faceHTML(c, E.rankOf(c, this.st))}${backHTML(c)}</div>` + marks(c);
     if (c.curtain != null) d.classList.add('curtain');
     if (c.alt != null) d.classList.add('dbl-card');
+    if (this.inDoor(c)) d.classList.add('in-door');
     const cut = E.cutOf(c, this.st);
     if (cut) d.style.clipPath = tearClip(cut);
     d.style.zIndex = c.z * 100 + c.id;
@@ -550,6 +606,7 @@ export class Game {
     if (this.level.scroll === 'gravedad') return this.placeGrav(c);
     if (this.level.scroll === 'plegable') return this.placeFold(c);
     if (this.level.scroll) return this.placeNeb(c);
+    if (c.belt && this.level.belt) return this.placeBelt(c);
     const o = this.offsets[c.group];
     c.el.style.left = `${(o.x + c.x) * this.u}px`;
     c.el.style.top = `${(o.y + c.y) * this.u}px`;
@@ -566,15 +623,317 @@ export class Game {
     if (this.level.scroll) return this.layoutNeb(r);
     // La carta doble se ve 10% más grande: se deja un poco de aire para que no se salga del tablero.
     const room = this.cards.some((c) => c.alt != null) ? 0.93 : 1;
-    const { u, bw, bh, offsets } = packGroups(this.level.groups, (r.width - 10) * room, (r.height - 10) * room);
+    const { u, bw, bh, offsets } = this.railItems().length ? this.packRail((r.width - 10) * room, (r.height - 10) * room) : packGroups(this.level.groups, (r.width - 10) * room, (r.height - 10) * room);
     this.u = Math.max(18, u);
     this.offsets = offsets;
     this.boardEl.style.width = `${bw * this.u}px`;
     this.boardEl.style.height = `${bh * this.u}px`;
     this.boardEl.style.setProperty('--cw', `${this.u}px`);
     this.cards.forEach((c) => c.el && this.place(c));
+    this.placeHole();
+    this.placeDoors();
+    this.placeBeltBox();
     this.renderStock();
     this.coach?.update();
+  }
+
+  // ---------- Banda transportadora (8 nov 2026) ----------
+  // La ventana de la banda (BELT_W lugares) entre dos cajas de la máquina. Las cartas que no están en la ventana van
+  // adentro de la máquina (escondidas): las que acaban de salir, del lado de salida; las que vienen, del de entrada.
+  makeBelt() {
+    const B = this.level.belt;
+    if (!B) return;
+    const b = document.createElement('div');
+    b.className = `belt belt-${B.dir}`;
+    b.innerHTML = '<i class="belt-track"></i><i class="belt-box in"></i><i class="belt-box out"></i>';
+    this.boardEl.append(b);
+    this.beltEl = b;
+    this.placeBeltBox();
+  }
+  placeBeltBox() {
+    const B = this.level.belt, o = B && this.offsets?.[B.g];
+    if (!this.beltEl || !o) return;
+    const g = this.level.groups[B.g];
+    Object.assign(this.beltEl.style, { left: `${o.x * this.u}px`, top: `${o.y * this.u}px`, width: `${g.w * this.u}px`, height: `${g.h * this.u}px` });
+  }
+  placeBelt(c) {
+    const B = this.level.belt, o = this.offsets[B.g], el = c.el;
+    const p = E.beltPos(this.level, c, this.st), shown = p < B.W;
+    // Escondida: del lado de salida si acaba de irse (mitad final de la vuelta), si no del de entrada.
+    const at = shown ? p : p >= (B.K + B.W) / 2 ? -1 : B.W;
+    const step = B.dir === 'h' ? 1.08 : 1.55;
+    const wasShown = el.dataset.belt === '1';
+    // De escondida a escondida (por dentro de la máquina) no se anima: brincaría por encima de la ventana.
+    el.style.transition = !shown && !wasShown ? 'none' : '';
+    el.dataset.belt = shown ? '1' : '0';
+    el.classList.toggle('belt-out', !shown);
+    el.style.left = `${(o.x + (B.dir === 'h' ? at * step : 0)) * this.u}px`;
+    el.style.top = `${(o.y + (B.dir === 'v' ? at * step : 0)) * this.u}px`;
+    el.style.rotate = '0deg';
+  }
+
+  // ---------- Riel de la orilla (9 nov 2026) ----------
+  // El agujero negro y las puertas van en una franja a la orilla del tablero (abajo o a un lado, donde las cartas
+  // salgan más grandes): nunca tapan cartas. railItems: lo que va en la franja, en unidades de carta.
+  railItems() {
+    // Puertas (9 nov 2026, pedido del usuario): en fila, todas del alto de la pila más alta (alineadas arriba aunque
+    // traigan distintas cartas). En columna van juntas (del alto de una carta, hc) y la que se abre crece hasta su pila
+    // y recorre a las de abajo; ext = lo que crece una pila al abrirse (para apartar lugar).
+    if (this.level.doors) {
+      const h = Math.max(...this.level.doors.map((x) => x.h));
+      return this.level.doors.map((x, d) => ({ w: W, h, g: x.g, hc: E.doorOpen(this.level, d, this.st) ? x.h : H, ext: x.h - H }));
+    }
+    if (this.level.hole) return [{ w: 1.9, h: 1.45 }];
+    return [];
+  }
+  // Acomoda los grupos del tablero y la franja. Devuelve lo mismo que packGroups (con los grupos de las puertas en su
+  // lugar de la franja) y this.railBox = dónde quedó cada cosa de la franja.
+  packRail(W0, H0) {
+    const items = this.railItems(), G = this.level.groups;
+    const inRail = new Set(items.map((x) => x.g).filter((g) => g != null));
+    const main = G.map((_, i) => i).filter((i) => !inRail.has(i));
+    const pk = packGroups(main.map((i) => G[i]), W0, H0);
+    const gap = 0.7, sp = 0.45;
+    const rowW = items.reduce((a, x) => a + x.w, 0) + sp * (items.length - 1), rowH = Math.max(...items.map((x) => x.h));
+    // En columna se aparta lugar para las pilas que se pueden abrir (tantas como llaves hay), así las cartas no
+    // cambian de tamaño al abrir una.
+    const keys = this.level.cards.filter((c) => c.doorKey).length;
+    const ext = items.map((x) => x.ext || 0).sort((a, b) => b - a).slice(0, keys).reduce((a, b) => a + b, 0);
+    const colW = Math.max(...items.map((x) => x.w)), colH = items.reduce((a, x) => a + (x.ext != null ? H : x.h), 0) + sp * (items.length - 1) + ext;
+    const uB = Math.min(W0 / Math.max(pk.bw, rowW), H0 / (pk.bh + gap + rowH), 120);
+    const uS = Math.min(W0 / (pk.bw + gap + colW), H0 / Math.max(pk.bh, colH), 120);
+    const side = uS > uB;
+    const bw = side ? pk.bw + gap + colW : Math.max(pk.bw, rowW), bh = side ? Math.max(pk.bh, colH) : pk.bh + gap + rowH;
+    const offsets = [];
+    const mx = side ? 0 : (bw - pk.bw) / 2, my = side ? (bh - pk.bh) / 2 : 0;
+    main.forEach((i, k) => (offsets[i] = { x: pk.offsets[k].x + mx, y: pk.offsets[k].y + my }));
+    // La franja, centrada: en renglón debajo del tablero o en columna a su derecha.
+    let at = side ? (bh - colH) / 2 : (bw - rowW) / 2;
+    this.railBox = items.map((x) => {
+      const hh = side ? x.hc ?? x.h : x.h;
+      const box = side ? { x: pk.bw + gap + (colW - x.w) / 2, y: at, w: x.w, h: hh } : { x: at, y: pk.bh + gap + (rowH - x.h) / 2, w: x.w, h: x.h };
+      at += (side ? hh : x.w) + sp;
+      if (x.g != null) offsets[x.g] = { x: box.x, y: box.y };
+      return box;
+    });
+    this.railSide = side;
+    return { u: side ? uS : uB, bw, bh, offsets };
+  }
+
+  // ---------- Puertas (9 nov 2026) ----------
+  // Puertitas del tamaño de una carta en la franja de la orilla, cada una con su premio pintado (moneda, cometa o
+  // cohete); no se ve cuántas cartas trae (9 nov 2026: el grosor de la pila se salía de la puerta). Las cartas llave dan llaves (la ficha de llaves del marcador); con una llave
+  // en la mano las puertas brillan y tocar una la abre: la llave vuela a la cerradura, las hojas se abren, se activa su
+  // premio y las cartas salen volando a su pila. Abrir una puerta no se deshace (ni lo que se jugó antes).
+  makeDoors() {
+    const D = this.level.doors;
+    if (!D) return;
+    this.doorEls = D.map((x, d) => {
+      const el = document.createElement('div');
+      el.className = 'door';
+      el.dataset.door = d;
+      el.style.setProperty('--n', x.n);
+      el.innerHTML = `<i class="door-frame"></i><i class="leaf l"></i><i class="leaf r"></i><span class="door-prize">${x.prize === 'coin' ? coin() : icon(x.prize === 'comet' ? 'comet' : 'rocket')}</span><span class="door-hole"></span>`;
+      el.addEventListener('pointerdown', (e) => (e.stopPropagation(), this.tapDoor(d)));
+      this.boardEl.append(el);
+      return el;
+    });
+    this.placeDoors();
+    this.doorUpdate(true);
+  }
+  placeDoors() {
+    if (!this.doorEls || !this.offsets) return;
+    this.doorEls.forEach((el, d) => {
+      const o = this.offsets[this.level.doors[d].g];
+      if (o) Object.assign(el.style, { left: `${o.x * this.u}px`, top: `${o.y * this.u}px` });
+    });
+  }
+  inDoor(c) {
+    return c.door != null && !E.doorOpen(this.level, c.door, this.st);
+  }
+  tapDoor(d) {
+    if (this.done || this.busy || this.modalOpen) return;
+    const el = this.doorEls[d];
+    if (E.doorOpen(this.level, d, this.st)) return;
+    if (!E.canOpen(this.level, this.st, d)) {
+      buzz();
+      this.tell('door', 'Juega una carta llave para abrir una puerta');
+      return this.shake(el);
+    }
+    const before = this.st;
+    const { s, ev } = E.openDoor(this.level, before, d);
+    this.history.push({ t: 'door', before, ev, best: this.best, bonus: this.bonus });
+    this.st = s;
+    this.sync();
+    this.best = Math.max(this.best, s.streak);
+    buzz(18);
+    // La llave vuela de su ficha a la cerradura; luego se abre.
+    const pill = this.el.querySelector('.key-pill');
+    const go = () => {
+      const x = this.level.doors[d];
+      if (x.prize === 'coin') {
+        save.coins += x.coins;
+        persist();
+        const [cx, cy] = center(el.getBoundingClientRect());
+        flyToWallet('coins', { x: cx, y: cy }, x.coins, save.coins - x.coins);
+        this.showStreak(`+${x.coins} monedas`);
+      } else if (x.prize === 'turbo') {
+        this.showCombo();
+        this.showStreak('¡Turbo ×2!');
+      } else {
+        this.renderStock();
+        const slots = this.rewardSlots(ev.wishes);
+        ev.wishes.forEach((w, i) => (w.kind === 'bank' ? (save.wild++, persist(), squash(this.el.querySelector('.wild-card'))) : w.kind === 'broom' ? this.sweep(w.ids) : this.flyReward(w.kind, slots[i])));
+        this.showCombo();
+        this.showStreak(`¡Cometa +${s.streak - before.streak}!`);
+      }
+      this.renderStock();
+      this.refresh();
+      this.updateCounts();
+      this.save();
+      this.checkEnd();
+    };
+    if (reduced() || !pill) return go();
+    const k = document.createElement('div');
+    k.className = 'key-fly';
+    k.innerHTML = icon('door');
+    const [ax, ay] = center(pill.getBoundingClientRect()), [bx, by] = center(el.getBoundingClientRect());
+    k.style.cssText = `left:${ax}px;top:${ay}px`;
+    this.el.append(k);
+    this.paintKeys();
+    this.busy = true;
+    k.animate([{ translate: '-50% -50%', scale: 0.6 }, { translate: `calc(-50% + ${(bx - ax) / 2}px) calc(-50% + ${(by - ay) / 2 - 40}px)`, scale: 1.4, offset: 0.5 }, { translate: `calc(-50% + ${bx - ax}px) calc(-50% + ${by - ay}px)`, scale: 0.7 }], { duration: 520, easing: 'cubic-bezier(0.5, 0, 0.3, 1)' })
+      .finished.catch(() => {})
+      .then(() => {
+        k.remove();
+        this.busy = false;
+        go();
+      });
+  }
+  // Abre o cierra (al deshacer) cada puerta según el estado. Al abrirse, sus cartas salen de la puerta a su pila una
+  // tras otra; al cerrarse, regresan adentro. first: al armar el tablero (sin animar).
+  doorUpdate(first = false) {
+    if (!this.doorEls) return;
+    const keys = this.st.keys || 0;
+    // En columna, abrir (o cerrar) una puerta recorre a las de abajo: se vuelve a acomodar y lo que se movió se desliza.
+    const moved = !first && this.railSide && this.doorEls.some((el, d) => E.doorOpen(this.level, d, this.st) !== el.classList.contains('open'));
+    if (moved) {
+      const els = [...this.doorEls, ...this.cards.filter((c) => c.door != null && c.el && !c.removed).map((c) => c.el)];
+      const before = els.map((e) => [parseFloat(e.style.left) || 0, parseFloat(e.style.top) || 0]);
+      this.layout();
+      if (!reduced()) els.forEach((e, i) => {
+        const dx = before[i][0] - (parseFloat(e.style.left) || 0), dy = before[i][1] - (parseFloat(e.style.top) || 0);
+        if (Math.abs(dx) + Math.abs(dy) > 1 && !e.classList.contains('in-door')) e.animate([{ translate: `${dx}px ${dy}px` }, { translate: '0 0' }], { duration: 420, easing: 'cubic-bezier(0.34, 1.2, 0.64, 1)' });
+      });
+    }
+    this.doorEls.forEach((el, d) => {
+      const open = E.doorOpen(this.level, d, this.st), was = el.classList.contains('open');
+      el.classList.toggle('open', open);
+      el.classList.toggle('can', !open && keys > 0);
+      if (open === was && !first) return;
+      const cards = this.cards.filter((c) => c.door === d && c.el && !c.removed);
+      const [dx, dy] = [parseFloat(el.style.left) || 0, parseFloat(el.style.top) || 0];
+      cards.forEach((c, j) => {
+        c.el.classList.toggle('in-door', !open);
+        if (first || reduced() || this.dealing) return;
+        const tx = dx - parseFloat(c.el.style.left), ty = dy - parseFloat(c.el.style.top);
+        const k = [{ translate: `${tx}px ${ty}px`, scale: 0.3, opacity: 0 }, { translate: `${tx}px ${ty - this.u * 0.6}px`, scale: 1.15, opacity: 1, offset: 0.45 }, { translate: '0 0', scale: 1, opacity: 1 }];
+        c.el.animate(open ? k : k.slice().reverse(), { duration: 520, delay: open ? 260 + j * 110 : 0, easing: 'cubic-bezier(0.34, 1.3, 0.64, 1)', fill: 'backwards' });
+      });
+      if (!first && open && !reduced()) {
+        const [x, y] = center(el.getBoundingClientRect());
+        sparkle({ x, y }, 18);
+      }
+    });
+    this.paintKeys();
+  }
+  // Ficha de llaves del marcador: cuántas tienes (se apaga sin llaves).
+  paintKeys() {
+    const p = this.el.querySelector('.key-pill');
+    if (!p) return;
+    const n = this.st.keys || 0, b = p.querySelector('b');
+    if (b.textContent !== String(n)) {
+      b.textContent = n;
+      if (!reduced()) p.animate([{ scale: 1 }, { scale: 1.3 }, { scale: 1 }], { duration: 380, easing: 'cubic-bezier(0.34, 1.45, 0.64, 1)' });
+    }
+    p.classList.toggle('on', n > 0);
+  }
+  // Carta llave jugada: una llave sale del descarte y vuela a su ficha.
+  gainKey() {
+    const p = this.el.querySelector('.key-pill');
+    if (!p || reduced()) return this.paintKeys();
+    const k = document.createElement('div');
+    k.className = 'key-fly';
+    k.innerHTML = icon('door');
+    const [ax, ay] = center(this.wasteEl.getBoundingClientRect()), [bx, by] = center(p.getBoundingClientRect());
+    k.style.cssText = `left:${ax}px;top:${ay}px`;
+    this.el.append(k);
+    k.animate([{ translate: '-50% -50%', scale: 0.4 }, { translate: `calc(-50% + ${(bx - ax) / 2}px) calc(-50% + ${(by - ay) / 2 - 50}px)`, scale: 1.6, offset: 0.45 }, { translate: `calc(-50% + ${bx - ax}px) calc(-50% + ${by - ay}px)`, scale: 0.6 }], { duration: 700, delay: FLY_MS, easing: 'cubic-bezier(0.5, 0, 0.3, 1)', fill: 'backwards' })
+      .finished.catch(() => {})
+      .then(() => {
+        k.remove();
+        this.paintKeys();
+        sparkle({ x: bx, y: by }, 10);
+        // Las puertas brillan: ya puedes escoger una.
+        if (!reduced()) this.doorEls?.forEach((d) => d.classList.contains('can') && d.animate([{ scale: 1 }, { scale: 1.12 }, { scale: 1 }], { duration: 420, easing: 'ease-out' }));
+      });
+  }
+
+  // ---------- Agujero negro (8 nov 2026; 9 nov: en la orilla y como la foto que mandó el usuario) ----------
+  // Un ojo de luz: el disco de fuego rosa y naranja girando de lado, el anillo de luz alrededor y adentro la sombra azul
+  // oscuro con su orilla blanca. Encima, cuántas jugadas o robos faltan para que se trague sus cartas (no se marca
+  // cuáles son: se ven volar al remolino) y las escupa con los números revueltos. Va en la franja de la orilla.
+  makeHole() {
+    if (!this.level.hole) return;
+    const h = document.createElement('div');
+    h.className = 'hole';
+    // 9 nov 2026: dibujo con contorno de tinta como el resto del juego (el de capas de CSS se veía feo): brillo, disco de
+    // atrás, halo de fuego, la sombra azul con su orilla blanca y la mitad de enfrente del disco; sus rayas giran.
+    const disk = (cls) => `<g class="${cls}"><ellipse cx="60" cy="42" rx="55" ry="12" fill="url(#hdk)" stroke="#2a1f5c" stroke-width="3"/><ellipse class="hd-streak" cx="60" cy="42" rx="44" ry="8" fill="none" stroke="#fff6e0" stroke-width="2.2" stroke-dasharray="10 14" stroke-linecap="round"/><ellipse class="hd-streak b" cx="60" cy="42" rx="32" ry="5.5" fill="none" stroke="#ffe08a" stroke-width="1.8" stroke-dasharray="6 10" stroke-linecap="round"/></g>`;
+    h.innerHTML = `<svg viewBox="0 0 120 84" aria-hidden="true"><defs>
+      <radialGradient id="hgl"><stop offset="0" stop-color="#ff8fb0" stop-opacity=".9"/><stop offset=".6" stop-color="#ff7a59" stop-opacity=".35"/><stop offset="1" stop-color="#ff7a59" stop-opacity="0"/></radialGradient>
+      <linearGradient id="hdk" x1="0" x2="1"><stop offset="0" stop-color="#ff5f7e"/><stop offset=".3" stop-color="#ffb06a"/><stop offset=".5" stop-color="#fff1d6"/><stop offset=".7" stop-color="#ffb06a"/><stop offset="1" stop-color="#ff5f7e"/></linearGradient>
+      <radialGradient id="hcr" cx=".45" cy=".4"><stop offset="0" stop-color="#050b26"/><stop offset=".6" stop-color="#0e2f78"/><stop offset=".92" stop-color="#3f8fe6"/><stop offset="1" stop-color="#bfe6ff"/></radialGradient>
+      <clipPath id="hfr"><rect x="0" y="42" width="120" height="42"/></clipPath></defs>
+      <ellipse class="hd-glow" cx="60" cy="42" rx="60" ry="40" fill="url(#hgl)"/>
+      ${disk('hd-back')}
+      <circle cx="60" cy="40" r="27" fill="none" stroke="#2a1f5c" stroke-width="10"/><circle class="hd-halo" cx="60" cy="40" r="27" fill="none" stroke="#ff9a6a" stroke-width="5"/>
+      <circle cx="60" cy="40" r="21" fill="url(#hcr)" stroke="#2a1f5c" stroke-width="3"/><circle cx="60" cy="40" r="18.5" fill="none" stroke="#ffffff" stroke-width="2" opacity=".9"/>
+      <g clip-path="url(#hfr)">${disk('hd-front')}</g></svg><b class="outl"></b>`;
+    this.boardEl.append(h);
+    this.holeEl = h;
+    this.holeTurn = E.holeTurn(this.st);
+    this.placeHole();
+  }
+  placeHole() {
+    const b = this.railBox?.[0];
+    if (!this.holeEl || !b) return;
+    Object.assign(this.holeEl.style, { left: `${b.x * this.u}px`, top: `${b.y * this.u}px`, width: `${b.w * this.u}px`, height: `${b.h * this.u}px` });
+  }
+  // Se las traga: cada carta que se tragó en esta vuelta (cambia de número) vuela al remolino girando y regresa.
+  // Al deshacer (vuelta para atrás) vuelan las de la vuelta que se deshizo.
+  holeSpin(turn) {
+    const t = Math.max(turn, this.holeTurn);
+    const h = this.holeEl;
+    if (!h) return;
+    buzz(14);
+    if (reduced()) return;
+    h.animate([{ scale: 1 }, { scale: 1.3, rotate: '-12deg' }, { scale: 1, rotate: '0deg' }], { duration: 760, easing: 'ease-in-out' });
+    const hr = h.getBoundingClientRect(), [hx, hy] = center(hr);
+    let k = 0;
+    for (const c of this.cards) {
+      if (!E.holeTook(c, t) || c.removed || !c.el) continue;
+      const [x, y] = center(c.el.getBoundingClientRect());
+      c.el.animate(
+        [
+          { translate: '0 0', scale: 1, rotate: `${c.rot}deg` },
+          { translate: `${(hx - x) * 0.9}px ${(hy - y) * 0.9}px`, scale: 0.15, rotate: `${c.rot + 260}deg`, offset: 0.45 },
+          { translate: `${(hx - x) * 0.9}px ${(hy - y) * 0.9}px`, scale: 0.15, rotate: `${c.rot + 300}deg`, offset: 0.55 },
+          { translate: '0 0', scale: 1, rotate: `${c.rot + 360}deg` },
+        ],
+        { duration: 760 + (k++ % 5) * 40, easing: 'cubic-bezier(0.5, 0, 0.3, 1)' },
+      );
+    }
   }
 
   // ---------- Mesa enrollada ----------
@@ -1022,6 +1381,23 @@ export class Game {
     else if (level.scroll === 'plegable') this.foldUpdate();
     else if (level.scroll) this.nebUpdate();
     this.updateStuck(true);
+    this.doorUpdate();
+    // Banda: cada acción la mueve un lugar (y su cinta avanza).
+    if (this.beltEl) {
+      for (const c of this.cards) if (c.belt && c.el && !c.removed) this.placeBelt(c);
+      const t = this.st.actions;
+      if (t !== this.beltT && this.beltT != null && !reduced()) this.beltEl.querySelector('.belt-track').animate([{ backgroundPosition: '0 0' }, { backgroundPosition: this.level.belt.dir === 'h' ? '-24px 0' : '0 -24px' }], { duration: 350, easing: 'ease-out' });
+      this.beltT = t;
+      this.beltEl.classList.toggle('frozen', this.st.freeze > 0);
+    }
+    if (this.holeEl) {
+      const turn = E.holeTurn(st);
+      if (turn !== this.holeTurn && this.holeTurn != null) this.holeSpin(turn);
+      this.holeTurn = turn;
+      this.holeEl.querySelector('b').textContent = E.holeLeft(st);
+      this.holeEl.classList.toggle('hot', E.holeLeft(st) === 1);
+      this.holeEl.classList.toggle('frozen', st.freeze > 0);
+    }
     for (const c of this.cards) {
       if (c.removed || !c.el) continue;
       const el = c.el;
@@ -1054,8 +1430,26 @@ export class Game {
           el.querySelector('.inner')?.animate([{ scale: '1 1' }, { scale: '1.1 0.86', offset: 0.3 }, { scale: '0.93 1.08', offset: 0.6 }, { scale: '1.03 0.98', offset: 0.8 }, { scale: '1 1' }], { duration: 520, easing: 'ease-out' });
         }
       }
+      // Agujero negro: el número cambia a la mitad del viaje al remolino (o de una vez si no hay animación).
+      if (c.ring) {
+        const r = E.rankOf(c, st), was = el.dataset.rank;
+        if (was !== String(r)) {
+          el.dataset.rank = r;
+          const set = () => {
+            for (const sel of ['.front .big', '.front .rk']) {
+              const t = el.querySelector(sel);
+              if (!t) continue;
+              t.textContent = RANKS[r];
+              t.classList.toggle('uline', RANKS[r] === '6' || RANKS[r] === '9');
+              if (sel === '.front .big') t.classList.toggle('ten', RANKS[r] === '10');
+            }
+          };
+          if (was == null || reduced() || !this.holeEl) set();
+          else setTimeout(set, 340);
+        }
+      }
       // Reloj de arena: las cartas con cuenta se ven congeladas mientras dure.
-      if (c.bomb || c.comet || c.live || c.ghost || c.cham) el.classList.toggle('frozen', st.freeze > 0);
+      if (c.bomb || c.comet || c.live || c.ghost || c.cham || c.ring) el.classList.toggle('frozen', st.freeze > 0);
       if (c.bomb) {
         const left = E.bombLeft(c, st);
         el.querySelector('.bomb-face b').textContent = left == null ? '' : left;
@@ -1419,6 +1813,7 @@ export class Game {
     if (ev.wished?.length) this.flyComets(ev, before.streak + (boosted ? 2 : 1), slots.slice(2));
     this.caught = (this.caught || 0) + (ev.wished?.length || 0);
     if (ev.turbo) this.launchTurbo(ev);
+    if (ev.key) this.gainKey();
     if (ev.shipBack) this.shipGives(ev.shipBack);
     if (this.cards[ev.id].coin && !ev.split) this.coinCard(this.cards[ev.id]);
     this.burn(ev.boom, burnRects);
@@ -1975,6 +2370,8 @@ export class Game {
   undo() {
     if (this.coach) return;
     if (!this.history.length) return toast('Nada que deshacer');
+    // Abrir una puerta no se deshace (9 nov 2026, pedido del usuario): ni eso ni lo de antes.
+    if (this.history[this.history.length - 1].t === 'door') return toast('Abrir una puerta no se puede deshacer');
     const inf = this.opts.dev?.infinite;
     if (save.undo <= 0 && !inf) return save.coins < this.priceOf('undo') ? this.noWayOut('undo') : this.offerBuy('undo');
     if (!inf) save.undo--;
@@ -2022,6 +2419,10 @@ export class Game {
     } else if (h.t === 'wild') {
       this.returnWild(wasteRect);
       if (!inf) save.wild++;
+    } else if (h.t === 'door') {
+      // Puerta: se cierra (refresh regresa sus cartas adentro), vuelve la llave y, si era de monedas, las monedas.
+      const x = this.level.doors[ev.d];
+      if (x.prize === 'coin') (save.coins = Math.max(0, save.coins - x.coins)), updateCoins();
     } else if (h.t === 'help') {
       // Reloj de arena o llave maestra: vuelve a tu mazo de ayudas.
       if (!inf) save.helps[h.k] = (save.helps[h.k] || 0) + 1;
@@ -2054,7 +2455,7 @@ export class Game {
   helpKeys() {
     const { level, st } = this, left = (c) => !st.rem[c.id] && c.el;
     const useful = {
-      reloj: this.cards.some((c) => left(c) && (c.bomb || c.comet || c.live || c.ghost || c.cham)),
+      reloj: this.cards.some((c) => left(c) && (c.bomb || c.comet || c.live || c.ghost || c.cham || c.ring || c.belt)),
       llave: this.cards.some((c) => left(c) && ((c.lock != null && !E.lockOpen(level, c, st)) || (c.curtain != null && !E.curtainOpen(level, c, st)))),
       ver: this.cards.some((c) => left(c) && !this.shownUp(c)),
     };
@@ -2189,7 +2590,7 @@ export class Game {
   helpUseless(k) {
     if (k === 'wild') return this.st.top?.wild ? 'Ya tienes un comodín en juego' : null;
     const { level, st } = this, left = (c) => !st.rem[c.id] && c.el;
-    if (k === 'reloj' && !this.cards.some((c) => left(c) && (c.bomb || c.comet || c.live || c.ghost || c.cham))) return 'Aquí no hay cuentas que congelar';
+    if (k === 'reloj' && !this.cards.some((c) => left(c) && (c.bomb || c.comet || c.live || c.ghost || c.cham || c.ring || c.belt))) return 'Aquí no hay cuentas que congelar';
     if (k === 'llave' && !this.cards.some((c) => left(c) && ((c.lock != null && !E.lockOpen(level, c, st)) || (c.curtain != null && !E.curtainOpen(level, c, st))))) return 'No hay candados ni cortinas cerrados';
     if (HELPS[k].secs && !this.cards.some((c) => left(c) && !this.shownUp(c))) return 'Ya ves todas las cartas';
     return null;
@@ -2300,12 +2701,13 @@ export class Game {
   // Precio de los boosters según el nivel que se juega (mismos escalones que los boletos).
   // En el evento y las festividades todo cuesta 15% más (también +5); con la lluvia de meteoritos, comodín y
   // deshacer cuestan 30% menos.
+  // Apuesta (8 nov 2026): con ×N las ayudas de este nivel cuestan ×N (no se dice en los textos de la apuesta).
   priceOf(kind) {
-    const r = this.helpRate(kind);
-    return r ? round5(this.basePrice(kind) * (1 + r)) : this.basePrice(kind);
+    const r = this.helpRate(kind), m = this.opts.bet || 1;
+    return round5((r ? round5(this.basePrice(kind) * (1 + r)) : this.basePrice(kind)) * m);
   }
   basePrice(kind) {
-    return price(kind, this.level.world * LEVELS_PER_WORLD);
+    return price(kind, this.level.world * LEVELS_PER_WORLD, Math.max(this.level.world, save.open || 0) * LEVELS_PER_WORLD);
   }
   helpRate(kind) {
     return this.opts.event ? EV_MARKUP : this.opts.meteor && kind !== 'extra' ? -MET_OFF.help : 0;
@@ -2434,7 +2836,7 @@ export class Game {
   }
 
   checkEnd() {
-    if (E.won(this.st)) return this.win();
+    if (E.won(this.st, this.level)) return this.win();
   }
 
   // Sin mazo y sin jugadas: la carta +5 y "Finalizar nivel" saltan para que se vean (sin ventana).
@@ -2465,7 +2867,7 @@ export class Game {
   noWayOut(kind = 'stuck') {
     if (this.done || this.modalOpen) return;
     this.modalOpen = true;
-    const left = this.cards.filter((c) => !c.removed).length, have = `(tienes ${save.coins})`;
+    const left = this.cards.filter((c) => !c.removed && !this.inDoor(c)).length, have = `(tienes ${save.coins})`;
     const lead = {
       stuck: `Te ${left === 1 ? 'falta 1 carta' : `faltan ${left} cartas`}, pero ya no tienes <b>comodines</b> y para <b>+5 cartas</b> necesitas ${coin()} ${Math.min(this.extraCost(), this.priceOf('wild'))} ${have}.`,
       wild: `Ya no tienes <b>comodines</b> y uno cuesta ${coin()} ${this.priceOf('wild')} ${have}.`,
@@ -2488,7 +2890,8 @@ export class Game {
   }
 
   isStuck() {
-    return !this.done && !this.stock.length && !this.hasMove();
+    // Con una llave en la mano todavía puedes abrir una puerta.
+    return !this.done && !this.stock.length && !this.hasMove() && !this.level.doors?.some((_, d) => E.canOpen(this.level, this.st, d));
   }
 
   // Comprar +5 cartas tocando la carta +5 (solo si estás atascado y te alcanza).
@@ -2510,7 +2913,7 @@ export class Game {
   endLevel() {
     if (this.done || this.modalOpen) return;
     this.modalOpen = true;
-    const left = this.cards.filter((c) => !c.removed).length;
+    const left = this.cards.filter((c) => !c.removed && !this.inDoor(c)).length;
     const cost = this.extraCost(), short = save.coins < cost;
     const fan = [0, 1, 2, 3, 4].map((k) => `<div class="card mini-back" style="left:${6 + k * 9}px;rotate:${-14 + k * 7}deg"></div>`).join('');
     const m = openModal({
@@ -2518,7 +2921,7 @@ export class Game {
       color: 'pink',
       // El cuadro grande es el botón de comprar +5: dice el precio y se toca para gastar (gris si no alcanza).
       body: `<button class="offer buy press"${short ? ' disabled' : ''}><div class="fan">${fan}</div><div><b>Comprar +5 cartas</b><span>Quedan ${left} carta${left === 1 ? '' : 's'} en el tablero. ${this.opts.event ? 'Te pueden salvar el nivel.' : 'Con +5 siempre te llevas al menos 1 estrella.'}</span>
-          <em class="cost${short ? ' short' : ''}">${coin()} ${cost || 'gratis'}${short ? ' · te faltan monedas' : ''}</em></div></button>${this.rachaWarn(true)}`,
+          <em class="cost${short ? ' short' : ''}">${coin()} ${cost || 'gratis'}${short ? ' · te faltan monedas' : ''}</em></div></button>${this.opts.event || this.opts.free ? '' : betLoseHTML(this.opts.bet, this.opts.betPaid, 'si te rindes o reintentas')}${this.rachaWarn(true)}`,
       onClose: () => (this.modalOpen = false),
       buttons: [
         !this.opts.event && { label: this.opts.free ? 'Reintentar' : 'Reintentar · nuevo boleto', cls: 'ghost wide', onClick: () => this.opts.onRetry() },
@@ -2585,10 +2988,12 @@ export class Game {
     const title = ev ? res.title : this.level.secret ? '¡Nivel secreto!' : this.level.boss ? '¡Jefe derrotado!' : '¡Nivel superado!';
     // Los premios son burbujas (icono + cantidad, sin texto) que salen de las estrellas y suben despacio; se pueden
     // tronar y cuentan para el premio de burbujas (countPop en ui.js).
+    // 9 nov 2026: las burbujas traen la cantidad ya multiplicada y SIN etiqueta ×N ni ×2 de la lluvia (parecía que se
+    // ganaba eso ×N otra vez); el ×N de la apuesta va solo en el sello.
+    const bet = res.bet > 1 ? res.bet : 0;
     const bub = (ico, n) => `${ico}<b>+${n}</b>`;
     const loot = [
-      // Lluvia de meteoritos: la burbuja de las monedas lleva su ×2.
-      coins && (res.met ? `${bub(coin(), coins)}<i class="x2">×2</i>` : bub(coin(), coins)),
+      coins && bub(coin(), coins),
       tickets && bub(icon('ticket'), tickets),
       gold && bub(icon('gold'), 1),
       cgold && bub(icon('constTicket'), 1),
@@ -2611,7 +3016,7 @@ export class Game {
         color: 'gold',
         closable: false,
         cls: 'win',
-        body: `<div class="win-top"><div class="rays"></div>${ev ? `<div class="ev-win${ev.boss ? ' boss' : ''}">${icon(ev.ico, 0, 0, 'big')}</div>` : `<div class="big-stars">${starsHTML(stars)}</div>`}</div>${note}`,
+        body: `<div class="win-top"><div class="rays"></div>${ev ? `<div class="ev-win${ev.boss ? ' boss' : ''}">${icon(ev.ico, 0, 0, 'big')}</div>` : `<div class="big-stars">${starsHTML(stars)}</div>`}${bet ? `<span class="win-bet b${bet}">×${bet}</span>` : ''}</div>${bet ? `<p class="note bet-note">¡Apostaste ×${bet}: todo lo que ganaste va multiplicado!</p>` : ''}${note}`,
         // Sin las 3 estrellas puede repetirlo ahí mismo (gratis: ya lo ganó). Se queda su mejor resultado.
         // Repetir es solo el ícono; Continuar ocupa el resto del renglón (o todo, si no hay Repetir).
         buttons: [
@@ -2649,7 +3054,7 @@ export class Game {
         title: '¿Abandonar el nivel?',
         color: 'pink',
         onClose: free,
-        body: `<p class="lead">${this.opts.event ? (this.opts.event.tk ? 'Se gasta tu boleto del evento: el siguiente llega en 48 horas.' : 'Pierdes este intento; puedes volver a jugarlo.') : this.opts.free ? 'Se pierde este intento.' : 'Pierdes los boletos y lo que gastaste en este intento.'}</p>${this.rachaWarn()}`,
+        body: `<p class="lead">${this.opts.event ? (this.opts.event.tk ? 'Se gasta tu boleto del evento: el siguiente llega en 48 horas.' : 'Pierdes este intento; puedes volver a jugarlo.') : this.opts.free ? 'Se pierde este intento.' : 'Pierdes los boletos y lo que gastaste en este intento.'}</p>${this.opts.event || this.opts.free ? '' : betLoseHTML(this.opts.bet, this.opts.betPaid)}${this.rachaWarn()}`,
         buttons: [{ label: 'Seguir jugando', cls: 'ghost' }, { label: 'Abandonar', cls: 'pink', onClick: () => (this.trackEnd(false), this.opts.onAbandon(true)) }],
       });
     return [

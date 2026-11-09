@@ -1,5 +1,6 @@
 // Dibujos del juego (SVG): estilo "toon" con contorno de tinta y sombreado por bloques,
 // el mismo trazo de los planetas. Reemplaza a lowpoly.js con la misma interfaz.
+import { THEMES, themeKey } from './themes.js';
 export const INK = '#2a1f5c';
 const K = INK;
 let uid = 0;
@@ -356,6 +357,8 @@ const ICONS = {
 export const icon = (name, _light, _dark, cls = '') => svg((ICONS[name] || ICONS.star)(), `i-${name} ${cls}`);
 export const star = (on = true, cls = '') => svg(on ? ICONS.star() : ICONS.starOff(), `star ${cls}`);
 export const coin = (cls = '') => svg(ICONS.coin(), `coin ${cls}`);
+// Un icono como imagen de fondo (para dibujos de fondo en CSS): op = opacidad, rot = giro.
+export const iconURL = (name, op = 0.25, rot = 0) => svgUrl(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><g opacity="${op}"${rot ? ` transform="rotate(${rot} 16 16)"` : ''}>${(ICONS[name] || ICONS.star)()}</g></svg>`);
 
 function lockInner(c, d) {
   return `<path d="M10.5 15v-4a5.5 5.5 0 0 1 11 0v4" fill="none" stroke="${K}" stroke-width="6.4"/><path d="M10.5 15v-4a5.5 5.5 0 0 1 11 0v4" fill="none" stroke="${c}" stroke-width="2.6"/>`
@@ -372,6 +375,18 @@ export const curtainIcon = () => svg(`${tshape('M2 4h28v4H2z', '#c9893a', '#a86a
 // ---------- Reversos ----------
 // emb: planetita del centro · star: estrella grande (premios de racha: carta regalo violeta y comodín dorado).
 export const BACKS = {
+  // 8 nov 2026: reversos nuevos de la tienda.
+  hongos: { a: '#e6f5d0', b: '#b8dc8a', dots: '#7fae5a',
+    art: () => tshape('M42 76h16l3 26H39z', '#fff6e6', '#e6d6b8', '', 3) + tshape('M22 78Q22 46 50 44Q78 46 78 78z', '#e8434f', '#c22c49', '<circle cx="38" cy="60" r="5" fill="#fff"/><circle cx="56" cy="54" r="4" fill="#fff"/><circle cx="64" cy="68" r="3.4" fill="#fff"/><circle cx="46" cy="72" r="2.6" fill="#fff"/>', 3.5) },
+  olas: { a: '#4aa8de', b: '#2f86c0', flat: true, nodots: true,
+    bg: () => Array.from({ length: 8 }, (_, i) => `<path d="M0 ${20 + i * 16}q10.5-8 21 0t21 0 21 0 21 0 21 0" fill="none" stroke="${i % 2 ? '#9fd8ff' : '#e6f6ff'}" stroke-width="4" stroke-linecap="round" opacity=".7"/>`).join(''),
+    art: () => tshape(CIRCLE(50, 70, 16), '#ffc83d', '#ec9a17', '<circle cx="45" cy="65" r="4" fill="#fff3b8"/>', 3.5) },
+  rayo: { a: '#3d2f8f', b: '#2e2270', dots: '#ffe58a', art: () => tshape('M60 34 34 76h17l-9 32 32-46H57l11-28z', '#ffe066', '#ffb31a', '', 3.5) },
+  reloj: { a: '#2fb6a0', b: '#1f9a7c', dots: '#e6fffb',
+    art: () => tshape(CIRCLE(50, 70, 27), '#fff6e6', '#e6d6b8', `${Array.from({ length: 12 }, (_, i) => { const a = (i * Math.PI) / 6, r1 = i % 3 ? 21 : 18; return `<path d="M${(50 + Math.cos(a) * r1).toFixed(1)} ${(70 + Math.sin(a) * r1).toFixed(1)}L${(50 + Math.cos(a) * 24).toFixed(1)} ${(70 + Math.sin(a) * 24).toFixed(1)}" stroke="${K}" stroke-width="${i % 3 ? 1.8 : 3}" stroke-linecap="round"/>`; }).join('')}<path d="M50 70V54M50 70l11 6" stroke="${K}" stroke-width="3.4" stroke-linecap="round"/><circle cx="50" cy="70" r="3" fill="#ff5f7e" stroke="${K}" stroke-width="1.6"/>`, 3.5) },
+  anillo: { a: '#1a1433', b: '#120e26', dots: '#ffe58a',
+    art: () => `<circle cx="50" cy="78" r="22" fill="none" stroke="${K}" stroke-width="15"/><circle cx="50" cy="78" r="22" fill="none" stroke="#ffc83d" stroke-width="9"/><circle cx="50" cy="78" r="22" fill="none" stroke="#fff3b8" stroke-width="2" stroke-dasharray="10 40" stroke-linecap="round"/>`
+      + tshape('M50 40l12 14-12 14-12-14z', '#ff5f7e', '#d63d5f', '<path d="M45 50l5-5" stroke="#fff" stroke-width="2" stroke-linecap="round"/>', 3.5) },
   clasico: { a: '#2b2b7a', b: '#22226a', emb: ['#ffc83d', '#ec9a17', '#ff9c5b', '#8fe8ff'] },
   coral: { a: '#ff6f61', b: '#e0524a', moon: true, dots: '#fff1d6' },
   menta: { a: '#2fbf9a', b: '#1f9a7c', emb: ['#ffd27a', '#e8a94a', '#ff7a9a', '#fff6e6'] },
@@ -609,6 +624,8 @@ export const BACKS = {
         + `<path d="${spark(76, 36, 10)}" fill="#fff6c9" stroke="${K}" stroke-width="3" stroke-linejoin="round"/><path d="${spark(25, 104, 8)}" fill="#fff6c9" stroke="${K}" stroke-width="3" stroke-linejoin="round"/>`;
     } },
 };
+// Reversos de las temáticas (themes.js): su color, puntitos claros y su dibujo grande al centro.
+for (const t of THEMES) BACKS[themeKey(t)] ??= { a: t.main, b: t.dark, dots: t.light, art: () => `<g transform="translate(18 38) scale(2)">${(ICONS[t.ico] || ICONS.star)()}</g>` };
 const backCache = {};
 // La baraja que usa el jugador (la cambia la tienda): cardBackURL() sin nombre la dibuja.
 let deck = 'clasico';
@@ -655,6 +672,53 @@ const kid = (shirt, shirtD) => shoulders(shirt, shirtD)
   + P(CIRCLE(50, 53, 27), '#ffd3a8', '#f2b07c');
 const kidFace = () => eyes(56, 11, 4.4) + smile(65, 6) + blush(63, 19);
 export const AVATARS = {
+  // 8 nov 2026: personajes nuevos de la tienda, propios (inspirados en ideas, sin copiar a nadie).
+  // Voltio: ratoncito eléctrico de orejas redondas con un rayo azul en la frente y chispitas en los cachetes.
+  voltio: () => shoulders('#ffd23d', '#ecab17')
+    + mirror(P(CIRCLE(24, 30, 13), '#ffd23d', '#ecab17', '<circle cx="24" cy="30" r="7" fill="#ffb02e"/>'))
+    + P(ELL(50, 58, 30, 27), '#ffe066', '#f2bf2a')
+    + P('M53 31 43 46h8l-4 11 12-16h-8l4-10z', '#4aa8de', '#2f86c0', '', 2.6)
+    + eyes(59, 12, 4.6) + `<ellipse cx="50" cy="67" rx="3" ry="2.2" fill="${K}"/>` + smile(71, 4)
+    + mirror(`<path d="M30 66 16 64M30 70 17 72" stroke="${K}" stroke-width="2" stroke-linecap="round"/><path d="M12 54l5-2-2 4 5-2" fill="none" stroke="#4aa8de" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>`),
+  // Tic: viajero del tiempo con sus goggles de reloj en la frente.
+  tic: () => kid('#2fb6a0', '#1f9a7c')
+    + P('M40 82h20l-4 8h-12z', '#ff9c5b', '#e2753a', '', 2.6)
+    + P('M22 50Q18 22 50 20Q82 22 78 50Q72 38 60 36Q54 42 44 37Q34 41 22 50z', '#c98a3a', '#a86a22')
+    + P('M44 23Q50 10 62 12Q56 16 56 24z', '#c98a3a', '#a86a22')
+    + `<path d="M23 38Q50 30 77 38" stroke="${K}" stroke-width="7" fill="none"/><path d="M23 38Q50 30 77 38" stroke="#6a4028" stroke-width="3.6" fill="none"/>`
+    + mirror(P(CIRCLE(38, 35, 9), '#d9a441', '#b8832a', `<circle cx="38" cy="35" r="5.4" fill="#bfe8ff" stroke="${K}" stroke-width="2"/><path d="M38 35v-3.6M38 35h3" stroke="${K}" stroke-width="1.6" stroke-linecap="round"/>`))
+    + kidFace(),
+  // Bruno: guardián del anillo. Capucha verde, pelo de rizos y su anillo dorado colgando del cuello.
+  guardian: () => P('M10 104Q8 40 50 18Q92 40 90 104z', '#3f8a4a', '#2f6a38')
+    + shoulders('#5aa85f', '#3f8a4a')
+    + mirror(P(CIRCLE(24, 56, 5.6), '#ffc596', '#eda06c'))
+    + P(CIRCLE(50, 55, 25), '#ffd3a8', '#f2b07c')
+    + [[29, 42], [33, 33], [41, 28], [50, 26], [59, 28], [67, 33], [71, 42]].map(([x, y]) => P(CIRCLE(x, y, 7), '#7a4a2a', '#5a331b')).join('')
+    + eyes(58, 10, 4.2) + smile(67, 5) + blush(64, 17)
+    + `<path d="M38 81Q50 92 62 81" fill="none" stroke="#d9a441" stroke-width="2" stroke-dasharray="2 2"/><circle cx="50" cy="93" r="5" fill="none" stroke="${K}" stroke-width="5"/><circle cx="50" cy="93" r="5" fill="none" stroke="#ffc83d" stroke-width="2.6"/>`
+    + P('M70 86q6-8 12-4-4 7-12 4z', '#7fd36a', '#56b83a', '', 2.4),
+  // Zafiro: mago de las estrellas con barba y sombrero alto lleno de estrellas.
+  mago: () => shoulders('#4a5ad8', '#2a3a9a')
+    + mirror(P(CIRCLE(26, 54, 5.4), '#f0c49a', '#dca47a'))
+    + P(CIRCLE(50, 54, 22), '#f0c49a', '#dca47a')
+    + P('M29 58Q30 92 50 94Q70 92 71 58Q64 68 50 67Q36 68 29 58z', '#f4f1ff', '#d3cdea', '<path d="M42 74q2 8 4 12M50 72v14M58 74q-2 8-4 12" stroke="#d3cdea" stroke-width="1.8" fill="none"/>')
+    + eyes(52, 9, 4) + blush(58, 16)
+    + P('M24 40 54 0 76 40z', '#4a5ad8', '#2a3a9a', [[44, 26, 4], [58, 16, 3], [62, 32, 3.4]].map(([x, y, r]) => `<path d="${starPath(x, y, r, r * 0.45)}" fill="#ffc83d"/>`).join(''))
+    + P(ELL(50, 40, 30, 6), '#5a6ae8', '#3a4ab8'),
+  // Kage: ninja con su banda roja anudada.
+  ninja: () => shoulders('#2f3550', '#1f2440')
+    + P(CIRCLE(50, 52, 30), '#2f3550', '#1f2440')
+    + P('M26 44Q50 39 74 44V60Q50 65 26 60z', '#ffd3a8', '#f2b07c')
+    + eyes(52, 11, 4.4)
+    + P('M78 35l14-7-3 10 7 6-16-3z', '#e8434f', '#c22c49', '', 3)
+    + P('M20 34Q50 27 80 34v8Q50 35 20 42z', '#e8434f', '#c22c49'),
+  // Sir Galleta: caballero con el casco levantado y su penacho rojo.
+  caballero: () => shoulders('#b9c4e0', '#8f9cc4')
+    + P('M50 20Q44 2 66 4Q56 9 58 20z', '#e8434f', '#c22c49')
+    + P('M22 54Q20 20 50 18Q80 20 78 54V76Q50 86 22 76z', '#d3dbef', '#a9b4d4')
+    + P('M34 46h32v20Q50 76 34 66z', '#ffd3a8', '#f2b07c', blush(62, 11))
+    + eyes(55, 8, 3.8) + smile(63, 4)
+    + P('M27 36Q50 28 73 36v7Q50 35 27 43z', '#a9b4d4', '#8f9cc4', `<path d="M36 38h28" stroke="${K}" stroke-width="2" stroke-dasharray="3 3"/>`),
   nino: () => kid('#ff9c5b', '#e2753a')
     + `<path d="M40 82 50 92 60 82" fill="none" stroke="${K}" stroke-width="3" stroke-linejoin="round"/>`
     + P('M22 52Q18 22 50 21Q82 22 78 52Q74 40 64 37Q58 43 47 38Q36 42 22 52z', '#7a4a2a', '#5a331b')
@@ -1045,6 +1109,18 @@ const band = (r, color, w = 6) => `<circle cx="70" cy="70" r="${r}" fill="none" 
 const heart = (x, y, s) => `M${x} ${y + s * 0.9}C${x - s * 1.6} ${y - s * 0.1} ${x - s * 0.9} ${y - s * 1.3} ${x} ${y - s * 0.45}C${x + s * 0.9} ${y - s * 1.3} ${x + s * 1.6} ${y - s * 0.1} ${x} ${y + s * 0.9}z`;
 export const RINGS = {
   sencillo: () => '',
+  // 8 nov 2026: marcos nuevos de la tienda.
+  // Pétalos: aro rosa con 8 pétalos alrededor.
+  petalos: () => band(55, '#ffb3d1', 4) + Array.from({ length: 8 }, (_, i) => { const d = i * 45, [x, y] = at(d, 57); return `<g transform="rotate(${d + 90} ${x.toFixed(1)} ${y.toFixed(1)})">${tshape(ELL(x, y, 6, 10), i % 2 ? '#fff6fb' : '#ff9cc8', i % 2 ? '#ffd6e8' : '#f27aad', '', 2.2)}</g>`; }).join(''),
+  // Rayos: aro dorado con 6 rayitos que titilan.
+  rayos: () => band(55, '#ffc83d', 5) + Array.from({ length: 6 }, (_, i) => { const [x, y] = at(i * 60 - 90, 57); return `<g class="r-tw" style="animation-delay:${(i * 0.3).toFixed(1)}s">${tshape(`M${x + 2} ${y - 10}L${x - 6} ${y + 1}h6l-3 9 9-11h-6l3-8z`, '#fff36b', '#ffc83d', '', 2.2)}</g>`; }).join(''),
+  // Manecillas: aro lila con las marcas de un reloj y una bolita dorada que da la vuelta.
+  relojes: () => band(55, '#c9bff0', 6) + Array.from({ length: 12 }, (_, i) => { const [x1, y1] = at(i * 30, 50), [x2, y2] = at(i * 30, i % 3 ? 59 : 63); return `<path d="M${x1.toFixed(1)} ${y1.toFixed(1)}L${x2.toFixed(1)} ${y2.toFixed(1)}" stroke="${i % 3 ? K : '#ffb31a'}" stroke-width="${i % 3 ? 2.4 : 4}" stroke-linecap="round"/>`; }).join('')
+    + `<g class="r-spin">${tshape(CIRCLE(70, 15, 5), '#ffc83d', '#ec9a17', '', 2.2)}</g>`,
+  // Anillo de oro: aro grueso dorado con una gema roja arriba y puntitos que brillan.
+  runas: () => band(55, '#ffc83d', 9) + `<circle cx="70" cy="70" r="55" fill="none" stroke="#fff3b8" stroke-width="1.6"/>`
+    + Array.from({ length: 8 }, (_, i) => { const [x, y] = at(i * 45 + 22.5, 55); return `<circle class="r-tw" style="animation-delay:${(i * 0.25).toFixed(2)}s" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2.2" fill="#ff9c3d"/>`; }).join('')
+    + tshape('M70 4l9 11-9 11-9-11z', '#ff5f7e', '#d63d5f', '<path d="M66 12l4-4" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/>', 2.4),
   destello: () => band(55, '#5fe0c8', 5) + [-45, 45, 135, 225].map((d, i) => {
     const [x, y] = at(d, 56), R = i % 2 ? 7.5 : 10.5;
     return `<g class="r-tw" style="animation-delay:${i * 0.45}s">${tshape(`M${x} ${y - R}Q${x} ${y} ${x + R} ${y}Q${x} ${y} ${x} ${y + R}Q${x} ${y} ${x - R} ${y}Q${x} ${y} ${x} ${y - R}z`, '#fff6b8', '#ffc83d', '', 2.2)}</g>`;

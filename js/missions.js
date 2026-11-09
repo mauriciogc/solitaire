@@ -8,8 +8,8 @@ import { save, persist } from './storage.js';
 import { MECH_INTRO, LEVELS_PER_WORLD } from './levels.js';
 import { mulberry32, hash } from './rng.js';
 
-export const MIS_FROM = 30; // nivel en que se abren (save.next); igual que UNLOCK en events.js
-export const LOGROS_FROM = 40;
+export const MIS_FROM = 40; // nivel en que se abren (save.next); igual que UNLOCK en events.js
+export const LOGROS_FROM = 70;
 const DAY = 864e5;
 const today = () => {
   const d = new Date();
@@ -146,7 +146,7 @@ export const LOGROS = [
   { id: 'stars', k: 'stars', name: 'Cazaestrellas', ico: 'star', steps: [300, 1500, 4000, 8000, 14000], text: (n) => `Junta ${fmtN(n)} estrellas` },
   { id: 'three', k: 'three', name: 'Perfeccionista', ico: 'crown', steps: [50, 300, 1000, 2000, 3500], text: (n) => `Gana ${fmtN(n)} niveles con 3 estrellas`, title: 'perfeccionista' },
   { id: 'cards', k: 'cards', name: 'Mano rápida', ico: 'card', steps: [5000, 25000, 80000, 200000, 400000], text: (n) => `Juega ${fmtN(n)} cartas` },
-  { id: 'streak', k: 'streak', best: true, name: 'Imparable', ico: 'flame', steps: [20, 28, 35, 42, 50], text: (n) => `Haz una racha de ${n} en un nivel`, title: 'imparable' },
+  { id: 'streak', k: 'streak', best: true, name: 'Imparable', ico: 'flame', steps: [25, 33, 40, 48, 56], text: (n) => `Haz una racha de ${n} en un nivel`, title: 'imparable' },
   { id: 'bosses', k: 'boss', name: 'Domador de jefes', ico: 'trophy', steps: [10, 50, 150, 300, 500], text: (n) => `Derrota ${n} jefes` },
   { id: 'boss3', k: 'boss3', name: 'Jefe perfecto', ico: 'trophy', steps: [5, 25, 100, 200, 400], text: (n) => `Derrota ${n} jefes con 3 estrellas` },
   { id: 'pure', k: 'pure', name: 'Impecable', ico: 'crown', steps: [20, 100, 400, 1000, 2000], text: (n) => `Gana ${fmtN(n)} niveles con 3 estrellas sin deshacer, comodín ni +5` },
@@ -154,7 +154,7 @@ export const LOGROS = [
   { id: 'nowild', k: 'nowild', name: 'Sin trucos', ico: 'wild', steps: [30, 150, 500, 1200, 2500], text: (n) => `Gana ${fmtN(n)} niveles sin usar comodín` },
   { id: 'rewards', k: 'rewards', name: 'Premiado', ico: 'gift', steps: [100, 500, 2000, 5000, 10000], text: (n) => `Gana ${fmtN(n)} premios de racha` },
   { id: 'brooms', k: 'brooms', name: 'Barrendero', ico: 'escoba', steps: [10, 50, 200, 500, 1000], text: (n) => `Gana ${fmtN(n)} escobas de racha` },
-  { id: 'left', k: 'left', best: true, name: 'Ahorrador', ico: 'deck', steps: [8, 11, 14, 17, 20], text: (n) => `Gana un nivel con ${n} cartas o más en tu mazo` },
+  { id: 'left', k: 'left', best: true, name: 'Ahorrador', ico: 'deck', steps: [12, 16, 20, 24, 28], text: (n) => `Gana un nivel con ${n} cartas o más en tu mazo` },
   { id: 'coins', k: 'coins', name: 'Millonario', ico: 'coin', steps: [5000, 25000, 100000, 250000, 500000], text: (n) => `Junta ${fmtN(n)} monedas jugando` },
   { id: 'locks', k: 'locks', mech: 'lock', name: 'Cerrajero', ico: 'lock', steps: [100, 500, 1500, 3000, 6000], text: (n) => `Abre ${fmtN(n)} candados` },
   { id: 'packs', k: 'packs', mech: 'pack', name: 'Abrerregalos', ico: 'gift', steps: [40, 200, 600, 1200, 2500], text: (n) => `Abre ${fmtN(n)} cartas regalo` },
@@ -178,7 +178,8 @@ export const LOGROS = [
   { id: 'secrets', k: 'secret', name: 'Explorador secreto', ico: 'starSecret', steps: [5, 25, 100, 250, 520], text: (n) => `Gana ${n} niveles secretos`, title: 'explorador_secreto' },
 ];
 // 8 nov 2026: los logros pedían poco (el usuario: "no están tan complicados"): todas las metas ×LOGRO_UP desde el
-// principio, redondeadas bonito. Las de "mejor de un nivel" (racha, cartas en el mazo) no: ya van cerca del tope posible.
+// principio, redondeadas bonito. Las de "mejor de un nivel" (racha, cartas en el mazo) no: se subieron a mano (Ahorrador
+// era muy fácil: antes 8/11/14/17/20 cartas; Imparable antes 20/28/35/42/50).
 export const LOGRO_UP = 1.7;
 const nice = (n) => {
   const v = n * LOGRO_UP, s = v < 50 ? 1 : v < 200 ? 5 : v < 1000 ? 10 : v < 10000 ? 50 : 500;
@@ -186,7 +187,8 @@ const nice = (n) => {
 };
 for (const l of LOGROS) if (!l.best) l.steps = l.steps.map(nice);
 // Premio de cada escalón (bronce → diamante).
-export const LOGRO_PRIZES = [{ coins: 200 }, { coins: 600 }, { coins: 1500 }, { coins: 3000, wild: 1 }, { coins: 6000, wild: 2, undo: 3 }];
+// 8 nov 2026: 10% menos monedas (el usuario: endurecer los logros, no dar más dinero). Antes 200/600/1,500/3,000/6,000.
+export const LOGRO_PRIZES = [{ coins: 180 }, { coins: 540 }, { coins: 1350 }, { coins: 2700, wild: 1 }, { coins: 5400, wild: 2, undo: 3 }];
 export const LOGRO_COINS = LOGRO_PRIZES.map((p) => p.coins);
 export const LOGRO_MEDAL = ['Bronce', 'Plata', 'Oro', 'Platino', 'Diamante'];
 export const LOGRO_TOP = LOGRO_MEDAL.length;

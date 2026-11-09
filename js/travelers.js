@@ -2,6 +2,7 @@
 // Mismo estilo que los planetas: material toon con contorno de tinta. Miden ~1 de alto, centrados en el origen.
 import * as THREE from 'three';
 import { INK } from './art.js';
+import { TRAVELER_VARIANTS } from './themes.js';
 
 const TAU = Math.PI * 2;
 const calm = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -1155,7 +1156,8 @@ const MODELS = {
       all.position.x = -0.35;
     } };
   },
-  // Avión de papel: alas dobladas que planea en ondas.
+  // Avión de papel: alas dobladas que planea en ondas. 9 nov 2026 (el usuario lo veía muy simple): cinta de color en las
+  // alas, punta de color y una estela de soplidos.
   avion(part) {
     const g = new THREE.Group(), plane = new THREE.Group();
     const wing = (s) => {
@@ -1166,10 +1168,23 @@ const MODELS = {
     const keel = new THREE.Shape(); keel.moveTo(0, 0); keel.lineTo(0.55, 0); keel.lineTo(0.48, -0.1); keel.lineTo(0, 0);
     plane.add(wl, wr, part(new THREE.ExtrudeGeometry(keel, { depth: 0.012, bevelEnabled: false }), '#d3cdea', { ol: 0.04 }));
     plane.add(part(new THREE.BoxGeometry(0.5, 0.004, 0.006), '#ff9cc8', { x: 0.27, y: 0.006, ol: 0 }));
+    for (const s of [-1, 1]) {
+      plane.add(part(new THREE.BoxGeometry(0.05, 0.006, 0.2), '#5fc7e8', { x: 0.4, y: 0.004, z: s * 0.1, ol: 0 }));
+      plane.add(part(new THREE.BoxGeometry(0.03, 0.006, 0.12), '#ffc83d', { x: 0.3, y: 0.004, z: s * 0.06, ol: 0 }));
+    }
+    plane.add(part(new THREE.ConeGeometry(0.02, 0.07, 3).rotateZ(Math.PI / 2), '#ff5f7e', { x: 0.02, y: 0, ol: 0.2 }));
+    const puffs = [0, 1, 2, 3].map((k) => {
+      const p = part(new THREE.SphereGeometry(0.035 - k * 0.006, 10, 8), '#ffffff', { x: 0.62 + k * 0.1, y: 0, ol: 0.12 });
+      plane.add(p);
+      return p;
+    });
     plane.position.x = -0.27;
     const hold = new THREE.Group(); hold.add(plane); hold.scale.setScalar(1.5);
     g.add(hold);
-    return { obj: g, tick: (t) => { hold.position.y = Math.sin(t * 1.8) * 0.08; hold.rotation.set(0.7 + Math.sin(t * 0.9) * 0.15, 2.6, 0.25 + Math.cos(t * 1.8) * 0.18); } };
+    return { obj: g, tick: (t) => {
+      hold.position.y = Math.sin(t * 1.8) * 0.08; hold.rotation.set(0.7 + Math.sin(t * 0.9) * 0.15, 2.6, 0.25 + Math.cos(t * 1.8) * 0.18);
+      puffs.forEach((p, k) => { const f = (t * 1.6 + k * 0.25) % 1; p.scale.setScalar(0.4 + f * 0.9); p.position.y = Math.sin(t * 1.8 - k * 0.6) * 0.03; });
+    } };
   },
   // Nube con arcoíris: nube esponjosa que flota sobre su arco de colores.
   nube(part) {
@@ -1188,8 +1203,14 @@ const MODELS = {
 export const TRAVELERS = Object.keys(MODELS);
 
 // Un viajero listo para ponerse en una escena: { obj, tick(segundos) }. Con "reducir movimiento" se queda quieto.
+// Los de otro color (themes.js) usan el modelo de su base con los colores cambiados.
 export function makeTraveler(kind, toon = toonMaker()) {
-  const m = (MODELS[kind] || MODELS.cohete)(kit(toon), toon);
+  const v = TRAVELER_VARIANTS.find((x) => x.k === kind), base = kit(toon);
+  const part = v ? (geo, color, o) => base(geo, v.map[color] ?? color, o) : base;
+  // 9 nov 2026: los colores que el modelo pide directo al material (los gajos del globo, la luz del satélite) también
+  // se cambian; antes "Globo de fiesta" se veía igual que el globo.
+  const tn = v ? (o = {}) => toon({ ...o, ...(o.color && { color: v.map[o.color] ?? o.color }) }) : toon;
+  const m = (MODELS[v ? v.base : kind] || MODELS.cohete)(part, tn);
   const tick = m.tick;
   m.tick = (t) => (calm() ? tick(0.6) : tick(t));
   m.tick(0);

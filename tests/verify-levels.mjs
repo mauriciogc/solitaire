@@ -21,7 +21,7 @@ function reference(L) {
     }
     s = play(L, s, id).s;
   }
-  return won(s);
+  return won(s, L);
 }
 
 // Los 5,200 niveles normales, los 520 secretos (uno por mundo) y el evento del mes:

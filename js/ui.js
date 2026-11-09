@@ -354,6 +354,13 @@ export function popBalloon(b, [c, d], { remove = true } = {}) {
   t.animate([{ scale: 0.3, opacity: 0, translate: '-50% -50%' }, { scale: 1.15, opacity: 1, translate: '-50% -50%', offset: 0.35 }, { scale: 1, opacity: 0, translate: '-50% -110%' }], { duration: 620, easing: 'ease-out' }).finished.then(() => t.remove());
   return true;
 }
+// Aviso al abandonar un nivel con apuesta: la etiqueta ×N y la entrada que se pierde (o que era su ×N gratis).
+// when: cuándo se pierde ("si abandonas", "si te rindes o reintentas").
+export function betLoseHTML(m, paid, when = 'si abandonas') {
+  if (!(m > 1)) return '';
+  const what = !paid ? 'tu entrada' : paid.gift ? `tu ×${m} gratis` : `tu entrada de <b>${paid.tk}</b>${icon('ticket')}${paid.fee ? ` y ${coin()}<b>${money(paid.fee)}</b>` : ''}`;
+  return `<p class="bet-lose"><i class="go-bet b${m}">×${m}</i><span>Apostaste <b>×${m}</b>: ${when} pierdes ${what} y el premio ×${m}.</span></p>`;
+}
 // Aviso de que se pierde la racha (abandonar, rendirse, reintentar): el cohete con el número tiembla.
 export const rachaWarnHTML = (n, pend, when) =>
   `<div class="racha-warn"><span class="rw-ico">${icon('rocket')}<b class="outl">${n}</b></span><p><b>¡Pierdes tu racha de ${n} estrellas!</b> ${when}, vuelve a 0${pend ? ' y se pierden los premios sin reclamar' : ''}.</p></div>`;

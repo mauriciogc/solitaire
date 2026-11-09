@@ -3,7 +3,7 @@
 import { save, prefs, persist, resetProfile, backupOnce, restoreBackup, setDev, backupInfo } from './storage.js';
 import { missions, misDone, LOGROS } from './missions.js';
 import { rachaWin, rachaLose, racha, nextGoal, col, daysToNextCol, ev, daysToNextEvent, evEnter, evWin, EVENT_PER_PLANET, EVENT_LEVELS, fiesta, fiEnter, fiWin, nextFiesta, daysToNextFiesta, daysToFiesta, fiShape, isOn, UNLOCK } from './events.js';
-import { TIERS, generateLevel, hardHelp, fiestaPick, fiestaLevel, eventLevel, eventGroup, EVENT_WORLDS, packGroups, worldInfo, specials, specialGroup, SPECIAL_ID, TOTAL_LEVELS, LEVELS_PER_WORLD, MECH_NAMES, MECHANICS, MECH_INTRO, SCROLL_FROM, EXTRA, extraDebut, mareaFirst } from './levels.js';
+import { TIERS, generateLevel, hardHelp, fiestaPick, fiestaLevel, eventLevel, eventGroup, EVENT_WORLDS, packGroups, worldInfo, specials, specialGroup, SPECIAL_ID, TOTAL_LEVELS, LEVELS_PER_WORLD, MECH_NAMES, MECHANICS, MECH_INTRO, SCROLL_FROM, EXTRA, extraDebut, mareaFirst, hoyoFirst, puertasFirst, bandaFirst } from './levels.js';
 import { playCasual, solve, initState } from './engine.js';
 import { openModal, toast, updateCoins, popGoal } from './ui.js';
 import { mulberry32 } from './rng.js';
@@ -13,6 +13,7 @@ import { peek } from './galaxy.js';
 import { EVENTOS, COLECCIONES, FIESTAS, fiestaDays } from './events.js';
 import { ITEMS, SECTIONS, GROUPS, owns, lockedUntil } from './shop.js';
 import { meteor, nextShowers, metItems, MET_FROM } from './meteor.js';
+import { BET_STEPS, maxBet } from './economy.js';
 import { KINDS, TREASURE, makeLot, makeCode, rewardName, lotText, usedHere, lotNonces } from './codes.js';
 // Icono de cada sección de la tienda (para el recuento).
 const SEC_ICO = { avatar: 'user', ring: 'star', title: 'crown', back: 'deck', face: 'face', traveler: 'rocket', space: 'planet', frame: 'album' };
@@ -163,12 +164,15 @@ const TABLE_ICONS = {
   nebulosa: SV('<circle cx="16" cy="16" r="13" fill="#8a5cf0"/><path d="M16 16c0-3 4-3 4 0s-3 6-7 5-6-5-4-9 8-6 12-3" stroke="#fff" stroke-width="2" stroke-linecap="round"/>'),
   plegable: SV('<path d="M2 9l9 3v14l-9-3z" fill="#6fc6cc"/><rect x="11" y="7" width="10" height="19" rx="1.6" fill="#3fa0a8"/><path d="M30 9l-9 3v14l9-3z" fill="#6fc6cc"/>'),
   // Mesas sobre un tablero normal (8 nov 2026: faltaban en el recuento y en los filtros).
+  banda: SV('<rect x="3" y="11" width="26" height="11" rx="3" fill="#5d5a7a"/><rect x="9" y="8" width="6" height="9" rx="1.4" fill="#fff"/><rect x="17" y="8" width="6" height="9" rx="1.4" fill="#fff"/><rect x="1" y="7" width="5" height="18" rx="2" fill="#ffb066"/><rect x="26" y="7" width="5" height="18" rx="2" fill="#ffb066"/>'),
+  puertas: SV('<rect x="5" y="4" width="22" height="25" rx="3" fill="#b5763f"/><path d="M16 4v25" stroke-width="1.6"/><circle cx="13" cy="17" r="1.6" fill="#2a1f5c"/><circle cx="19" cy="17" r="1.6" fill="#2a1f5c"/>'),
+  hoyo: SV('<circle cx="16" cy="16" r="13" fill="#8a5cf0"/><circle cx="16" cy="16" r="9" fill="#ff8a3d"/><circle cx="16" cy="16" r="5.5" fill="#05030f"/>'),
   marea: SV('<rect x="5" y="3" width="22" height="26" rx="3" fill="#fff6e6"/><path d="M5 18c4-3 7 3 11 0s7 3 11 0v8a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3z" fill="#4aa8de"/>'),
 };
 export const tableIcon = (t) => TABLE_ICONS[t] || '';
 const SCROLL_NAMES = { mesa: 'mesa enrollada', gravedad: 'gravedad', nebulosa: 'nebulosa', plegable: 'mesa plegable' };
 // Mesas que van sobre un tablero normal (no son tira): se filtran por su bandera del nivel.
-const OVERLAY_TABLES = [['marea', 'Marea', mareaFirst() + 1, (L) => !!L.tide]];
+const OVERLAY_TABLES = [['marea', 'Marea', mareaFirst() + 1, (L) => !!L.tide], ['hoyo', 'Agujero negro', hoyoFirst() + 1, (L) => !!L.hole], ['puertas', 'Puertas', puertasFirst() + 1, (L) => !!L.doors], ['banda', 'Banda transportadora', bandaFirst() + 1, (L) => !!L.belt]];
 const PIECES = [['steps', 3], ['cross', 3], ['crown', 8], ['rosette', 13], ['sandwich', 16], ['tiltFan', 21]];
 // Nombres en español de formas y piezas (galería e Info).
 const TPL_NAMES = { pyramid: 'Pirámide', peaks: 'Picos', clusters: 'Grupitos', star: 'Estrella', layers: 'Capas', wall: 'Muro', towers: 'Torres', butterfly: 'Mariposa', diamond: 'Diamante', spiral: 'Espiral', mesa: 'Mesa enrollada', heart: 'Corazón', gravedad: 'Gravedad', scatter: 'Dispersas', nebulosa: 'Nebulosa', plegable: 'Mesa plegable', invPyramid: 'Pirámide invertida', hourglass: 'Reloj de arena' };
@@ -501,6 +505,25 @@ function completeWorlds(from, to) {
   save.run = null;
   persist();
 }
+// Apuesta: el primer nivel (índice, como save.next) donde se abre cada ×N.
+const BET_AT = BET_STEPS.slice(1).map((m) => { let g = 0; while (g < TOTAL_LEVELS && maxBet(g) < m) g += LEVELS_PER_WORLD; return [m, g]; });
+// Deja el camino justo en el nivel g (sin ganar): si vas antes, gana con 3★ lo de en medio; si vas después, borra
+// lo ganado desde ahí. Vuelven a salir la presentación de ese ×N (en el ×2 la de "¡Nuevo!") y su partida gratis.
+function goToLevel(g, betBefore) {
+  if (save.next < g) completeWorlds(Math.floor(save.next / LEVELS_PER_WORLD), g / LEVELS_PER_WORLD - 1);
+  for (let k = g; k < TOTAL_LEVELS; k++) delete save.stars[k];
+  save.next = g;
+  save.open = Math.floor(g / LEVELS_PER_WORLD);
+  save.run = null;
+  const intro = (save.intro ||= {});
+  for (const m of BET_STEPS) intro[`apuesta${m}`] = m <= betBefore || undefined;
+  if (betBefore < 2) delete intro.apuesta;
+  else intro.apuesta = true;
+  save.betFreeN = betBefore;
+  delete save.betFree;
+  delete save.betGift;
+  persist();
+}
 // card: dibuja la carta de una mecánica (mechCard de main.js) para el recuento.
 export function openDevMenu({ onGallery, onPlanets, onRefresh, card }) {
   const w = Math.min(Math.floor(save.next / LEVELS_PER_WORLD), save.open);
@@ -576,6 +599,7 @@ export function openDevMenu({ onGallery, onPlanets, onRefresh, card }) {
     ...MECH_ORDER.map((m) => ({ n: mechDebut(m), k: 'card', name: MECH_NAMES[m], pic: `<span class="dmc">${card(m)}</span>` })),
     ...Object.entries(SCROLL_FROM).map(([t, g]) => ({ n: g + 1, k: 'mesa', name: SCROLL_NAMES[t], pic: tableIcon(t) })),
     ...OVERLAY_TABLES.map(([k, name, n]) => ({ n, k: 'mesa', name: name.toLowerCase(), pic: tableIcon(k) })),
+    ...BET_AT.map(([m, g], i) => ({ n: g + 1, k: 'ev', name: `Apuesta hasta ×${m}`, pic: `<i class="go-bet dbet b${m}">×${m}</i>`, note: `${i ? `Sale su presentación "¡Subiste a ×${m}!"` : 'Sale la presentación "¡Nuevo: Apuestas!" con sus reglas (antes del evento del mes)'}. Su primera partida va forzada a ×${m} y gratis; cuota ${10 * (m - 1)} monedas, en jefes ${{ 2: 200, 3: 400, 5: 800, 10: 1600 }[m]} (× el boleto de entrada); con lluvia de meteoritos, los boletos a mitad.` })),
   ].sort((a, b) => a.n - b.n || Object.keys(KINDS).indexOf(a.k) - Object.keys(KINDS).indexOf(b.k));
   // Choques: dos ventanas de desbloqueo (eventos) en el mismo nivel salen una tras otra. Se marcan en rojo.
   const evAt = {};
@@ -656,6 +680,12 @@ export function openDevMenu({ onGallery, onPlanets, onRefresh, card }) {
       } },
       // En pruebas, empezar de cero también vuelve a enseñar los avisos de desbloqueo (el Reiniciar de Ajustes no).
       { l: 'Reiniciar progreso', title: 'Desde el nivel 1, con los avisos de desbloqueo otra vez', fn: () => (resetProfile(), (save.intro = {}), delete save.metSeen, persist(), onRefresh()) },
+    ] },
+    // Apuesta (9 nov 2026): brincar al nivel donde se abre cada ×N, para ver su ventana.
+    { t: 'Apuesta', sub: `aquí hasta ×${maxBet(save.next)} · escogida ×${save.bet || 1} · gratis hasta ×${save.betFreeN ?? (save.betFree || save.betGift ? 2 : 1)}`, items: [
+      ...BET_AT.map(([m, g], i) => ({ l: `Ir al inicio de ×${m} (nivel ${g + 1})`, title: `Deja el camino en el nivel ${g + 1} sin ganar (gana lo de antes o borra lo de después) y su ventana sale sola`, fn: () => (goToLevel(g, i ? BET_AT[i - 1][0] : 1), toast(`Siguiente: nivel ${g + 1}, apuesta hasta ×${m}`), onRefresh()) })),
+      { l: 'Su ×N gratis otra vez', title: 'La siguiente partida va gratis con la apuesta más alta de aquí', fn: () => { const i = BET_STEPS.indexOf(maxBet(save.next)); save.betFreeN = BET_STEPS[Math.max(0, i - 1)]; delete save.betFree; delete save.betGift; persist(); toast('La siguiente va por nuestra cuenta'); onRefresh(); } },
+      { l: 'Volver a ×1', title: 'La apuesta escogida vuelve a ×1', fn: () => ((save.bet = 1), persist(), onRefresh()) },
     ] },
     // Misiones del día y logros (7 nov 2026).
     { t: 'Misiones y logros', sub: `misiones ${missions().list.filter(misDone).length}/3`, items: [

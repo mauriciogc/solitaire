@@ -1,16 +1,19 @@
 import { save, prefs, persist, resetProfile, deleteProfile, renameProfile, exportCode, readCode, loadProfile, setDev } from './storage.js';
-import { UNLOCK, EVENTOS, FIESTAS, COLECCIONES, evSoon, isOn, nextEvent, daysToNextCol, plusCols, RACHA_GOALS, RACHA_STEP, rachaGoal, nextIndex, racha, rachaTheme, rachaReady, rachaHot, rachaWin, rachaLose, rachaClaim, msToMidnight, col, colLeft, colWin, colOffers, colBuy, ev, evLeft, evTicketLeft, evTicketPrice, evBuyTicket, evPrize, evEnter, evWin, evLose, evAlbum, fiAlbum, EVENT_PLANETS, EVENT_PER_PLANET, EVENT_LEVELS, fiesta, fiestaLeft, nextFiesta, fiEnter, fiWin, fiLose, fiShape, fiPrice, fiPaid, fiBuy, fiPre, FI_PRE, FI_ENTRY, EV_FIRST } from './events.js';
-import { WORLD_COUNT, LEVELS_PER_WORLD, TOTAL_LEVELS, worldInfo, generateLevel, variantLevel, MECH_INTRO, MECH_NAMES, MECHANICS, EXTRA, extraDebut, SCROLL_FROM, mareaFirst, secretId, isSecret, eventLevel, fiestaLevel } from './levels.js';
+import { UNLOCK, EVENTOS, FIESTAS, COLECCIONES, evSoon, isOn, nextEvent, daysToNextCol, plusCols, RACHA_GOALS, RACHA_STEP, rachaGoal, nextIndex, racha, rachaTheme, rachaReady, rachaHot, rachaWin, rachaLose, rachaClaim, msToMidnight, col, colLeft, colWin, colOffers, colBuy, ev, evLeft, evTicketLeft, evTicketPrice, evBuyTicket, evPrize, evEnter, evWin, evLose, evAlbum, fiAlbum, EVENT_PLANETS, EVENT_PER_PLANET, EVENT_LEVELS, fiesta, fiestaLeft, fiestaSoon, soonLeft, evPrePrice, evPreOwned, evPreBuy, nextFiesta, fiEnter, fiWin, fiLose, fiShape, fiPrice, fiPaid, fiBuy, fiPre, FI_PRE, FI_ENTRY, EV_FIRST } from './events.js';
+import { WORLD_COUNT, LEVELS_PER_WORLD, TOTAL_LEVELS, worldInfo, generateLevel, variantLevel, MECH_INTRO, MECH_NAMES, MECHANICS, EXTRA, extraDebut, SCROLL_FROM, mareaFirst, hoyoFirst, puertasFirst, bandaFirst, secretId, isSecret, eventLevel, fiestaLevel } from './levels.js';
 import { Game, faceHTML, backHTML } from './game.js';
-import { HELPS, DAILY_PATH, dailyState, starsNeeded, TICKET_PRICE, ticketCost, ticketRefund, coinsFor, bossChest, rollChest, CONST_PRIZE, openCost, boosted, secretCoins, rollSecret, openSurprise, MET_OFF, metShopPrice } from './economy.js';
+import { maxBet, betFee, betSteps, HELPS, DAILY_PATH, dailyState, starsNeeded, TICKET_PRICE, ticketCost, ticketRefund, coinsFor, bossChest, rollChest, CONST_PRIZE, openCost, boosted, secretCoins, rollSecret, openSurprise, MET_OFF, metShopPrice } from './economy.js';
 import { missions, misDef, misDone, misReady, misBonusReady, misAllDone, misClaim, misBonus, LOGROS, LOGRO_PRIZES, LOGRO_MEDAL, LOGRO_TOP, logroAt, logroGot, logroStat, logrosVisible, logrosReady, logroClaim } from './missions.js';
-import { pauseOffscreen, openModal, toast, updateCoins, money, esc, reduced, wait, flyToWallet, spendFromWallet, sparkle, confetti, starsHTML, warp, buzz, balloons, lootBubbles, floatBubbles, rachaWarnHTML, popPrize, popBalloon, countPop, HEADS } from './ui.js';
-import { icon, star, coin, miniPlanet, avatarHTML, AVATAR_COLORS, cardBackURL, setDeck, lockIcon, curtainIcon, chestBody, chestLid, boxBody, boxLid } from './art.js';
+import { pauseOffscreen, openModal, toast, updateCoins, money, esc, reduced, wait, flyToWallet, spendFromWallet, sparkle, confetti, starsHTML, warp, buzz, balloons, lootBubbles, floatBubbles, rachaWarnHTML, popPrize, popBalloon, countPop, HEADS, betLoseHTML } from './ui.js';
+import { icon, iconURL, star, coin, miniPlanet, avatarHTML, AVATAR_COLORS, cardBackURL, setDeck, lockIcon, curtainIcon, chestBody, chestLid, boxBody, boxLid } from './art.js';
 import { GROUPS, SECTIONS, ITEMS, shopItems, groupOf, owns, equipped, equip, buy, item, lockedUntil, titleHTML, titleIcon, sell, sellable, sellPrice } from './shop.js';
 import { BIOMES, biomeKey, EVENT_BIOMES } from './biomes.js';
 import { redeem } from './codes.js';
 import { meteor, metWin, metCoins, MET_FROM } from './meteor.js';
 import { dev, gallery, attachDevBar, galleryScreen, openDevMenu, planetGal, planetsScreen, casualRate, rateTag, tableIcon } from './dev.js';
+import { themeCSS } from './themes.js';
+// Caras, fondos y marcos de las temáticas de la tienda (themes.js): su CSS se arma de su paleta.
+document.head.append(Object.assign(document.createElement('style'), { textContent: themeCSS(iconURL) }));
 
 document.documentElement.classList.toggle('dev-on', !!prefs.dev);
 // Reversos de los premios de racha (carta regalo violeta y comodín dorado), para todo el documento:
@@ -177,13 +180,133 @@ const devBtn = '<button class="tb press dev-pill" data-a="dev" aria-label="Modo 
 // al salir del tablero se vuelve al planeta de ese nivel.
 const playCTA = () => {
   const run = save.run, gateW = pendingWorld(), done = save.next >= TOTAL_LEVELS;
-  return run ? goBtn('Continuar', levelName(run.g), 'continue') : gateW != null ? goBtn('Abrir', `Mundo ${gateW + 1}`, 'gate') : done ? goBtn('¡Completado!', '', 'none') : goBtn('Jugar', `Nivel ${save.next + 1}`, 'continue');
+  return run ? goBtn('Continuar', levelName(run.g), 'continue', run.bet) : gateW != null ? goBtn('Abrir', `Mundo ${gateW + 1}`, 'gate') : done ? goBtn('¡Completado!', '', 'none') : goBtn('Jugar', playSub(), 'continue', betShown());
 };
+// ---------- Apuesta (8 nov 2026; 9 nov: desde la constelación 2, hasta ×10 y con su ventana) ----------
+// Cada ×N que se abre (×2 en el nivel 101, antes del evento del mes; ×3, ×5, ×10 después) tiene su presentación como
+// las de desbloqueo (openUnlock 'apuesta' / 'apuesta3'…: reglas en lista y "¡Entendido!"; la última, en verde: su
+// primer ×N va por nuestra cuenta). SIEMPRE el primer ×N que le sale es gratis y forzado (save.betFreeN = el último
+// regalado): al tocar Jugar, la ventana para apostar lo trae fijo (las demás fichas bloqueadas) y no cobra. Después
+// Jugar abre esa ventana con la última escogida (save.bet). Solo niveles nuevos del camino; nunca en los eventos.
+const betOk = (g) => !save.run && !isSecret(g) && g === save.next && g < TOTAL_LEVELS && maxBet(g) > 1 && !save.stars[g];
+const betNow = (g) => betSteps(g).filter((m) => m <= (save.bet || 1)).pop() || 1;
+// El primer ×N que le sale va por nuestra cuenta (save.betFree / save.betGift eran marcas viejas del ×2).
+const betFreeN = () => save.betFreeN ?? (save.betFree || save.betGift ? 2 : 1);
+const betGiftNow = (g) => betOk(g) && maxBet(g) > betFreeN();
+// Lo que se paga al entrar con la apuesta m: boletos × apuesta y una cuota en monedas. Con la lluvia de meteoritos los
+// boletos cuestan la mitad (la cuota no); full: lo de siempre, para enseñarlo tachado.
+const betPay = (g, m) => {
+  const full = ticketCost(g) * m, met = m > 1 && !!meteor();
+  return { tk: met ? Math.ceil(full / 2) : full, full, met, fee: betFee(g, m) };
+};
+// La apuesta que lleva el Jugar del camino (etiqueta ×N; si toca la gratis, esa), y repintarla sin redibujar.
+const betShown = () => (!betOk(save.next) ? 1 : betGiftNow(save.next) ? maxBet(save.next) : betNow(save.next));
+const betSticker = (m) => (m > 1 ? `<i class="go-bet b${m}" aria-hidden="true">×${m}</i>` : '');
+const playSub = () => `Nivel ${save.next + 1}${betGiftNow(save.next) ? ' · ¡gratis!' : ''}`;
+function paintBetSticker() {
+  if (save.run) return;
+  document.querySelectorAll('#app .go[data-a="continue"], #app .go[data-a="play-next"]').forEach((b) => {
+    b.querySelector('.go-bet')?.remove();
+    b.insertAdjacentHTML('beforeend', betSticker(betShown()));
+    const sm = b.querySelector('.t small');
+    if (sm) sm.textContent = playSub();
+  });
+}
+// Lo que da el nivel al ganarlo con 3★, cada cosa con su número (n) o solo su ×N: monedas, la devolución de boletos,
+// fichas de la colección y el cofre del jefe (la lluvia va en las monedas: tachado y ×2).
+const betLoot = (g) => [
+  { ico: coin(), n: boosted(coinsFor(g, 3, 0), save.coins, g), met: !!meteor() },
+  { ico: icon('ticket'), n: ticketRefund(g) },
+  col() && { ico: icon(col().token), n: 3 },
+  g % LEVELS_PER_WORLD === LEVELS_PER_WORLD - 1 && { ico: icon('cofre') },
+].filter(Boolean);
+// Sin etiqueta ×N donde hay número (9 nov 2026): ya va multiplicado y la etiqueta hacía creer que era eso ×N otra vez.
+// El cofre y el meteoro (sin número: su premio sale al ganar) sí llevan su ×N.
+// Con la lluvia, las monedas enseñan lo de la apuesta tachado y al lado lo final (×2 del meteoro), con su meteorito.
+const lootN = (x, m) => x.n * m * (x.met ? 2 : 1);
+// Cada número aparta el ancho del más grande (M, la apuesta más alta): al cambiar la apuesta la ventana no se mueve.
+const wch = (n) => `style="min-width:${money(n).length}ch"`;
+const betLootHTML = (loot, m, M = m) => loot.map((x, i) => `<span class="bl${x.met ? ' met' : ''}">${x.ico}${x.met ? `<s ${wch(x.n * M)}>${money(x.n * m)}</s>` : ''}${x.n != null ? `<b class="outl" data-i="${i}" data-n="${lootN(x, m)}" ${wch(lootN(x, M))}>${money(lootN(x, m))}</b>${x.met ? icon('meteoro') : ''}` : `<i class="bl-x b${m}"${m > 1 ? '' : ' hidden'}>×${m}</i>`}</span>`).join('');
+// Cuenta de a poco hasta el número nuevo (sube o baja).
+function countTo(el, to) {
+  const from = +el.dataset.n || 0;
+  el.dataset.n = to;
+  if (reduced() || from === to) return (el.textContent = money(to));
+  const t0 = performance.now(), D = 420;
+  const step = (t) => {
+    const k = Math.min(1, (t - t0) / D), e = 1 - (1 - k) ** 3;
+    el.textContent = money(Math.round(from + (to - from) * e));
+    if (k < 1 && el.isConnected) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
+// Ventana para apostar (al tocar Jugar): "¡Apuesta y gana más!", la ficha grande ×N y "Si ganas te llevas" con cada
+// premio (su número multiplicado y su etiqueta ×N); abajo las fichas ×1 ×2 ×3… para escoger (la escogida llena de su
+// color, levantada y con palomita), el botón y debajo lo que cuesta. Sin letra chiquita. Al cambiar, todo cuenta y brinca.
+function openBet() {
+  const g = save.next;
+  if (!betOk(g)) return enterLevel(g, true);
+  // El primer ×N que le sale: forzado, las demás fichas bloqueadas y gratis (va por nuestra cuenta).
+  const gift = betGiftNow(g);
+  let cur = gift ? maxBet(g) : betNow(g);
+  const loot = betLoot(g);
+  const p0 = betPay(g, cur);
+  const m = openModal({
+    title: '¡Apuesta y gana más!',
+    color: 'gold',
+    cls: 'bet-modal',
+    body: `<div class="bet-top"><div class="bet-hero"><div class="rays"></div><span class="bet-big b${cur} outl">×${cur}</span></div>
+      <div class="bet-sell"><p class="bet-lead">Si ganas te llevas</p><div class="bet-loot">${betLootHTML(loot, cur, maxBet(g))}</div></div></div>
+      <div class="bet-opts" role="group" aria-label="Apuesta">${betSteps(g).map((k) => `<button class="bet-opt press b${k}${k === cur ? ' sel' : ''}" data-m="${k}" aria-pressed="${k === cur}"${gift && k !== cur ? ' disabled' : ''}><b class="outl">×${k}</b>${icon('check')}</button>`).join('')}</div>`,
+    buttons: [{ label: '', cls: 'green wide bet-go', keep: true, onClick: () => {
+      save.bet = cur;
+      persist();
+      m.close();
+      paintBetSticker();
+      enterLevel(g, true);
+    } }],
+  });
+  const go = m.el.querySelector('.bet-go'), big = m.el.querySelector('.bet-big');
+  go.insertAdjacentHTML('afterend', gift ? `<p class="bet-cost free">${icon('gift')}¡Tu primer ×${cur} va por nuestra cuenta!</p>` : `<p class="bet-cost">Cuesta <s class="bc-full"${p0.met ? '' : ' hidden'}>${p0.full}</s><b data-tk data-n="${p0.tk}">${p0.tk}</b>${icon('ticket')}<span class="bc-met"${p0.met ? '' : ' hidden'}>${icon('meteoro')}−50%</span><span class="bc-fee"${p0.fee ? '' : ' hidden'}>+ ${coin()}<b data-fee data-n="${p0.fee}">${money(p0.fee)}</b></span></p>`);
+  const paint = () => (go.innerHTML = `${icon('play')} ${cur > 1 ? `¡Jugar ×${cur}${gift ? ' gratis' : ''}!` : 'Jugar sin apostar'}`);
+  paint();
+  m.el.querySelectorAll('.bet-opt').forEach((b) =>
+    b.addEventListener('click', () => {
+      const k = +b.dataset.m;
+      if (k === cur || gift) return;
+      const up = k > cur;
+      cur = k;
+      buzz(10);
+      m.el.querySelectorAll('.bet-opt').forEach((o) => (o.classList.toggle('sel', o === b), o.setAttribute('aria-pressed', o === b)));
+      const pay = betPay(g, k);
+      countTo(m.el.querySelector('[data-tk]'), pay.tk);
+      const full = m.el.querySelector('.bc-full');
+      full.textContent = pay.full;
+      full.hidden = m.el.querySelector('.bc-met').hidden = !pay.met;
+      countTo(m.el.querySelector('[data-fee]'), pay.fee);
+      m.el.querySelector('.bc-fee').hidden = !pay.fee;
+      big.className = `bet-big b${k} outl`;
+      big.textContent = `×${k}`;
+      m.el.querySelectorAll('.bet-loot b').forEach((el) => {
+        const x = loot[+el.dataset.i];
+        countTo(el, lootN(x, k));
+        if (x.met) el.previousElementSibling.textContent = money(x.n * k);
+      });
+      m.el.querySelectorAll('.bl-x').forEach((el) => ((el.className = `bl-x b${k}`), (el.textContent = `×${k}`), (el.hidden = k < 2)));
+      paint();
+      if (reduced()) return;
+      big.animate([{ scale: 1, rotate: '0deg' }, { scale: up ? 1.35 : 0.8, rotate: up ? '-10deg' : '6deg' }, { scale: 1, rotate: '0deg' }], { duration: 380, easing: 'cubic-bezier(0.34, 1.45, 0.64, 1)' });
+      m.el.querySelectorAll('.bet-loot .bl').forEach((el, i) => el.animate([{ translate: '0 0', scale: 1 }, { translate: `0 ${up ? -8 : 5}px`, scale: up ? 1.18 : 0.9 }, { translate: '0 0', scale: 1 }], { duration: 420, delay: i * 60, easing: 'ease-out' }));
+      if (up) { const r = big.getBoundingClientRect(); sparkle({ x: r.left + r.width / 2, y: r.top + r.height / 2 }, 10 + k); }
+    }),
+  );
+  if (!reduced()) m.el.querySelectorAll('.bet-loot .bl, .bet-opt').forEach((el, i) => el.animate([{ opacity: 0, translate: '0 10px' }, { opacity: 1, translate: '0 0' }], { duration: 300, delay: 250 + i * 70, easing: 'ease-out', fill: 'backwards' }));
+}
 const playNow = () => (save.run ? enterLevel(save.run.g) : pendingWorld() != null ? openWorldGate(pendingWorld()) : enterLevel(save.next));
-const goBtn = (title, sub, act) => {
+const goBtn = (title, sub, act, bet = 1) => {
   // Lluvia de meteoritos: el Jugar del camino lleva orilla de fuego y lo que le queda (el del evento no: ahí no cuenta).
   const m = ['continue', 'play-next'].includes(act) && meteor();
-  return `<button class="go${m ? ' met' : ''}" data-a="${act}">${icon('play')}<span class="t"><b class="outl">${title}</b>${sub ? `<small>${sub}</small>` : ''}</span>${m ? `<small class="met-clock">${mmss(m.left())}</small>` : ''}</button>`;
+  return `<button class="go${m ? ' met' : ''}" data-a="${act}">${icon('play')}<span class="t"><b class="outl">${title}</b>${sub ? `<small>${sub}</small>` : ''}</span>${m ? `<small class="met-clock">${mmss(m.left())}</small>` : ''}${betSticker(bet)}</button>`;
 };
 
 // Estado de un mundo para dibujarlo. gate: forzar que se vea por abrir (antes de animar su desbloqueo).
@@ -240,8 +363,8 @@ function showMap({ region, start = null, anim, after = null, unlock = null, paid
       <div class="wtitle info">${miniPlanet(b.emblem, 'em')}<div><b>${esc(info.name)}</b><small>Mundo ${w + 1} · ${worldStarsHTML(w)}</small></div></div>`;
     const first = w * LEVELS_PER_WORLD, run = save.run;
     let go;
-    if (run && worldOf(run.g) === w) go = goBtn('Continuar', isSecret(run.g) ? 'Nivel secreto' : `Nivel ${run.g + 1}`, 'continue');
-    else if (save.next >= first && save.next < first + LEVELS_PER_WORLD) go = goBtn('Jugar', `Nivel ${save.next + 1}`, 'play-next');
+    if (run && worldOf(run.g) === w) go = goBtn('Continuar', isSecret(run.g) ? 'Nivel secreto' : `Nivel ${run.g + 1}`, 'continue', run.bet);
+    else if (save.next >= first && save.next < first + LEVELS_PER_WORLD) go = goBtn('Jugar', playSub(), 'play-next', betShown());
     else go = '<div class="hint-chip">Toca un nivel para repetirlo</div>';
     // Mecánica nueva: botón con su carta junto a Jugar; al tocarlo se despliega el aviso y al tocarlo otra vez se recoge.
     // Brinca hasta que lo lee (o hasta que vio el "Nuevo: …" del tablero).
@@ -484,7 +607,7 @@ const endTouring = (screen) => screen.classList.toggle('touring', !!tourStep());
 // ya se reclamó, solo se señala). save.sideTour = paso en el que va (si cierra el juego, sigue ahí) o 'done'.
 const TOUR_EVS = [['mes', 'star'], ['fiesta', 'flame'], ['col', 'concha'], ['racha', 'rocket']];
 // Orden de los botones de eventos (por su data-a), el mismo de eventButtons.
-const EV_ORDER = ['evento', 'fiesta', 'col', 'racha', 'mis', 'logros'];
+const EV_ORDER = ['evento', 'evento-next', 'fiesta', 'fiesta-next', 'col', 'racha', 'mis', 'logros'];
 const SIDE_TOUR = [
   // 8 nov 2026: los menús van agrupados; primero el botón que los junta (tocarlo abre su cajón) y luego cada uno.
   { sel: '.side.l .grp-btn', open: 'l', title: 'Menú', text: () => 'Aquí se juntan el <b>regalo diario</b>, los <b>boletos</b>, la <b>tienda</b>, el <b>álbum</b>, <b>tu camino</b> y los <b>ajustes</b>. Tócalo para abrirlo; toca afuera para cerrarlo.' },
@@ -596,13 +719,14 @@ function sideTour() {
       Object.assign(ring.style, { left: `${cur.x - cur.w / 2}px`, top: `${cur.y - cur.h / 2}px`, width: `${cur.w}px`, height: `${cur.h}px`, translate: 'none', boxSizing: 'border-box' });
       const bh = bub.offsetHeight, midY = () => Math.min(H - bh - 12, Math.max(12, cy - bh / 2));
       if (cx < W / 2 && roomR >= 220) Object.assign(bub.style, { left: `${r.right + 20}px`, width: `${Math.min(330, roomR)}px`, translate: '0 0', top: `${midY()}px` });
-      else if (cx > W / 2 && roomL >= 220 && r.height > r.width * 1.25) {
+      // 9 nov 2026: los de la derecha, igual de pegados que los de la izquierda (antes solo si eran alargados).
+      else if (cx > W / 2 && roomL >= 220) {
         const w = Math.min(330, roomL);
         Object.assign(bub.style, { left: `${r.left - 20 - w}px`, width: `${w}px`, translate: '0 0', top: `${midY()}px` });
       } else {
-        // Debajo si cabe; si no (botón de jugar, abajo), encima.
-        const below = r.bottom + 24 + bh < H - 12;
-        Object.assign(bub.style, { left: '50%', width: '', translate: '-50% 0', top: `${below ? r.bottom + 24 : Math.max(12, r.top - 24 - bh)}px` });
+        // Debajo si cabe; si no (botón de jugar, abajo), encima. Alineado con el botón (no centrado en la pantalla).
+        const below = r.bottom + 24 + bh < H - 12, w = Math.min(330, W - 24);
+        Object.assign(bub.style, { left: `${Math.min(W - w - 12, Math.max(12, cx - w / 2))}px`, width: `${w}px`, translate: '0 0', top: `${below ? r.bottom + 24 : Math.max(12, r.top - 24 - bh)}px` });
       }
     }
     const loop = () => {
@@ -822,7 +946,7 @@ const eventButtons = (res) => {
 const sideButtons = () => grouped('l', 'Menú', `${ibtn('gift', 'Regalo diario', 'daily', !dailyState(save.daily).claimed)}${ticketBtn()}${ibtn('bag', 'Tienda', 'shop')}${ibtn('album', 'Álbum de postales', 'album')}${roadBtn()}${ibtn('gear', 'Ajustes', 'settings')}`);
 function sideAction(a) {
   if (a === 'grp-r' || a === 'grp-l') return openGroup(a.slice(4)), true;
-  const act = { me: () => !document.querySelector('.touring') && openProfile(), camino: openRoad, shop: () => openShop(), daily: openDaily, dticket: openDailyTicket, racha: openRacha, mis: openMis, logros: openLogros, col: openCol, evento: openEvento, fiesta: openFiesta, album: openAlbum, settings: openSettings, dev: () => openDevMenu({ onGallery: () => showGallery(save.next), onPlanets: showPlanets, onRefresh: boot, card: mechCard }) }[a];
+  const act = { me: () => !document.querySelector('.touring') && openProfile(), camino: openRoad, shop: () => openShop(), daily: openDaily, dticket: openDailyTicket, racha: openRacha, mis: openMis, logros: openLogros, col: openCol, evento: openEvento, 'evento-next': openEventoNext, fiesta: () => openFiesta(), 'fiesta-next': () => openFiesta(fiestaSoon(), 'fiesta-next'), album: openAlbum, settings: openSettings, dev: () => openDevMenu({ onGallery: () => showGallery(save.next), onPlanets: showPlanets, onRefresh: boot, card: mechCard }) }[a];
   // Usar un botón cierra su cajón (menos durante el recorrido, que los va enseñando).
   if (act && !document.querySelector('.side-touring')) closeGroups();
   act?.();
@@ -931,6 +1055,9 @@ function roadItems() {
   const tables = [
     ...ROAD_TABLES.map(([id, name, text]) => ({ id, n: SCROLL_FROM[id] + 1, name, text })),
     { id: 'marea', n: mareaFirst() + 1, name: 'Marea', text: 'Cada robo sube el agua y cada carta que juegas la baja.' },
+    { id: 'puertas', n: puertasFirst() + 1, name: 'Puertas', text: 'Cada carta llave abre la puerta que tú escojas. Las que no abras no cuentan.' },
+    { id: 'banda', n: bandaFirst() + 1, name: 'Banda transportadora', text: 'Sus cartas dan vueltas: solo ves 4 a la vez y avanza con cada jugada o robo.' },
+    { id: 'hoyo', n: hoyoFirst() + 1, name: 'Agujero negro', text: 'Cada 4 jugadas o robos se traga sus cartas y las escupe con los números revueltos.' },
   ].map((x) => ({ ...x, k: 'mesa', pic: tableIcon(x.id) }));
   const order = Object.keys(ROAD_KINDS);
   return [...evs, ...cards, ...tables].sort((a, b) => a.n - b.n || order.indexOf(a.k) - order.indexOf(b.k));
@@ -1071,8 +1198,19 @@ function spendTickets(cost, sel = '[data-tickets]', ico = 'ticket', before = sav
   label.textContent = shown;
   const fx = from.left + from.width / 2, fy = from.top + from.height / 2;
   const runs = [];
-  for (let k = 0; k < cost; k++) {
-    const tx = innerWidth / 2 + (k - (cost - 1) / 2) * 96, ty = innerHeight / 2;
+  // 9 nov 2026 (con apuesta pueden ser muchos): hasta 10 boletos en filas que caben en la pantalla (parada o acostada),
+  // más chicos entre más sean; si cuesta más de 10, cada uno descuenta su parte.
+  const V = Math.min(cost, 10);
+  let best = null;
+  for (let C = V; C >= 1; C--) {
+    const R = Math.ceil(V / C), S = Math.min(3, (innerWidth - 32) / (C * 32 + 8), (innerHeight * 0.55) / (R * 36 + 4));
+    if (!best || S > best.S) best = { C, R, S };
+  }
+  const { C, R, S } = best, sx = 32 * S, sy = 36 * S, step = Math.min(280, 1400 / V);
+  for (let k = 0; k < V; k++) {
+    const row = Math.floor(k / C), inRow = Math.min(C, V - row * C), col = k - row * C;
+    const tx = innerWidth / 2 + (col - (inRow - 1) / 2) * sx, ty = innerHeight / 2 + (row - (R - 1) / 2) * sy;
+    const dec = Math.floor(((k + 1) * cost) / V) - Math.floor((k * cost) / V);
     const f = document.createElement('div');
     f.className = 'fly-ticket';
     f.innerHTML = icon(ico);
@@ -1082,15 +1220,15 @@ function spendTickets(cost, sel = '[data-tickets]', ico = 'ticket', before = sav
       [
         { translate: '0 0', scale: 0.8, rotate: '0deg', opacity: 0 },
         { translate: '0 0', scale: 1, rotate: '0deg', opacity: 1, offset: 0.1 },
-        { translate: `${tx - fx}px ${ty - fy}px`, scale: 3.2, rotate: '12deg', opacity: 1, offset: 0.75 },
-        { translate: `${tx - fx}px ${ty - fy}px`, scale: 3, rotate: '0deg', opacity: 1 },
+        { translate: `${tx - fx}px ${ty - fy}px`, scale: S * 1.07, rotate: '12deg', opacity: 1, offset: 0.75 },
+        { translate: `${tx - fx}px ${ty - fy}px`, scale: S, rotate: '0deg', opacity: 1 },
       ],
-      { duration: 760, delay: k * 280, easing: 'cubic-bezier(0.3, 0.9, 0.3, 1.1)', fill: 'both' },
+      { duration: 760, delay: k * step, easing: 'cubic-bezier(0.3, 0.9, 0.3, 1.1)', fill: 'both' },
     );
     setTimeout(() => {
-      label.textContent = --shown;
+      label.textContent = shown -= dec;
       label.closest('.pill').animate([{ scale: 1 }, { scale: 0.85 }, { scale: 1 }], { duration: 240, easing: 'ease-out' });
-    }, k * 280 + 80);
+    }, k * step + 80);
     runs.push(
       go.finished.then(() => {
         // Se rompe por la mitad: cada mitad gira y cae.
@@ -1123,7 +1261,8 @@ const runRacha = (run) => {
   if (!runLoses(run) || !isOn('racha') || !r.n) return '';
   return rachaWarnHTML(r.n, r.pend.length, 'Si lo abandonas');
 };
-function enterLevel(g) {
+// chosen: ya escogió la apuesta en su ventana (si no, un nivel nuevo con apuesta abre la ventana primero).
+function enterLevel(g, chosen = false) {
   // También en modo dev: así se prueba la puerta (y las monedas de la constelación). La galería entra sin puerta.
   if (worldOf(g) > save.open) return openWorldGate(worldOf(g));
   const run = save.run;
@@ -1132,7 +1271,7 @@ function enterLevel(g) {
     return openModal({
       title: 'Nivel a medias',
       color: 'orange',
-      body: `<p class="lead"><b>${levelName(run.g)}</b> sigue en juego. Termínalo, o abandónalo${run.replay ? '' : ' y pierdes su boleto'}.</p>${runRacha(run)}`,
+      body: `<p class="lead"><b>${levelName(run.g)}</b> sigue en juego. Termínalo, o abandónalo${run.replay ? '' : ' y pierdes su boleto'}.</p>${betLoseHTML(run.bet, run.paid)}${runRacha(run)}`,
       buttons: [
         {
           label: 'Abandonar y jugar este',
@@ -1148,45 +1287,88 @@ function enterLevel(g) {
       ],
     });
   }
-  const cost = entryCost(g);
-  if (!cost) return startLevel(g);
-  if (save.tickets >= cost) {
+  // Apuesta: Jugar abre su ventana para escoger (y ahí dice lo que cuesta). La primera apuesta de todas va forzada
+  // y gratis (la ventana no deja bajarla y dice que va por nuestra cuenta); luego boletos × apuesta y su cuota. Si no alcanza no se juega ×1 a
+  // escondidas: la ventana de abajo vende lo que falta para la apuesta escogida o deja jugar sin apostar.
+  if (betOk(g) && !chosen) return openBet();
+  if (betGiftNow(g)) {
+    if (entering) return;
+    const bet = maxBet(g);
+    save.bet = bet;
+    save.betFreeN = bet;
+    persist();
+    return startLevel(g, { bet, paid: { tk: 0, fee: 0, gift: true } });
+  }
+  const base = entryCost(g), bet = betOk(g) ? betNow(g) : 1;
+  // Sin costo (modo dev con boletos infinitos): entra igual con su apuesta.
+  if (!base) return startLevel(g, { bet });
+  const { tk: cost, fee } = bet > 1 ? betPay(g, bet) : { tk: base, fee: 0 };
+  if (save.tickets >= cost && save.coins >= fee) {
     if (entering) return;
     entering = true;
     save.tickets -= cost;
+    save.coins -= fee;
     persist();
-    return spendTickets(cost).then(() => {
+    const payFee = fee ? spendFromWallet('coins', { x: innerWidth / 2, y: innerHeight / 2 }, fee) : Promise.resolve();
+    return Promise.all([cost ? spendTickets(cost) : Promise.resolve(updateCoins()), payFee]).then(() => {
       entering = false;
-      startLevel(g);
+      startLevel(g, { bet, paid: { tk: cost, fee } });
     });
   }
-  const need = cost - save.tickets;
-  const price = need * TICKET_PRICE;
-  openModal({
-    title: 'Faltan boletos',
-    ico: 'ticket',
+  return openShort(g, bet, cost, fee, base);
+}
+// Faltan boletos (9 nov 2026, "más creativo"): la taquilla. Una fila de boletos con los que pide la entrada: los que
+// tienes de color y los que faltan punteados, latiendo. "Completar" paga y los que faltan caen uno por uno (con
+// chispas), el contador sube y entra solo. Con apuesta lleva su etiqueta ×N; si le alcanza para ×1, puede bajarla.
+// Si solo faltan monedas (la cuota), lo dice con la moneda.
+function openShort(g, bet, cost, fee, base) {
+  const have = save.tickets, need = Math.max(0, cost - have), price = need * TICKET_PRICE;
+  const plain = bet > 1 && have >= base, broke = save.coins < price + fee;
+  const N = Math.min(cost, 10), full = Math.min(N, Math.floor((have / cost) * N));
+  const slots = Array.from({ length: N }, (_, i) => `<span class="sh-slot${i < full ? '' : ' miss'}">${icon('ticket')}</span>`).join('');
+  const m = openModal({
+    title: need ? '¡Faltan boletos!' : '¡Faltan monedas!',
     color: 'pink',
-    body: `<p class="lead">Este nivel cuesta <b>${cost}</b> ${icon('ticket')} y tienes ${save.tickets}.</p>
-      <p class="note">Si ganas el nivel, te devuelve los boletos. Repetir niveles ganados es gratis.</p>`,
+    cls: 'short-modal',
+    body: `<div class="sh-booth">${bet > 1 ? `<i class="go-bet b${bet}">×${bet}</i>` : ''}<div class="sh-row">${slots}</div>
+        <p class="sh-count"><b data-n="${have}">${have}</b> / ${cost} ${icon('ticket')}</p></div>
+      <p class="sh-lead">${need ? `¡Te falta${need === 1 ? '' : 'n'} <b>${need}</b> ${icon('ticket')} para entrar!` : `Te faltan ${coin()} <b>${money(fee - save.coins)}</b> para la apuesta`}</p>`,
     buttons: [
-      {
-        label: `${need} ${icon('ticket')} · ${coin()} ${price}`,
-        disabled: save.coins < price,
-        onClick: () => {
-          save.coins -= price;
-          save.tickets += need;
-          persist();
-          updateCoins();
-          enterLevel(g);
-        },
-      },
-    ],
+      need && { label: broke ? `Te faltan ${coin()} ${money(price + fee - save.coins)}` : `${icon('ticket')} Completar · ${coin()} ${money(price)}`, cls: 'green wide sh-buy', disabled: broke, keep: true, onClick: (btn) => fill(btn) },
+      plain && { label: 'Jugar sin apostar', cls: 'ghost wide', onClick: () => ((save.bet = 1), persist(), paintBetSticker(), enterLevel(g, true)) },
+    ].filter(Boolean),
   });
+  if (!reduced()) m.el.querySelectorAll('.sh-slot').forEach((el, i) => el.animate([{ opacity: 0, translate: '0 -14px', rotate: '-12deg' }, { opacity: 1, translate: '0 0', rotate: '0deg' }], { duration: 320, delay: 150 + i * 50, easing: 'cubic-bezier(0.34, 1.45, 0.64, 1)', fill: 'backwards' }));
+  async function fill(btn) {
+    m.el.querySelectorAll('.mbtns .btn').forEach((b) => (b.disabled = true));
+    save.coins -= price;
+    save.tickets += need;
+    persist();
+    updateCoins();
+    countTo(m.el.querySelector('.sh-count b'), save.tickets);
+    const miss = [...m.el.querySelectorAll('.sh-slot.miss')];
+    for (const el of miss) {
+      el.classList.remove('miss');
+      el.classList.add('got');
+      buzz(8);
+      if (!reduced()) {
+        const r = el.getBoundingClientRect();
+        sparkle({ x: r.left + r.width / 2, y: r.top + r.height / 2 }, 6);
+        await wait(Math.max(70, 420 / miss.length));
+      }
+    }
+    btn.innerHTML = `${icon('check')} ¡Listo!`;
+    await wait(reduced() ? 0 : 450);
+    m.close();
+    enterLevel(g, true);
+  }
 }
 
 // ---------- Partida ----------
 // resume: retoma save.run · free: modo dev (sin boletos y sin guardar la partida) · anim: transición
-function startLevel(g, { resume = false, free = false, anim = 'up' } = {}) {
+// bet: apuesta (8 nov 2026; la partida guardada recuerda la suya)
+// paid: lo que pagó al entrar con apuesta ({ tk, fee, gift }), para decírselo si abandona.
+function startLevel(g, { resume = false, free = false, anim = 'up', bet = 1, paid = null } = {}) {
   const old = [...app.children];
   game?.destroy();
   game = null;
@@ -1198,9 +1380,11 @@ function startLevel(g, { resume = false, free = false, anim = 'up' } = {}) {
   // a medias: al volver, Jugar apunta a ese nivel y para jugar otro hay que abandonarlo (y se pierde la racha).
   // Salir desde la pausa sigue perdiendo el intento.
   const saved = run ? !run.replay : !free && !save.stars[g] && !isSecret(g);
+  const mult = run ? run.bet || 1 : bet;
+  const betPaid = run ? run.paid || null : mult > 1 ? paid : null;
   if (!run) {
     save.tries[g] = v + 1;
-    if (saved) save.run = { g, v, state: null, sig: null };
+    if (saved) save.run = { g, v, state: null, sig: null, ...(mult > 1 && { bet: mult, paid: betPaid }) };
     persist();
   }
   const level = variantLevel(generateLevel(g), v);
@@ -1225,6 +1409,8 @@ function startLevel(g, { resume = false, free = false, anim = 'up' } = {}) {
     meteor: !!met0,
     resume: run?.state,
     saved,
+    bet: mult,
+    betPaid,
     // Desde la constelación 2 no hay Guardar y salir (7 nov 2026); si cierra la app tiene RUN_LIMIT para volver.
     canExit: !(saved && g >= NO_EXIT_FROM),
     free: !!save.stars[g] || isSecret(g) || free || dev.infinite, // intento que no costó boleto
@@ -1233,7 +1419,7 @@ function startLevel(g, { resume = false, free = false, anim = 'up' } = {}) {
     racha: counts && isOn('racha') ? { n: racha().n, ico: rachaTheme().ico, hot: rachaHot() } : null,
     onSave: saved
       ? (state) => {
-          save.run = { g, v, state, sig, at: Date.now() };
+          save.run = { g, v, state, sig, at: Date.now(), ...(mult > 1 && { bet: mult, paid: betPaid }) };
           persist();
         }
       : free
@@ -1301,14 +1487,15 @@ function startLevel(g, { resume = false, free = false, anim = 'up' } = {}) {
       const prev = save.stars[g] || 0;
       const met = metWin(free ? null : meteor()?.id || met0, stars);
       // Si va corto de monedas para su avance, el nivel paga más (boosted; nunca menos de lo normal).
-      const coins = metCoins(boosted(coinsFor(g, stars, prev), save.coins, g), met);
+      // Apuesta: todo × apuesta (monedas, boletos, fichas, cofre y el premio de la lluvia de meteoritos).
+      const coins = metCoins(boosted(coinsFor(g, stars, prev), save.coins, g), met) * mult;
       // La primera victoria devuelve los boletos que cuesta el nivel.
-      const tickets = prev ? 0 : ticketRefund(g);
+      const tickets = prev ? 0 : ticketRefund(g) * mult;
       // El jefe da el boleto dorado para abrir el mundo siguiente (solo la primera vez).
       // El del último mundo de cada constelación da el boleto de constelación (abre la siguiente; 8 nov 2026).
       const bossTk = !prev && level.boss && w + 1 < WORLD_COUNT ? 1 : 0;
       const gold = w % 10 === 9 ? 0 : bossTk, cgold = w % 10 === 9 ? bossTk : 0;
-      const fichas = colWin(stars, prev);
+      const fichas = colWin(stars, prev, mult);
       save.stars[g] = Math.max(prev, stars);
       save.coins += coins;
       save.tickets += tickets;
@@ -1326,15 +1513,21 @@ function startLevel(g, { resume = false, free = false, anim = 'up' } = {}) {
           chest.constel = true;
           for (const k of ['coins', 'wild', 'undo']) chest[k] = (chest[k] || 0) + CONST_PRIZE[k];
         }
+        for (const k of ['coins', 'wild', 'undo']) if (chest[k]) chest[k] *= mult;
+        if (mult > 1) chest.bet = mult;
         save.coins += chest.coins || 0;
         save.undo += chest.undo || 0;
         save.wild += chest.wild || 0;
       }
+      // La lluvia de meteoritos ya dio su comodín o deshacer (metWin): con apuesta se suman los que faltan.
+      const mw = (met?.prize?.wild || 0) * mult, mu = (met?.prize?.undo || 0) * mult;
+      save.wild += mw - (met?.prize?.wild || 0);
+      save.undo += mu - (met?.prize?.undo || 0);
       const racha = counts && !prev && rachaOn ? rachaWin(stars) : null;
       persist();
       updateCoins();
       // Repetir desde la victoria salta el festejo del mapa: no se ofrece si toca abrir el mundo siguiente.
-      return { coins, tickets, prev, gold, cgold, chest, wild: met?.prize?.wild || 0, undo: met?.prize?.undo || 0, met, worldStars: worldStars(w), counted: true, first: !prev, racha, replay: !free && !chest, col: fichas ? { n: fichas, ico: col().token } : null };
+      return { bet: mult, coins, tickets, prev, gold, cgold, chest, wild: mw, undo: mu, met, worldStars: worldStars(w), counted: true, first: !prev, racha, replay: !free && !chest, col: fichas ? { n: fichas, ico: col().token } : null };
     },
   });
   // El tablero sube y la pantalla anterior se queda atrás.
@@ -1884,7 +2077,7 @@ document.addEventListener('pointerdown', (e) => {
   closeGroups();
 }, true);
 // Nombre corto de cada botón del cajón (va abajo).
-const GRP_NAMES = { daily: 'Regalo', dticket: 'Boletos', shop: 'Tienda', album: 'Álbum', camino: 'Camino', settings: 'Ajustes', racha: 'Racha', mis: 'Misiones', logros: 'Logros', col: 'Colección', evento: 'Evento', fiesta: 'Festividad' };
+const GRP_NAMES = { daily: 'Regalo', dticket: 'Boletos', shop: 'Tienda', album: 'Álbum', camino: 'Camino', settings: 'Ajustes', racha: 'Racha', mis: 'Misiones', logros: 'Logros', col: 'Colección', evento: 'Evento', 'evento-next': 'Próximo', fiesta: 'Festividad', 'fiesta-next': 'Próxima' };
 // El botón del grupo enseña lo más urgente de su cajón y cuántos tienen algo listo; se repinta cuando cambian.
 function paintGroup(side) {
   const btn = side.querySelector('.grp-btn'), drawer = side.querySelector('.grp-drawer');
@@ -2031,10 +2224,18 @@ function seeSoon(e, a) {
   persist();
   document.querySelectorAll(`[data-a="${a}"]`).forEach((b) => (b.classList.remove('ready', 'nuevo'), b.querySelectorAll('.soon-new, .dot').forEach((x) => x.remove())));
 }
-const evBtn = () => {
+// 9 nov 2026: los botones van agrupados, así que desde 3 días antes el del mes que viene sale junto al del que termina
+// (evNextBtn, gris y con candado; con palomita si ya compró su entrada en preventa).
+const evBtn = () => evNowBtn() + evNextBtn();
+const evNextBtn = () => {
+  const n = evSoon();
+  if (!n) return '';
+  const pre = evPreOwned(n);
+  return `<button class="iconbtn tb press ev-btn soon ${pre ? 'pre' : ''} ${fresh('mes')}${soonTag(n)}" data-a="evento-next" aria-label="${n.name}: ${n.inDays > 1 ? `en ${n.inDays} días` : 'mañana'}" title="${n.name}">${icon(n.ico)}<span class="fi-lock">${icon(pre ? 'check' : 'lock')}</span><small class="tl">en ${shortLeft(evLeft())}</small>${soonDot(n)}</button>`;
+};
+const evNowBtn = () => {
   const e = ev();
-  // Un día antes del mes con evento: el botón ya sale, gris y con candado, con la cuenta regresiva.
-  if (!e || e.done) { const n = evSoon(); return n ? `<button class="iconbtn tb press ev-btn soon ${fresh('mes')}${soonTag(n)}" data-a="evento" aria-label="${n.name}: mañana" title="${n.name}">${icon(n.ico)}<span class="fi-lock">${icon('lock')}</span><small class="tl">en ${shortLeft(msToMidnight())}</small>${soonDot(n)}</button>` : ''; }
+  if (!e || e.done) return '';
   // Arriba, lo que le queda al mes. El reloj del boleto vive adentro: aquí solo se apaga si no hay boleto
   // y se mueve con su punto cuando sí lo hay.
   // Sin pagar todavía el primer boleto también llama (hay algo que hacer adentro).
@@ -2045,56 +2246,79 @@ const evBtn = () => {
 function openEvento() {
   // Entrar al mundo del evento ya es haber pagado: si no, primero la entrada (openEntry).
   if (ev() && !ev().done) return ev().state.paid ? warp(() => showEvent({ kind: 'mes' })) : openEntry('mes');
+  openEventoNext();
+}
+// El mes que viene (desde 3 días antes): de qué va, la cuenta regresiva y su entrada en preventa con descuento.
+function openEventoNext() {
   const n = evSoon();
   if (!n) return;
-  seeSoon(n, 'evento');
+  seeSoon(n, 'evento-next');
+  const pre = evPreOwned(n), p = evPrePrice(n), full = evPrePrice(n, false), short = save.coins < p;
   const m = openModal({
-    title: `¡Mañana empieza ${n.name}!`,
+    title: n.inDays > 1 ? `¡En ${n.inDays} días empieza ${n.name}!` : `¡Mañana empieza ${n.name}!`,
     color: n.color,
     cls: 'entry-modal',
-    body: `${passHTML(n, { ico: n.ico, state: 'soon', label: 'Empieza en', sub: `<span class="ep-clock" data-pclock>${clock(msToMidnight())}</span>` })}
-      <p class="lead">Todo el mes: <b>${EVENT_PLANETS} planetas</b>, ${EVENT_LEVELS} niveles y premios <b>exclusivos</b>.</p>`,
-    buttons: [{ label: '¡Ahí estaré!', cls: 'gold wide' }],
+    body: `${passHTML(n, { ico: n.ico, state: pre ? 'owned' : 'soon', label: 'Empieza en', sub: `<span class="ep-clock" data-pclock>${clock(evLeft())}</span>`, off: pre ? '' : `−${Math.round(FI_PRE * 100)}%` })}
+      <p class="lead">Todo el mes: <b>${EVENT_PLANETS} planetas</b>, ${EVENT_LEVELS} niveles y premios <b>exclusivos</b>. ${pre ? 'Ya tienes tu entrada: ese día entras directo.' : 'Compra tu entrada desde hoy y paga menos.'}</p>`,
+    buttons: pre ? [] : [{
+      label: short ? `Te faltan ${coin()} ${money(p - save.coins)}` : `Comprar · ${coin()} <s>${money(full)}</s> ${money(p)}`,
+      cls: 'green wide',
+      disabled: short,
+      keep: true,
+      onClick: async (btn) => {
+        if (!evPreBuy()) return;
+        btn.disabled = true;
+        const r = btn.getBoundingClientRect();
+        await spendFromWallet('coins', { x: r.left + r.width / 2, y: r.top + r.height / 2 }, p);
+        updateCoins();
+        m.close();
+        toast(`${icon('check')} ¡Entrada lista para ${n.name}!`);
+        current?.();
+      },
+    }],
   });
-  passClock(m, () => (evSoon() ? msToMidnight() : 0), () => current?.());
+  passClock(m, () => (evSoon() ? evLeft() : 0), () => current?.());
 }
 // Festividad (24 h): botón dorado junto a Jugar, del tamaño de los laterales. Desde 3 días antes sale gris, con
 // candado y la cuenta regresiva ("en 2 d", "en 19 h"); el día de la fiesta, a color con "¡Hoy!" y lo que le queda.
-const fiBtn = () => {
+// 9 nov 2026: festividades pegadas (p. ej. La Llorona y La Catrina): mientras dura una, la que sigue ya sale a su lado
+// (fiNextBtn, data-a="fiesta-next") con su preventa.
+const fiSoonHTML = (f, a) => `<button class="iconbtn tb press fi-btn soon ${fiPre(f) ? 'pre' : ''} ${fresh('fiesta')}${soonTag(f)}" data-a="${a}" aria-label="${f.name}: ${f.inDays > 1 ? `en ${f.inDays} días` : 'mañana'}" title="${f.name}">${icon(f.ico)}<span class="fi-lock">${icon(fiPre(f) ? 'check' : 'lock')}</span><small class="tl">en ${shortLeft(soonLeft(f))}</small>${soonDot(f)}</button>`;
+const fiBtn = () => fiNowBtn() + fiNextBtn();
+const fiNextBtn = () => { const f = fiestaSoon(); return f ? fiSoonHTML(f, 'fiesta-next') : ''; };
+const fiNowBtn = () => {
   const f = fiesta();
   if (!f || f.done) return '';
-  const left = shortLeft(fiestaLeft());
   return f.soon
-    ? `<button class="iconbtn tb press fi-btn soon ${fiPre(f) ? 'pre' : ''} ${fresh('fiesta')}${soonTag(f)}" data-a="fiesta" aria-label="${f.name}: ${f.inDays > 1 ? `en ${f.inDays} días` : 'mañana'}" title="${f.name}">${icon(f.ico)}<span class="fi-lock">${icon(fiPre(f) ? 'check' : 'lock')}</span><small class="tl">en ${left}</small>${soonDot(f)}</button>`
-    : `<button class="iconbtn tb press fi-btn ready ${fresh('fiesta')}" data-a="fiesta" aria-label="${f.name}" title="${f.name}">${icon(f.ico)}<small class="tl">${left}</small><em class="fi-hoy outl">¡Hoy!</em><span class="dot"></span></button>`;
+    ? fiSoonHTML(f, 'fiesta')
+    : `<button class="iconbtn tb press fi-btn ready ${fresh('fiesta')}" data-a="fiesta" aria-label="${f.name}" title="${f.name}">${icon(f.ico)}<small class="tl">${shortLeft(fiestaLeft())}</small><em class="fi-hoy outl">¡Hoy!</em><span class="dot"></span></button>`;
 };
 // Antes de que empiece: de qué va y la cuenta regresiva (nunca se dice que los niveles piden ayudas). El día de la fiesta, el botón lleva a ella.
-function openFiesta() {
-  const f = fiesta();
+function openFiesta(f = fiesta(), a = 'fiesta') {
   if (!f) return;
   if (!f.soon) return fiPaid(f) ? warp(() => showEvent({ kind: 'fiesta' })) : openEntry('fiesta');
   // Preventa (7 nov 2026): comprada antes cuesta FI_PRE menos; el día de la fiesta ya entras sin pagar.
   // 8 nov 2026: el mismo pase que la entrada del mes, con la cinta del descuento; ya comprada, el pase lleva el sello
   // "¡Lista!" y no hay botones (ni "Ahora no" ni "Entrada comprada").
   const pre = fiPre(f);
-  seeSoon(f, 'fiesta');
+  seeSoon(f, a);
   EVS = EVK.fiesta;
   const m = openModal({
     title: f.inDays > 1 ? `¡En ${f.inDays} días es ${f.name}!` : `¡Mañana es ${f.name}!`,
     color: f.color,
     cls: 'entry-modal',
-    body: `${passHTML(f, { ico: f.ico, state: pre ? 'owned' : 'soon', label: 'Empieza en', sub: `<span class="ep-clock" data-pclock>${clock(fiestaLeft())}</span>`, off: pre ? '' : `−${Math.round(FI_PRE * 100)}%` })}
+    body: `${passHTML(f, { ico: f.ico, state: pre ? 'owned' : 'soon', label: 'Empieza en', sub: `<span class="ep-clock" data-pclock>${clock(soonLeft(f))}</span>`, off: pre ? '' : `−${Math.round(FI_PRE * 100)}%` })}
       <p class="lead">${pre ? 'Ya tienes tu entrada. Ese día entras directo.' : 'Compra tu entrada desde hoy y paga menos.'}</p>`,
     buttons: pre ? [] : [buyTicketBtn(f, () => m, 'fiesta', () => (toast(`${icon('check')} ¡Entrada lista para ${f.name}!`), current?.()), 'Comprar')],
   });
-  passClock(m, () => (fiesta()?.soon ? fiestaLeft() : 0), () => current?.());
+  passClock(m, () => (fiesta()?.soon || fiestaSoon() ? soonLeft(f) : 0), () => current?.());
 }
 // Los tiempos de los botones avanzan solos (y el del mes vuelve a moverse cuando llega el boleto).
 setInterval(() => {
-  const fb = document.querySelector('[data-a="fiesta"]');
-  if (fb && !fb.classList.contains('fresh')) fb.outerHTML = fiBtn();
-  const b = document.querySelector('[data-a="evento"]');
-  if (b && !b.classList.contains('fresh')) b.outerHTML = evBtn();
+  for (const [a, f] of [['fiesta', fiNowBtn], ['fiesta-next', fiNextBtn], ['evento', evNowBtn], ['evento-next', evNextBtn]]) {
+    const b = document.querySelector(`[data-a="${a}"]`);
+    if (b && !b.classList.contains('fresh')) b.outerHTML = f();
+  }
   const c = document.querySelector('[data-a="col"]');
   if (c && !c.classList.contains('fresh')) c.outerHTML = colBtn();
 }, 20e3);
@@ -2366,7 +2590,7 @@ function buyTicketBtn(e, modal, kind = kindOf(e), after = () => wait(350).then(e
     disabled: short,
     keep: true,
     onClick: async (btn) => {
-      if (!(K.tk ? evBuyTicket() : fiBuy())) return;
+      if (!(K.tk ? evBuyTicket() : fiBuy(e.soon ? e : undefined))) return;
       btn.disabled = true;
       const r = btn.getBoundingClientRect();
       await spendFromWallet('coins', { x: r.left + r.width / 2, y: r.top + r.height / 2 }, p);
@@ -2531,6 +2755,7 @@ function openMetIntro() {
         <ul class="evi-rules">
           <li>${coin()}<span>Las monedas de cada nivel que ganes valen <b>el doble</b>.</span></li>
           <li>${star(true)}<span>Gana un nivel con <b>3 estrellas</b> y te cae un <b>premio sorpresa</b> (uno por lluvia).</span></li>
+          ${maxBet(save.next || 0) > 1 ? `<li>${icon('ticket')}<span>¿Apuestas? Los boletos de tu <b>×${betShown() > 1 ? betShown() : maxBet(save.next || 0)}</b> cuestan <b>la mitad</b>.</span></li>` : ''}
           ${first ? `<li>${icon('meteoro')}<span>Cae <b>sin aviso</b>, unas veces por semana, a cualquier hora. ¡Si la ves, juega!</span></li>` : ''}
         </ul>`,
       buttons: [{ label: '¡A jugar!', cls: 'gold wide' }],
@@ -2609,11 +2834,17 @@ async function notices() {
     if (!(await calm(gen))) return;
     if (meteor() && !meteor().state.intro) await openMetIntro();
   }
-  for (const k of ['racha', 'mis', 'logros', 'meteoro', 'col', 'mes', 'col2', 'fiesta', 'col3', 'fiesta2']) {
-    // La lluvia: solo si nunca se ha visto una (quien ya la vio caer no necesita la ventana).
-    if (!(k === 'meteoro' ? (save.next || 0) >= MET_FROM && !save.metSeen : isOn(k)) || save.intro?.[k]) continue;
+  for (const k of ['racha', 'mis', 'logros', 'meteoro', 'col', 'apuesta', 'mes', 'col2', 'fiesta', 'col3', 'fiesta2']) {
+    // La lluvia: solo si nunca se ha visto una (quien ya la vio caer no necesita la ventana). La apuesta: nivel 101.
+    if (!(k === 'meteoro' ? (save.next || 0) >= MET_FROM && !save.metSeen : k === 'apuesta' ? maxBet(save.next) > 1 : isOn(k)) || save.intro?.[k]) continue;
     if (!(await calm(gen))) return;
     await openUnlock(k);
+    if (k === 'apuesta') {
+      // Ya vio la apuesta más alta de aquí: las de abajo no salen otra vez.
+      for (const m of betSteps(save.next)) save.intro[`apuesta${m}`] = true;
+      persist();
+      paintBetSticker();
+    }
   }
   const c = col();
   if (c && !c.state.intro) {
@@ -2631,12 +2862,57 @@ async function notices() {
     if (!(await calm(gen))) return;
     await openEvIntro(e, true);
   }
+  // Apuesta (9 nov 2026): al subir a ×3, ×5 o ×10, su presentación (la del ×2 sale con las de desbloqueo).
+  const mb = maxBet(save.next || 0);
+  if (mb > 2 && save.intro?.apuesta && !save.intro[`apuesta${mb}`]) {
+    if (!(await calm(gen))) return;
+    await openUnlock(`apuesta${mb}`);
+    paintBetSticker();
+  }
+  // Preventa (9 nov 2026): cuando sale el botón del próximo evento (mes o festividad), su ventana avisa una vez.
+  const pf = fiestaSoon() || (fiesta()?.soon ? fiesta() : null), pe = evSoon();
+  for (const [x, open] of [[pf, () => openFiesta(pf, fiestaSoon() ? 'fiesta-next' : 'fiesta')], [pe, openEventoNext]]) {
+    if (!x || (save.preSeen ||= {})[x.id]) continue;
+    if (!(await calm(gen))) return;
+    save.preSeen[x.id] = 1;
+    persist();
+    open();
+  }
   if (await calm(gen)) rachaLost();
 }
 
 // Algo nuevo en la columna de la derecha: su botón entra volando, sale la ventana que lo explica
 // y, al cerrarla, el botón late con un anillo para que se vea dónde quedó.
+// Presentación de cada ×N de la apuesta (9 nov 2026): la primera ("¡Nuevo: Apuestas!") con todas las reglas; al subir
+// ("¡Subiste a ×N!") lo que gana y lo que paga. La última, en verde: su primer ×N va por nuestra cuenta.
+const BET_WORD = { 2: 'el doble', 3: 'el triple' };
+function betInfo(first) {
+  const m = maxBet(save.next), w = BET_WORD[m] || `×${m}`;
+  const gift = ['gift', `¡Tu primer <b>×${m}</b> va por nuestra cuenta!`, 'evi-gift'];
+  return first
+    ? {
+        title: '¡Nuevo: Apuestas!', color: 'gold', hero: `<span class="bet-big b${m} outl">×${m}</span>`,
+        lead: `En los niveles nuevos puedes <b>apostar</b>: si ganas, te llevas <b>${w} de todo</b>.`,
+        rules: [
+          ['coin', `Todo lo que ganes va <b>×${m}</b>: monedas, boletos, comodines, fichas y el cofre del jefe.`],
+          ['ticket', `Al entrar pagas tus boletos <b>×${m}</b> y unas monedas.`],
+          ['close', 'Si no ganas, lo apostado <b>no regresa</b>.'],
+          ['flag', 'Los niveles que ya ganaste y los eventos se juegan <b>normal</b>.'],
+          gift,
+        ],
+      }
+    : {
+        title: `¡Subiste a ×${m}!`, color: 'gold', badge: '¡Subiste!', hero: `<span class="bet-big b${m} outl">×${m}</span>`,
+        lead: `Ya puedes apostar hasta <b>×${m}</b>: si ganas, te llevas <b>${w} de todo</b>.`,
+        rules: [
+          ['coin', `Monedas, boletos, comodines, deshacer, fichas y el cofre del jefe: todo <b>×${m}</b>.`],
+          ['ticket', `Al entrar pagas tus boletos <b>×${m}</b> y unas monedas.`],
+          gift,
+        ],
+      };
+}
 const UNLOCK_INFO = {
+
   // Lluvia de meteoritos (8 nov 2026): antes se descubría sola, sin aviso; ahora al abrirse sale esta ventana una vez.
   meteoro: () => ({
     title: '¡Nueva: Lluvia de meteoritos!', ico: 'meteoro', color: 'orange', hero: icon('meteoro', 0, 0, 'big'),
@@ -2771,7 +3047,7 @@ function evHeroIcons(main, list = Object.keys(EVENTOS).map(Number).sort((a, b) =
   return [at(-1), at(0), at(1)].map((x, k) => icon(x, 0, 0, k === 1 ? 'main' : '')).join('');
 }
 async function openUnlock(k) {
-  const sel = k === 'meteoro' ? null : `.side.r [data-a="${{ racha: 'racha', mis: 'mis', logros: 'logros', col: 'col', mes: 'evento', col2: 'col', col3: 'col', fiesta: 'fiesta', fiesta2: 'fiesta' }[k]}"]`;
+  const sel = k === 'meteoro' || k.startsWith('apuesta') ? null : `.side.r [data-a="${{ racha: 'racha', mis: 'mis', logros: 'logros', col: 'col', mes: 'evento', col2: 'col', col3: 'col', fiesta: 'fiesta', fiesta2: 'fiesta' }[k]}"]`;
   if (sel) openGroup('r', 'open');
   const btn = sel && document.querySelector(sel);
   revealed.add(k);
@@ -2785,16 +3061,16 @@ async function openUnlock(k) {
       await wait(350);
     }
   }
-  const info = UNLOCK_INFO[k]();
+  const info = k.startsWith('apuesta') ? betInfo(k === 'apuesta') : UNLOCK_INFO[k]();
   await new Promise((done) => {
     const m = openModal({
       title: info.title,
       color: info.color,
       wide: true,
       cls: `ev-intro unlock-${k}`,
-      body: `<div class="evi-hero"><div class="rays"></div><span class="evi-ico ul-hero">${info.hero}<span class="ul-new outl">¡Nuevo!</span></span></div>
+      body: `<div class="evi-hero"><div class="rays"></div><span class="evi-ico ul-hero">${info.hero}<span class="ul-new outl">${info.badge || '¡Nuevo!'}</span></span></div>
         <p class="lead">${info.lead}</p>
-        <ul class="evi-rules">${info.rules.map(([ico, html]) => `<li>${icon(ico)}<span>${html}</span></li>`).join('')}</ul>`,
+        <ul class="evi-rules">${info.rules.map(([ico, html, cls]) => `<li${cls ? ` class="${cls}"` : ''}>${icon(ico)}<span>${html}</span></li>`).join('')}</ul>`,
       buttons: [{ label: '¡Entendido!', cls: 'gold wide' }],
       onClose: () => {
         (save.intro ||= {})[k] = true;
@@ -2958,7 +3234,7 @@ function openBossReward(w, res) {
       closable: false,
       cls: 'boss-win',
       body: `${postcardHTML(w, res.worldStars)}
-        <div class="chest-row"><div class="chest"><span class="lid">${chestLid()}</span><span class="body">${chestBody()}</span></div></div>`,
+        <div class="chest-row"><div class="chest"><span class="lid">${chestLid()}</span><span class="body">${chestBody()}</span>${ch.bet > 1 ? `<i class="go-bet chest-bet b${ch.bet}">×${ch.bet}</i>` : ''}</div></div>`,
       buttons: [{ label: 'Continuar', cls: 'green wide', onClick: done }],
     });
     balloons(m);
@@ -3998,6 +4274,9 @@ function openHelp(tab = 'basico', then) {
         <div class="step"><div class="ill">${mini(0, '9', 's')}${mini(34, '10', 'd')}<span class="h-neb"></span></div><p><b>Nebulosa:</b> solo ves 3 grupos. Vacía <b>cualquiera</b> y de la nebulosa sale otro.</p></div>
         <div class="step"><div class="ill"><span class="h-rail" style="left:10px"></span><span class="h-rail" style="left:58px"></span>${helpBack(14, 'top:0px')}${mini(14, '8', 'c', {}, 'h-low')}${helpBack(62, 'top:0px')}${mini(62, 'J', 'h', {}, 'h-low')}</div><p><b>Gravedad:</b> solo juegas la carta de <b>abajo</b> de cada columna. Al quitarla, la columna <b>cae</b>.</p></div>
         <div class="step"><div class="ill">${mini(10, '7', 's')}${mini(48, '8', 'h')}<span class="h-tide"></span></div><p><b>Marea:</b> cada vez que robas sube el agua y cada carta que juegas la baja. Lo que queda bajo el agua no se juega.</p></div>
+        <div class="step"><div class="ill">${mini(6, '4', 'd')}${mini(44, '9', 's')}<span class="h-hole"></span></div><p><b>Agujero negro:</b> atrapa muchas cartas (no se sabe cuáles) y cada <b>4 jugadas o robos</b> se las traga y las escupe con los <b>números revueltos</b>. Su número dice cuánto falta.</p></div>
+        <div class="step"><div class="ill"><span class="h-door"><i></i><i></i></span>${mini(56, '6', 'h', { marks: `<span class="door-key">${icon('door')}</span>` })}</div><p><b>Puertas:</b> cada <b>carta llave</b> te da una llave y tú escoges qué puerta abrir: suelta su premio y sus cartas. Hay menos llaves que puertas; las que no abras no cuentan.</p></div>
+        <div class="step"><div class="ill"><span class="h-belt"><i></i></span>${mini(24, 'K', 'c', {}, 'h-belt-c')}${mini(58, '2', 'h', {}, 'h-belt-c')}</div><p><b>Banda transportadora:</b> sus cartas dan vueltas y solo ves <b>4</b> a la vez. Con cada jugada o robo avanza un lugar. ¡Atrápala cuando pase!</p></div>
         <div class="step"><div class="ill"><span class="h-fold" style="left:4px;transform:perspective(90px) rotateY(55deg);transform-origin:right"></span><span class="h-fold" style="left:40px"></span><span class="h-fold" style="left:76px;transform:perspective(90px) rotateY(-55deg);transform-origin:left"></span>${mini(41, 'Q', 'h')}</div><p><b>Mesa plegable:</b> llega <b>doblada</b>. Limpia el panel de <b>en medio</b> y se desdobla: salen más cartas a los lados.</p></div>
       </div>`
         : `<div class="steps">${MECH_GROUPS.map(([h, ms]) => `<h3 class="help-h">${h}</h3>${ms.map((m) => `<div class="step"><div class="ill c${MECH_BOTH[m] ? ' pair' : ''}">${MECH_BOTH[m]?.() || mechCard(m)}</div><p><b>${MECH_NAMES[m]}:</b> ${MECH_TEXT[m]}</p></div>`).join('')}`).join('')}</div>`;

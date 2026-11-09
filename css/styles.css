@@ -1305,6 +1305,11 @@ html:not(.dev-on) .dev-pill { display: none; }
 .face-pixel .front:not(.face-prev:not(.face-pixel) .front).red:not(.arrowed):not(.live) { color: #e8434f; }
 .face-dorada .front:not(.face-prev:not(.face-dorada) .front):not(.wild):not(.arrowed):not(.live) { color: #5a3a00; background: linear-gradient(150deg, #fff6cf, #ffd970 55%, #ffe9a0); box-shadow: inset 0 0 0 2px var(--ink), inset 0 0 0 5px #e8b53a, inset 0 0 0 6.5px var(--ink), inset 0 calc(var(--cw) * -0.1) 0 #e8b53a, 2px 4px 0 #0b062a33, 4px 9px 12px #0b062a40; }
 .face-dorada .front:not(.face-prev:not(.face-dorada) .front).red:not(.arrowed):not(.live) { color: #c22c49; }
+/* 9 nov 2026: Luna y Dorada con su letra y su efecto (el usuario no les veía diferencia). Luna: letra fina con brillo
+   azul y una luna creciente en la esquina; Dorada: letra de libro antiguo con relieve dorado. */
+.face-luna .front:not(.face-prev:not(.face-luna) .front):not(.wild):not(.arrowed):not(.live) { background: radial-gradient(circle at 74% 74%, #eef2ff 0 13%, transparent 13.5%), radial-gradient(circle at 80% 80%, #ffd970 0 15%, transparent 15.5%), radial-gradient(1.6px 1.6px at 80% 22%, #b9c4ee, transparent), radial-gradient(1.2px 1.2px at 20% 72%, #b9c4ee, transparent), radial-gradient(1.4px 1.4px at 30% 30%, #c9d2f2, transparent), #eef2ff; }
+.face-luna .front:not(.face-prev:not(.face-luna) .front):not(.wild) :is(.big, .rk, .dbl b, .tk b) { font-family: Optima, 'Gill Sans', 'Trebuchet MS', sans-serif; font-weight: 700; text-shadow: 0 0 calc(var(--cw) * 0.07) #9fb0ff; }
+.face-dorada .front:not(.face-prev:not(.face-dorada) .front):not(.wild) :is(.big, .rk, .dbl b, .tk b) { font-family: 'Bodoni 72', Didot, Georgia, serif; font-weight: 700; text-shadow: calc(var(--cw) * 0.02) calc(var(--cw) * 0.02) 0 #fff6cf, calc(var(--cw) * 0.045) calc(var(--cw) * 0.045) 0 #c4900f; }
 .face-cristal .front:not(.face-prev:not(.face-cristal) .front):not(.wild):not(.arrowed):not(.live) { color: #2a5f9e; background: linear-gradient(120deg, #0000 40%, #ffffffcc 48%, #0000 56%), linear-gradient(135deg, #e8f6ff, #ffffff 45%, #d7ecff); box-shadow: inset 0 0 0 2px var(--ink), inset 0 0 0 4px #a9d8ff88, inset 0 calc(var(--cw) * -0.1) 0 #bfe0f5, 2px 4px 0 #0b062a33, 4px 9px 12px #0b062a40; }
 .face-cristal .front:not(.face-prev:not(.face-cristal) .front).red:not(.arrowed):not(.live) { color: #e04f85; }
 .face-pixel .front:not(.face-prev:not(.face-pixel) .front) .rk, .face-pixel .front:not(.face-prev:not(.face-pixel) .front) .big, .face-pixel .front:not(.face-prev:not(.face-pixel) .front) .dbl { font-family: ui-monospace, 'Courier New', monospace; font-weight: 900; letter-spacing: -0.06em; }
@@ -1796,6 +1801,12 @@ html:not(.dev-on) .dev-pill { display: none; }
 .evi-rules { list-style: none; display: grid; gap: 7px; margin: 6px 0 4px; padding: 0; }
 .evi-rules li { display: flex; align-items: center; gap: 10px; text-align: left; font-weight: 700; color: #4a3f73; line-height: 1.25; }
 .evi-rules li > .ico { flex: none; width: 30px; height: 30px; }
+/* Regalo de la apuesta (9 nov 2026): texto verde sobre un fondo verde clarito, sin contorno ni sombra (no es botón);
+   solo el regalo se mueve. */
+.evi-rules li.evi-gift { padding: 6px 10px; border-radius: 12px; background: #e3f7ea; color: #1f8a50; }
+.evi-rules li.evi-gift b { color: #1f8a50; }
+.evi-rules li.evi-gift > .ico { animation: wobble 1.6s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .evi-rules li.evi-gift > .ico { animation: none; } }
 @media (max-width: 420px) { .evi-pl { width: 40px; height: 40px; translate: calc(-50% + var(--i) * 58px) calc(-50% + var(--i) * var(--i) * 6px - 6px); } }
 @media (max-height: 500px) {
   .evi-hero { height: 82px; }
@@ -1803,6 +1814,7 @@ html:not(.dev-on) .dev-pill { display: none; }
   .evi-ico .ico { width: 64px; height: 64px; }
   .ev-intro .lead { font-size: 14px; margin: 2px 0; }
   .evi-rules { grid-template-columns: 1fr 1fr; gap: 6px 14px; font-size: 12px; line-height: 1.2; }
+  .evi-rules li.evi-gift { grid-column: 1 / -1; padding: 4px 10px; }
   .evi-rules li > .ico { width: 24px; height: 24px; }
 }
 /* Editor del jugador: fondo del universo y postal (como el viajero, en tarjetas que se eligen). */
@@ -2061,9 +2073,10 @@ html:not(.dev-on) .dev-pill { display: none; }
 .btn.ev-go-programador { background: linear-gradient(#7fe8a0, #47c27a); box-shadow: inset 0 -6px 0 #2f9e5c, inset 0 3px 0 #c8f5d8, 0 4px 0 var(--ink); }
 .btn.ev-go-inocentes { background: linear-gradient(#ff6f78, #e8434f); box-shadow: inset 0 -6px 0 #c22c3c, inset 0 3px 0 #ffb0b6, 0 4px 0 var(--ink); }
 .btn.ev-go-anionuevo { background: linear-gradient(#ffd76a, #ffb13d); box-shadow: inset 0 -6px 0 #e0820a, inset 0 3px 0 #fff0c0, 0 4px 0 var(--ink); }
-.racha-warn { display: flex; align-items: center; gap: 10px; margin-top: 12px; padding: 8px 12px; border-radius: 14px; background: #ffe2cc; border: 2.5px solid var(--ink); box-shadow: inset 0 -3px 0 #f6c39e; text-align: left; color: #8a3a12; font-size: 14px; line-height: 1.25; }
+/* 9 nov 2026: mismo diseño que el aviso de la apuesta (.bet-lose): fondo clarito, sin contorno; el cohete tiembla. */
+.racha-warn { display: flex; align-items: center; gap: 12px; margin-top: 10px; padding: 9px 12px; border-radius: 14px; background: #f1ecfb; text-align: left; color: #4a4270; font-weight: 700; font-size: 14px; line-height: 1.3; }
 .racha-warn p { margin: 0; }
-.racha-warn p b { display: block; color: #c2501c; font-size: 15.5px; }
+.racha-warn p b { color: #d63d5f; }
 .rw-ico { position: relative; flex: none; width: 46px; height: 46px; display: grid; place-items: center; animation: rw-shake 1.4s ease-in-out infinite; }
 .rw-ico .ico { width: 40px; height: 40px; }
 .rw-ico > b { position: absolute; right: -4px; bottom: -4px; font: 400 18px 'Lilita One'; }
@@ -2446,3 +2459,219 @@ html:not(.dev-on) .dev-pill { display: none; }
 .seg-ind { position: absolute; left: 0; top: 0; z-index: 0; box-sizing: border-box; border-radius: 12px; background: #4aa8de; border: 2px solid var(--ink); box-shadow: inset 0 -3px 0 #2f86c0, 0 2px 0 var(--ink); pointer-events: none; transition: translate .35s var(--ease-out), width .35s var(--ease-out), height .35s var(--ease-out); }
 .stabs .seg-ind { border-radius: 11px; } .sgroups .seg-ind { border-radius: 13px; }
 .seg > .on, .seg > [aria-selected="true"] { background: none !important; border-color: transparent !important; box-shadow: none !important; color: #fff !important; text-shadow: 0 1.5px 0 #1f5f8f !important; transition: color .25s; }
+
+/* Títulos nuevos de la tienda (8 nov 2026). */
+.title-chip.t-chispa { --tc: #fff; --td: #e2692a; background: linear-gradient(#ffb066, #ff8a3d); font-family: 'Lilita One'; font-weight: 400; text-shadow: 0 1.5px 0 #b8562a; }
+.title-chip.t-estratega { --tc: #fff; --td: #1f2440; background: #2f3550; border-radius: 8px; font-family: 'Lilita One'; font-weight: 400; letter-spacing: .03em; }
+.title-chip.t-cronista { --tc: #0f5a4e; --td: #7fd6c4; background: linear-gradient(90deg, #bff2e6, #e6fffa); }
+.title-chip.t-guardiananillo { --tc: #fff; --td: #2f6a38; background: linear-gradient(#5aa85f, #3f8a4a); font-family: 'Lilita One'; font-weight: 400; text-shadow: 0 1.5px 0 #1f4a26; box-shadow: inset 0 -3px 0 var(--td), 0 0 0 2px #ffc83d; }
+.title-chip.t-magocartas { --tc: #fff; --td: #2a3a9a; background: radial-gradient(1.4px 1.4px at 20% 30%, #ffe58a, transparent), radial-gradient(1.2px 1.2px at 80% 65%, #ffe58a, transparent), linear-gradient(#5a6ae8, #3a4ab8); font-family: 'Lilita One'; font-weight: 400; }
+.title-chip.t-invencible { --tc: #fff; --td: #9e1f37; padding: 3px 13px 4px 7px; background: linear-gradient(110deg, #e8434f 0 35%, #ff9c9c 45%, #e8434f 55% 100%) 0 0 / 300% 100%; font-family: 'Lilita One'; font-weight: 400; font-size: 14px; text-shadow: 0 1.5px 0 #6b1022; box-shadow: inset 0 -3px 0 var(--td), 0 0 0 2px #ffc83d, 0 0 12px #e8434f88; animation: shimmer 3s linear infinite; }
+/* Marcos nuevos: la ventana del perfil se viste del mismo color. */
+.modal.mr-petalos { --mr: #ff9cc8; --mrh: linear-gradient(100deg, #ff7aa2, #ffb3d1 50%, #ff7aa2); --mrd: #e0507e; }
+.modal.mr-rayos { --mr: #ffc83d; --mrh: linear-gradient(100deg, #5a4ae0, #8a5cf0 50%, #5a4ae0); --mrd: #3a2a9a; }
+.modal.mr-relojes { --mr: #c9bff0; --mrh: linear-gradient(#2fb6a0, #1f9a7c); --mrd: #157a62; outline-style: dotted; }
+.modal.mr-runas { --mr: #ffc83d; --mrh: linear-gradient(100deg, #ffb31a, #ffe58a 45%, #ffb31a); --mrd: #c47a00; outline-width: 5px; }
+
+/* Agujero negro (8 nov 2026): remolino oscuro junto a sus cartas con la cuenta de cuándo se las traga. Las cartas que
+   atrapó llevan un remolinito en la esquina de abajo. */
+.hole { position: absolute; z-index: 3000; display: grid; place-items: center; pointer-events: none; }
+.hole svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+/* 9 nov 2026 (2.ª vez): dibujo SVG con contorno, como el resto del juego. Las rayas del disco corren (gira), el brillo
+   respira; a 1 de tragar todo va más rápido y más naranja; con el reloj de arena se congela azul. */
+.hole .hd-streak { animation: hd-spin 1.6s linear infinite; }
+.hole .hd-streak.b { animation-duration: 1.1s; }
+.hole .hd-glow { transform-origin: 60px 42px; animation: hd-breathe 2.6s ease-in-out infinite; }
+.hole .hd-halo { animation: hd-halo 2.6s ease-in-out infinite; }
+.hole b { position: relative; z-index: 3; margin-top: -6%; font: 400 calc(var(--cw) * 0.4)/1 'Lilita One'; color: #fff; }
+.hole.hot .hd-streak { animation-duration: .5s; }
+.hole.hot .hd-halo { stroke: #ffc83d; }
+.hole.frozen svg { filter: saturate(.4) hue-rotate(160deg) brightness(1.15); }
+.hole.frozen :is(.hd-streak, .hd-glow, .hd-halo) { animation-play-state: paused; }
+@keyframes hd-spin { to { stroke-dashoffset: -48; } }
+@keyframes hd-breathe { 50% { transform: scale(1.08); opacity: .8; } }
+@keyframes hd-halo { 50% { stroke: #ffc4a0; } }
+@media (prefers-reduced-motion: reduce) { .hole :is(.hd-streak, .hd-glow, .hd-halo) { animation: none; } }
+.step .ill .h-hole { position: absolute; left: 76px; top: 10px; width: 40px; height: 32px; border-radius: 50%; background: radial-gradient(circle at 50% 50%, #071433 0 22%, #2f7fd6 30%, #fff 33%, #ffc4dc 36%, #ff7a59 44%, transparent 52%), linear-gradient(transparent 38%, #ff8a5c 44%, #ff4f7a 52%, transparent 60%); box-shadow: 0 0 10px #ff6a8a88; }
+/* Puertas (9 nov 2026): puertitas del tamaño de una carta en la orilla, con su premio y su cerradura (sin decir
+   cuántas cartas traen). Con llave en la mano brillan (.can). Abierta: las hojas se abren, queda el marco atrás de su pila. */
+.door { position: absolute; z-index: 2500; width: var(--cw); height: calc(var(--cw) * 1.4); perspective: 500px; cursor: pointer; transition: z-index 0s .6s; }
+.door-frame { position: absolute; inset: 0; border-radius: calc(var(--cw) * 0.12); background: radial-gradient(circle at 50% 35%, #4b3a8a, #1d1340); border: 3px solid var(--ink); transition: opacity .4s .4s; }
+.door .leaf { position: absolute; top: 0; bottom: 0; width: 50%; border: 3px solid var(--ink); background: repeating-linear-gradient(90deg, #c9893a 0 22%, #b5763f 22% 25%), #c9893a; box-shadow: inset 0 -5px 0 #0002, inset 0 3px 0 #fff3; transition: rotate .6s cubic-bezier(.5, 0, .3, 1), opacity .3s .45s; }
+.door .leaf.l { left: 0; border-radius: calc(var(--cw) * 0.12) 0 0 calc(var(--cw) * 0.12); transform-origin: 0 50%; }
+.door .leaf.r { right: 0; border-left-width: 1.5px; border-radius: 0 calc(var(--cw) * 0.12) calc(var(--cw) * 0.12) 0; transform-origin: 100% 50%; }
+.door-prize { position: absolute; left: 50%; top: 34%; translate: -50% -50%; z-index: 2; width: 52%; aspect-ratio: 1; display: grid; place-items: center; border-radius: 50%; background: #fff6e6; border: 2.5px solid var(--ink); box-shadow: 0 2px 0 var(--ink); transition: scale .35s cubic-bezier(.34, 1.45, .64, 1), opacity .3s .3s; }
+.door-prize .ico, .door-prize svg { width: 76%; height: 76%; }
+.door-hole { position: absolute; left: 50%; top: 70%; translate: -50% 0; z-index: 2; width: 16%; aspect-ratio: .6; border-radius: 50% 50% 20% 20%; background: var(--ink); transition: box-shadow .3s, background .3s; }
+.door.can .leaf { box-shadow: inset 0 -5px 0 #0002, 0 0 14px 4px #ffc83dcc; }
+.door.can .door-hole { background: #ffc83d; box-shadow: 0 0 10px 3px #ffe08a; }
+.door.can { animation: door-call 1.6s ease-in-out infinite; }
+@keyframes door-call { 50% { translate: 0 -3px; } }
+.door.open { z-index: 0; pointer-events: none; animation: none; transition: z-index 0s; }
+.door.open .leaf.l { rotate: y -105deg; opacity: 0; }
+.door.open .leaf.r { rotate: y 105deg; opacity: 0; }
+.door.open .door-prize { scale: 1.8; opacity: 0; }
+.door.open .door-hole { opacity: 0; }
+.door.open .door-frame { opacity: .45; }
+.card.in-door { opacity: 0; pointer-events: none; }
+.card .door-key { position: absolute; left: -10%; top: -8%; z-index: 3; width: 44%; aspect-ratio: 1; display: grid; place-items: center; border-radius: 50%; background: linear-gradient(#ffe08a, #ffb31a); border: 2px solid var(--ink); box-shadow: 0 0 8px #ffc83d; pointer-events: none; }
+.card .door-key .ico { width: 70%; height: 70%; }
+.key-pill { gap: 3px; font: 400 18px 'Lilita One'; color: #a49bc6; transition: background .3s, color .3s; }
+.key-pill .ico { width: 20px; height: 20px; }
+.key-pill.on { background: linear-gradient(#ffe08a, #ffb31a); color: #7a4a00; box-shadow: 0 0 12px #ffc83d; }
+.key-fly { position: fixed; z-index: 9999; width: 40px; height: 40px; display: grid; place-items: center; border-radius: 50%; background: linear-gradient(#ffe08a, #ffb31a); border: 2.5px solid var(--ink); box-shadow: 0 0 16px #ffc83d; pointer-events: none; }
+.key-fly .ico { width: 70%; height: 70%; }
+@media (prefers-reduced-motion: reduce) { .door .leaf, .door-prize, .door-frame { transition: none; } .door.can { animation: none; } }
+.step .ill .h-door { position: absolute; left: 6px; top: 2px; width: 42px; height: 50px; display: flex; perspective: 200px; }
+.step .ill .h-door i { flex: 1; border: 2px solid var(--ink); background: #c9893a; box-shadow: inset 0 0 0 3px #ffc83d; transform-origin: 0 50%; animation: h-door 2.8s ease-in-out infinite; }
+.step .ill .h-door i + i { transform-origin: 100% 50%; animation-name: h-door-r; }
+@keyframes h-door { 0%, 35%, 100% { rotate: y 0deg; } 55%, 80% { rotate: y -70deg; } }
+@keyframes h-door-r { 0%, 35%, 100% { rotate: y 0deg; } 55%, 80% { rotate: y 70deg; } }
+
+/* Banda transportadora (8 nov 2026): cinta gris con rayas que avanzan entre dos cajas de la máquina (entrada y
+   salida). Las cartas se deslizan por la ventana; las de adentro de la máquina no se ven. */
+.belt { position: absolute; z-index: 0; pointer-events: none; }
+.belt-track { position: absolute; inset: -6px; border-radius: 10px; border: 3px solid var(--ink); background: repeating-linear-gradient(90deg, #5d5a7a 0 12px, #4a476a 12px 24px); box-shadow: inset 0 3px 0 #ffffff22, inset 0 -4px 0 #0003; }
+.belt-v .belt-track { background: repeating-linear-gradient(0deg, #5d5a7a 0 12px, #4a476a 12px 24px); }
+.belt-box { position: absolute; z-index: 9000; border: 3px solid var(--ink); border-radius: 12px; background: linear-gradient(#ffb066, #e8853e); box-shadow: inset 0 -5px 0 #c96a28, inset 0 3px 0 #ffd6a8; }
+.belt-box::after { content: ''; position: absolute; inset: 22% 18%; border-radius: 6px; background: repeating-linear-gradient(90deg, #2a1f5c 0 3px, transparent 3px 7px); opacity: .35; }
+.belt-h .belt-box { top: -14px; bottom: -14px; width: calc(var(--cw) * 0.62); }
+.belt-h .belt-box.in { right: calc(var(--cw) * -0.66); }
+.belt-h .belt-box.out { left: calc(var(--cw) * -0.66); }
+.belt-v .belt-box { left: -14px; right: -14px; height: calc(var(--cw) * 0.62); }
+.belt-v .belt-box.in { bottom: calc(var(--cw) * -0.66); }
+.belt-v .belt-box.out { top: calc(var(--cw) * -0.66); }
+.belt.frozen .belt-track { filter: saturate(.5) hue-rotate(160deg) brightness(1.1); }
+.card[data-belt] { transition: left .35s cubic-bezier(.3, .8, .3, 1), top .35s cubic-bezier(.3, .8, .3, 1), opacity .25s, scale var(--press); }
+.card.belt-out { opacity: 0; pointer-events: none; }
+.step .ill .h-belt { position: absolute; left: 0; right: 0; top: 14px; height: 30px; border-radius: 8px; border: 2.5px solid var(--ink); background: repeating-linear-gradient(90deg, #5d5a7a 0 10px, #4a476a 10px 20px); animation: h-belt 1.2s linear infinite; }
+.step .ill .card.h-belt-c { animation: h-belt-c 2.4s ease-in-out infinite; }
+@keyframes h-belt { to { background-position: -20px 0; } }
+@keyframes h-belt-c { 0%, 30% { translate: 0 0; } 60%, 100% { translate: -14px 0; } }
+
+/* Apuesta (8 nov 2026): sello en el tablero con la apuesta del nivel. 9 nov 2026: ya no hay ficha junto a Jugar;
+   Jugar lleva una etiqueta ×N montada en su orilla de arriba (color plano, mismo contorno que el botón, poco ladeada
+   y un brinquito de vez en cuando): parte del botón, sin cargarlo. */
+.go { position: relative; }
+.go-bet { position: absolute; top: calc(-11px * var(--k)); right: calc(10px * var(--k)); z-index: 2; padding: 2px 7px 3px; border-radius: 9px; border: 2.5px solid var(--ink); font: 400 calc(17px * var(--k))/1 'Lilita One'; font-style: normal; color: #fff; text-shadow: 0 1.5px 0 #0003; background: #ffb31a; box-shadow: 0 2px 0 var(--ink); rotate: 6deg; animation: go-bet 3.2s ease-in-out infinite; pointer-events: none; }
+.go-bet.b2 { background: #2fae6a; } .go-bet.b3 { background: #8a5cf0; } .go-bet.b5 { background: #ffb31a; } .go-bet.b10 { background: #2a1f66; color: #ffd85a; }
+.go-bet.dbet { position: static; display: inline-block; rotate: 0deg; animation: none; font-size: 14px; padding: 0 5px 1px; border-width: 2px; box-shadow: none; }
+@keyframes go-bet { 0%, 80%, 100% { rotate: 6deg; scale: 1; } 87% { rotate: -2deg; scale: 1.08; } 94% { rotate: 8deg; scale: 1; } }
+.bet-pill { font: 400 18px 'Lilita One'; color: #fff; padding: 0 12px; }
+.bet-pill.b2 { background: #2fae6a; } .bet-pill.b3 { background: #8a5cf0; } .bet-pill.b4, .bet-pill.b5 { background: #ffb31a; color: #7a4a00; }
+/* 9 nov 2026: ×5 dorada y ×10 de fuego (rosa a dorado). Con "¡Nuevo!" cuando se abre una apuesta. */
+/* Ventana para apostar (9 nov 2026): la ficha grande junto a "Si ganas te llevas" con cada premio (número y etiqueta
+   ×N de su color), las fichas ×1 ×2 ×3… para escoger y abajo del botón lo que cuesta. Sin letra chiquita. */
+.bet-big { position: relative; display: grid; place-items: center; width: 92px; height: 92px; border-radius: 28px; border: 3px solid var(--ink); font: 400 44px/1 'Lilita One'; color: #fff; box-shadow: 0 4px 0 var(--ink), 0 0 26px #ffc83daa; animation: bet-bob 2.4s ease-in-out infinite; }
+@keyframes bet-bob { 50% { translate: 0 -5px; rotate: -4deg; } }
+.bet-big.b1 { background: linear-gradient(#cfc8e8, #9a92c4); box-shadow: 0 4px 0 var(--ink); }
+.bet-big.b2 { background: linear-gradient(#7fe0a0, #2fae6a); }
+.bet-big.b3 { background: linear-gradient(#b48cff, #8a5cf0); }
+.bet-big.b5 { background: linear-gradient(#ffe08a, #ffb31a); }
+.bet-big.b10 { background: linear-gradient(#4a3a9e, #2a1f66); color: #ffd85a; }
+.bet-top { display: flex; align-items: center; justify-content: center; gap: 14px; }
+.bet-hero { position: relative; flex: none; width: 110px; height: 110px; display: grid; place-items: center; }
+.bet-rules .bet-hero { margin: 0 auto; }
+.bet-hero .rays { width: 190px; height: 190px; z-index: 0; }
+.bet-hero .bet-big { z-index: 1; }
+.bet-sell { display: grid; justify-items: center; gap: 8px; }
+.bet-lead { margin: 0; font: 400 20px/1 'Lilita One'; color: #c27a00; }
+.bet-loot { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px 10px; }
+/* 9 nov 2026: cada número aparta el ancho que tendrá con la apuesta más alta (las pastillas no cambian de tamaño
+   y no se reacomodan al cambiar la apuesta). */
+.bet-loot .bl { position: relative; display: flex; align-items: center; gap: 5px; padding: 5px 12px 6px 8px; border-radius: 99px; background: linear-gradient(#fffaf0, #ffeccc); border: 2.5px solid var(--ink); box-shadow: 0 3px 0 var(--ink); }
+.bet-loot .bl > .ico { width: 30px; height: 30px; }
+.bet-loot .bl b { font: 400 26px/1 'Lilita One'; color: #ffc83d; text-align: center; font-variant-numeric: tabular-nums; }
+.bet-loot .bl s { font: 400 17px/1 'Lilita One'; color: #9a93bd; text-decoration-thickness: 2px; text-align: center; font-variant-numeric: tabular-nums; }
+.bet-loot .bl.met > .ico:last-child { width: 20px; height: 20px; margin-left: -2px; }
+.bl-x { position: absolute; top: -10px; right: -8px; padding: 0 5px 1px; border-radius: 8px; border: 2px solid var(--ink); font: 400 14px/1.15 'Lilita One'; font-style: normal; color: #fff; background: #ffb31a; rotate: 8deg; }
+.bl-x.b2 { background: #2fae6a; } .bl-x.b3 { background: #8a5cf0; } .bl-x.b10 { background: #2a1f66; color: #ffd85a; }
+.bl-x[hidden] { display: none; }
+/* Fichas ×N: todas claras con su ×N de su color; la escogida se llena de su color, sube, lleva palomita y orilla dorada. */
+.bet-opts { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 14px; }
+.bet-opt { --bc: #8d84b8; --bg: linear-gradient(#cfc8e8, #9a92c4); position: relative; flex: 1 1 0; min-width: 52px; max-width: 90px; height: 52px; display: grid; place-items: center; border-radius: 16px; border: 2.5px solid var(--ink); background: #fffdf7; box-shadow: 0 3px 0 var(--ink); opacity: .85; transition: translate .2s, opacity .2s; }
+.bet-opt.b2 { --bc: #2fae6a; --bg: linear-gradient(#7fe0a0, #2fae6a); } .bet-opt.b3 { --bc: #8a5cf0; --bg: linear-gradient(#b48cff, #8a5cf0); } .bet-opt.b5 { --bc: #e8a10f; --bg: linear-gradient(#ffe08a, #ffb31a); } .bet-opt.b10 { --bc: #2a1f66; --bg: linear-gradient(#4a3a9e, #2a1f66); }
+.bet-opt.sel.b10 b { color: #ffd85a; }
+.bet-opt b { font: 400 24px/1 'Lilita One'; color: var(--bc); -webkit-text-stroke: 0; text-shadow: none; }
+.bet-opt > .ico { position: absolute; top: -9px; right: -9px; width: 22px; height: 22px; padding: 2px; border-radius: 50%; background: var(--gold); border: 2px solid var(--ink); opacity: 0; scale: .4; transition: opacity .2s, scale .25s cubic-bezier(.34, 1.45, .64, 1); }
+.bet-opt.sel { background: var(--bg); opacity: 1; translate: 0 -4px; box-shadow: 0 5px 0 var(--ink), 0 0 0 3px var(--gold); }
+.bet-opt.sel b { color: #fff; -webkit-text-stroke: 1.5px var(--ink); paint-order: stroke fill; text-shadow: 0 2px 0 var(--ink); }
+.bet-opt.sel > .ico { opacity: 1; scale: 1; }
+/* Abajo del botón, lo que se cobra (cuenta al cambiar). */
+.modal.bet-modal .mbtns { flex-direction: column; flex-wrap: nowrap; gap: 6px; }
+.modal.bet-modal .mbtns .btn { flex: none; align-self: stretch; }
+.bet-cost { display: flex; flex-wrap: nowrap; white-space: nowrap; align-items: center; justify-content: center; gap: 4px; margin: 0; font: 400 17px/1 'Lilita One'; color: #6e66a3; }
+.bet-cost b { font-weight: 400; color: var(--ink); font-variant-numeric: tabular-nums; }
+.bet-cost .ico { width: 19px; height: 19px; }
+.bc-fee { display: inline-flex; align-items: center; gap: 4px; margin-left: 2px; }
+.bc-fee[hidden] { display: none; }
+/* Lluvia de meteoritos: los boletos de la apuesta a mitad (el de siempre tachado y la cinta del meteoro). */
+.bc-full { color: #9a93bd; text-decoration-thickness: 2px; margin-right: 2px; }
+.bc-met { display: inline-flex; align-items: center; gap: 2px; margin-left: 2px; padding: 1px 7px 2px 4px; border-radius: 99px; background: #ffe2cc; color: #d6451f; font-size: 14px; }
+.bc-met .ico { width: 16px; height: 16px; }
+.bc-full[hidden], .bc-met[hidden] { display: none; }
+.bet-cost.free { color: #c27a00; } .bet-cost.free .ico { width: 22px; height: 22px; }
+/* 1.ª apuesta (gratis): las demás fichas bloqueadas y apagadas. */
+.bet-opt:disabled { opacity: .35; filter: grayscale(.7); box-shadow: 0 2px 0 var(--ink); }
+@media (max-width: 420px) { .bet-top { flex-direction: column; gap: 4px; } .bet-hero { width: 96px; height: 96px; } .bet-big { width: 76px; height: 76px; font-size: 36px; } }
+/* Noticia al subir de apuesta (openBetUp, ancho de las presentaciones): la ficha, la frase grande y un cuadrito por
+   premio con su etiqueta ×N. La presentación al abrirse usa la de desbloqueo (openUnlock 'apuesta'). */
+.br-lead { margin: 2px 0 0; text-align: center; font: 400 28px/1.1 'Lilita One'; color: #ffc83d; }
+.br-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(84px, 1fr)); gap: 10px; margin-top: 14px; }
+.br-tile { display: grid; justify-items: center; align-content: start; gap: 8px; padding: 14px 6px 10px; border-radius: 16px; background: #fff3c4; text-align: center; }
+.br-tile b { font: 800 14px/1.2 'Baloo 2', sans-serif; color: #8a5a00; }
+.br-pic { position: relative; height: 40px; display: flex; align-items: center; justify-content: center; }
+.br-pic > .ico { width: 36px; height: 36px; }
+.br-pic .bl-x { top: -8px; right: -20px; }
+.unlock-apuesta .ul-hero .bet-big { animation: none; }
+@media (orientation: landscape) and (max-height: 520px) {
+  .bet-hero { width: 76px; height: 76px; } .bet-hero .rays { width: 120px; height: 120px; }
+  .bet-modal .bet-big { width: 62px; height: 62px; font-size: 30px; border-radius: 20px; }
+  .bet-loot .bl b { font-size: 21px; } .bet-loot .bl > .ico { width: 24px; height: 24px; }
+  .bet-opts { margin-top: 8px; } .bet-modal .bet-opt { height: 44px; }
+  .br-lead { font-size: 22px; } .br-tiles { margin-top: 8px; } .br-tile { padding: 8px 6px; gap: 4px; }
+}
+/* Victoria con apuesta: el ×N cae como sello junto a las estrellas; las burbujas llevan su ×N del color de la apuesta. */
+.win-bet { position: absolute; right: 8%; top: 6%; z-index: 2; padding: 2px 10px 4px; border-radius: 14px; border: 2.5px solid var(--ink); background: linear-gradient(#ffe08a, #ffb31a); font: 400 30px/1 'Lilita One'; color: #fff; box-shadow: 0 3px 0 var(--ink); rotate: 12deg; animation: win-bet .5s 1.3s cubic-bezier(.34, 1.45, .64, 1) backwards; }
+@keyframes win-bet { from { scale: 3; opacity: 0; rotate: -20deg; } }
+.bet-note { color: #c27a00; font-weight: 800; }
+.x2.xbet { background: linear-gradient(#ffe08a, #ffb31a); color: #7a4a00; text-shadow: none; }
+/* 9 nov 2026: todos los ×N de la apuesta llevan el diseño de la etiqueta de Jugar (.go-bet): color plano de su
+   apuesta, contorno de tinta, sombrita abajo y poco ladeados. La victoria (sello y burbujas), los premios y el tablero.
+   ×10 en todos lados (fichas y ficha grande también): morado oscuro con letra dorada. */
+.win-bet, .x2.xbet, .bl-x, .bet-pill { border: 2.5px solid var(--ink); border-radius: 9px; background: #ffb31a; color: #fff; text-shadow: 0 1.5px 0 #0003; box-shadow: 0 2px 0 var(--ink); -webkit-text-stroke: 0; }
+.x2.xbet, .bl-x { border-width: 2px; border-radius: 7px; rotate: 6deg; animation: none; }
+.win-bet { border-radius: 14px; rotate: 6deg; }
+.win-bet.b2, .x2.xbet.b2, .bl-x.b2, .bet-pill.b2 { background: #2fae6a; color: #fff; }
+.win-bet.b3, .x2.xbet.b3, .bl-x.b3, .bet-pill.b3 { background: #8a5cf0; color: #fff; }
+.win-bet.b5, .x2.xbet.b5, .bl-x.b5, .bet-pill.b5 { background: #ffb31a; color: #fff; }
+.win-bet.b10, .x2.xbet.b10, .bl-x.b10, .bet-pill.b10 { background: #2a1f66; color: #ffd85a; }
+@media (prefers-reduced-motion: reduce) { .bet-big, .win-bet, .go-bet { animation: none; } }
+/* Abandonar con apuesta (9 nov 2026): la etiqueta ×N de Jugar y lo que se pierde. */
+.bet-lose { display: flex; align-items: center; gap: 12px; margin: 10px 0 0; padding: 9px 12px; border-radius: 14px; background: #f1ecfb; text-align: left; font-weight: 700; font-size: 14px; line-height: 1.3; color: #4a4270; }
+.bet-lose .go-bet { position: static; flex: none; font-size: 20px; animation: rw-shake 1.4s ease-in-out infinite; }
+.bet-lose b { color: #d63d5f; }
+@media (prefers-reduced-motion: reduce) { .bet-lose .go-bet { animation: none; } }
+.bet-lose .ico { width: 18px; height: 18px; vertical-align: -3px; }
+/* Faltan boletos (9 nov 2026): la taquilla. Boletos que tienes de color, los que faltan punteados y latiendo; al
+   completar caen uno por uno. */
+.sh-booth { position: relative; margin: 4px auto 0; padding: 18px 14px 12px; max-width: 360px; border-radius: 18px; border: 2.5px solid var(--ink); background: repeating-linear-gradient(90deg, #ffe7ef 0 14px, #fff6f9 14px 28px); box-shadow: inset 0 -5px 0 #ffcadb, 0 3px 0 var(--ink); }
+.sh-booth .go-bet { top: -13px; right: 14px; }
+.sh-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
+.sh-slot { display: grid; place-items: center; width: 44px; height: 34px; border-radius: 9px; }
+.sh-slot .ico { width: 40px; height: 40px; rotate: -8deg; filter: drop-shadow(0 2px 0 #0b062a44); }
+.sh-slot.miss { border: 2.5px dashed #c9a3b6; background: #fff8; animation: sh-miss 1.4s ease-in-out infinite; }
+.sh-slot.miss .ico { opacity: .18; filter: grayscale(1); }
+.sh-slot.got .ico { animation: sh-got .42s cubic-bezier(.34, 1.45, .64, 1); }
+@keyframes sh-miss { 50% { scale: .92; border-color: #ff5f7e; } }
+@keyframes sh-got { from { translate: 0 -40px; scale: 1.6; rotate: 20deg; opacity: 0; } }
+.sh-count { margin: 10px 0 0; display: flex; align-items: center; justify-content: center; gap: 4px; font: 400 20px/1 'Lilita One'; color: #6e66a3; }
+.sh-count b { font-weight: 400; color: var(--ink); font-size: 26px; }
+.sh-count .ico { width: 22px; height: 22px; }
+.sh-lead { margin: 12px 0 0; text-align: center; font: 400 20px/1.25 'Lilita One'; color: #d63d5f; }
+.sh-lead .ico { width: 22px; height: 22px; vertical-align: -4px; }
+.modal.short-modal .mbtns { flex-direction: column; flex-wrap: nowrap; }
+.modal.short-modal .mbtns .btn { flex: none; align-self: stretch; }
+@media (prefers-reduced-motion: reduce) { .sh-slot.miss, .sh-slot.got .ico { animation: none; } }
+/* Cofre del jefe ganado con apuesta: su ×N (el mismo de Jugar) pegado al cofre. */
+.chest .chest-bet { top: -6px; right: -16px; z-index: 3; font-size: 20px; }
