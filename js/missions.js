@@ -177,6 +177,14 @@ export const LOGROS = [
   { id: 'events', k: 'event', name: 'Fiestero', ico: 'calavera', steps: [15, 75, 200, 400, 750], text: (n) => `Gana ${n} niveles de eventos` },
   { id: 'secrets', k: 'secret', name: 'Explorador secreto', ico: 'starSecret', steps: [5, 25, 100, 250, 520], text: (n) => `Gana ${n} niveles secretos`, title: 'explorador_secreto' },
 ];
+// 8 nov 2026: los logros pedían poco (el usuario: "no están tan complicados"): todas las metas ×LOGRO_UP desde el
+// principio, redondeadas bonito. Las de "mejor de un nivel" (racha, cartas en el mazo) no: ya van cerca del tope posible.
+export const LOGRO_UP = 1.7;
+const nice = (n) => {
+  const v = n * LOGRO_UP, s = v < 50 ? 1 : v < 200 ? 5 : v < 1000 ? 10 : v < 10000 ? 50 : 500;
+  return Math.round(v / s) * s;
+};
+for (const l of LOGROS) if (!l.best) l.steps = l.steps.map(nice);
 // Premio de cada escalón (bronce → diamante).
 export const LOGRO_PRIZES = [{ coins: 200 }, { coins: 600 }, { coins: 1500 }, { coins: 3000, wild: 1 }, { coins: 6000, wild: 2, undo: 3 }];
 export const LOGRO_COINS = LOGRO_PRIZES.map((p) => p.coins);

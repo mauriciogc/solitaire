@@ -52,8 +52,11 @@ const part = (g, stars) => Math.round((levelReward(g) * stars) / 3);
 export const coinsFor = (g, stars, prev = 0) => Math.max(0, part(g, stars) - part(g, prev));
 
 // Precio de un booster según el avance (`g` = nivel de referencia: el que se juega o el primero sin completar).
+// 8 nov 2026: además, cada constelación las sube CONST_UP (5%): en la constelación 1 cuestan lo de TIERS, en la 11 +50%.
+export const CONST_UP = 0.05;
+export const constUp = (r) => 1 + CONST_UP * r;
 export function price(kind, g) {
-  return TIERS[kind][ticketCost(g) - 1];
+  return Math.round((TIERS[kind][ticketCost(g) - 1] * constUp(Math.floor(g / (LEVELS_PER_WORLD * 10)))) / 5) * 5;
 }
 // Dentro del nivel, las ayudas cuestan distinto según dónde se juega: en el evento del mes y en las festividades,
 // 15% más caras (comodín, deshacer y +5); durante la lluvia de meteoritos, comodín y deshacer 30% menos (se ve como

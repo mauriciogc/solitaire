@@ -4,6 +4,7 @@
 // de temática cada día confundía, porque la colección también tiene temáticas). Los premios se reclaman a mano:
 // los reclamados son tuyos; los que no, se pierden si la racha se reinicia o si pasa la medianoche.
 import { save, persist } from './storage.js';
+import { constUp } from './economy.js';
 import { EVENT_LEVELS, EVENT_PER_PLANET, EVENT_PLANETS, FIESTA_LEVELS, FIESTA_PER_PLANET, FIESTA_PLANETS } from './levels.js';
 
 // Los eventos se abren poco a poco, según los niveles ganados (save.next): primero la racha, luego la colección
@@ -206,7 +207,8 @@ export function colOffers(tier = 1) {
   const ex = Object.entries(EX_PRICE).map(([sec, price]) => ({ k: sec, sec, item: c.ex[sec], price }));
   // Ayudas (8 nov 2026): ×HELP_UP más, para que cuesten como un exclusivo de en medio o más (el usuario: "deben ser
   // nivel medio/difícil de comprar"; antes el comodín costaba 19 fichas y un título 65).
-  const hp = (n) => Math.round((n * tier * COL_UP * HELP_UP) / 5) * 5;
+  // 8 nov 2026: y 5% más por cada constelación abierta (igual que en los niveles, constUp en economy.js).
+  const hp = (n) => Math.round((n * tier * COL_UP * HELP_UP * constUp(Math.floor((save.open || 0) / 10))) / 5) * 5;
   return [
     ...ex,
     { k: 'wild', prize: { wild: 1 }, price: hp(12) },
