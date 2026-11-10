@@ -1127,7 +1127,7 @@ function openRoad() {
   const chip = (k, label, ico) => {
     const all = k ? items.filter((x) => x.k === k) : items;
     const n = all.filter((x) => x.n <= at).length;
-    return `<button class="rd-chip${k ? '' : ' on'}" data-f="${k}" aria-pressed="${!k}"><span class="rd-cl">${ico}<span>${label}</span></span><i>${n}/${all.length}</i></button>`;
+    return `<button class="rd-chip${k ? '' : ' on'}" data-f="${k}" aria-pressed="${!k}"><span class="rd-cl">${ico}<span>${label}</span></span><i>${k ? n : `${n}/${all.length}`}</i></button>`;
   };
   const list = items.map(row);
   list.splice(got, 0, me);
@@ -1190,7 +1190,8 @@ function openRoad() {
       m.el.querySelectorAll('.rd-chip').forEach((x, k) => (x.classList.toggle('on', x === c), x.setAttribute('aria-pressed', x === c), x === c && m.el.querySelector('.rd-seg').style.setProperty('--i', k)));
       road.dataset.f = c.dataset.f;
       road.querySelectorAll('.rd').forEach((x) => {
-        const show = !c.dataset.f || x.dataset.k === c.dataset.f;
+        // 10 nov 2026: con filtro solo sale lo ya descubierto (la idea es no saber dónde sale lo que falta).
+        const show = !c.dataset.f || (x.dataset.k === c.dataset.f && !x.classList.contains('lock'));
         x.hidden = !show;
         if (show && !reduced()) x.animate([{ opacity: 0, scale: 0.92 }, { opacity: 1, scale: 1 }], { duration: 260, easing: 'cubic-bezier(0.23, 1, 0.32, 1)' });
       });
