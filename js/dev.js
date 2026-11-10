@@ -1,13 +1,13 @@
 // Modo dev: probar niveles rápido sin jugarlos a mano.
 // Se prende y apaga con los botones de pruebas de Ajustes (8 toques seguidos al título). Queda guardado en el navegador.
 import { save, prefs, persist, resetProfile, backupOnce, restoreBackup, setDev, backupInfo } from './storage.js';
-import { missions, misDone, LOGROS } from './missions.js';
+import { missions, misDone, LOGROS, LOGRO_TOP, logroGot, logrosVisible } from './missions.js';
 import { rachaWin, rachaLose, racha, nextGoal, col, daysToNextCol, ev, daysToNextEvent, evEnter, evWin, EVENT_PER_PLANET, EVENT_LEVELS, fiesta, fiEnter, fiWin, nextFiesta, daysToNextFiesta, daysToFiesta, fiShape, isOn, UNLOCK } from './events.js';
 import { TIERS, generateLevel, hardHelp, fiestaPick, fiestaLevel, eventLevel, eventGroup, EVENT_WORLDS, packGroups, worldInfo, specials, specialGroup, SPECIAL_ID, TOTAL_LEVELS, LEVELS_PER_WORLD, MECH_NAMES, MECHANICS, MECH_INTRO, SCROLL_FROM, EXTRA, extraDebut, mareaFirst, hoyoFirst, puertasFirst, bandaFirst } from './levels.js';
 import { playCasual, solve, initState } from './engine.js';
 import { openModal, toast, updateCoins, popGoal } from './ui.js';
 import { mulberry32 } from './rng.js';
-import { icon, miniPlanet, avatarHTML, charSVG, AVATAR_COLORS, kidOf } from './art.js';
+import { icon, miniPlanet } from './art.js';
 import { tableHTML, BIOMES, biomeKey } from './biomes.js';
 import { peek } from './galaxy.js';
 import { EVENTOS, COLECCIONES, FIESTAS, fiestaDays } from './events.js';
@@ -525,7 +525,36 @@ function goToLevel(g, betBefore) {
   persist();
 }
 // card: dibuja la carta de una mecánica (mechCard de main.js) para el recuento.
-export function openDevMenu({ onGallery, onPlanets, onSets, onRefresh, card }) {
+// Para ver el festejo de la portada (10 nov 2026): cumple una cosa de verdad y al cerrar el menú se cobra y se festeja.
+// Devuelve lo que falta abrir (texto) si todavía no se puede.
+const pickOne = (a) => a[Math.floor(Math.random() * a.length)];
+function devMisOne() {
+  if (!isOn('mis')) return `misiones (nivel ${UNLOCK.mis + 1})`;
+  const x = pickOne(missions().list.filter((m) => !misDone(m)));
+  if (x) x.n = x.goal;
+  return '';
+}
+function devLogroOne() {
+  if (!isOn('logros')) return `logros (nivel ${UNLOCK.logros + 1})`;
+  const l = pickOne(logrosVisible().filter((x) => logroGot(x) < LOGRO_TOP));
+  if (!l) return '';
+  const st = (save.stats ||= {}), k = l.best ? `${l.k}Best` : l.k;
+  st[k] = Math.max(st[k] || 0, l.steps[logroGot(l)]);
+  return '';
+}
+function devRachaNext() {
+  if (!isOn('racha')) return `racha (nivel ${UNLOCK.racha + 1})`;
+  const g = nextGoal();
+  while (racha().n < g.n) rachaWin(Math.min(3, g.n - racha().n));
+  return '';
+}
+const devDo = (fns, onRefresh) => {
+  const no = fns.map((f) => f()).filter(Boolean);
+  persist();
+  if (no.length) toast(`Aún no se abren: ${no.join(', ')}`);
+  onRefresh();
+};
+export function openDevMenu({ onGallery, onPlanets, onRefresh, card }) {
   const w = Math.min(Math.floor(save.next / LEVELS_PER_WORLD), save.open);
   const r = Math.floor(w / REGION);
   const evNow = ev(), colNow = col();
@@ -616,28 +645,30 @@ export function openDevMenu({ onGallery, onPlanets, onSets, onRefresh, card }) {
     <p class="dline">De la tienda, ${shopLocked} siguen con candado por mundo; lo último se abre en el mundo ${lastNeed + 1} (nivel ${lastNeed * LEVELS_PER_WORLD + 1}).</p>`;
   // Secciones con título; cada botón dice en corto lo que hace (la explicación larga va en su title).
   const S = [
-    { t: 'General', items: [
-      { l: 'Galería de niveles', cls: 'gold', fn: onGallery },
-      { l: 'Galería de planetas', cls: 'gold', title: 'Cada tipo de planeta: verlo en el mapa o jugar en su mesa', fn: onPlanets },
-      { l: 'Colecciones de personaje', cls: 'gold', title: 'Cada avatar con su marco, título, nave y su pieza extra, todo junto', fn: onSets },
-      { l: 'Avatar 3D', cls: 'gold', title: 'El niño de busto en 3D: sus 3 movimientos, la foto de las listas y los 10 de la bodega', fn: openAvatar3D },
-      { l: `Boosters infinitos: ${prefs.devInfinite ? 'sí' : 'no'}`, fn: () => { prefs.devInfinite = !prefs.devInfinite; persist(); toast(`Boosters infinitos: ${prefs.devInfinite ? 'sí' : 'no'}`); } },
-      { l: '+20,000 monedas', fn: () => ((save.coins += 20000), persist(), updateCoins()) },
-      // 9 nov 2026: para ver todo sin avanzar niveles (dev es caja de pruebas: al apagarlo vuelve tu partida).
-      { l: 'Toda la tienda', title: 'Te da todo lo que se compra en la tienda, aunque tenga candado por mundo', fn: () => { for (const sec in ITEMS) ITEMS[sec].forEach((it) => !it.ev && (save.owned[`${sec}:${it.k}`] = 1)); persist(); toast('Ya tienes toda la tienda'); } },
-      { l: 'Todos los exclusivos', title: 'Te da todos los premios exclusivos: evento del mes, festividades, colecciones, lluvia de meteoritos, código de regalo y logros', fn: () => { for (const sec in ITEMS) ITEMS[sec].forEach((it) => it.ev && (save.owned[`${sec}:${it.k}`] = 1)); persist(); toast('Ya tienes todos los exclusivos'); } },
-      { l: `Medidas de pantalla: ${prefs.screenInfo ? 'sí' : 'no'}`, title: 'Recuadro con lo que dice el navegador del tamaño de la pantalla (para revisar el iPhone)', fn: () => { prefs.screenInfo = !prefs.screenInfo; persist(); dispatchEvent(new Event('screeninfo')); toast(`Medidas de pantalla: ${prefs.screenInfo ? 'sí' : 'no'}`); } },
-    ] },
-    { t: 'Códigos de regalo', sub: prefs.codeLot ? `${prefs.codeLot.length} hechos` : 'aún no hay', items: [
-      { l: prefs.codeLot ? 'Hacer otro lote' : 'Hacer lote', cls: 'gold', title: 'Uno de cada cosa del Tesoro escondido, 20 de monedas (100 a 500), comodines, deshacer y boletos. Los de antes siguen sirviendo', fn: () => (makeLot(), openCodeList()) },
-      prefs.codeLot && { l: 'Ver los códigos', fn: openCodeList },
-      { l: 'Un código suelto', title: 'Elige qué da: monedas, ayudas o una cosa del Tesoro escondido', fn: openOneCode },
-    ] },
-    { t: 'Volver a explicar', items: [
-      { l: 'Explicar mecánicas', title: 'Las explicaciones de cada mecánica salen otra vez', fn: () => ((save.seen = {}), persist(), toast('Las explicaciones saldrán otra vez')) },
-      { l: 'Recorrido de botones', title: 'El recorrido de los botones (izquierda, arriba, eventos y Jugar) sale otra vez al cerrar este menú', fn: () => { delete save.sideTour; persist(); onRefresh(); } },
-      // 8 nov 2026: los avisos de desbloqueo salen una sola vez por jugador (Reiniciar progreso los conserva).
-      { l: 'Avisos de desbloqueo', title: 'Racha, misiones, lluvia de meteoritos, logros, colecciones, evento del mes y festividades: sus ventanas de "¡Nuevo!" salen otra vez (las que ya tengas abiertas, al volver al mapa)', fn: () => { save.intro = {}; delete save.metSeen; persist(); toast('Los avisos de desbloqueo saldrán otra vez'); onRefresh(); } },
+    // Orden del menú (10 nov 2026, pedido del usuario): de lo más importante a lo menos.
+    // General (10 nov 2026): herramientas, volver a explicar y códigos de regalo en un grupo, cada uno con su parte.
+    { t: 'General', items: [], parts: [
+      { k: 'gen', h: 'Herramientas', ico: 'gear', items: [
+        { l: 'Galería de niveles', cls: 'gold', fn: onGallery },
+        { l: 'Galería de planetas', cls: 'gold', title: 'Cada tipo de planeta: verlo en el mapa o jugar en su mesa', fn: onPlanets },
+        { l: `Boosters infinitos: ${prefs.devInfinite ? 'sí' : 'no'}`, fn: () => { prefs.devInfinite = !prefs.devInfinite; persist(); toast(`Boosters infinitos: ${prefs.devInfinite ? 'sí' : 'no'}`); } },
+        { l: '+20,000 monedas', fn: () => ((save.coins += 20000), persist(), updateCoins()) },
+        // 9 nov 2026: para ver todo sin avanzar niveles (dev es caja de pruebas: al apagarlo vuelve tu partida).
+        { l: 'Toda la tienda', title: 'Te da todo lo que se compra en la tienda, aunque tenga candado por mundo', fn: () => { for (const sec in ITEMS) ITEMS[sec].forEach((it) => !it.ev && (save.owned[`${sec}:${it.k}`] = 1)); persist(); toast('Ya tienes toda la tienda'); } },
+        { l: 'Todos los exclusivos', title: 'Te da todos los premios exclusivos: evento del mes, festividades, colecciones, lluvia de meteoritos, código de regalo y logros', fn: () => { for (const sec in ITEMS) ITEMS[sec].forEach((it) => it.ev && (save.owned[`${sec}:${it.k}`] = 1)); persist(); toast('Ya tienes todos los exclusivos'); } },
+        { l: `Medidas de pantalla: ${prefs.screenInfo ? 'sí' : 'no'}`, title: 'Recuadro con lo que dice el navegador del tamaño de la pantalla (para revisar el iPhone)', fn: () => { prefs.screenInfo = !prefs.screenInfo; persist(); dispatchEvent(new Event('screeninfo')); toast(`Medidas de pantalla: ${prefs.screenInfo ? 'sí' : 'no'}`); } },
+      ] },
+      { k: 'exp', h: 'Volver a explicar', ico: 'replay', items: [
+        { l: 'Explicar mecánicas', title: 'Las explicaciones de cada mecánica salen otra vez', fn: () => ((save.seen = {}), persist(), toast('Las explicaciones saldrán otra vez')) },
+        { l: 'Recorrido de botones', title: 'El recorrido de los botones (izquierda, arriba, eventos y Jugar) sale otra vez al cerrar este menú', fn: () => { delete save.sideTour; persist(); onRefresh(); } },
+        // 8 nov 2026: los avisos de desbloqueo salen una sola vez por jugador (Reiniciar progreso los conserva).
+        { l: 'Avisos de desbloqueo', title: 'Racha, misiones, lluvia de meteoritos, logros, colecciones, evento del mes y festividades: sus ventanas de "¡Nuevo!" salen otra vez (las que ya tengas abiertas, al volver al mapa)', fn: () => { save.intro = {}; delete save.metSeen; persist(); toast('Los avisos de desbloqueo saldrán otra vez'); onRefresh(); } },
+      ] },
+      { k: 'cod', h: 'Códigos de regalo', ico: 'gift', sub: prefs.codeLot ? `${prefs.codeLot.length} hechos` : 'aún no hay', items: [
+        { l: prefs.codeLot ? 'Hacer otro lote' : 'Hacer lote', cls: 'gold', title: 'Uno de cada cosa del Tesoro escondido, 20 de monedas (100 a 500), comodines, deshacer y boletos. Los de antes siguen sirviendo', fn: () => (makeLot(), openCodeList()) },
+        prefs.codeLot && { l: 'Ver los códigos', fn: openCodeList },
+        { l: 'Un código suelto', title: 'Elige qué da: monedas, ayudas o una cosa del Tesoro escondido', fn: openOneCode },
+      ] },
     ] },
     { t: 'Avance', sub: `vas en el mundo ${w + 1}`, items: [
       { l: `Abrir mundo ${w + 1}`, fn: () => (completeWorlds(w, w), onRefresh()) },
@@ -686,54 +717,58 @@ export function openDevMenu({ onGallery, onPlanets, onSets, onRefresh, card }) {
       // En pruebas, empezar de cero también vuelve a enseñar los avisos de desbloqueo (el Reiniciar de Ajustes no).
       { l: 'Reiniciar progreso', title: 'Desde el nivel 1, con los avisos de desbloqueo otra vez', fn: () => (resetProfile(), (save.intro = {}), delete save.metSeen, persist(), onRefresh()) },
     ] },
+    // Misiones del día, logros y racha (10 nov 2026): un solo grupo con su parte cada uno, de su color (como sus
+    // tarjetas de festejo), y arriba "Premios mezclados" para ver los festejos juntos.
+    { t: 'Misiones, logros y racha', items: [
+      { l: 'Premios mezclados', cls: 'gold', title: 'Siguiente premio de racha, una misión y un logro: para ver sus festejos juntos', fn: () => devDo([devRachaNext, devMisOne, devLogroOne], onRefresh) },
+    ], parts: [
+      { k: 'racha', h: 'Racha cohete', ico: 'rocket', sub: `va en ${racha().n}`, items: [
+        { l: 'Al siguiente premio', fn: () => devDo([devRachaNext], onRefresh) },
+        { l: '+1 victoria (3★)', fn: () => (rachaWin(3), onRefresh()) },
+        { l: 'Perderla', fn: () => (rachaLose(), onRefresh()) },
+        { l: 'Pasar al otro día', fn: () => ((save.devDay = (save.devDay || 0) + 1), persist(), onRefresh()) },
+      ] },
+      { k: 'mis', h: 'Misiones del día', ico: 'misiones', sub: `${missions().list.filter(misDone).length}/3 cumplidas`, items: [
+        { l: 'Cumplir una', title: 'Una de las de hoy que falte, al azar', fn: () => devDo([devMisOne], onRefresh) },
+        { l: 'Cumplir las 3', fn: () => { for (const x of missions().list) x.n = x.goal; persist(); onRefresh(); } },
+        { l: 'Otras misiones', title: 'Escoge 3 nuevas (como si fuera otro día, sin mover la fecha)', fn: () => { save.misSeed = (save.misSeed || 0) + 1; save.mis = null; missions(); onRefresh(); } },
+      ] },
+      { k: 'logro', h: 'Logros', ico: 'trophy', sub: `${LOGROS.reduce((n, l) => n + logroGot(l), 0)} medallas`, items: [
+        { l: 'Completar uno', title: 'Uno al azar llega a su siguiente medalla y al cerrar se cobra su premio', fn: () => devDo([devLogroOne], onRefresh) },
+        { l: 'Subir todos un escalón', fn: () => { const st = (save.stats ||= {}); for (const l of LOGROS) { const k = l.best ? `${l.k}Best` : l.k; st[k] = Math.max(st[k] || 0, l.steps.find((n) => n > (st[k] || 0)) || st[k]); } persist(); onRefresh(); } },
+      ] },
+    ] },
+    // Eventos (10 nov 2026): del mes, del día (festividad) y colección en un solo grupo, cada uno con su parte.
+    { t: 'Eventos', items: [], parts: [
+      { k: 'mes', h: 'Evento del mes', ico: 'planet', sub: evNow ? `${evNow.name} · nivel ${Math.min(evNow.state.k + 1, EVENT_LEVELS)} de ${EVENT_LEVELS} · ${evNow.state.tk ? 'con boleto' : 'sin boleto'}` : 'no hay este mes', items: [
+        { l: evNow ? 'Siguiente evento' : 'Ir al próximo', fn: () => ((save.devDay = (save.devDay || 0) + daysToNextEvent()), persist(), onRefresh()) },
+        { l: 'Día antes del próximo', title: 'Mueve el reloj al último día del mes anterior: su botón sale gris con candado y la cuenta regresiva', fn: () => ((save.devDay = (save.devDay || 0) + daysToNextEvent() - 1), persist(), onRefresh()) },
+        evNow && { l: 'Boleto ya', title: 'Da el boleto sin esperar las 48 horas', fn: () => evSet({}) },
+        evNow && { l: 'Ir al jefe del planeta', fn: () => evSet({ k: Math.min(EVENT_LEVELS - 1, Math.floor(evNow.state.k / EVENT_PER_PLANET) * EVENT_PER_PLANET + EVENT_PER_PLANET - 1) }) },
+        evNow && { l: 'Siguiente planeta', fn: () => evSet({ k: Math.min(EVENT_LEVELS - 1, (Math.floor(evNow.state.k / EVENT_PER_PLANET) + 1) * EVENT_PER_PLANET) }) },
+        evNow && { l: 'Ganar todo hasta el último jefe', title: 'Gana los niveles que faltan (con sus premios) y te deja en el jefe del último planeta', fn: () => (ev().state.tk = 1, ev().state.run = null, winTo(ev, evEnter, evWin, EVENT_LEVELS - 1)) },
+      ] },
+      { k: 'dia', h: 'Festividad del día', ico: 'calavera', sub: `${fiNow ? `${fiNow.name} · ${fiNow.soon ? (fiNow.inDays > 1 ? `en ${fiNow.inDays} días` : 'mañana') : `nivel ${Math.min(fiNow.state.k + 1, FL)} de ${FL}`}` : fiNext ? `próxima: ${fiNext.name} en ${fiNext.days} días` : 'ninguna lista'}${isOn('fiesta') ? '' : ` · se abre en el nivel ${UNLOCK.fiesta}`}`, items: [
+        fiNext && fiNext.days > 3 && { l: `3 días antes de: ${fiNext.name}`, title: 'Mueve el reloj a 3 días de la siguiente fiesta: su botón sale gris con la cuenta regresiva', fn: () => toDay(fiNext.days - 3) },
+        fiNow?.soon && { l: 'Que empiece ya', title: 'Mueve el reloj al día de la fiesta', fn: () => toDay(fiNow.inDays) },
+        fiOn && { l: 'Ir al jefe del planeta', fn: () => fiSet({ k: Math.min(FL - 1, Math.floor(fiNow.state.k / FN) * FN + FN - 1) }) },
+        fiOn && { l: 'Siguiente planeta', fn: () => fiSet({ k: Math.min(FL - 1, (Math.floor(fiNow.state.k / FN) + 1) * FN) }) },
+        fiOn && { l: 'Ganar todo hasta el último jefe', title: 'Gana los niveles que faltan (con sus premios) y te deja en el jefe del último planeta', fn: () => ((fiesta().state.run = null), winTo(fiesta, fiEnter, fiWin, FL - 1)) },
+        fiOn && { l: 'Empezar de cero', fn: () => ((save.fi = null), persist(), onRefresh()) },
+        { l: 'Ver el aviso de Festividades', title: 'La ventana que sale al desbloquearlas (nivel 120), con 3 iconos', fn: () => (save.intro && delete save.intro.fiesta, persist(), onRefresh()) },
+        { l: 'Ver el aviso de Leyendas', title: `La ventana que sale al llegar al nivel ${UNLOCK.fiesta2}, con las festividades nuevas`, fn: () => (save.intro && delete save.intro.fiesta2, persist(), onRefresh()) },
+      ] },
+      { k: 'col', h: 'Colección', ico: colNow?.token || COLECCIONES[0].token, sub: colNow ? `${colNow.name} · ${colNow.state.n} fichas` : 'no hay esta semana', items: [
+        { l: colNow ? 'Siguiente colección' : 'Ir a la próxima', fn: () => ((save.devDay = (save.devDay || 0) + daysToNextCol()), persist(), onRefresh()) },
+        colNow && { l: '+500 fichas', fn: () => ((col().state.n += 500), persist(), onRefresh()) },
+        colNow && { l: 'Ver su bienvenida', fn: () => ((col().state.intro = false), persist(), onRefresh()) },
+      ] },
+    ] },
     // Apuesta (9 nov 2026): brincar al nivel donde se abre cada ×N, para ver su ventana.
     { t: 'Apuesta', sub: `aquí hasta ×${maxBet(save.next)} · escogida ×${save.bet || 1} · gratis hasta ×${save.betFreeN ?? (save.betFree || save.betGift ? 2 : 1)}`, items: [
       ...BET_AT.map(([m, g], i) => ({ l: `Ir al inicio de ×${m} (nivel ${g + 1})`, title: `Deja el camino en el nivel ${g + 1} sin ganar (gana lo de antes o borra lo de después) y su ventana sale sola`, fn: () => (goToLevel(g, i ? BET_AT[i - 1][0] : 1), toast(`Siguiente: nivel ${g + 1}, apuesta hasta ×${m}`), onRefresh()) })),
       { l: 'Su ×N gratis otra vez', title: 'La siguiente partida va gratis con la apuesta más alta de aquí', fn: () => { const i = BET_STEPS.indexOf(maxBet(save.next)); save.betFreeN = BET_STEPS[Math.max(0, i - 1)]; delete save.betFree; delete save.betGift; persist(); toast('La siguiente va por nuestra cuenta'); onRefresh(); } },
       { l: 'Volver a ×1', title: 'La apuesta escogida vuelve a ×1', fn: () => ((save.bet = 1), persist(), onRefresh()) },
-    ] },
-    // Misiones del día y logros (7 nov 2026).
-    { t: 'Misiones y logros', sub: `misiones ${missions().list.filter(misDone).length}/3`, items: [
-      { l: 'Cumplir las misiones de hoy', fn: () => { for (const x of missions().list) x.n = x.goal; persist(); onRefresh(); } },
-      { l: 'Otras misiones', title: 'Escoge 3 nuevas (como si fuera otro día, sin mover la fecha)', fn: () => { save.misSeed = (save.misSeed || 0) + 1; save.mis = null; missions(); onRefresh(); } },
-      { l: 'Logros: subir todo un escalón', fn: () => { const st = (save.stats ||= {}); for (const l of LOGROS) { const k = l.best ? `${l.k}Best` : l.k; st[k] = Math.max(st[k] || 0, l.steps.find((n) => n > (st[k] || 0)) || st[k]); } persist(); onRefresh(); } },
-      { l: 'Logros: borrar', fn: () => ((save.stats = {}), (save.logros = {}), persist(), onRefresh()) },
-    ] },
-    { t: 'Racha', sub: `va en ${racha().n}`, items: [
-      { l: '+1 victoria (3★)', fn: () => (rachaWin(3), onRefresh()) },
-      { l: 'Al siguiente premio', fn: () => { const g = nextGoal(); while (racha().n < g.n) rachaWin(); onRefresh(); } },
-      { l: 'Perderla', fn: () => (rachaLose(), onRefresh()) },
-      { l: 'Pasar al otro día', fn: () => ((save.devDay = (save.devDay || 0) + 1), persist(), onRefresh()) },
-    ] },
-    { t: 'Globos, burbujas y meteoros', sub: ['globo', 'burbuja', 'meteoro'].map((k) => { const p = save.pops?.[k] || { n: 0, lvl: 0 }; return `${k}s ${p.n} de ${popGoal(k, p.lvl)}`; }).join(' · '), items: [
-      { l: 'A 1 globo del comodín', fn: () => popNear('globo') },
-      { l: 'A 1 burbuja de las monedas', title: 'Las burbujas salen de los premios al ganar cualquier nivel y del cofre del jefe', fn: () => popNear('burbuja') },
-      { l: 'A 1 meteoro de las monedas', title: 'Los meteoros cruzan el cielo del mapa durante la lluvia (DEV → Lluvia de meteoritos → Que caiga ya)', fn: () => popNear('meteoro') },
-      { l: 'Empezar de cero', fn: () => ((save.pops = {}), persist(), onRefresh()) },
-    ] },
-    { t: 'Colección', sub: colNow ? `${colNow.name} · ${colNow.state.n} fichas` : 'no hay esta semana', items: [
-      { l: colNow ? 'Siguiente colección' : 'Ir a la próxima', fn: () => ((save.devDay = (save.devDay || 0) + daysToNextCol()), persist(), onRefresh()) },
-      colNow && { l: '+500 fichas', fn: () => ((col().state.n += 500), persist(), onRefresh()) },
-      colNow && { l: 'Ver su bienvenida', fn: () => ((col().state.intro = false), persist(), onRefresh()) },
-    ] },
-    { t: 'Evento del mes', sub: evNow ? `${evNow.name} · nivel ${Math.min(evNow.state.k + 1, EVENT_LEVELS)} de ${EVENT_LEVELS} · ${evNow.state.tk ? 'con boleto' : 'sin boleto'}` : 'no hay este mes', items: [
-      { l: evNow ? 'Siguiente evento' : 'Ir al próximo', fn: () => ((save.devDay = (save.devDay || 0) + daysToNextEvent()), persist(), onRefresh()) },
-      { l: 'Día antes del próximo', title: 'Mueve el reloj al último día del mes anterior: su botón sale gris con candado y la cuenta regresiva', fn: () => ((save.devDay = (save.devDay || 0) + daysToNextEvent() - 1), persist(), onRefresh()) },
-      evNow && { l: 'Boleto ya', title: 'Da el boleto sin esperar las 48 horas', fn: () => evSet({}) },
-      evNow && { l: 'Ir al jefe del planeta', fn: () => evSet({ k: Math.min(EVENT_LEVELS - 1, Math.floor(evNow.state.k / EVENT_PER_PLANET) * EVENT_PER_PLANET + EVENT_PER_PLANET - 1) }) },
-      evNow && { l: 'Siguiente planeta', fn: () => evSet({ k: Math.min(EVENT_LEVELS - 1, (Math.floor(evNow.state.k / EVENT_PER_PLANET) + 1) * EVENT_PER_PLANET) }) },
-      evNow && { l: 'Ganar todo hasta el último jefe', title: 'Gana los niveles que faltan (con sus premios) y te deja en el jefe del último planeta', fn: () => (ev().state.tk = 1, ev().state.run = null, winTo(ev, evEnter, evWin, EVENT_LEVELS - 1)) },
-      evNow && { l: 'Empezar de cero', fn: () => ((save.ev = null), persist(), onRefresh()) },
-    ] },
-    { t: 'Festividad', sub: `${fiNow ? `${fiNow.name} · ${fiNow.soon ? (fiNow.inDays > 1 ? `en ${fiNow.inDays} días` : 'mañana') : `nivel ${Math.min(fiNow.state.k + 1, FL)} de ${FL}`}` : fiNext ? `próxima: ${fiNext.name} en ${fiNext.days} días` : 'ninguna lista'}${isOn('fiesta') ? '' : ` · se abre en el nivel ${UNLOCK.fiesta}`}`, items: [
-      fiNext && fiNext.days > 3 && { l: `3 días antes de: ${fiNext.name}`, title: 'Mueve el reloj a 3 días de la siguiente fiesta: su botón sale gris con la cuenta regresiva', fn: () => toDay(fiNext.days - 3) },
-      fiNow?.soon && { l: 'Que empiece ya', title: 'Mueve el reloj al día de la fiesta', fn: () => toDay(fiNow.inDays) },
-      fiOn && { l: 'Ir al jefe del planeta', fn: () => fiSet({ k: Math.min(FL - 1, Math.floor(fiNow.state.k / FN) * FN + FN - 1) }) },
-      fiOn && { l: 'Siguiente planeta', fn: () => fiSet({ k: Math.min(FL - 1, (Math.floor(fiNow.state.k / FN) + 1) * FN) }) },
-      fiOn && { l: 'Ganar todo hasta el último jefe', title: 'Gana los niveles que faltan (con sus premios) y te deja en el jefe del último planeta', fn: () => ((fiesta().state.run = null), winTo(fiesta, fiEnter, fiWin, FL - 1)) },
-      fiOn && { l: 'Empezar de cero', fn: () => ((save.fi = null), persist(), onRefresh()) },
-      { l: 'Ver el aviso de Festividades', title: 'La ventana que sale al desbloquearlas (nivel 120), con 3 iconos', fn: () => (save.intro && delete save.intro.fiesta, persist(), onRefresh()) },
-      { l: 'Ver el aviso de Leyendas', title: `La ventana que sale al llegar al nivel ${UNLOCK.fiesta2}, con las festividades nuevas`, fn: () => (save.intro && delete save.intro.fiesta2, persist(), onRefresh()) },
     ] },
     // Lluvia de meteoritos: hacerla caer ya (30 min), cortarla y repetir su aviso o su premio.
     { t: 'Lluvia de meteoritos', sub: `${metNow ? `cayendo · quedan ${Math.ceil(metNow.left() / 6e4)} min · premio ${metNow.state.prize ? 'ya dado' : 'pendiente'}` : 'no está cayendo'}${(save.next || 0) >= MET_FROM ? '' : ` · a ti te cae desde el nivel ${MET_FROM}`}`, items: [
@@ -746,10 +781,18 @@ export function openDevMenu({ onGallery, onPlanets, onSets, onRefresh, card }) {
       { l: 'Quitarme los exclusivos', fn: () => { metItems().forEach((x) => delete save.owned[`${x.sec}:${x.k}`]); persist(); toast('Sin exclusivos de meteoro'); } },
       { l: 'Aviso de primera vez', title: 'Vuelven a salir la ventana de desbloqueo (al volver al mapa) y la explicación completa de la siguiente lluvia', fn: () => (delete save.metSeen, save.intro && delete save.intro.meteoro, persist(), toast('Saldrán la ventana de desbloqueo y el aviso completo')) },
     ] },
+    { t: 'Globos, burbujas y meteoros', sub: ['globo', 'burbuja', 'meteoro'].map((k) => { const p = save.pops?.[k] || { n: 0, lvl: 0 }; return `${k}s ${p.n} de ${popGoal(k, p.lvl)}`; }).join(' · '), items: [
+      { l: 'A 1 globo del comodín', fn: () => popNear('globo') },
+      { l: 'A 1 burbuja de las monedas', title: 'Las burbujas salen de los premios al ganar cualquier nivel y del cofre del jefe', fn: () => popNear('burbuja') },
+      { l: 'A 1 meteoro de las monedas', title: 'Los meteoros cruzan el cielo del mapa durante la lluvia (DEV → Lluvia de meteoritos → Que caiga ya)', fn: () => popNear('meteoro') },
+    ] },
     // Una por festividad: mueve el reloj al día en que empieza (la de este año). Las de leyendas, solo desde el nivel 200.
-  ].map((sec) => ({ ...sec, items: sec.items.filter(Boolean) }));
-  const all = S.flatMap((sec) => sec.items);
-  const secHTML = (sec) => `<section class="dsec"><h4>${sec.t}${sec.sub ? `<small>${sec.sub}</small>` : ''}</h4>${sec.html || ''}<div class="dbtns">${sec.items.map((it) => `<button class="btn ${it.cls || 'ghost'}" data-i="${all.indexOf(it)}"${it.title ? ` title="${it.title}"` : ''}>${it.l}</button>`).join('')}</div></section>`;
+  ].map((sec) => ({ ...sec, items: sec.items.filter(Boolean), parts: sec.parts?.map((p) => ({ ...p, items: p.items.filter(Boolean) })) }));
+  const all = S.flatMap((sec) => [...sec.items, ...(sec.parts || []).flatMap((p) => p.items)]);
+  const btns = (items) => `<div class="dbtns">${items.map((it) => `<button class="btn ${it.cls || 'ghost'}" data-i="${all.indexOf(it)}"${it.title ? ` title="${it.title}"` : ''}>${it.l}</button>`).join('')}</div>`;
+  // parts: partes dentro de una sección, cada una con su icono, su color y sus botones.
+  const partHTML = (p) => `<div class="dpart dp-${p.k}"><h5>${icon(p.ico)}${p.h}${p.sub ? `<small>${p.sub}</small>` : ''}</h5>${btns(p.items)}</div>`;
+  const secHTML = (sec) => `<section class="dsec"><h4>${sec.t}${sec.sub ? `<small>${sec.sub}</small>` : ''}</h4>${sec.html || ''}${sec.items.length ? btns(sec.items) : ''}${(sec.parts || []).map(partHTML).join('')}</section>`;
   const m = openModal({
     title: 'Modo dev',
     cls: 'devmenu',
@@ -795,40 +838,6 @@ async function shareText(text, what = 'Copiado') {
   } catch (e) {
     if (e?.name !== 'AbortError') toast('No se pudo copiar');
   }
-}
-// Avatares 3D (10 nov 2026): tu personaje (el de tu jugador, o niño / niña aquí) con cada ropa o disfraz que ya tiene
-// modelo: sus 3 movimientos, los 10 de la bodega con su nombre, vivo, foto y el dibujo 2D de antes.
-function openAvatar3D() {
-  const st = { kid: { ...kidOf(save) }, dress: save.look === 'char' ? save.char : 'nino' };
-  const p = () => ({ name: 'Yo', look: 'char', char: st.dress, avatar: save.avatar || 0, kid: st.kid });
-  const box = (cls, inner, label) => `<div class="${cls}">${inner}<span>${label}</span></div>`;
-  const chips = (key, list, now) => `<div class="av3d-chips">${list.map(([k, n]) => `<button class="btn ${now === k ? 'gold' : 'ghost'}" data-${key}="${k}">${n}</button>`).join('')}</div>`;
-  const m = openModal({ title: 'Avatar 3D', cls: 'devmenu av3d-modal', body: '<div class="av3d-body"></div>', buttons: [{ label: 'Listo', cls: 'green' }] });
-  const body = m.el.querySelector('.av3d-body');
-  import('./avatar3d.js').then(({ MOVES, moveNow, movesOf, COSTUME_LIST }) => {
-    const draw = () => {
-      body.innerHTML = `<p class="pick-lbl">Personaje (el de tu jugador se cambia al editarlo)</p>${chips('base', [['nino', 'Niño'], ['nina', 'Niña']], st.kid.base)}
-        <p class="pick-lbl">Ropa o disfraz</p>${chips('dress', COSTUME_LIST, st.dress)}
-        <div class="av3d">${box('a3d-live', avatarHTML(p(), 'av3d-big'), 'Sus 3 movimientos')}${box('a3d-all', avatarHTML(p(), 'av3d-big'), 'Los 10 de la bodega')}</div>
-        <p class="av3d-now">Ahora: <b>…</b></p>
-        <div class="av3d">${box('a3d-live', avatarHTML(p()), 'Vivo')}${box('a3d-still', avatarHTML(p()), 'Foto (listas)')}${box('', `<span class="avatar char" style="--av:${AVATAR_COLORS[save.avatar || 0]}">${charSVG(st.dress)}</span>`, '2D de antes')}</div>
-        <p class="note">Usa: <b>${movesOf(st.dress).map((k) => MOVES[k].name.toLowerCase()).join(', ')}</b>. El jugador nunca ve estos nombres.</p>`;
-      body.querySelectorAll('[data-base], [data-dress]').forEach((b) => b.addEventListener('click', () => {
-        if (b.dataset.base && b.dataset.base !== st.kid.base) st.kid = { ...st.kid, base: b.dataset.base, style: 0 };
-        if (b.dataset.dress) st.dress = b.dataset.dress;
-        draw();
-      }));
-    };
-    draw();
-    // Qué movimiento va haciendo el de la bodega (para decidir cuáles van con quién).
-    const tick = () => {
-      if (!body.isConnected) return;
-      const out = body.querySelector('.av3d-now b'), k = moveNow(body.querySelector('.a3d-all canvas'));
-      if (out) out.textContent = k ? MOVES[k].name : 'feliz';
-      requestAnimationFrame(tick);
-    };
-    tick();
-  });
 }
 // Todos los códigos hechos, por grupos (acordeón). Tocar uno lo copia. "usado" = ya se canjeó en este teléfono.
 function openCodeList() {

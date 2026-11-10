@@ -339,7 +339,10 @@ const ICONS = {
   wild: () => `<g transform="rotate(8 16 16)">${tshape('M9 4h14a3 3 0 0 1 3 3v18a3 3 0 0 1-3 3H9a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3z', '#fffaf0', '#eadcc2', '', 2.2)}${tshape(starPath(16, 16.5, 7.5, 3.4), '#ff9c2b', '#e8761a', '', 1.8)}</g>`,
   // Una sola carta de reverso (botón Cartas de la tienda).
   card: () => `<g transform="rotate(-10 16 16)">${tshape('M10 4h12a3 3 0 0 1 3 3v18a3 3 0 0 1-3 3H10a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3z', '#fff6e6', '#e3d8c4', '<rect x="9.6" y="6.6" width="12.8" height="18.8" rx="1.8" fill="#4a4ac0"/>', 1.8)}<path d="${starPath(16, 16, 5, 2.3)}" fill="#ffc83d" stroke="#2a1f5c" stroke-width="1.4" stroke-linejoin="round"/></g>`,
-  deck: () => [0, 1, 2].map((i) => tshape(`M${8 + i * 3} ${8 - i * 2}h11a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H${8 + i * 3}a2 2 0 0 1-2-2V${10 - i * 2}a2 2 0 0 1 2-2z`, '#2b2b7a', '#22226a', '', 1.8)).join(''),
+  // Mazo (10 nov 2026: antes las de atrás se dibujaban encima y salía una mancha azul): tres reversos, de atrás hacia
+  // delante; el de enfrente con su marco claro y una estrella.
+  deck: () => [2, 1, 0].map((i) => tshape(`M${7 + i * 3.5} ${9 - i * 2.5}h11a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H${7 + i * 3.5}a2 2 0 0 1-2-2V${11 - i * 2.5}a2 2 0 0 1 2-2z`, ['#8a5cf0', '#7448e0', '#5f36c9'][i], '#4a2aa8', i ? '' : `<rect x="7.5" y="11.5" width="10" height="15" rx="1.2" fill="none" stroke="#d9c8ff" stroke-width="1.4"/><path d="${starPath(12.5, 19, 3.6, 1.6)}" fill="#ffd75a"/>`, 1.8)).join(''),
+  cards: () => ICONS.deck(),
   lock: () => lockInner('#d3cde8', '#aea6cc'),
   bomb: () => tshape(CIRCLE(15, 19, 10.5), '#4a4373', '#332d58', '<path d="M9 16a7 7 0 0 1 5.5-4.5" stroke="#8f88c0" stroke-width="2.4" stroke-linecap="round" fill="none"/>', 2.2)
     + `<g transform="rotate(40 21 9)">${tshape('M18 6h6v5h-6z', '#8f88c0', '#6e66a3', '', 1.8)}</g><path d="M24 6c1.5-2.5 3.5-2.8 5-1.2" stroke="${K}" stroke-width="1.8" fill="none" stroke-linecap="round"/>${tshape(starPath(29, 4.5, 3.6, 1.6), '#ffd85a', '#ffb02e', '', 1.4)}`,

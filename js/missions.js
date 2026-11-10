@@ -1,11 +1,12 @@
 // Misiones del día y logros (7 nov 2026).
 // Misiones: cada día (medianoche, hora del teléfono) tocan 3 de una lista de ~25, escogidas con la fecha (iguales en
 // todo el día). Solo las que ya puedes hacer (las de cartas especiales, cuando ya llegaste a su mundo). Cada una da
-// monedas al reclamarla y las 3 juntas dan un cofre extra. Lo que no se reclama se pierde a medianoche.
+// monedas y las 3 juntas un cofre extra; desde el 10 nov 2026 se cobran solas al cumplirse (autoClaim).
 // Logros: para siempre. Cada uno tiene 3 escalones (bronce, plata y oro) con monedas; el oro da además un título.
 // Los dos se alimentan de lo mismo: track(stats) al terminar cada nivel (y al tronar burbujas o globos).
 import { save, persist } from './storage.js';
 import { MECH_INTRO, LEVELS_PER_WORLD } from './levels.js';
+import { maxBet } from './economy.js';
 import { mulberry32, hash } from './rng.js';
 
 export const MIS_FROM = 40; // nivel en que se abren (save.next); igual que UNLOCK en events.js
@@ -175,6 +176,8 @@ export const LOGROS = [
   { id: 'meteors', k: 'meteoro', name: 'Cazameteoros', ico: 'meteoro', steps: [25, 100, 300, 700, 1500], text: (n) => `Truena ${fmtN(n)} meteoros en el cielo` },
   { id: 'missions', k: 'missions', name: 'Cumplidor', ico: 'check', steps: [30, 150, 365, 700, 1200], text: (n) => `Completa ${fmtN(n)} misiones del día`, title: 'cumplidor' },
   { id: 'events', k: 'event', name: 'Fiestero', ico: 'calavera', steps: [15, 75, 200, 400, 750], text: (n) => `Gana ${n} niveles de eventos` },
+  // 10 nov 2026 (pedido del usuario): niveles seguidos ganados con apuesta (×2 o más). Sale cuando ya se puede apostar.
+  { id: 'betrow', k: 'betrow', best: true, bet: true, name: 'Apostador', ico: 'coin', steps: [3, 5, 8, 12, 20], text: (n) => `Gana ${n} apuestas seguidas` },
   { id: 'secrets', k: 'secret', name: 'Explorador secreto', ico: 'starSecret', steps: [5, 25, 100, 250, 520], text: (n) => `Gana ${n} niveles secretos`, title: 'explorador_secreto' },
 ];
 // 8 nov 2026: los logros pedían poco (el usuario: "no están tan complicados"): todas las metas ×LOGRO_UP desde el
@@ -198,7 +201,7 @@ const stat = (l) => (save.stats || {})[l.best ? `${l.k}Best` : l.k] || 0;
 export const logroAt = (l) => l.steps.filter((n) => stat(l) >= n).length;
 export const logroGot = (l) => Math.min(LOGRO_TOP, (save.logros || {})[l.id] || 0);
 export const logroStat = stat;
-export const logrosVisible = () => LOGROS.filter((l) => !l.mech || (save.open || 0) >= MECH_INTRO[l.mech]);
+export const logrosVisible = () => LOGROS.filter((l) => (!l.mech || (save.open || 0) >= MECH_INTRO[l.mech]) && (!l.bet || maxBet(save.next || 0) > 1));
 export const logrosReady = () => isLogrosOn() && logrosVisible().some((l) => logroAt(l) > logroGot(l));
 export function logroClaim(id) {
   const l = LOGROS.find((x) => x.id === id);
@@ -222,11 +225,13 @@ export function logroClaim(id) {
 // bombs, comets, turbo, halves, coincards, ghosts, cham, event, secret, burbuja, globo, meteoro, arrows, doubles, lives,
 // curtains, brooms, boss3, pure }. Los "best" (streak, left) se
 // comparan; lo demás se suma. Devuelve las misiones que se acaban de completar (para avisar).
+// Los que guardan el mejor (no se suman): racha de un nivel, cartas en el mazo y apuestas seguidas.
+const BEST = ['streak', 'left', 'betrow'];
 export function track(stats) {
   const st = (save.stats ||= {});
   for (const [k, v] of Object.entries(stats)) {
     if (!v) continue;
-    if (k === 'streak' || k === 'left') st[`${k}Best`] = Math.max(st[`${k}Best`] || 0, v);
+    if (BEST.includes(k)) st[`${k}Best`] = Math.max(st[`${k}Best`] || 0, v);
     else st[k] = (st[k] || 0) + v;
   }
   const done = [];
@@ -242,8 +247,34 @@ export function track(stats) {
       }
     }
   }
+  autoClaim();
   persist();
   return done;
+}
+// ---------- Se cobran solos (10 nov 2026, pedido del usuario) ----------
+// Al cumplir una misión, las 3 (cofre del día) o un escalón de logro, el premio se suma al momento: si cierra la app ya
+// lo tiene. Lo cobrado espera en save.feats para festejarlo en la portada (playFeats en main.js): mientras tanto el
+// monedero lo enseña sin esas monedas (shownCoins en ui.js) y al festejar vuelan a él.
+export const featCoins = () => (save.feats || []).reduce((n, f) => n + (f.coins || 0), 0);
+export function autoClaim() {
+  const q = (save.feats ||= []), n0 = q.length;
+  if (isMisOn()) {
+    missions().list.forEach((x, i) => {
+      if (!misDone(x) || x.got) return;
+      const p = misClaim(i);
+      q.push({ t: 'mis', id: x.id, goal: x.goal, coins: p.coins });
+    });
+    if (misBonusReady()) q.push({ t: 'bonus', ...misBonus() });
+  }
+  if (isLogrosOn()) {
+    for (const l of logrosVisible()) {
+      while (logroAt(l) > logroGot(l)) q.push({ t: 'logro', id: l.id, step: logroGot(l), ...logroClaim(l.id) });
+    }
+  }
+  if (q.length === n0) return false;
+  persist();
+  if (typeof dispatchEvent === 'function') dispatchEvent(new Event('feats'));
+  return true;
 }
 // Para el modo dev: las misiones de hoy otra vez.
 export const misReset = () => { save.mis = null; persist(); };

@@ -9,8 +9,10 @@ export function money(n) {
   const v = n / d;
   return `${v < 100 ? Math.floor(v * 10) / 10 : Math.floor(v)}${u}`;
 }
+// Lo que enseña el monedero: sin las monedas de misiones y logros que aún no se festejan en la portada (save.feats).
+export const shownCoins = () => save.coins - (save.feats || []).reduce((n, f) => n + (f.coins || 0), 0);
 export function updateCoins() {
-  document.querySelectorAll('[data-coins]').forEach((e) => (e.textContent = money(save.coins)));
+  document.querySelectorAll('[data-coins]').forEach((e) => (e.textContent = money(shownCoins())));
   document.querySelectorAll('[data-tickets]').forEach((e) => (e.textContent = save.tickets));
 }
 
@@ -133,7 +135,7 @@ function rollTo(kind, from, to, ms) {
 // `from` = valor que muestra el monedero antes (el guardado ya tiene el nuevo). Devuelve una promesa al terminar.
 export function flyToWallet(kind, { x, y }, amount, from) {
   const target = document.querySelector(counters[kind])?.closest('.pill');
-  const to = kind === 'coins' ? save.coins : save.tickets;
+  const to = kind === 'coins' ? shownCoins() : save.tickets;
   if (!target || reduced() || !amount) {
     updateCoins();
     return Promise.resolve();
@@ -173,7 +175,7 @@ export function flyToWallet(kind, { x, y }, amount, from) {
 // El guardado ya tiene el valor nuevo. Devuelve una promesa al terminar.
 export function spendFromWallet(kind, { x, y }, amount) {
   const pill = document.querySelector(counters[kind])?.closest('.pill');
-  const now = kind === 'coins' ? save.coins : save.tickets;
+  const now = kind === 'coins' ? shownCoins() : save.tickets;
   if (!pill || reduced() || !amount) {
     updateCoins();
     return Promise.resolve();

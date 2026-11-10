@@ -1,5 +1,5 @@
 import { save, persist } from './storage.js';
-import { openModal, toast, confetti, updateCoins, money, starsHTML, reduced, buzz, sparkle, wait, spendFromWallet, flyToWallet, balloons, lootBubbles, rachaWarnHTML, betLoseHTML } from './ui.js';
+import { openModal, toast, confetti, updateCoins, money, starsHTML, reduced, buzz, sparkle, wait, spendFromWallet, flyToWallet, balloons, lootBubbles, rachaWarnHTML, betLoseHTML, shownCoins } from './ui.js';
 import { worldInfo, packGroups, MECH_NAMES, LEVELS_PER_WORLD, scrollStrip, scrollSpan, scrollCover, SCROLL_VIEW, SCROLL_SHOW, NEB_SLOTS, GRAV_SHOWN, W, H } from './levels.js';
 import * as E from './engine.js';
 import { price, EV_MARKUP, MET_OFF, round5, HELPS, buyable } from './economy.js';
@@ -425,7 +425,7 @@ export class Game {
       <header class="hud">
         <button class="tb hbtn" data-a="exit" aria-label="Pausa" title="Pausa">${icon('pause')}</button>
         <div class="hud-mid"><div class="combo info"></div></div>
-        <div class="hud-r">${level.doors ? `<div class="pill info key-pill" aria-label="Llaves" title="Llaves: abre la puerta que quieras">${icon('door')}<b>0</b></div>` : ''}${this.opts.bet > 1 ? `<div class="pill info bet-pill b${this.opts.bet}" aria-label="Apuesta ×${this.opts.bet}" title="Apuesta: premios y ayudas ×${this.opts.bet}">×${this.opts.bet}</div>` : ''}${this.opts.racha ? `<div class="pill info racha-pill ${this.opts.racha.hot ? 'hot' : ''}" aria-label="Racha">${this.opts.racha.hot ? `<span class="fire">${icon('flame')}</span>` : ''}${icon(this.opts.racha.ico)}<span>${this.opts.racha.n}</span></div>` : ''}<div class="pill info${this.opts.meteor ? ' met-pill' : ''}">${coin()}<span data-coins>${money(save.coins)}</span>${this.opts.meteor ? '<i class="x2">×2</i><small class="met-clock"></small>' : ''}</div>${avatarHTML(save, 'hud-av')}</div>
+        <div class="hud-r">${level.doors ? `<div class="pill info key-pill" aria-label="Llaves" title="Llaves: abre la puerta que quieras">${icon('door')}<b>0</b></div>` : ''}${this.opts.bet > 1 ? `<div class="pill info bet-pill b${this.opts.bet}" aria-label="Apuesta ×${this.opts.bet}" title="Apuesta: premios y ayudas ×${this.opts.bet}">×${this.opts.bet}</div>` : ''}${this.opts.racha ? `<div class="pill info racha-pill ${this.opts.racha.hot ? 'hot' : ''}" aria-label="Racha">${this.opts.racha.hot ? `<span class="fire">${icon('flame')}</span>` : ''}${icon(this.opts.racha.ico)}<span>${this.opts.racha.n}</span></div>` : ''}<div class="pill info${this.opts.meteor ? ' met-pill' : ''}">${coin()}<span data-coins>${money(shownCoins())}</span>${this.opts.meteor ? '<i class="x2">×2</i><small class="met-clock"></small>' : ''}</div>${avatarHTML(save, 'hud-av')}</div>
       </header>
       <div class="board-wrap"><div class="board"></div><div class="streak"></div></div>
       <footer class="tray">
@@ -777,7 +777,7 @@ export class Game {
         save.coins += x.coins;
         persist();
         const [cx, cy] = center(el.getBoundingClientRect());
-        flyToWallet('coins', { x: cx, y: cy }, x.coins, save.coins - x.coins);
+        flyToWallet('coins', { x: cx, y: cy }, x.coins, shownCoins() - x.coins);
         this.showStreak(`+${x.coins} monedas`);
       } else if (x.prize === 'turbo') {
         this.showCombo();
@@ -2159,7 +2159,7 @@ export class Game {
     save.coins += c.coin;
     persist();
     const [x, y] = center(this.wasteEl.getBoundingClientRect());
-    flyToWallet('coins', { x, y }, c.coin, save.coins - c.coin);
+    flyToWallet('coins', { x, y }, c.coin, shownCoins() - c.coin);
     this.showStreak(`+${c.coin} monedas`);
   }
 
@@ -2959,13 +2959,20 @@ export class Game {
       if (r) rewards++;
       if (E.BROOM[r]) brooms++;
     }
+    // Apuestas seguidas (10 nov 2026, logro Apostador): cada nivel ganado con ×2 o más suma; perder o abandonar uno con
+    // apuesta la regresa a 0. Los niveles sin apuesta no la cortan.
+    let betrow = 0;
+    if (this.opts.bet > 1) {
+      save.betRow = won ? (save.betRow || 0) + 1 : 0;
+      betrow = save.betRow;
+    }
     const turboLeft = st.stock.filter((c) => c.turbo).length;
     const stats = {
       cards: st.plays, streak: this.best, rewards, locks: gone('lock'), packs: gone('pack'), ice: gone('ice'),
       bombs: level.cards.filter((c) => c.bomb && st.rem[c.id] && !st.boom.includes(c.id)).length, comets: this.caught || 0,
       turbo: gone('turbo') + Math.max(0, level.stock.filter((c) => c.turbo).length - turboLeft), halves: gone('half'),
       coincards: gone('coin'), ghosts: gone('ghost'), cham: gone('cham'),
-      arrows: gone('arrow'), doubles: gone('alt'), lives: gone('live'), curtains: gone('curtain'), brooms,
+      arrows: gone('arrow'), doubles: gone('alt'), lives: gone('live'), curtains: gone('curtain'), brooms, betrow,
       ...(won && { win: 1, stars, three: +(stars === 3), noundo: +!this.usedUndo, noextra: +!this.extras, nowild: +!this.usedWild, left, boss: +!!(level.boss && !level.secret), event: +!!this.opts.event, secret: +!!level.secret, coins,
         boss3: +!!(level.boss && !level.secret && stars === 3), pure: +(stars === 3 && !this.usedUndo && !this.usedWild && !this.extras) }),
     };
@@ -2978,7 +2985,7 @@ export class Game {
     this.coach?.end();
     const left = this.stock.length;
     const stars = this.extras ? 1 : E.starsFor(this.level, left);
-    const shown = save.coins;
+    const shown = shownCoins();
     const res = this.opts.onWin(stars);
     this.trackEnd(true, stars, left, res.coins || 0);
     // Las monedas del nivel se suman al volver al mapa, volando al monedero: detrás de la ventana la ficha se queda

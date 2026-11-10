@@ -832,12 +832,16 @@ function getStage() {
 }
 const dispose = (obj) => obj.traverse((o) => { o.geometry?.dispose(); [].concat(o.material || []).forEach((m) => m.dispose()); });
 // Dibuja un modelo solo y lo copia al lienzo 2D (o devuelve la foto).
+// Los vivos se dibujan solo del tamaño de su lienzo (esquina de abajo del de 320): 30 veces por segundo, dibujar y
+// copiar el lienzo entero para un avatar de 52 px era lo que más pesaba.
 function shoot(st, obj, ctx) {
   st.scene.children.forEach((c) => c.isGroup && (c.visible = c === obj));
+  const w = ctx ? Math.min(S, ctx.canvas.width) : S;
+  st.renderer.setViewport(0, 0, w, w);
   st.renderer.render(st.scene, st.camera);
   if (!ctx) return st.renderer.domElement.toDataURL('image/png');
   ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-  ctx.drawImage(st.renderer.domElement, 0, 0, ctx.canvas.width, ctx.canvas.height);
+  ctx.drawImage(st.renderer.domElement, 0, S - w, w, w, 0, 0, ctx.canvas.width, ctx.canvas.height);
 }
 // Foto quieta (feliz), una vez por personaje.
 function still(kind) {
@@ -890,15 +894,15 @@ export const moveNow = (canvas) => stage?.live.find((s) => s.canvas === canvas)?
 // Dónde se mueve: en el botón del perfil de los mundos (arriba), en el del nivel, en tu tarjeta (al tocar tu avatar) y en
 // la ficha del paquete. Al editar tu
 // jugador va quieto, igual que en la tienda, Tu camino y paquetes (lo pidió el usuario). .a3d-live / .a3d-still
-// fuerzan uno u otro; .a3d-all hace la ronda con los 10 movimientos (dev).
-const LIVE = '.me .avatar, .hud-av, .prof-av .avatar, .ss-hero .avatar, .a3d-live .avatar, .a3d-all .avatar';
+// fuerzan uno u otro.
+const LIVE = '.me .avatar, .hud-av, .prof-av .avatar, .ss-hero .avatar, .a3d-live .avatar';
 function hydrate() {
   for (const el of document.querySelectorAll('.avatar[data-a3d]:not([data-a3d-on])')) {
     const kind = el.dataset.a3d;
     el.dataset.a3dOn = '1';
     if (!has3D(kind)) continue;
     try {
-      if (el.matches(LIVE) && !el.closest('.a3d-still') && !calm()) goLive(el, kind, el.closest('.a3d-all') ? 'all' : null);
+      if (el.matches(LIVE) && !el.closest('.a3d-still') && !calm()) goLive(el, kind, null);
       else {
         const img = new Image(); img.className = 'av-char av3d-pic'; img.alt = ''; img.src = still(kind);
         el.querySelector('.av-char')?.replaceWith(img);

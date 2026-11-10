@@ -77,13 +77,26 @@ export const msToMidnight = () => {
   return d - Date.now();
 };
 
-// Ganó un nivel nuevo: suma sus estrellas y aparta los premios que alcanzó.
+// Ganó un nivel nuevo: suma sus estrellas y cobra los premios que alcanzó.
+// 10 nov 2026 (pedido del usuario): se cobran solos, como misiones y logros. Se suman al momento y esperan en save.feats
+// para festejarlos en la portada (playFeats en main.js). r.pend se queda vacío (guardados viejos: rachaClaim).
 export function rachaWin(stars = 1) {
   if (!isOn('racha')) return null;
   const r = racha();
   r.n += stars;
-  for (let i = 0; i < goalIndex(r.n); i++) if (!r.got.includes(i)) r.got.push(i), r.pend.push(i);
+  let any = false;
+  for (let i = 0; i < goalIndex(r.n); i++) {
+    if (r.got.includes(i)) continue;
+    const g = rachaGoal(i);
+    r.got.push(i);
+    save.coins += g.coins;
+    save.wild += g.wild || 0;
+    save.undo += g.undo || 0;
+    (save.feats ||= []).push({ t: 'racha', n: g.n, coins: g.coins, wild: g.wild || 0, undo: g.undo || 0 });
+    any = true;
+  }
   persist();
+  if (any && typeof dispatchEvent === 'function') dispatchEvent(new Event('feats'));
   return r.n;
 }
 // Perdió o abandonó un nivel nuevo (o se rindió en uno repetido): vuelve a 0 y los premios sin reclamar se pierden
@@ -98,6 +111,21 @@ export function rachaLose() {
   r.miss = [...(r.miss || []), ...r.pend]; // perdidos sin reclamar: en la ventana se ven tachados
   r.pend = [];
   persist();
+}
+// Guardados de antes (cuando se reclamaban a mano): lo pendiente se cobra solo y va a la cola del festejo.
+export function rachaPendToFeats() {
+  const r = racha();
+  if (!r.pend?.length) return false;
+  for (const i of r.pend) {
+    const g = rachaGoal(i);
+    save.coins += g.coins;
+    save.wild += g.wild || 0;
+    save.undo += g.undo || 0;
+    (save.feats ||= []).push({ t: 'racha', n: g.n, coins: g.coins, wild: g.wild || 0, undo: g.undo || 0 });
+  }
+  r.pend = [];
+  persist();
+  return true;
 }
 // Junta los premios pendientes y los quita de la lista.
 export function rachaClaim() {
