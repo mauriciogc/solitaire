@@ -352,6 +352,12 @@ const ICONS = {
   album: () => tshape('M5 7a2 2 0 0 1 2-2h18a2 2 0 0 1 2 2v18a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2z', '#4aa8de', '#2f86c0', '', 2.2) + tshape('M9 9h14v10H9z', '#fff6e6', '#ecdcc0', '<path d="M9 17l4-4 3 3 2-2 5 5v0H9z" fill="#5ad68c"/><circle cx="19" cy="12" r="1.8" fill="#ffc83d"/>', 1.8) + `<path d="M10 23h8" stroke="${K}" stroke-width="2" stroke-linecap="round"/>`,
   rocket: () => `<g transform="rotate(35 16 16)">${tshape('M9.5 20 6 26l6-1.5zM22.5 20 26 26l-6-1.5z', '#ff5f7e', '#d63d5f', '', 1.8)}${tshape('M16 3c4.5 3.5 6.5 9 6.5 14.5V23h-13v-5.5C9.5 12 11.5 6.5 16 3z', '#fff6e6', '#d9cfee', '', 2.2)}${tshape(CIRCLE(16, 13.5, 3.2), '#5fc7e8', '#2f86c0', '', 1.8)}${tshape('M13 23h6l-3 6.5z', '#ffc83d', '#ff8a3d', '', 1.6)}</g>`,
   face: () => `<g transform="rotate(-8 16 16)">${tshape('M9 4h14a3 3 0 0 1 3 3v18a3 3 0 0 1-3 3H9a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3z', '#fffdf7', '#efe4d0', '', 2.2)}</g><text x="16" y="22.5" text-anchor="middle" font-family="Lilita One" font-size="15" fill="#e8434f" transform="rotate(-8 16 16)">A</text>`,
+  // Disfraz (10 nov 2026): carita con su gorro de orejas de conejo, para la sección de disfraces de la tienda.
+  disfraz: () => tshape('M8.6 13Q5.4 3.6 9 1.8q3.4 1 3.8 9.8z', '#f4f1ff', '#d3cdea', '<path d="M9.6 10.4Q8 5 9.4 3.6q1.6 1.2 1.6 6.4z" fill="#ffb3d1"/>', 2)
+    + tshape('M23.4 13q3.2-9.4-.4-11.2-3.4 1-3.8 9.8z', '#f4f1ff', '#d3cdea', '<path d="M22.4 10.4Q24 5 22.6 3.6q-1.6 1.2-1.6 6.4z" fill="#ffb3d1"/>', 2)
+    + tshape(CIRCLE(16, 19, 11.4), '#f4f1ff', '#d3cdea', '', 2.2)
+    + tshape('M16 13.2c4.4 0 7 2.8 7 6.6s-2.8 6.6-7 6.6-7-2.8-7-6.6 2.6-6.6 7-6.6z', '#ffd3a8', '#f2b07c', '', 2)
+    + `<circle cx="13.4" cy="19.4" r="1.5" fill="${K}"/><circle cx="18.6" cy="19.4" r="1.5" fill="${K}"/><path d="M13.6 22.6q2.4 2 4.8 0" fill="none" stroke="${K}" stroke-width="1.8" stroke-linecap="round"/>`,
   user: () => tshape(CIRCLE(16, 17, 12), '#ff9c5b', '#e2753a', '', 2.2) + `<circle cx="12" cy="16" r="1.8" fill="${K}"/><circle cx="20" cy="16" r="1.8" fill="${K}"/><path d="M12 21q4 3 8 0" fill="none" stroke="${K}" stroke-width="2" stroke-linecap="round"/>`,
   // Colección de Copito el conejo (9 nov 2026): sus 4 verduras (figuras de su cara de cartas, su marco y su reverso).
   zanahoria: () => tshape('M21.6 6.6q3.4-.6 4.6 2 1.2 2.8-1.4 4.8L8.4 28.2q-2.6 1.6-3.6.4-.8-1 .6-3.4z', '#ff8a3d', '#e2652a', `<path d="M17 13.4l2.4 1.8M13.6 18.4l2.2 1.6M10.4 23l2 1.4" stroke="#c4501f" stroke-width="1.4" stroke-linecap="round"/><path d="M19.6 10q-3.6 5.2-7.4 10.2" stroke="#ffc08a" stroke-width="1.6" stroke-linecap="round" opacity=".8"/>`, 2.2)
@@ -1418,10 +1424,21 @@ for (const k in SA.rings) {
 }
 const ringOf = (p) => (RINGS[p.ring] ? p.ring : RINGS[p.equip?.ring] ? p.equip.ring : 'sencillo');
 export const ringSVG = (k) => (k !== 'sencillo' && RINGS[k] ? `<svg class="av-ring" viewBox="0 0 140 140" aria-hidden="true">${RINGS[k]()}</svg>` : '');
-// p: { name, avatar (color), look, char, ring } o el guardado entero (lee p.equip.ring).
+// ---------- Tu personaje 3D (10 nov 2026) ----------
+// Todos son el niño o la niña que arma el jugador; los avatares de la tienda son disfraces encima (avatar3d.js).
+// save.kid = { base: 'nino' | 'nina', skin, hair, style } (índices de estas listas). Todo gratis.
+export const KID_SKINS = ['#ffe3cc', '#ffd3a8', '#d9a06a', '#9a6440'];
+export const KID_HAIRS = ['#7a4a2a', '#2e2236', '#b98250', '#f2c25a', '#d9582a', '#4a2e6b'];
+export const KID_STYLES = { nino: ['Remolino', 'Despeinado', 'Rizos'], nina: ['Chongos', 'Coletas', 'Suelto con diadema'] };
+// Sin elegir todavía: Lila → niña de pelo morado; lo demás → niño de pelo café.
+export const kidOf = (p) => p.kid || (p.char === 'nina' ? { base: 'nina', skin: 1, hair: 5, style: 0 } : { base: 'nino', skin: 1, hair: 0, style: 0 });
+export const kidCode = (p) => { const k = kidOf(p); return `${k.base}.${k.skin}.${k.hair}.${k.style}`; };
+
+// p: { name, avatar (color), look, char, ring, kid } o el guardado entero (lee p.equip.ring).
 export function avatarHTML(p, cls = '') {
   const char = p.look === 'char' && AVATARS[p.char], ring = ringOf(p);
-  return `<span class="avatar ${char ? 'char' : ''} ring-${ring} ${cls}" style="--av:${avColor(p)}">${char ? charSVG(p.char) : `<span class="av-l">${initial(p)}</span>`}${ringSVG(ring)}</span>`;
+  // data-a3d: avatar3d.js lo cambia por el busto 3D (tu personaje con ese disfraz) si el disfraz ya tiene modelo.
+  return `<span class="avatar ${char ? 'char' : ''} ring-${ring} ${cls}" style="--av:${avColor(p)}"${char ? ` data-a3d="${p.char}:${kidCode(p)}"` : ''}>${char ? charSVG(p.char) : `<span class="av-l">${initial(p)}</span>`}${ringSVG(ring)}</span>`;
 }
 
 // placeIcon(lugar): ahora es el planetita del mundo (ver biomes.js para los colores).

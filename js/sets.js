@@ -119,7 +119,8 @@ export const setOf = (av) => SETS.find((s) => s.av === av);
 
 // Ventana del perfil por marco (9 nov 2026; el usuario: "antes estaban más personalizados"): cada uno con su receta
 // como los de la tienda y eventos. [cabecera, orilla, estilo de orilla, sombra de la cabecera, fondo, sticker].
-// El sticker es una figura del personaje que se asoma en la esquina de la cabecera.
+// El sticker es una figura del personaje en la esquina izquierda de la cabecera, dentro de la barra (10 nov 2026: antes
+// se salía por arriba y en horizontal se encimaba).
 const G = (a, b) => `linear-gradient(${a}, ${b})`;
 const SH = (a, b) => `linear-gradient(100deg, ${a}, ${b} 50%, ${a})`;
 const ST = (a, b, w = 12, deg = -45) => `repeating-linear-gradient(${deg}deg, ${a} 0 ${w}px, ${b} ${w}px ${2 * w}px)`;
@@ -197,7 +198,7 @@ export function setCSS(url, inner) {
     if (mr) {
       const [head, line, style, dark, bg, sticker] = mr, sel = `.modal.mr-${s.ring[0]}`;
       css.push(`${sel} { --mr: ${line}; --mrh: ${head}; --mrd: ${dark}; outline-style: ${style}; ${style === 'solid' ? '' : 'outline-width: 5px;'} background: ${bg}, var(--cream); }`);
-      css.push(`${sel} > .mhead::before { content: ''; position: absolute; left: 6px; top: -20px; z-index: 4; width: 44px; height: 44px; pointer-events: none; background: ${url(sticker, 1)} center / contain no-repeat; rotate: -14deg; animation: mr-sticker 2.6s ease-in-out infinite; }`);
+      css.push(`${sel} > .mhead::before { content: ''; position: absolute; left: 12px; top: 6px; z-index: 4; width: 38px; height: 38px; pointer-events: none; background: ${url(sticker, 1)} center / contain no-repeat; rotate: -14deg; animation: mr-sticker 2.6s ease-in-out infinite; }`);
     }
     css.push(`${t} { --tc: #fff; --td: ${d}; background: linear-gradient(${a}, ${b}); font-family: 'Lilita One'; font-weight: 400; text-shadow: 0 1.5px 0 ${d}; box-shadow: inset 0 -3px 0 ${o}; } ${t} span { -webkit-text-stroke: 3px var(--td); paint-order: stroke fill; }`);
     if (s.face) {

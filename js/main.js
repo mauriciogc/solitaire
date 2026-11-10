@@ -5,7 +5,7 @@ import { Game, faceHTML, backHTML } from './game.js';
 import { maxBet, betFee, betSteps, BET_STEPS, HELPS, DAILY_PATH, dailyState, starsNeeded, TICKET_PRICE, ticketCost, ticketRefund, coinsFor, bossChest, rollChest, CONST_PRIZE, openCost, boosted, secretCoins, rollSecret, openSurprise, MET_OFF, metShopPrice } from './economy.js';
 import { missions, misDef, misDone, misReady, misBonusReady, misAllDone, misClaim, misBonus, LOGROS, LOGRO_PRIZES, LOGRO_MEDAL, LOGRO_TOP, logroAt, logroGot, logroStat, logrosVisible, logrosReady, logroClaim } from './missions.js';
 import { pauseOffscreen, openModal, toast, updateCoins, money, esc, reduced, wait, flyToWallet, spendFromWallet, sparkle, confetti, starsHTML, warp, buzz, balloons, lootBubbles, floatBubbles, rachaWarnHTML, popPrize, popBalloon, countPop, HEADS, betLoseHTML } from './ui.js';
-import { icon, iconURL, iconInner, charSVG, star, coin, miniPlanet, avatarHTML, AVATAR_COLORS, cardBackURL, setDeck, lockIcon, curtainIcon, chestBody, chestLid, boxBody, boxLid } from './art.js';
+import { icon, iconURL, iconInner, charSVG, star, coin, miniPlanet, avatarHTML, AVATAR_COLORS, kidOf, KID_SKINS, KID_HAIRS, KID_STYLES, cardBackURL, setDeck, lockIcon, curtainIcon, chestBody, chestLid, boxBody, boxLid } from './art.js';
 import { GROUPS, SECTIONS, ITEMS, shopItems, groupOf, owns, equipped, equip, buy, item, lockedUntil, titleHTML, titleIcon, sell, sellable, sellPrice } from './shop.js';
 import { BIOMES, biomeKey, EVENT_BIOMES } from './biomes.js';
 import { redeem } from './codes.js';
@@ -813,8 +813,25 @@ function regionData(r) {
   return { r, name: regionName(r), hue: hues[0], hues, worlds, stars, state };
 }
 // opening: constelación que se acaba de comprar ({ r, was: cómo se veía cerrada, w: su primer mundo}).
+// «Arma tu personaje» (10 nov 2026): quien ya jugaba antes de los avatares 3D lo ve una vez en el mapa, cuando no
+// hay otra ventana abierta (ni el tutorial ni avisos de desbloqueo). Se abre en la pestaña Personaje.
+let kidAsking = false;
+function askKid() {
+  if (!save.kidAsk || kidAsking || save.onboard !== 'done') return;
+  kidAsking = true;
+  const go = () => {
+    if (!save.kidAsk) return (kidAsking = false);
+    if (document.querySelector('#modal-root .modal') || !document.querySelector('.screen.galaxy')) return setTimeout(go, 1500);
+    kidAsking = false;
+    delete save.kidAsk;
+    persist();
+    profileForm({ title: 'Arma tu personaje', p: playerNow(), action: '¡Listo!', onSave: (p) => { savePlayer(p, save.name); paintMe(); } });
+  };
+  setTimeout(go, 1800);
+}
 function showUniverse({ from = regionOf(currentWorld()), opening = null } = {}) {
   gallery.active = false;
+  askKid();
   current = () => showUniverse({ from });
   const el = h(`<div class="screen galaxy universe">
     <div class="space"></div><div class="g3d"></div>${metSky()}<div class="glabels"></div>
@@ -1601,7 +1618,7 @@ function showPlanets() {
 // Solo cosas para verse bonito (nada ayuda a ganar). Catálogo y compras en shop.js.
 // Comprar: las monedas salen del monedero hacia la pieza, que salta con chispas y queda puesta.
 // 9 nov 2026: sin leyendas debajo de las pestañas (el usuario); cada sección lleva su icono.
-const SHOP_ICO = { avatar: 'user', ring: 'star', title: 'crown', back: 'card', face: 'face', traveler: 'rocket', space: 'planet', frame: 'album' };
+const SHOP_ICO = { avatar: 'disfraz', ring: 'star', title: 'crown', back: 'card', face: 'face', traveler: 'rocket', space: 'planet', frame: 'album' };
 // La tienda se separa por de dónde sale cada cosa. Los exclusivos solo se ven si ya son tuyos.
 const ORIGINS = [
   { k: 'tienda', name: 'De la tienda', ico: 'bag' },
@@ -1705,7 +1722,7 @@ function openShop(tab = 'avatar') {
     const c = openModal({
       title,
       color: 'orange',
-      body: `<p class="lead">${text}</p>`,
+      body: `<div class="lead">${text}</div>`,
       cls: 'buy-modal',
       buttons: [{ label, cls: `${cls} grow`, onClick: onYes }, { label: 'Ahora no', cls: 'later' }],
     });
@@ -1814,6 +1831,19 @@ function openShop(tab = 'avatar') {
     if (lockedUntil(tab, k)) return nope(`${icon('lock')} Se abre al llegar al mundo ${lockedUntil(tab, k)}`);
     const pay = cost(it);
     if (!owns(tab, k) && save.coins < pay) return nope(`${coin()} Te faltan ${fmt(pay - save.coins)} monedas`);
+    // 10 nov 2026 (el usuario): tocar la tarjeta ya no compra: abre la pieza en grande con «¿La compras?». Solo el botón
+    // del precio compra directo. Lo tuyo se pone de un toque, como antes.
+    if (!owns(tab, k) && !e.target.closest('.s-price')) {
+      const c = confirm({
+        title: esc(it.name),
+        text: `<span class="s-zoom a3d-live">${shopPreview(tab, k)}</span>¿Lo compras por ${coin()} <b>${fmt(pay)}</b>?`,
+        label: `Comprar ${coin()} ${fmt(pay)}`,
+        onYes: () => el.querySelector('.s-price')?.click(),
+      });
+      const cv = c.el.querySelector('canvas[data-kind]');
+      if (cv) import('./travelers.js').then(({ TravelerShelf }) => cv.isConnected && new TravelerShelf([{ canvas: cv, kind: cv.dataset.kind }]));
+      return;
+    }
     const bought = !owns(tab, k);
     if (bought) {
       buy(tab, k, pay);
@@ -1841,7 +1871,7 @@ function openSetSheet(av, after = () => {}) {
 function setSheet(host, av, { back, backLabel, changed }) {
   const pieces = setPieces(av);
   const cost = (it) => metShopPrice(it.price, !!meteor());
-  const LBL = { avatar: 'Avatar', ring: 'Marco', title: 'Título', traveler: 'Nave', back: 'Reverso', face: 'Cara', space: 'Espacio', frame: 'Postal' };
+  const LBL = { avatar: 'Disfraz', ring: 'Marco', title: 'Título', traveler: 'Nave', back: 'Reverso', face: 'Cara', space: 'Espacio', frame: 'Postal' };
   const pic = ({ sec, k }) => sec === 'traveler' ? `<canvas class="trav-prev" data-kind="${k}"></canvas>` : sec === 'title' ? titleHTML(k) : sec === 'ring' ? avatarHTML({ ...save, look: 'char', char: av, ring: k }) : shopPreview(sec, k);
   const state = ({ sec, k, it }) => {
     if (inUse(sec, k)) return `<span class="s-on">${icon('check')}En uso</span>`;
@@ -2290,7 +2320,7 @@ function bumpBtn(a, text, shine) {
 const colAvail = (o) => !o.sec || !owns(o.sec, o.item);
 // sec: con segundos (en la tienda de la colección, para que se vea avanzar).
 const daysLeft = (ms, sec = false) => { if (ms <= 864e5) return clock(ms); const t = clock(ms % 864e5); return `${Math.floor(ms / 864e5)} d ${sec ? t : t.replace(/:\d\d$/, '')}`; };
-const COL_KIND = { title: 'Título', frame: 'Postal', space: 'Espacio', ring: 'Marco', avatar: 'Avatar', back: 'Reverso', traveler: 'Viajero' };
+const COL_KIND = { title: 'Título', frame: 'Postal', space: 'Espacio', ring: 'Marco', avatar: 'Disfraz', back: 'Reverso', traveler: 'Viajero' };
 const COL_HELP = { wild: 'Comodín', undo: 'Deshacer', tickets: 'Boletos', reloj: 'Reloj de arena', ver3: 'Ver cartas 3 s', llave: 'Llave maestra' };
 function openCol() {
   const c = col();
@@ -2664,7 +2694,7 @@ function openEvIntro(e, go = false) {
         ${rule('flame', `${K.L} niveles <b>difíciles</b>. No cuentan para tu <b>racha</b> ni tu <b>colección</b>.`)}
         ${rule('gift', `El <b>nivel ${K.N}</b> de cada planeta trae un <b>regalo sorpresa</b>: entre más estrellas, más fácil que sea un exclusivo.`)}
         ${rule('flag', `${K.left() > 864e5 ? 'Termina en unos días' : 'Termina hoy a la medianoche'}: te quedan <b>${evDaysOf(K)}</b>.`)}
-      </ul>` : `<p class="lead">¡Llegó el evento del mes! Viaja por <b>${EVENT_PLANETS} planetas</b> y gana premios <b>exclusivos</b> que solo salen ahora: avatares, marcos, reversos, postales, fondos, títulos y naves.</p>
+      </ul>` : `<p class="lead">¡Llegó el evento del mes! Viaja por <b>${EVENT_PLANETS} planetas</b> y gana premios <b>exclusivos</b> que solo salen ahora: disfraces, marcos, reversos, postales, fondos, títulos y naves.</p>
       <ul class="evi-rules">
         ${rule(e.tk, `Cada nivel se juega con tu <b>boleto</b>. Si ganas, lo conservas; si pierdes, llega otro en <b>48 horas</b> o lo compras en ${coin()} <b>${money(evTicketPrice({ ...e, state: { ...e.state, paid: true } }))}</b>.`)}
         ${rule('gift', `El <b>nivel 5</b> de cada planeta trae un <b>regalo sorpresa</b>: entre más estrellas, más fácil que sea un exclusivo.`)}
@@ -2862,7 +2892,7 @@ function openEvPrize(e, res) {
   });
 }
 // Una cosa de la tienda como burbuja: un circulito con su dibujo y abajo qué es (Avatar, Postal…).
-const GIFT_KIND = { avatar: 'Avatar', ring: 'Marco', title: 'Título', back: 'Reverso', face: 'Caras', traveler: 'Viajero', space: 'Fondo', frame: 'Postal' };
+const GIFT_KIND = { avatar: 'Disfraz', ring: 'Marco', title: 'Título', back: 'Reverso', face: 'Caras', traveler: 'Viajero', space: 'Fondo', frame: 'Postal' };
 const giftBubble = (sec, k) => `<span class="lb-pic lp-${sec}">${sec === 'title' ? titleIcon(k) : shopPreview(sec, k)}</span><b>${GIFT_KIND[sec]}</b>`;
 // La caja de regalo de la ventana (.gbox) tiembla, se abre y suelta sus premios en burbujas.
 function boxBubbles(m, bubbles) {
@@ -3128,7 +3158,7 @@ const UNLOCK_INFO = {
       lead: 'Una o dos semanas al mes llega una <b>colección</b> con su temática y su <b>tienda</b> de premios exclusivos.',
       rules: [
         ['star', 'Cada <b>estrella nueva</b> que ganas te da <b>1 ficha</b> de la colección.'],
-        ['bag', 'Cámbialas por avatares, reversos, viajeros y más que <b>solo salen ahí</b>.'],
+        ['bag', 'Cámbialas por disfraces, reversos, viajeros y más que <b>solo salen ahí</b>.'],
         ['flag', 'Termina el <b>domingo</b>: las fichas que sobren se pierden.'],
         ['gift', c ? '¡Ya llegó una! Búscala a la <b>derecha</b>.' : `La próxima llega en <b>${days} ${days === 1 ? 'día' : 'días'}</b>.`],
       ],
@@ -3849,7 +3879,7 @@ function openProfile() {
         <div class="stat">${coin()}<div><b>${fmt(save.coins)}</b><span>monedas</span></div></div>
         <div class="stat">${icon('album')}<div><b>${cards}</b><span>postales</span></div></div>
         <div class="stat">${icon('starSecret')}<div><b>${secrets}</b><span>secretos</span></div></div>
-        <div class="stat">${icon('user')}<div><b>${mine('avatar')}</b><span>avatares</span></div></div>
+        <div class="stat">${icon('user')}<div><b>${mine('avatar')}</b><span>disfraces</span></div></div>
         <div class="stat">${icon('bag')}<div><b>${things}</b><span>tesoros</span></div></div>
       </div></div>`,
     buttons: [
@@ -3881,14 +3911,28 @@ function openProfile() {
 // Formulario de jugador (crear o editar): nombre, avatar (inicial o personaje), color, marco, título, viajero,
 // fondo del universo y postal. p: { name, avatar, look, char, ring, title, traveler, space, frame } · onSave(p). La ventana toma el estilo del marco elegido.
 // first: al crear el jugador solo se elige entre lo gratis (inicial, Nico, Lila; marco sencillo o destello).
-function profileForm({ title, p, action, onSave, noCancel = false, first = false }) {
-  p = { ...p };
+function profileForm({ title, p, action, onSave, noCancel = false, first = false, tab = 'kid' }) {
+  p = { ...p, kid: { ...kidOf(p) } };
+  // Al crear el jugador se arma tu personaje (niño o niña, piel, pelo y peinado) con su ropa de inicio.
+  if (p.char === 'nina') p.char = 'nino'; // la ropa de inicio es una sola: cada base la suya
+  if (first && (p.look !== 'char' || p.char !== 'nino')) Object.assign(p, { look: 'char', char: 'nino' });
   const mine = (sec) => ITEMS[sec].filter((it) => owns(sec, it.k) && (!first || it.price === 0));
-  if (first && p.look === 'char' && !mine('avatar').some((it) => it.k === p.char)) p.look = 'letter';
   if (first && !mine('ring').some((it) => it.k === p.ring)) p.ring = 'sencillo';
-  const chars = mine('avatar'), rings = mine('ring'), titles = mine('title'), travs = mine('traveler'), spaces = mine('space'), frames = mine('frame');
+  const chars = mine('avatar').filter((it) => it.k !== 'nina'), rings = mine('ring'), titles = mine('title'), travs = mine('traveler'), spaces = mine('space'), frames = mine('frame');
   const on = (yes) => (yes ? 'on' : '');
   const lookBtn = (look, k) => `<button data-look="${look}" data-char="${k || ''}" class="${on(p.look === look && (look === 'letter' || p.char === k))}" aria-label="${look === 'letter' ? 'Tu inicial' : item('avatar', k).name}" title="${look === 'letter' ? 'Tu inicial' : item('avatar', k).name}">${avatarHTML({ ...p, look, char: k })}</button>`;
+  // Tu personaje (10 nov 2026): niño o niña, piel, pelo y peinado, todo gratis. Las fotos de niño/niña y de los
+  // peinados van con la ropa de inicio para que se vea el pelo (un disfraz de gorro lo tapa).
+  // part: 'base' (niño o niña, con su nombre abajo: así va en la creación), 'look' (piel, pelo y peinado) o todo.
+  const kidHTML = (part) => {
+    const k = p.kid, photo = (kid, char) => avatarHTML({ ...p, look: 'char', char, kid, ring: 'sencillo' });
+    const base = `${part ? '' : '<div class="pick-lbl">Personaje</div>'}<div class="look-pick kid-pick">${['nino', 'nina'].map((b) => `<button data-kbase="${b}" class="${on(k.base === b)}" aria-label="${b === 'nino' ? 'Niño' : 'Niña'}" title="${b === 'nino' ? 'Niño' : 'Niña'}">${photo({ ...k, base: b, style: b === k.base ? k.style : 0 }, 'nino')}${part ? `<small>${b === 'nino' ? 'Niño' : 'Niña'}</small>` : ''}</button>`).join('')}</div>`;
+    if (part === 'base') return base;
+    return `${part ? '' : base}
+      <div class="pick-lbl">Piel</div><div class="avatar-pick">${KID_SKINS.map((c, i) => `<button data-skin="${i}" class="${on(i === k.skin)}" style="background:${c}" aria-label="Piel ${i + 1}"></button>`).join('')}</div>
+      <div class="pick-lbl">Pelo</div><div class="avatar-pick">${KID_HAIRS.map((c, i) => `<button data-hair="${i}" class="${on(i === k.hair)}" style="background:${c}" aria-label="Pelo ${i + 1}"></button>`).join('')}</div>
+      <div class="pick-lbl">Peinado</div><div class="look-pick kid-pick">${KID_STYLES[k.base].map((n, i) => `<button data-style="${i}" class="${on(i === k.style)}" aria-label="${n}" title="${n}">${photo({ ...k, style: i }, 'nino')}</button>`).join('')}</div>`;
+  };
   const shopBtn = (tab, cls, label) => (noCancel ? '' : `<button class="more ${cls}" data-shop="${tab}" aria-label="${label}" title="${label}">${icon('bag')}</button>`);
   // Al crear el jugador, Continuar va hasta abajo (dentro de lo que se desplaza) para que se vea que hay más
   // opciones; la foto se queda fija arriba para ver lo que se va eligiendo.
@@ -3896,7 +3940,8 @@ function profileForm({ title, p, action, onSave, noCancel = false, first = false
   // pestañas con ícono y en cada una solo sus opciones, separadas por de dónde salen. Así no se amontona
   // aunque tengas de todo, y las naves 3D solo se dibujan en su pestaña.
   const TABS = [
-    { k: 'avatar', name: 'Avatar', ico: 'face' },
+    { k: 'kid', name: 'Tú', ico: 'user' }, // tu personaje: niño o niña, piel, pelo y peinado
+    { k: 'avatar', name: 'Disfraz', ico: 'disfraz' },
     { k: 'ring', name: 'Marco', ico: 'crown' },
     { k: 'title', name: 'Título', ico: 'flag' },
     { k: 'traveler', name: 'Viajero', ico: 'rocket' },
@@ -3910,39 +3955,40 @@ function profileForm({ title, p, action, onSave, noCancel = false, first = false
     return gs.map((o, i) => (gs.length > 1 ? `<h3 class="s-sub">${icon(o.ico)}${o.name}</h3>` : '') + `<div class="${cls}">${i ? '' : lead}${o.its.map(cell).join('')}</div>`).join('');
   };
   const panel = (tab) => ({
+    kid: () => `<div class="kid-panel">${kidHTML()}</div>`,
     avatar: () => `<div class="pick-lbl">Color</div><div class="avatar-pick">${AVATAR_COLORS.map((c, i) => `<button data-av="${i}" class="${on(i === p.avatar)}" style="background:${c}" aria-label="Color ${i + 1}"></button>`).join('')}</div>
-      <div class="pick-lbl">Personaje</div>${grouped(chars, (it) => lookBtn('char', it.k), 'look-pick', lookBtn('letter'))}`,
+      <div class="pick-lbl">Disfraz</div>${grouped(chars, (it) => lookBtn('char', it.k), 'look-pick', lookBtn('letter'))}`,
     ring: () => grouped(rings, (it) => `<button data-ring="${it.k}" class="${on(it.k === p.ring)}" aria-label="${it.name}" title="${it.name}">${avatarHTML({ ...p, ring: it.k })}</button>`, 'look-pick rings'),
     title: () => grouped(titles, (it) => titleHTML(it.k, on(it.k === p.title), 'button', `data-title="${it.k}"`), 'title-pick'),
     traveler: () => grouped(travs, (it) => `<button data-trav="${it.k}" class="${on(it.k === p.traveler)}" aria-label="${it.name}" title="${it.name}"><canvas data-kind="${it.k}"></canvas></button>`, 'trav-pick'),
     space: () => grouped(spaces, (it) => `<button data-space="${it.k}" class="${on(it.k === p.space)}" aria-label="${it.name}" title="${it.name}"><div class="space-prev space-${it.k}"><div class="space"></div></div><small>${it.name}</small></button>`, 'space-pick'),
     frame: () => grouped(frames, (it) => `<button data-frame="${it.k}" class="${on(it.k === p.frame)}" aria-label="${it.name}" title="${it.name}"><div class="frame-prev">${postcardHTML(0, 24, 'mini', it.k)}</div><small>${it.name}</small></button>`, 'frame-pick'),
   })[tab]();
-  let tabNow = 'avatar'; // la pestaña abierta: el botón de la tienda (junto a Guardar) lleva a esa sección
+  let tabNow = tab; // la pestaña abierta: el botón de la tienda (junto a Guardar) lleva a esa sección
   const editBody = `<div class="pf-top"><div class="pf-hero space-${p.space}"><div class="space"></div><div class="avatar-preview">${avatarHTML(p, 'huge')}</div>
       <div class="pf-id"><input class="text-in" maxlength="16" aria-label="Tu nombre" placeholder="Tu nombre" autocomplete="off" autocapitalize="words" enterkeyhint="done" value="${esc(p.name)}"><div class="pf-title">${titleHTML(p.title)}</div></div></div>
-      <div class="pf-tabs">${TABS.map((t) => `<button class="pf-tab ${on(t.k === 'avatar')}" data-tab="${t.k}">${icon(t.ico)}<span>${t.name}</span></button>`).join('')}</div></div>
-      <div class="pf-panel">${panel('avatar')}</div>`;
+      <div class="pf-tabs">${TABS.map((t) => `<button class="pf-tab ${on(t.k === tab)}" data-tab="${t.k}">${icon(t.ico)}<span>${t.name}</span></button>`).join('')}</div></div>
+      <div class="pf-panel">${panel(tab)}</div>`;
   const m = openModal({
     title,
     color: 'blue',
     closable: !noCancel,
     cls: `pform ${first ? 'pf-first' : 'pf-edit'} mr-${p.ring}`,
-    body: first ? `<div class="avatar-preview">${avatarHTML(p, 'huge')}</div>
-      <input class="text-in" maxlength="16" placeholder="Tu nombre" autocomplete="off" autocapitalize="words" enterkeyhint="done" value="${esc(p.name)}">
-      <div class="pick-lbl">Avatar</div>
-      <div class="look-pick">${lookBtn('letter')}${chars.map((it) => lookBtn('char', it.k)).join('')}${shopBtn('avatar', '', 'Más avatares en la tienda')}</div>
-      ${first ? `<div class="pf-more"><div class="pf-locked">${ITEMS.avatar.filter((it) => !owns('avatar', it.k)).slice(0, 5).map((it) => `<span>${avatarHTML({ ...p, look: 'char', char: it.k })}${icon('lock')}</span>`).join('')}</div><small>¡Mientras más juegues, más personajes desbloqueas!</small></div>` : ''}
-      <div class="pick-lbl">Color</div>
-      <div class="avatar-pick">${AVATAR_COLORS.map((c, i) => `<button data-av="${i}" class="${on(i === p.avatar)}" style="background:${c}" aria-label="Color ${i + 1}"></button>`).join('')}</div>
-      ${rings.length > 1 || !noCancel ? `<div class="pick-lbl">Marco</div><div class="look-pick rings">${rings.map((it) => `<button data-ring="${it.k}" class="${on(it.k === p.ring)}" aria-label="${it.name}" title="${it.name}">${avatarHTML({ ...p, ring: it.k })}</button>`).join('')}${shopBtn('ring', '', 'Más marcos en la tienda')}</div>` : ''}
-      ${titles.length > 1 ? `<div class="pick-lbl">Título</div><div class="title-pick">${titles.map((it) => titleHTML(it.k, on(it.k === p.title), 'button', `data-title="${it.k}"`)).join('')}</div>` : ''}
-      ${noCancel ? '' : `<div class="pick-lbl">Viajero</div><div class="trav-pick">${travs.map((it) => `<button data-trav="${it.k}" class="${on(it.k === p.traveler)}" aria-label="${it.name}" title="${it.name}"><canvas data-kind="${it.k}"></canvas></button>`).join('')}${shopBtn('traveler', '', 'Más viajeros en la tienda')}</div>`}
-      ${noCancel ? '' : `<div class="pick-lbl">Fondo del universo</div><div class="space-pick">${spaces.map((it) => `<button data-space="${it.k}" class="${on(it.k === p.space)}" aria-label="${it.name}" title="${it.name}"><div class="space-prev space-${it.k}"><div class="space"></div></div><small>${it.name}</small></button>`).join('')}${shopBtn('space', '', 'Más fondos en la tienda')}</div>
-      <div class="pick-lbl">Postal</div><div class="frame-pick">${frames.map((it) => `<button data-frame="${it.k}" class="${on(it.k === p.frame)}" aria-label="${it.name}" title="${it.name}"><div class="frame-prev">${postcardHTML(0, 24, 'mini', it.k)}</div><small>${it.name}</small></button>`).join('')}${shopBtn('frame', '', 'Más postales en la tienda')}</div>`}
-      ${first ? `<p class="pf-note">Puedes cambiar tu nombre y avatar <b>cuando quieras</b>.</p><button class="btn green pf-go">${action}</button>` : ''}` : editBody,
+    // Creación (10 nov 2026, el usuario: «muy saturada de tanta opción»): 3 pasos cortos con tu personaje grande
+    // arriba: 1) tu nombre, 2) niño o niña, 3) tu look (piel, pelo y peinado). Color, marco y título se quedan
+    // como vienen; se cambian después al editar tu jugador.
+    body: first ? `<div class="pf-wiz"><div class="pf-stage"><div class="avatar-preview">${avatarHTML(p, 'huge')}</div>
+      <div class="pf-dots" aria-hidden="true"><i class="on"></i><i></i><i></i></div></div>
+      <div class="pf-side"><div class="pf-steps">
+        <section class="pf-step" data-step="0"><h3 class="pf-q">¿Cómo te llamas?</h3>
+          <input class="text-in" maxlength="16" placeholder="Tu nombre" aria-label="Tu nombre" autocomplete="off" autocapitalize="words" enterkeyhint="next" value="${esc(p.name)}"></section>
+        <section class="pf-step" data-step="1" hidden><h3 class="pf-q">¿Quién eres?</h3><div class="kid-panel" data-part="base">${kidHTML('base')}</div></section>
+        <section class="pf-step" data-step="2" hidden><h3 class="pf-q">Tu look</h3><div class="kid-panel" data-part="look">${kidHTML('look')}</div>
+          <p class="pf-note">${icon('disfraz')}<span>Jugando desbloqueas <b>disfraces</b>. Todo esto lo cambias cuando quieras.</span></p></section>
+      </div>
+      <div class="pf-nav"><button class="pf-back" hidden>${icon('prev')}Atrás</button><button class="btn green pf-next">Siguiente</button></div></div></div>` : editBody,
     buttons: first ? [] : [
-      { label: icon('bag'), cls: 'ghost sq', title: 'Ir a la tienda', onClick: () => openShop(tabNow) },
+      { label: icon('bag'), cls: 'ghost sq', title: 'Ir a la tienda', onClick: () => openShop(tabNow === 'kid' ? 'avatar' : tabNow) },
       { label: action, cls: 'green grow', onClick: () => onSave({ ...p, name: p.name.trim() }) },
     ],
     onClose: closeShelf,
@@ -3950,13 +3996,27 @@ function profileForm({ title, p, action, onSave, noCancel = false, first = false
   const box = document.querySelector('.pform');
   if (!first) pauseOffscreen(box.querySelector('.pf-panel'), 'button');
   const input = box.querySelector('.text-in');
-  if (first) {
-    // La foto flotante vive en la cabecera (que no se desplaza) y aparece cuando la grande ya no se ve.
-    const head = box.querySelector('.mhead'), big = box.querySelector('.avatar-preview');
-    head.insertAdjacentHTML('beforeend', `<div class="pf-float">${avatarHTML(p)}</div>`);
-    const check = () => box.classList.toggle('floating', big.getBoundingClientRect().top + big.offsetHeight * 0.55 < head.getBoundingClientRect().bottom);
-    m.el.addEventListener('scroll', check, true);
-  }
+  // Creación por pasos: Siguiente / Atrás con los pasos deslizándose y los puntitos de avance; el último es «¡Listo!».
+  let step = 0;
+  const goStep = (to) => {
+    const steps = [...box.querySelectorAll('.pf-step')], from = step;
+    if (to < 0 || to >= steps.length || to === from) return;
+    step = to;
+    const dir = to > from ? 1 : -1, now = steps[to];
+    steps.forEach((x, i) => (x.hidden = i !== to));
+    if (!reduced()) {
+      now.animate([{ opacity: 0, translate: `${dir * 40}px 0` }, { opacity: 1, translate: '0 0' }], { duration: 320, easing: 'cubic-bezier(0.34, 1.3, 0.64, 1)' });
+      [...now.querySelectorAll('button')].slice(0, 16).forEach((el, i) => el.animate([{ opacity: 0, scale: 0.7 }, { opacity: 1, scale: 1 }], { duration: 280, delay: 60 + i * 30, easing: 'cubic-bezier(0.34, 1.45, 0.64, 1)', fill: 'backwards' }));
+    }
+    box.querySelectorAll('.pf-dots i').forEach((d, i) => d.classList.toggle('on', i === to));
+    box.querySelectorAll('.pf-dots i').forEach((d, i) => d.classList.toggle('done', i < to));
+    const back = box.querySelector('.pf-back'), next = box.querySelector('.pf-next');
+    back.hidden = to === 0;
+    next.textContent = to === steps.length - 1 ? action : 'Siguiente';
+    if (!reduced()) next.animate([{ scale: 0.92 }, { scale: 1.05, offset: 0.6 }, { scale: 1 }], { duration: 300, easing: 'ease-out' });
+    if (to === 0 && matchMedia('(pointer: fine)').matches) box.querySelector('.text-in').focus();
+    else if (from === 0) box.querySelector('.text-in').blur();
+  };
   const paint = (pop) => {
     box.querySelector('.avatar-preview').innerHTML = avatarHTML(p, 'huge');
     const fl = box.querySelector('.pf-float');
@@ -3970,13 +4030,18 @@ function profileForm({ title, p, action, onSave, noCancel = false, first = false
     p.name = input.value;
     paint();
   });
-  input.addEventListener('keydown', (e) => e.key === 'Enter' && box.querySelector('.mbtns .btn, .pf-go')?.click());
+  input.addEventListener('keydown', (e) => e.key === 'Enter' && box.querySelector('.mbtns .btn, .pf-next')?.click());
   const pick = (sel, b) => box.querySelectorAll(sel).forEach((x) => x.classList.toggle('on', x === b));
   const bounce = (el) => !reduced() && el.animate([{ scale: 0.8 }, { scale: 1.12, offset: 0.6 }, { scale: 1 }], { duration: 360, easing: 'ease-out' });
   box.addEventListener('click', (e) => {
     const b = e.target.closest('button');
     if (!b) return;
-    if (b.classList.contains('pf-go')) { m.close(); return onSave({ ...p, name: p.name.trim() }); }
+    if (b.classList.contains('pf-back')) return goStep(step - 1);
+    if (b.classList.contains('pf-next')) {
+      if (step < box.querySelectorAll('.pf-step').length - 1) return goStep(step + 1);
+      m.close();
+      return onSave({ ...p, name: p.name.trim() });
+    }
     if (b.dataset.shop) { closeShelf(); document.getElementById('modal-root').replaceChildren(); return openShop(b.dataset.shop); }
     if (b.dataset.tab) {
       if (b.classList.contains('on')) return;
@@ -3992,6 +4057,18 @@ function profileForm({ title, p, action, onSave, noCancel = false, first = false
       return;
     }
     if (b.dataset.look) { p.look = b.dataset.look; if (b.dataset.char) p.char = b.dataset.char; pick('[data-look]', b); paint(true); }
+    // Tu personaje: al cambiar de niño a niña (o al revés) el peinado vuelve al primero y la ropa de inicio se cambia
+    // con él; un disfraz se queda puesto. Las fotos del panel se vuelven a sacar con lo nuevo.
+    if (b.dataset.kbase || b.dataset.skin || b.dataset.hair || b.dataset.style) {
+      const k = { ...p.kid }, d = b.dataset;
+      if (d.kbase && d.kbase !== k.base) { k.base = d.kbase; k.style = 0; if (p.look !== 'char') Object.assign(p, { look: 'char', char: 'nino' }); }
+      if (d.skin) k.skin = +d.skin;
+      if (d.hair) k.hair = +d.hair;
+      if (d.style) k.style = +d.style;
+      p.kid = k;
+      box.querySelectorAll('.kid-panel').forEach((x) => (x.innerHTML = kidHTML(x.dataset.part)));
+      paint(true);
+    }
     if (b.dataset.av) { p.avatar = +b.dataset.av; pick('[data-av]', b); paint(true); }
     if (b.dataset.ring) { p.ring = b.dataset.ring; pick('[data-ring]', b); paint(true); }
     if (b.dataset.title) { p.title = b.dataset.title; pick('[data-title]', b); bounce(b); const t = box.querySelector('.pf-title'); if (t) { t.innerHTML = titleHTML(p.title); bounce(t); } }
@@ -4001,9 +4078,10 @@ function profileForm({ title, p, action, onSave, noCancel = false, first = false
   });
   if (matchMedia('(pointer: fine)').matches) input.focus();
 }
-const playerNow = () => ({ name: save.named ? save.name : '', avatar: save.avatar || 0, look: save.look, char: save.char, ring: equipped('ring'), title: equipped('title'), traveler: equipped('traveler'), space: equipped('space'), frame: equipped('frame') });
+const playerNow = () => ({ name: save.named ? save.name : '', avatar: save.avatar || 0, look: save.look, char: save.char, kid: kidOf(save), ring: equipped('ring'), title: equipped('title'), traveler: equipped('traveler'), space: equipped('space'), frame: equipped('frame') });
 const savePlayer = (p, fallback) => {
-  renameProfile(p.name || fallback, p.avatar, { look: p.look, char: p.char });
+  renameProfile(p.name || fallback, p.avatar, { look: p.look, char: p.char, kid: p.kid });
+  delete save.kidAsk;
   for (const sec of ['ring', 'title', 'traveler', 'space', 'frame']) if (p[sec]) equip(sec, p[sec]);
   applyLook();
 };
@@ -4115,7 +4193,7 @@ function showSignup() {
   profileForm({
     title: '¡Crea tu jugador!',
     p: { ...playerNow(), name: '' },
-    action: 'Continuar',
+    action: '¡Listo!',
     noCancel: true,
     first: true,
     onSave: (p) => {
@@ -4566,6 +4644,8 @@ function staleRuns() {
   return true;
 }
 document.addEventListener('visibilitychange', () => (document.hidden ? stampRuns() : staleRuns()));
+// Avatares 3D (10 nov 2026): los personajes que ya tienen modelo se cambian solos del dibujo 2D al busto 3D.
+import('./avatar3d.js').then((m) => m.watchAvatars()).catch(() => {});
 addEventListener('pagehide', stampRuns);
 
 function boot() {

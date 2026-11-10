@@ -412,7 +412,8 @@ html.dev-on .galaxy .res .me { display: none; }
 .hud { flex: none; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 8px; padding: calc(8px + var(--st)) calc(10px + var(--cr)) 4px calc(10px + var(--cl)); color: var(--ink); }
 .hud-mid { display: flex; justify-content: center; min-width: 0; }
 .hud-r { justify-self: end; display: flex; align-items: center; gap: 6px; }
-.hud-av.avatar { width: calc(38px * var(--k)); height: calc(38px * var(--k)); font-size: calc(19px * var(--k)); border-width: 2.5px; }
+/* 10 nov 2026: 30% más grande (casi como el botón de deshacer) para que se luzca el avatar 3D. */
+.hud-av.avatar { width: calc(50px * var(--k)); height: calc(50px * var(--k)); font-size: calc(25px * var(--k)); border-width: 3px; }
 .hud-r .hud-av { margin: 0 calc(8px * var(--k)) 0 calc(4px * var(--k)); }
 .combo { display: flex; align-items: center; gap: 8px; height: calc(38px * var(--k)); padding: 0 12px 2px; border-radius: 19px; }
 .combo .dots { display: flex; align-items: center; gap: 5px; }
@@ -1190,7 +1191,7 @@ html:not(.dev-on) .dev-pill { display: none; }
 /* Avatar arriba a la derecha (junto al monedero): abre tu perfil. */
 /* grid: sin el renglón de texto del botón, el avatar queda centrado con las fichas de al lado. */
 .galaxy .res .me { flex: none; display: grid; place-items: center; border-radius: 50%; }
-.galaxy .res .me .avatar { width: calc(40px * var(--k)); height: calc(40px * var(--k)); font-size: calc(20px * var(--k)); }
+.galaxy .res .me .avatar { width: calc(44px * var(--k)); height: calc(44px * var(--k)); font-size: calc(22px * var(--k)); } /* 10 nov 2026: 52 se comía el marco; 44 con aire para él */
 /* Su marco se sale del círculo: al pasar el mouse crece en su lugar (no sube) para no cortarse con la orilla. */
 .galaxy .res .me { margin: 0 calc(9px * var(--k)) 0 calc(7px * var(--k)); transition: scale var(--press); }
 @media (hover: hover) and (pointer: fine) { .galaxy .res .me:hover { translate: none; scale: 1.06; } }
@@ -1626,9 +1627,10 @@ html:not(.dev-on) .dev-pill { display: none; }
 .pf-title { display: flex; min-width: 0; max-width: 100%; }
 .pf-title .title-chip { max-width: 100%; min-width: 0; }
 .pf-title .title-chip > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-.pf-tabs { display: grid; grid-template-columns: repeat(6, 1fr); gap: 5px; margin-top: 8px; }
+.pf-tabs { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-top: 8px; } /* 7 con Personaje (10 nov 2026), en un renglón */
 .pf-tab { display: flex; flex-direction: column; align-items: center; gap: 1px; min-height: 48px; padding: 5px 2px 4px; border-radius: 13px; border: 2.5px solid var(--ink); background: #fff; box-shadow: inset 0 -4px 0 var(--cream-d); font: 400 12px 'Lilita One'; color: var(--ink); transition: scale var(--press); }
 .pf-tab .ico { width: 22px; height: 22px; }
+.pf-tab span { font-size: 11px; letter-spacing: -.2px; white-space: nowrap; }
 .pf-tab:active { scale: .94; }
 .pf-tab.on { background: #4aa8de; color: #fff; box-shadow: inset 0 -4px 0 #2f86c0; }
 /* Acostado: la franja y las pestañas más bajitas, para que quede espacio a las opciones. */
@@ -1996,19 +1998,59 @@ html:not(.dev-on) .dev-pill { display: none; }
 @keyframes it-beat { 0%, 100% { scale: 1; } 50% { scale: 1.07; } }
 /* Perfil de la primera vez: el logo arriba y la ventana encima. */
 .signup { justify-content: flex-start; }
-.pf-first .mbody { padding-bottom: 20px; }
-.pf-first .pick-lbl { margin: 10px 0 5px; }
-.pf-go { margin-top: 4px; min-width: 200px; }
-/* Al bajar, la foto se hace chiquita y se queda flotando en la esquina; al subir regresa al centro. */
-.pf-first .mhead { position: relative; z-index: 3; }
-.pf-float { position: absolute; top: calc(100% + 8px); right: 12px; width: 58px; height: 58px; display: grid; place-items: center; border-radius: 50%; background: var(--cream); box-shadow: 0 0 0 3px var(--cream), 0 6px 14px #2a1f5c55;
-  pointer-events: none; opacity: 0; scale: 0.3; translate: min(-120px, calc(-50vw + 60px)) 60px; transition: opacity 220ms ease, scale 380ms var(--ease-out), translate 380ms var(--ease-out); }
-.pf-float .avatar { width: 50px; height: 50px; font-size: 25px; }
-.pf-first.floating .pf-float { opacity: 1; scale: 1; translate: 0 0; transition: opacity 160ms ease, scale 420ms cubic-bezier(0.34, 1.5, 0.64, 1), translate 420ms cubic-bezier(0.34, 1.3, 0.64, 1); }
-.pf-first .avatar-preview { transition: opacity 200ms ease, scale 300ms var(--ease-out); }
-.pf-first.floating .avatar-preview { opacity: 0; scale: 0.6; }
-@media (max-height: 500px) { .pf-first > .mhead { position: sticky; } }
+/* Crear jugador por pasos (10 nov 2026, el usuario: «muy saturada»): tu personaje grande arriba con los puntitos de
+   avance, una pregunta por paso (nombre · niño o niña · tu look) y abajo Atrás / Siguiente. En horizontal, el
+   personaje a la izquierda y el paso a la derecha. */
+.pf-first .mbody { padding-bottom: 16px; }
+.pf-wiz { display: grid; gap: 4px; }
+.pf-stage { display: grid; justify-items: center; gap: 12px; padding-top: 2px; }
+.pf-first .avatar-preview .avatar.huge { width: 124px; height: 124px; border-width: 4px; }
+.pf-dots { display: flex; gap: 7px; }
+.pf-dots i { width: 10px; height: 10px; border-radius: 99px; background: #e6defa; border: 2px solid var(--ink); transition: width 320ms var(--spring), background 200ms ease; }
+.pf-dots i.done { background: #9a7cf0; }
+.pf-dots i.on { width: 28px; background: var(--gold); }
+.pf-side { display: grid; gap: 14px; }
+.pf-steps { display: grid; min-height: 236px; align-content: start; }
+.pf-step { display: grid; justify-items: center; text-align: center; }
+.pf-step[hidden] { display: none; }
+.pf-q { margin: 10px 0 12px; font: 400 25px/1.1 'Lilita One'; color: var(--ink); }
+.pf-step .text-in { margin-top: 2px; max-width: 320px; text-align: center; font-size: 20px; }
+.pf-first .pick-lbl { margin: 8px 0 7px; }
+.pf-first .pick-lbl:first-child { margin-top: 0; }
+.pf-step .avatar-pick { gap: 12px; }
+.pf-step .avatar-pick button { width: 40px; height: 40px; }
+.pf-step .look-pick .avatar { width: 62px; height: 62px; }
+/* ¿Quién eres?: dos tarjetas grandes con su nombre. */
+.pf-step [data-part="base"] .kid-pick { gap: 14px; }
+.pf-step [data-part="base"] .kid-pick button { display: grid; justify-items: center; gap: 6px; padding: 12px 14px 8px; border-radius: 22px; background: #fff; border: 3px solid var(--ink); box-shadow: inset 0 -5px 0 var(--cream-d), 0 3px 0 var(--ink); }
+.pf-step [data-part="base"] .kid-pick button.on { background: #fff6d6; border-color: var(--ink); outline: 4px solid var(--gold); outline-offset: 1px; }
+.pf-step [data-part="base"] .kid-pick button.on::after { display: none; }
+.pf-step [data-part="base"] .kid-pick .avatar { width: 96px; height: 96px; border-width: 3.5px; }
+.pf-step [data-part="base"] .kid-pick small { font: 400 19px 'Lilita One'; color: var(--ink); }
+.pf-nav { display: flex; align-items: center; justify-content: center; gap: 10px; }
+.pf-next { min-width: 210px; min-height: 54px; font-size: 22px; }
+.pf-back { display: inline-flex; align-items: center; gap: 2px; padding: 8px 10px; border-radius: 12px; font: 400 16px 'Lilita One'; color: #8a80b8; background: none; transition: scale var(--press); }
+.pf-back:active { scale: .92; }
+.pf-back .ico { width: 18px; height: 18px; }
+.pf-back[hidden] { display: none; }
+@media (max-height: 500px) {
+  .pf-wiz { grid-template-columns: auto 1fr; align-items: center; gap: 22px; }
+  .pf-first .avatar-preview .avatar.huge { width: 112px; height: 112px; }
+  .pf-steps { min-height: 0; }
+  .pf-q { margin: 0 0 8px; font-size: 21px; }
+  .pf-step [data-part="base"] .kid-pick .avatar { width: 76px; height: 76px; }
+  .pf-step .look-pick .avatar { width: 50px; height: 50px; }
+  .pf-step .avatar-pick button { width: 34px; height: 34px; }
+  .pf-first .pick-lbl { margin: 3px 0 3px; }
+  .pf-first .mbody { padding-bottom: 10px; }
+  .pf-side { gap: 8px; }
+  .pf-step .avatar-pick { gap: 10px; }
+  .pf-next { min-height: 44px; min-width: 180px; font-size: 19px; }
+}
 .pf-note { margin: 16px 0 10px; line-height: 1.2; text-align: center; font-weight: 700; color: #4a3f73; }
+.pf-step .pf-note { margin: 14px 0 0; max-width: 300px; font-size: 14px; display: flex; align-items: center; justify-content: center; gap: 8px; text-align: left; }
+.pf-step .pf-note .ico { width: 26px; height: 26px; flex: none; }
+@media (max-height: 500px) { .pf-step .pf-note { display: none; } } /* en horizontal no cabe: lo dice la tienda */
 .pf-note b { color: #c22c49; }
 .pf-more { margin: 10px 0 2px; text-align: center; }
 .pf-more small { display: block; margin-top: 6px; line-height: 1.15; font-weight: 800; color: #6c3fd4; }
@@ -2847,3 +2889,18 @@ html:not(.dev-on) .dev-pill { display: none; }
 /* En la ficha, los estados en un renglón ("Mundo 326" no se parte). */
 .ss-st :is(.s-price, .s-use, .s-on, .s-lock) { white-space: nowrap; font-size: 14px; padding: 1px 10px 3px 5px; }
 .ss-st .ico { width: 19px; height: 19px; }
+/* Avatares 3D (avatar3d.js): el busto ocupa el lugar del dibujo 2D, recortado en círculo. */
+.avatar .av3d-pic { display: block; width: 100%; height: 100%; clip-path: circle(50%); }
+/* Dev → Avatar 3D: el niño grande con sus movimientos y los de la bodega; abajo vivo, foto y el 2D de antes. */
+.av3d { display: flex; gap: 22px; justify-content: center; align-items: center; flex-wrap: wrap; margin: 18px 0 6px; }
+.av3d > div { display: grid; justify-items: center; gap: 14px; font: 700 14px 'Baloo 2'; color: var(--ink); }
+.av3d-chips { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.av3d-chips .btn { min-height: 36px; padding: 0 14px 2px; font-size: 15px; }
+.av3d-body .pick-lbl { text-align: center; margin: 10px 0 6px; }
+.av3d-now { text-align: center; font: 700 15px 'Baloo 2'; color: var(--ink); margin: 4px 0 8px; }
+.avatar.av3d-big { width: min(120px, 32vw); height: min(120px, 32vw); border-width: 4px; }
+/* Tienda: al tocar una tarjeta sin comprar, la pieza en grande arriba de «¿Lo compras?» (10 nov 2026). */
+.buy-modal .s-zoom { display: grid; place-items: center; margin: 4px auto 14px; min-height: 120px; }
+.buy-modal .s-zoom .avatar.huge { width: 128px; height: 128px; }
+.buy-modal .s-zoom .trav-prev { width: 150px; height: 150px; }
+.buy-modal .s-zoom .card-prev, .buy-modal .s-zoom .face-prev, .buy-modal .s-zoom .space-prev, .buy-modal .s-zoom .frame-prev { transform: scale(1.4); margin: 18px 0; }

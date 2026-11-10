@@ -13,7 +13,7 @@ export const GROUPS = [
   { k: 'mundo', name: 'Viaje', ico: 'rocket', secs: ['traveler', 'space', 'frame'] },
 ];
 export const SECTIONS = [
-  { k: 'avatar', name: 'Avatares' },
+  { k: 'avatar', name: 'Disfraces' }, // 10 nov 2026: los avatares ahora son disfraces de tu personaje
   { k: 'ring', name: 'Marcos' },
   { k: 'title', name: 'Títulos' },
   { k: 'back', name: 'Reversos' },
@@ -448,6 +448,21 @@ export const ITEMS = {
     ITEMS[sec].push({ ...it, price: Math.round((base * SET_PRICE[sec]) / 50) * 50, ...(av.need && { need: av.need }) });
   }
 }
+// Un solo nombre por avatar (10 nov 2026): ahora todos son disfraces de tu personaje (avatar3d.js), así que se llaman
+// por lo que son (antes llevaban dos: «Michi · Gatito»). Con «/» el nombre cambia según tu personaje: niño / niña.
+// Plan con todos en dev/disfraces.html.
+const ONE_NAME = {
+  nino: 'Ropa de inicio', nina: 'Ropa de inicio', gato: 'Gatito', ajolote: 'Ajolote', conejo: 'Conejo', perrito: 'Perrito', zorro: 'Zorro/Zorrita', pinguino: 'Pingüino', panda: 'Panda', tortuga: 'Tortuga', robot: 'Robot', pulpo: 'Pulpo', abeja: 'Abeja', capibara: 'Capibara', astro: 'Astronauta', alien: 'Marciano/Marciana', dino: 'Dinosaurio', fantasma: 'Fantasmita', estrella: 'Estrella fugaz', buho: 'Búho', sirena: 'Tritón/Sirena', vampiro: 'Vampiro/Vampira', dragoncito: 'Dragoncito', unicornio: 'Unicornio', ninja: 'Ninja', voltio: 'Ratón eléctrico', tic: 'Viajero/Viajera del tiempo', guardian: 'Guardián/Guardiana', mago: 'Mago/Maga', caballero: 'Caballero/Caballera', profe: 'Profe Voltaje', turbo: 'Turbo', papaya: 'Papaya', cora: 'Arqueólogo/Arqueóloga', pip: 'Pip', gatobot: 'Gatobot', esponjita: 'Esponjita', capitan: 'Capitán/Capitana Sombrero', kiko: 'Kiko', luna: 'Luna Estelar', estrellapop: 'Estrella Pop', rocky: 'Rocky', mina: 'Idol', mcbeat: 'MC Beat',
+  // Exclusivos de eventos.
+  cangrejo: 'Cangrejo', topo: 'Topo minero', ardilla: 'Ardilla', osito: 'Osito de gomita', triceratops: 'Triceratops', robodog: 'Perro robot', pulpopintor: 'Pulpo pintor', ranita: 'Ranita rockera', mapache: 'Mapache director/Mapache directora', tamalito: 'Tamalito', taquito: 'Taquito', arbolito: 'Arbolito', pinatita: 'Piñatita', clavelito: 'Clavelito', bigoton: 'Bigotón', atigrado: 'Michi atigrado', dalmata: 'Dálmata', chaneque: 'Chaneque', xologuia: 'Xolo guía', lloronita: 'Lloronita', catrinita: 'Catrín/Catrina', revolucionario: 'Revolucionario/Revolucionaria', audifonos: 'Gamer pro', bichito: 'Bichito', bufoncito: 'Bufoncito', uvita: 'Uvita', xolo: 'Xólotl', reno: 'Reno', reymago: 'Rey Mago/Reina Maga', cupido: 'Cupido', catarina: 'Catarina', foca: 'Foca playera', chihuahua: 'Chihuahua charro', gatobruja: 'Gato brujo/Gata bruja', loro: 'Loro pirata', meteorin: 'Meteorín',
+};
+for (const it of ITEMS.avatar) {
+  const n = ONE_NAME[it.k];
+  if (!n) continue;
+  delete it.text;
+  const [boy, girl = boy] = n.split('/');
+  Object.defineProperty(it, 'name', { get: () => (save.kid?.base === 'nina' ? girl : boy), enumerable: true, configurable: true });
+}
 export const NEED_X = 5, PRICE_UP = 0.02;
 const round5 = (n) => Math.round(n / 5) * 5;
 for (const list of Object.values(ITEMS))
@@ -507,7 +522,8 @@ export function sell(sec, k) {
 export const item = (sec, k) => ITEMS[sec].find((x) => x.k === k);
 export const owns = (sec, k) => !!item(sec, k) && (item(sec, k).price === 0 || !!save.owned[`${sec}:${k}`]);
 // Lo que se ve en la tienda normal: los exclusivos de colección solo si ya son tuyos (para usarlos).
-export const shopItems = (sec) => ITEMS[sec].filter((it) => !it.ev || owns(sec, it.k));
+// La ropa de inicio es una sola ('nino'; la de Lila quedó dentro: cada base la suya), así que 'nina' ya no sale.
+export const shopItems = (sec) => ITEMS[sec].filter((it) => (!it.ev || owns(sec, it.k)) && !(sec === 'avatar' && it.k === 'nina'));
 // ¿Todavía no se puede comprar? Devuelve el número de mundo que falta abrir (o 0 si ya se puede).
 export const lockedUntil = (sec, k) => {
   const it = item(sec, k);

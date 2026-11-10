@@ -31,6 +31,7 @@ const fresh = (name, avatar = 0) => ({
   fiAlbum: {}, // festividades ganadas completas ('clave-año' -> 1): su postal en el álbum (pestaña Especiales)
   look: 'letter', // avatar: 'letter' = su inicial · 'char' = un personaje (char)
   char: 'nino', // Nico y Lila son gratis
+  kid: null, // tu personaje 3D (10 nov 2026): { base: 'nino'|'nina', skin, hair, style } (listas en art.js); char es la ropa o el disfraz
   owned: {}, // tienda: 'seccion:clave' -> 1 (ver shop.js)
   equip: {}, // tienda: seccion -> clave que usa
   soonSeen: {}, // eventos anunciados cuya ventana ya abrió (dejan de salir como nuevos en la botonera)
@@ -68,6 +69,14 @@ const fixOnboard = (p) => {
 fixOnboard(p0);
 // Astro era gratis antes de Nico y Lila: quien ya lo usaba se lo queda.
 if (p0.look === 'char' && p0.char === 'astro') (p0.owned ||= {})['avatar:astro'] = 1;
+// Tu personaje 3D (10 nov 2026): quien ya jugaba recibe uno según su avatar (Lila → niña de pelo morado; lo demás →
+// niño de pelo café) y la primera vez en el mapa sale «Arma tu personaje» (kidAsk) para que lo cambie.
+if (!p0.kid && p0.named) {
+  p0.kid = p0.char === 'nina' ? { base: 'nina', skin: 1, hair: 5, style: 0 } : { base: 'nino', skin: 1, hair: 0, style: 0 };
+  p0.kidAsk = 1;
+}
+// La ropa de inicio es una sola (char 'nino'): el niño la lleva naranja y la niña morada.
+if (p0.char === 'nina') p0.char = 'nino';
 
 // Preferencias del dispositivo (no del jugador): modo dev.
 export const prefs = root.prefs;
@@ -104,11 +113,11 @@ function replaceWith(p) {
 // Borra todo el avance del jugador (también lo comprado), conserva nombre y avatar. Lo que ya se le enseñó no se
 // repite (ya lo hizo): tutorial del tablero, recorridos del mapa y de los botones, mecánicas y presentaciones de eventos.
 export function resetProfile() {
-  const { name, avatar, named, look, onboard, tutorial, mapTour, sideTour, seen, intro, codes } = save;
+  const { name, avatar, named, look, onboard, tutorial, mapTour, sideTour, seen, intro, codes, kid } = save;
   const learned = { tutorial, seen, intro, codes, ...(mapTour ? { mapTour } : {}), ...(sideTour ? { sideTour } : {}) };
-  // Un personaje gratis (Nico o Lila) se conserva; uno comprado se pierde y vuelve a la inicial.
-  const free = look === 'char' && ['nino', 'nina'].includes(save.char);
-  replaceWith({ ...fresh(name, avatar), named, onboard, ...learned, ...(free ? { look, char: save.char } : {}) });
+  // Tu personaje se conserva; un disfraz comprado se pierde y vuelve a tu ropa de inicio (la de Nico o la de Lila).
+  const char = 'nino';
+  replaceWith({ ...fresh(name, avatar), named, onboard, ...learned, kid, ...(look === 'char' ? { look, char } : {}) });
 }
 
 // Eliminar perfil (8 nov 2026): todo desde cero, también nombre, avatar y lo que ya se le enseñó (vuelve la
@@ -118,7 +127,7 @@ export function deleteProfile() {
   replaceWith({ ...fresh(''), codes });
 }
 
-// look: { look, char } del avatar (opcional).
+// look: { look, char, kid } del avatar (opcional).
 export function renameProfile(name, avatar, look) {
   save.name = name;
   save.named = true;

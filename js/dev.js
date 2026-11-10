@@ -7,7 +7,7 @@ import { TIERS, generateLevel, hardHelp, fiestaPick, fiestaLevel, eventLevel, ev
 import { playCasual, solve, initState } from './engine.js';
 import { openModal, toast, updateCoins, popGoal } from './ui.js';
 import { mulberry32 } from './rng.js';
-import { icon, miniPlanet } from './art.js';
+import { icon, miniPlanet, avatarHTML, charSVG, AVATAR_COLORS, kidOf } from './art.js';
 import { tableHTML, BIOMES, biomeKey } from './biomes.js';
 import { peek } from './galaxy.js';
 import { EVENTOS, COLECCIONES, FIESTAS, fiestaDays } from './events.js';
@@ -16,7 +16,7 @@ import { meteor, nextShowers, metItems, MET_FROM } from './meteor.js';
 import { BET_STEPS, maxBet } from './economy.js';
 import { KINDS, TREASURE, makeLot, makeCode, rewardName, lotText, usedHere, lotNonces } from './codes.js';
 // Icono de cada sección de la tienda (para el recuento).
-const SEC_ICO = { avatar: 'user', ring: 'star', title: 'crown', back: 'deck', face: 'face', traveler: 'rocket', space: 'planet', frame: 'album' };
+const SEC_ICO = { avatar: 'disfraz', ring: 'star', title: 'crown', back: 'deck', face: 'face', traveler: 'rocket', space: 'planet', frame: 'album' };
 
 export const dev = {
   get on() {
@@ -620,6 +620,7 @@ export function openDevMenu({ onGallery, onPlanets, onSets, onRefresh, card }) {
       { l: 'Galería de niveles', cls: 'gold', fn: onGallery },
       { l: 'Galería de planetas', cls: 'gold', title: 'Cada tipo de planeta: verlo en el mapa o jugar en su mesa', fn: onPlanets },
       { l: 'Colecciones de personaje', cls: 'gold', title: 'Cada avatar con su marco, título, nave y su pieza extra, todo junto', fn: onSets },
+      { l: 'Avatar 3D', cls: 'gold', title: 'El niño de busto en 3D: sus 3 movimientos, la foto de las listas y los 10 de la bodega', fn: openAvatar3D },
       { l: `Boosters infinitos: ${prefs.devInfinite ? 'sí' : 'no'}`, fn: () => { prefs.devInfinite = !prefs.devInfinite; persist(); toast(`Boosters infinitos: ${prefs.devInfinite ? 'sí' : 'no'}`); } },
       { l: '+20,000 monedas', fn: () => ((save.coins += 20000), persist(), updateCoins()) },
       // 9 nov 2026: para ver todo sin avanzar niveles (dev es caja de pruebas: al apagarlo vuelve tu partida).
@@ -794,6 +795,40 @@ async function shareText(text, what = 'Copiado') {
   } catch (e) {
     if (e?.name !== 'AbortError') toast('No se pudo copiar');
   }
+}
+// Avatares 3D (10 nov 2026): tu personaje (el de tu jugador, o niño / niña aquí) con cada ropa o disfraz que ya tiene
+// modelo: sus 3 movimientos, los 10 de la bodega con su nombre, vivo, foto y el dibujo 2D de antes.
+function openAvatar3D() {
+  const st = { kid: { ...kidOf(save) }, dress: save.look === 'char' ? save.char : 'nino' };
+  const p = () => ({ name: 'Yo', look: 'char', char: st.dress, avatar: save.avatar || 0, kid: st.kid });
+  const box = (cls, inner, label) => `<div class="${cls}">${inner}<span>${label}</span></div>`;
+  const chips = (key, list, now) => `<div class="av3d-chips">${list.map(([k, n]) => `<button class="btn ${now === k ? 'gold' : 'ghost'}" data-${key}="${k}">${n}</button>`).join('')}</div>`;
+  const m = openModal({ title: 'Avatar 3D', cls: 'devmenu av3d-modal', body: '<div class="av3d-body"></div>', buttons: [{ label: 'Listo', cls: 'green' }] });
+  const body = m.el.querySelector('.av3d-body');
+  import('./avatar3d.js').then(({ MOVES, moveNow, movesOf, COSTUME_LIST }) => {
+    const draw = () => {
+      body.innerHTML = `<p class="pick-lbl">Personaje (el de tu jugador se cambia al editarlo)</p>${chips('base', [['nino', 'Niño'], ['nina', 'Niña']], st.kid.base)}
+        <p class="pick-lbl">Ropa o disfraz</p>${chips('dress', COSTUME_LIST, st.dress)}
+        <div class="av3d">${box('a3d-live', avatarHTML(p(), 'av3d-big'), 'Sus 3 movimientos')}${box('a3d-all', avatarHTML(p(), 'av3d-big'), 'Los 10 de la bodega')}</div>
+        <p class="av3d-now">Ahora: <b>…</b></p>
+        <div class="av3d">${box('a3d-live', avatarHTML(p()), 'Vivo')}${box('a3d-still', avatarHTML(p()), 'Foto (listas)')}${box('', `<span class="avatar char" style="--av:${AVATAR_COLORS[save.avatar || 0]}">${charSVG(st.dress)}</span>`, '2D de antes')}</div>
+        <p class="note">Usa: <b>${movesOf(st.dress).map((k) => MOVES[k].name.toLowerCase()).join(', ')}</b>. El jugador nunca ve estos nombres.</p>`;
+      body.querySelectorAll('[data-base], [data-dress]').forEach((b) => b.addEventListener('click', () => {
+        if (b.dataset.base && b.dataset.base !== st.kid.base) st.kid = { ...st.kid, base: b.dataset.base, style: 0 };
+        if (b.dataset.dress) st.dress = b.dataset.dress;
+        draw();
+      }));
+    };
+    draw();
+    // Qué movimiento va haciendo el de la bodega (para decidir cuáles van con quién).
+    const tick = () => {
+      if (!body.isConnected) return;
+      const out = body.querySelector('.av3d-now b'), k = moveNow(body.querySelector('.a3d-all canvas'));
+      if (out) out.textContent = k ? MOVES[k].name : 'feliz';
+      requestAnimationFrame(tick);
+    };
+    tick();
+  });
 }
 // Todos los códigos hechos, por grupos (acordeón). Tocar uno lo copia. "usado" = ya se canjeó en este teléfono.
 function openCodeList() {
