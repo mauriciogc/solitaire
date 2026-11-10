@@ -24,12 +24,14 @@ export const themeKey = (t) => `tm${t.k}`;
 // Caras quitadas (9 nov 2026, el usuario: su fondo se veía feo y tapaba mucho; Fuego se veía transparente al jugar).
 // Esas temáticas siguen con su reverso, fondo y postal; quien tenía la cara puesta vuelve a la clásica.
 const NO_FACE = new Set(['mariposas', 'tropical', 'plumas', 'limonada', 'jardin', 'lluvia', 'realeza', 'fuego']);
+// Reversos quitados (9 nov 2026, el usuario: muy simples; se rehacen con las colecciones de personaje). Reembolso en shop.js.
+const NO_BACK = new Set(['corazones', 'mariposas', 'verano', 'invierno', 'tropical', 'plumas', 'globos', 'limonada', 'jardin', 'gatitos', 'perritos']);
 // Lo que cuesta y desde qué mundo (antes del ×5 de NEED_X en shop.js): de la más barata a la más cara, repartidas.
 export function themeItems() {
   const out = { back: [], face: [], space: [], frame: [] };
   THEMES.forEach((t, i) => {
     const k = themeKey(t), need = 4 + i * 7;
-    out.back.push({ k, name: t.name, price: 600 + i * 100, need, theme: t.k });
+    if (!NO_BACK.has(t.k)) out.back.push({ k, name: t.name, price: 600 + i * 100, need, theme: t.k });
     if (!NO_FACE.has(t.k)) out.face.push({ k, name: t.name, price: 550 + i * 100, need: need + 2, theme: t.k });
     out.space.push({ k, name: t.name, price: 650 + i * 100, need: need + 3, theme: t.k });
     out.frame.push({ k, name: t.name, price: 300 + i * 60, need: need + 1, theme: t.k });
@@ -82,15 +84,10 @@ export function themeCSS(url) {
 }
 
 // Viajeros de otros colores (8 nov 2026): el mismo modelo 3D con su paleta cambiada (color de antes → color nuevo).
+// 9 nov 2026: se quitaron 7 (cohete menta, los 2 ovnis, globo de fiesta, satélite dorado, mantarraya de oro, avión del
+// cielo): las naves nuevas van con cada personaje. Su reembolso está en shop.js (GONE_TRAVELERS).
 export const TRAVELER_VARIANTS = [
-  { k: 'cohetementa', base: 'cohete', name: 'Cohete menta', text: 'Despega con su llama', price: 900, need: 5, map: { '#fff6e6': '#dcfff4', '#ff5f7e': '#2fbf9a', '#5fc7e8': '#ffc83d' } },
   { k: 'cohetenoche', base: 'cohete', name: 'Cohete de noche', text: 'Despega con su llama', price: 1300, need: 18, map: { '#fff6e6': '#3a3a6a', '#ff5f7e': '#ffc83d', '#5fc7e8': '#8fe8ff' } },
-  { k: 'ovnidorado', base: 'ovni', name: 'Ovni dorado', text: 'Gira con sus luces', price: 1500, need: 22, map: { '#b9b1dc': '#ffd970', '#8fe8ff': '#ff9cc8', '#8f88c0': '#e8a93a' } },
-  { k: 'ovniverde', base: 'ovni', name: 'Ovni marciano', text: 'Gira con sus luces', price: 1100, need: 10, map: { '#b9b1dc': '#9be86a', '#8fe8ff': '#d8f0ff', '#8f88c0': '#56b83a' } },
-  { k: 'globorayas', base: 'globo', name: 'Globo de fiesta', text: 'Se mece con su fueguito', price: 1300, need: 14, map: { '#ff5f7e': '#8a5cf0', '#ffc83d': '#5fd1c5', '#4aa8de': '#ff7ab8', '#fff6e6': '#c8e85a', '#b8865a': '#ff9c5b' } },
-  { k: 'satelitedorado', base: 'satelite', name: 'Satélite dorado', text: 'Gira con sus paneles', price: 1700, need: 28, map: { '#ffc83d': '#e8a93a', '#4a6fde': '#ffd970', '#9ad9ff': '#fff4c7', '#f4f1ff': '#ffe08a', '#b9c4e0': '#c4900f', '#ff5f7e': '#5ff0ff' } },
   { k: 'ballenarosa', base: 'ballena', name: 'Ballena rosa', text: 'Sopla polvo de estrellas', price: 2700, need: 65, map: { '#4aa8de': '#ff9cc8', '#3d95cc': '#e870a8' } },
   { k: 'medusaazul', base: 'medusa', name: 'Medusa azul', text: 'Late y ondula sus tentáculos', price: 1800, need: 33, map: { '#ff5f9e': '#4aa8de', '#ffc2dc': '#c9ecff', '#ff9cc8': '#8fd6ff', '#ff7ab8': '#5fc7e8', '#c9a6ff': '#9ad9ff' } },
-  { k: 'mantadorada', base: 'mantarraya', name: 'Mantarraya de oro', text: 'Aletea despacio', price: 2300, need: 45, map: { '#6f5fd8': '#e8a93a', '#5a4bc0': '#c47a00', '#e3d8ff': '#fff4c7' } },
-  { k: 'avioncielo', base: 'avion', name: 'Avión del cielo', text: 'Planea en ondas', price: 1000, need: 7, map: { '#fff6e6': '#d8f0ff', '#ff9cc8': '#4aa8de', '#f0eaff': '#bfe0f5' } },
 ];

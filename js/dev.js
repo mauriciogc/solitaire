@@ -525,7 +525,7 @@ function goToLevel(g, betBefore) {
   persist();
 }
 // card: dibuja la carta de una mecánica (mechCard de main.js) para el recuento.
-export function openDevMenu({ onGallery, onPlanets, onRefresh, card }) {
+export function openDevMenu({ onGallery, onPlanets, onSets, onRefresh, card }) {
   const w = Math.min(Math.floor(save.next / LEVELS_PER_WORLD), save.open);
   const r = Math.floor(w / REGION);
   const evNow = ev(), colNow = col();
@@ -619,8 +619,12 @@ export function openDevMenu({ onGallery, onPlanets, onRefresh, card }) {
     { t: 'General', items: [
       { l: 'Galería de niveles', cls: 'gold', fn: onGallery },
       { l: 'Galería de planetas', cls: 'gold', title: 'Cada tipo de planeta: verlo en el mapa o jugar en su mesa', fn: onPlanets },
+      { l: 'Colecciones de personaje', cls: 'gold', title: 'Cada avatar con su marco, título, nave y su pieza extra, todo junto', fn: onSets },
       { l: `Boosters infinitos: ${prefs.devInfinite ? 'sí' : 'no'}`, fn: () => { prefs.devInfinite = !prefs.devInfinite; persist(); toast(`Boosters infinitos: ${prefs.devInfinite ? 'sí' : 'no'}`); } },
       { l: '+20,000 monedas', fn: () => ((save.coins += 20000), persist(), updateCoins()) },
+      // 9 nov 2026: para ver todo sin avanzar niveles (dev es caja de pruebas: al apagarlo vuelve tu partida).
+      { l: 'Toda la tienda', title: 'Te da todo lo que se compra en la tienda, aunque tenga candado por mundo', fn: () => { for (const sec in ITEMS) ITEMS[sec].forEach((it) => !it.ev && (save.owned[`${sec}:${it.k}`] = 1)); persist(); toast('Ya tienes toda la tienda'); } },
+      { l: 'Todos los exclusivos', title: 'Te da todos los premios exclusivos: evento del mes, festividades, colecciones, lluvia de meteoritos, código de regalo y logros', fn: () => { for (const sec in ITEMS) ITEMS[sec].forEach((it) => it.ev && (save.owned[`${sec}:${it.k}`] = 1)); persist(); toast('Ya tienes todos los exclusivos'); } },
       { l: `Medidas de pantalla: ${prefs.screenInfo ? 'sí' : 'no'}`, title: 'Recuadro con lo que dice el navegador del tamaño de la pantalla (para revisar el iPhone)', fn: () => { prefs.screenInfo = !prefs.screenInfo; persist(); dispatchEvent(new Event('screeninfo')); toast(`Medidas de pantalla: ${prefs.screenInfo ? 'sí' : 'no'}`); } },
     ] },
     { t: 'Códigos de regalo', sub: prefs.codeLot ? `${prefs.codeLot.length} hechos` : 'aún no hay', items: [

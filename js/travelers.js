@@ -3,6 +3,7 @@
 import * as THREE from 'three';
 import { INK } from './art.js';
 import { TRAVELER_VARIANTS } from './themes.js';
+import { setModels } from './set-travelers.js';
 
 const TAU = Math.PI * 2;
 const calm = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -925,6 +926,38 @@ const MODELS = {
       fly.position.y = Math.sin(t * 2.2) * 0.08 + Math.sin(t * 9) * 0.015; fly.rotation.y = 0.25 + Math.sin(t * 0.8) * 0.3;
     } };
   },
+  // Zanahoria cohete (colección de Copito el conejo, 9 nov 2026): la punta es la nariz; ventanita redonda, surcos,
+  // aletas de hoja y las hojas de atrás se mueven como cola mientras sale su llamita.
+  zanahoria(part) {
+    const g = new THREE.Group(), body = new THREE.Group();
+    const prof = [[0, -0.32], [0.17, -0.3], [0.2, -0.18], [0.18, 0.02], [0.13, 0.22], [0.07, 0.38], [0, 0.5]].map(([x, y]) => new THREE.Vector2(x, y));
+    body.add(part(new THREE.LatheGeometry(prof, 22), '#ff8a3d', { ol: 0.07 }));
+    for (const [y, r] of [[-0.12, 0.196], [0.06, 0.172], [0.22, 0.13]]) body.add(part(new THREE.TorusGeometry(r, 0.012, 6, 28).rotateX(Math.PI / 2), '#d6602a', { y, ol: 0 }));
+    body.add(part(new THREE.SphereGeometry(0.075, 16, 12), '#8fe8ff', { y: -0.03, z: 0.18, ol: 0.3 }));
+    body.add(part(new THREE.SphereGeometry(0.025, 8, 6), '#ffffff', { x: -0.025, y: 0.0, z: 0.245, ol: 0 }));
+    for (let k = 0; k < 3; k++) {
+      const f = new THREE.Group();
+      f.add(part(new THREE.SphereGeometry(0.1, 12, 8).scale(0.25, 1, 0.7), '#5fbf5a', { y: -0.24, z: 0.2, rx: 0.35, ol: 0.15 }));
+      f.rotation.y = (k / 3) * TAU + 0.5; body.add(f);
+    }
+    const tuft = new THREE.Group();
+    tuft.position.y = -0.32;
+    const leaves = [0, 1, 2, 3].map((k) => {
+      const l = new THREE.Group();
+      l.add(part(new THREE.CapsuleGeometry(0.035, 0.16, 4, 8), k % 2 ? '#7fd36a' : '#5fbf5a', { y: -0.1, ol: 0.18 }));
+      l.rotation.set(0.5, (k / 4) * TAU, 0); tuft.add(l); return l;
+    });
+    const flame = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.22, 12), glow('#ffc83d', 0.95));
+    flame.rotation.x = Math.PI; flame.position.y = -0.12; tuft.add(flame);
+    body.add(tuft);
+    body.rotation.z = -0.3;
+    g.add(body);
+    return { obj: g, tick: (t) => {
+      leaves.forEach((l, k) => (l.rotation.x = 0.5 + Math.sin(t * 9 + k * 1.6) * 0.18));
+      flame.scale.set(1, 1 + Math.sin(t * 29) * 0.15 + Math.sin(t * 13) * 0.1, 1);
+      body.rotation.y = Math.sin(t * 0.9) * 0.5; body.position.y = Math.sin(t * 2.3) * 0.045;
+    } };
+  },
   // Patito inflable (Verano): flotador amarillo con cabeza de pato, pico naranja y franja; se mece como en las olas.
   patito(part) {
     const g = new THREE.Group(), duck = new THREE.Group();
@@ -1200,6 +1233,11 @@ const MODELS = {
     return { obj: g, tick: (t) => { all.position.y = Math.sin(t * 1.5) * 0.05; cloud.scale.set(1 + Math.sin(t * 2.4) * 0.03, 1 - Math.sin(t * 2.4) * 0.03, 1); all.rotation.y = -0.3 + Math.sin(t * 0.8) * 0.25; } };
   },
 };
+// Naves de las colecciones de personaje (set-travelers.js).
+for (const [k, m] of Object.entries(setModels(INK))) {
+  if (MODELS[k]) throw new Error(`Nave repetida: ${k}`);
+  MODELS[k] = m;
+}
 export const TRAVELERS = Object.keys(MODELS);
 
 // Un viajero listo para ponerse en una escena: { obj, tick(segundos) }. Con "reducir movimiento" se queda quieto.

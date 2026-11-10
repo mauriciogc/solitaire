@@ -4,6 +4,7 @@
 import { save, persist } from './storage.js';
 import { icon } from './art.js';
 import { themeItems, TRAVELER_VARIANTS } from './themes.js';
+import { SETS, setItems, SET_PRICE } from './sets.js';
 
 // Las secciones van en 3 grupos para que las pestañas quepan en un teléfono.
 export const GROUPS = [
@@ -59,6 +60,22 @@ export const ITEMS = {
     { k: 'guardian', name: 'Bruno', text: 'Guardián del anillo', price: 1700, need: 65 },
     { k: 'mago', name: 'Zafiro', text: 'Mago de las estrellas', price: 2000, need: 75 },
     { k: 'caballero', name: 'Sir Galleta', text: 'Caballero', price: 2500, need: 95 },
+    // 9 nov 2026: inspirados en personajes famosos, sin copiarlos (market de avatares).
+    { k: 'cora', name: 'Cora', text: 'Arqueóloga del templo', price: 1300, need: 35 },
+    { k: 'turbo', name: 'Turbo', text: 'Chico de la patineta flotante', price: 1400, need: 40 },
+    { k: 'papaya', name: 'Papaya', text: 'Piloto de carreras', price: 1500, need: 45 },
+    { k: 'profe', name: 'Profe Voltaje', text: 'Científico del tiempo', price: 1600, need: 50 },
+    // Segunda tanda (9 nov 2026): anime, caricaturas y cantantes, sin copiar.
+    { k: 'pip', name: 'Pip', text: 'Aventurero del gorro de oso', price: 1200, need: 30 },
+    { k: 'gatobot', name: 'Gatobot', text: 'Gato robot del futuro', price: 1300, need: 35 },
+    { k: 'esponjita', name: 'Esponjita', text: 'Esponja del fondo del mar', price: 1300, need: 40 },
+    { k: 'capitan', name: 'Capitán Sombrero', text: 'Pirata del sombrero de paja', price: 1500, need: 45 },
+    { k: 'kiko', name: 'Kiko', text: 'Guerrero de las nubes', price: 1600, need: 50 },
+    { k: 'luna', name: 'Luna Estelar', text: 'Chica mágica de las coletas', price: 1600, need: 55 },
+    { k: 'estrellapop', name: 'Estrella Pop', text: 'Cantante de lentejuelas', price: 1700, need: 60 },
+    { k: 'rocky', name: 'Rocky', text: 'Rockero de la guitarra', price: 1700, need: 65 },
+    { k: 'mina', name: 'Mina', text: 'Idol del K-pop', price: 1800, need: 70 },
+    { k: 'mcbeat', name: 'MC Beat', text: 'Rapero de los audífonos', price: 1800, need: 75 },
     // Exclusivos de la colección (ev).
     { k: 'cangrejo', name: 'Pinzas', text: 'Cangrejo', ev: 'mar' },
     { k: 'topo', name: 'Topacio', text: 'Topo minero', ev: 'gemas' },
@@ -224,12 +241,6 @@ export const ITEMS = {
     { k: 'galaxia', name: 'Galaxia', price: 1400, need: 35 },
     { k: 'eclipse', name: 'Eclipse', price: 1600, need: 45 },
     { k: 'fuegos', name: 'Fuegos artificiales', price: 1800, need: 55 },
-    // 8 nov 2026: reversos nuevos.
-    { k: 'hongos', name: 'Hongos', price: 600, need: 8 },
-    { k: 'olas', name: 'Olas', price: 750, need: 12 },
-    { k: 'rayo', name: 'Rayo', price: 1300, need: 25 },
-    { k: 'reloj', name: 'Reloj', price: 1500, need: 35 },
-    { k: 'anillo', name: 'Anillo dorado', price: 2200, need: 65 },
     // Exclusivos de la colección (ev): solo se consiguen con fichas en su tienda temporal.
     { k: 'arrecife', name: 'Arrecife', ev: 'mar' },
     { k: 'cristales', name: 'Cristales', ev: 'gemas' },
@@ -431,6 +442,11 @@ export const ITEMS = {
   const tm = themeItems();
   for (const sec in tm) ITEMS[sec].push(...tm[sec].filter((it) => !ITEMS[sec].some((x) => x.k === it.k)));
   ITEMS.traveler.push(...TRAVELER_VARIANTS.map(({ k, name, text, price, need }) => ({ k, name, text, price, need })));
+  // Colecciones de personaje (sets.js): cada pieza cuesta según su avatar y se abre en el mismo mundo que él.
+  for (const { sec, ...it } of setItems()) {
+    const av = ITEMS.avatar.find((x) => x.k === it.set), base = av.price || 300;
+    ITEMS[sec].push({ ...it, price: Math.round((base * SET_PRICE[sec]) / 50) * 50, ...(av.need && { need: av.need }) });
+  }
 }
 export const NEED_X = 5, PRICE_UP = 0.02;
 const round5 = (n) => Math.round(n / 5) * 5;
@@ -439,6 +455,33 @@ for (const list of Object.values(ITEMS))
     if (!it.need) continue;
     it.need *= NEED_X;
     it.price = round5(it.price * (1 + PRICE_UP * Math.floor(it.need / 10)));
+  }
+// Caras quitadas (9 nov 2026, el usuario: su fondo dibujado no se apreciaba). Quien la tenía recupera lo que pagó y,
+// si la usaba, vuelve a la clásica. Las caras nuevas van con cada personaje (dev/market-avatares.md).
+const GONE_FACES = ['luna', 'dorada', 'tmcorazones', 'tmglobos', 'tmgatitos', 'tmperritos'];
+for (const k of GONE_FACES) {
+  const i = ITEMS.face.findIndex((x) => x.k === k);
+  if (i < 0) continue;
+  const [it] = ITEMS.face.splice(i, 1);
+  if (!save.owned?.[`face:${k}`]) continue;
+  delete save.owned[`face:${k}`];
+  save.coins = (save.coins || 0) + it.price;
+  if (save.equip?.face === k) delete save.equip.face;
+  persist();
+}
+// Lo quitado de la tienda (9 nov 2026): quien lo tenía recupera lo que costaba y, si lo usaba, vuelve al de siempre.
+// Naves de otro color (las nuevas van con cada personaje) y reversos muy simples (de Hongos a Perritos: se rehacen).
+const GONE = {
+  traveler: { cohetementa: 935, ovnidorado: 1830, ovniverde: 1210, globorayas: 1480, satelitedorado: 2175, mantadorada: 3310, avioncielo: 1060 },
+  back: { hongos: 650, olas: 840, rayo: 1610, reloj: 2010, anillo: 3610, tmcorazones: 625, tmmariposas: 770, tmverano: 945, tminvierno: 1115, tmtropical: 1320, tmplumas: 1520, tmglobos: 1750, tmlimonada: 1975, tmjardin: 2240, tmgatitos: 2490, tmperritos: 2785 },
+};
+for (const sec in GONE)
+  for (const [k, p] of Object.entries(GONE[sec])) {
+    if (!save.owned?.[`${sec}:${k}`]) continue;
+    delete save.owned[`${sec}:${k}`];
+    save.coins = (save.coins || 0) + p;
+    if (save.equip?.[sec] === k) delete save.equip[sec];
+    persist();
   }
 // Lo que vale un exclusivo (no se compran en la tienda normal): vender da el 70%. Vendido, se recupera hasta que vuelve
 // su evento (8 nov 2026: ya no hay tienda de exclusivos pasados).
@@ -493,6 +536,7 @@ export function buy(sec, k, cost = item(sec, k)?.price) {
 
 // Cada título se ve distinto: color, icono y forma (los más caros, más vistosos).
 const TITLE_ICO = { novato: 'star', explorador: 'flag', cazacometas: 'rocket', maestro: 'trophy', viajero: 'planet', bombas: 'bomb', leyenda: 'crown', buscaconchas: 'concha', cazagemas: 'gema', guardabosques: 'bellota', golosito: 'caramelo', paleontologo: 'fosil', inventor: 'tuerca', tamalero: 'tamal', taquero: 'taco', heroeverde: 'tierra', jugueton: 'pinata', consentido: 'clavel', orgullo: 'corbata', amigomichi: 'gatito', mejoramigo: 'hueso', catrin: 'calavera', duende: 'esfera', buscador: 'rosca', flechazo: 'corazon', jardinero: 'tulipan', olas: 'sol', mariachi: 'sombrero', hechicero: 'calabaza', jefefinal: 'control', cerobugs: 'llaves', bromista: 'bufon', propositos: 'reloj', artista: 'gota', estrellarock: 'nota', director: 'claqueta', nahual: 'nahual', guiaalmas: 'xolito', almadelrio: 'velita', elegancia: 'catrina', valiente: 'locomotora', cazatesoros: 'cofre', cazaestrellas: 'meteoro', perfeccionista: 'crown', imparable: 'flame', artificiero: 'bomb', cazafantasmas: 'ghost', cumplidor: 'check', explorador_secreto: 'starSecret', chispa: 'flame', estratega: 'card', cronista: 'reloj', guardiananillo: 'gema', magocartas: 'wild', invencible: 'trophy' };
+for (const s of SETS) TITLE_ICO[s.title[0]] = s.title[2];
 export const titleName = (k = equipped('title')) => item('title', k).name;
 export const titleIcon = (k) => icon(TITLE_ICO[k] || 'star');
 export const titleHTML = (k = equipped('title'), cls = '', tag = 'span', attrs = '') =>

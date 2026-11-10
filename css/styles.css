@@ -1204,6 +1204,23 @@ html:not(.dev-on) .dev-pill { display: none; }
 .av-ring .r-shine { animation: r-shine 2.8s ease-in-out infinite; }
 .av-ring .r-tw { animation: r-tw 1.8s ease-in-out infinite; }
 @keyframes r-tw { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+/* Figuras que brincan en su lugar (marcos de las colecciones de personaje): suben, caen aplastándose y esperan. */
+.av-ring .r-hop { transform-box: fill-box; transform-origin: 50% 90%; animation: r-hop 1.8s ease-in-out infinite; }
+@keyframes r-hop { 0%, 55%, 100% { translate: 0 0; scale: 1; } 20% { translate: 0 -4px; scale: .94 1.08; } 38% { translate: 0 0; scale: 1.1 .9; } }
+.av-ring :is(.r-sway, .r-bob, .r-flap) { transform-box: fill-box; transform-origin: 50% 85%; }
+.av-ring .r-sway { animation: r-sway 2.4s ease-in-out infinite; }
+.av-ring .r-bob { transform-origin: 50% 50%; animation: r-bob 2.2s ease-in-out infinite; }
+.av-ring .r-flap { transform-origin: 50% 50%; animation: r-flap .5s ease-in-out infinite alternate; }
+@keyframes r-sway { 0%, 100% { rotate: -9deg; } 50% { rotate: 9deg; } }
+/* Giro sobre su propio centro (engranes, estrellas ninja, discos, timón) y órbita lenta del aro (r-spin slow). */
+.av-ring .r-roll { transform-box: fill-box; transform-origin: 50% 50%; animation: r-roll 3.2s linear infinite; }
+.av-ring .r-roll.slow { animation-duration: 7s; }
+.av-ring .r-roll.rev { animation-direction: reverse; }
+.av-ring .r-spin.slow { animation-duration: 28s; }
+@keyframes r-roll { to { rotate: 360deg; } }
+@keyframes r-bob { 0%, 100% { translate: 0 1.5px; } 50% { translate: 0 -2.5px; } }
+@keyframes r-flap { from { scale: 1 1; } to { scale: .72 1; } }
+@media (prefers-reduced-motion: reduce) { .av-ring :is(.r-hop, .r-sway, .r-bob, .r-flap, .r-roll) { animation: none; } }
 /* Lo que está fuera de la pantalla en listas largas no se anima (ver pauseOffscreen en ui.js). */
 .anim-off, .anim-off::before, .anim-off::after, .anim-off *, .anim-off *::before, .anim-off *::after { animation-play-state: paused !important; }
 /* Álbum: páginas por año en Eventos y Especiales. */
@@ -1526,10 +1543,13 @@ html:not(.dev-on) .dev-pill { display: none; }
 .stab.on { background: var(--cream); color: var(--ink); text-shadow: none; border-color: var(--ink); box-shadow: inset 0 -3px 0 var(--cream-d), 0 2px 0 var(--ink); }
 .stab.on::after { content: none; }
 @media (hover: hover) and (pointer: fine) { .sgroup:not(.on):hover, .stab:not(.on):hover { background: #fff6e680; } }
-.sbar { display: flex; align-items: center; gap: 10px; margin: 10px 0 0; }
-.shint { flex: 1; margin: 0 !important; font-size: 13.5px; font-weight: 700; color: #7a6f9d; text-align: left; line-height: 1.25; }
-.smoney { flex: none; display: inline-flex; align-items: center; gap: 4px; padding: 2px 12px 3px 4px; border-radius: 99px; background: #fff; border: 2.5px solid var(--ink); font: 400 17px 'Lilita One'; }
-.smoney .ico { width: 24px; height: 24px; }
+/* 9 nov 2026: las monedas van en la barra de arriba, a la izquierda (sin leyendas debajo de las pestañas). */
+.shop-modal .mhead { padding: 4px 118px; }
+.shop-modal .mhead h2 { display: inline-flex; align-items: center; gap: 6px; }
+.shop-modal .mhead h2 .ico { width: 30px; height: 30px; flex: none; }
+.smoney { position: absolute; left: 9px; top: 50%; translate: 0 -50%; display: inline-flex; align-items: center; gap: 5px; padding: 2px 14px 3px 3px; border-radius: 99px; background: #fffdf7; border: 2.5px solid var(--ink); box-shadow: inset 0 -3px 0 var(--cream-d), 0 2px 0 var(--ink); font: 400 17px 'Lilita One'; font-variant-numeric: tabular-nums; }
+.smoney .ico { width: 28px; height: 28px; }
+@media (max-width: 420px) { .shop-modal .mhead { padding: 4px 104px; } .smoney { font-size: 15px; padding-right: 10px; } .smoney .ico { width: 24px; height: 24px; } }
 .sgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(128px, 1fr)); gap: 12px; padding: 14px 2px 6px; }
 .sgrid.sg-frame { grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); }
 .sgrid.sg-title { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); }
@@ -2144,6 +2164,10 @@ html:not(.dev-on) .dev-pill { display: none; }
 @keyframes met-sale { 0%, 100% { scale: 1; } 50% { scale: 1.05; } }
 .met-sale .ico { width: 22px; height: 22px; }
 .met-sale b { color: #ffe066; font-weight: 400; }
+/* 9 nov 2026: en la tienda no debe parecer botón: cinta clarita sin contorno, sombra ni latido (como la de "Cuesta…"),
+   centrada (.mbody p le quitaba el margin auto). */
+.shead p.met-sale { margin: 10px auto 0; padding: 3px 14px 4px 8px; background: #ffe2cc; border: 0; box-shadow: none; color: #d6451f; text-shadow: none; animation: none; }
+.shead p.met-sale b { color: #d6451f; }
 .s-price s, .modal button s { opacity: 0.55; font-size: 0.8em; margin-right: 3px; text-decoration-thickness: 2px; }
 .loot-bub .x2 { position: absolute; top: -4px; right: -6px; margin: 0; }
 @keyframes met-x2 { 0%, 100% { scale: 1; } 50% { scale: 1.15; } }
@@ -2459,6 +2483,13 @@ html:not(.dev-on) .dev-pill { display: none; }
 .seg-ind { position: absolute; left: 0; top: 0; z-index: 0; box-sizing: border-box; border-radius: 12px; background: #4aa8de; border: 2px solid var(--ink); box-shadow: inset 0 -3px 0 #2f86c0, 0 2px 0 var(--ink); pointer-events: none; transition: translate .35s var(--ease-out), width .35s var(--ease-out), height .35s var(--ease-out); }
 .stabs .seg-ind { border-radius: 11px; } .sgroups .seg-ind { border-radius: 13px; }
 .seg > .on, .seg > [aria-selected="true"] { background: none !important; border-color: transparent !important; box-shadow: none !important; color: #fff !important; text-shadow: 0 1.5px 0 #1f5f8f !important; transition: color .25s; }
+/* Tienda (9 nov 2026, imagen del usuario): la elegida en pastilla clara con contorno y letra oscura, sobre el carril
+   crema; las demás en lila apagado. Las sub-pestañas llevan icono. */
+.shop-modal .seg-ind { background: #fffdf7; border: 2.5px solid var(--ink); box-shadow: inset 0 -3px 0 var(--cream-d), 0 2px 0 var(--ink); }
+.shop-modal .seg > .on { color: var(--ink) !important; text-shadow: none !important; }
+.shop-modal .stab { display: inline-flex; align-items: center; gap: 5px; padding: 0 12px 2px 8px; }
+.shop-modal .stab .ico { width: 22px; height: 22px; flex: none; }
+@media (max-width: 420px) { .shop-modal .stab { padding: 0 9px 2px 6px; gap: 4px; font-size: 13.5px; } .shop-modal .stab .ico { width: 19px; height: 19px; } }
 
 /* Títulos nuevos de la tienda (8 nov 2026). */
 .title-chip.t-chispa { --tc: #fff; --td: #e2692a; background: linear-gradient(#ffb066, #ff8a3d); font-family: 'Lilita One'; font-weight: 400; text-shadow: 0 1.5px 0 #b8562a; }
@@ -2562,7 +2593,7 @@ html:not(.dev-on) .dev-pill { display: none; }
 /* 9 nov 2026: ×5 dorada y ×10 de fuego (rosa a dorado). Con "¡Nuevo!" cuando se abre una apuesta. */
 /* Ventana para apostar (9 nov 2026): la ficha grande junto a "Si ganas te llevas" con cada premio (número y etiqueta
    ×N de su color), las fichas ×1 ×2 ×3… para escoger y abajo del botón lo que cuesta. Sin letra chiquita. */
-.bet-big { position: relative; display: grid; place-items: center; width: 92px; height: 92px; border-radius: 28px; border: 3px solid var(--ink); font: 400 44px/1 'Lilita One'; color: #fff; box-shadow: 0 4px 0 var(--ink), 0 0 26px #ffc83daa; animation: bet-bob 2.4s ease-in-out infinite; }
+.bet-big { position: relative; display: grid; place-items: center; min-width: 92px; height: 92px; padding: 0 16px 2px; border-radius: 28px; border: 3px solid var(--ink); font: 400 44px/1 'Lilita One'; color: #fff; box-shadow: 0 4px 0 var(--ink), 0 0 26px #ffc83daa; animation: bet-bob 2.4s ease-in-out infinite; }
 @keyframes bet-bob { 50% { translate: 0 -5px; rotate: -4deg; } }
 .bet-big.b1 { background: linear-gradient(#cfc8e8, #9a92c4); box-shadow: 0 4px 0 var(--ink); }
 .bet-big.b2 { background: linear-gradient(#7fe0a0, #2fae6a); }
@@ -2575,25 +2606,28 @@ html:not(.dev-on) .dev-pill { display: none; }
 .bet-hero .rays { width: 190px; height: 190px; z-index: 0; }
 .bet-hero .bet-big { z-index: 1; }
 .bet-sell { display: grid; justify-items: center; gap: 8px; }
+/* 9 nov 2026: lo que gana va en un panel dorado sin contornos (no parece botón) y las fichas para escoger en su
+   carril lila, con aire entre ellas: así se distingue qué se gana y qué se toca. */
+.bet-modal .bet-sell { padding: 10px 18px 12px; border-radius: 18px; background: #fff3c4; }
 .bet-lead { margin: 0; font: 400 20px/1 'Lilita One'; color: #c27a00; }
-.bet-loot { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px 10px; }
+.bet-loot { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 20px; }
 /* 9 nov 2026: cada número aparta el ancho que tendrá con la apuesta más alta (las pastillas no cambian de tamaño
    y no se reacomodan al cambiar la apuesta). */
-.bet-loot .bl { position: relative; display: flex; align-items: center; gap: 5px; padding: 5px 12px 6px 8px; border-radius: 99px; background: linear-gradient(#fffaf0, #ffeccc); border: 2.5px solid var(--ink); box-shadow: 0 3px 0 var(--ink); }
-.bet-loot .bl > .ico { width: 30px; height: 30px; }
-.bet-loot .bl b { font: 400 26px/1 'Lilita One'; color: #ffc83d; text-align: center; font-variant-numeric: tabular-nums; }
+.bet-loot .bl { position: relative; display: flex; align-items: center; gap: 5px; }
+.bet-loot .bl > .ico { width: 32px; height: 32px; }
+.bet-loot .bl b { font: 400 30px/1 'Lilita One'; color: #ffc83d; text-align: center; font-variant-numeric: tabular-nums; }
 .bet-loot .bl s { font: 400 17px/1 'Lilita One'; color: #9a93bd; text-decoration-thickness: 2px; text-align: center; font-variant-numeric: tabular-nums; }
 .bet-loot .bl.met > .ico:last-child { width: 20px; height: 20px; margin-left: -2px; }
 .bl-x { position: absolute; top: -10px; right: -8px; padding: 0 5px 1px; border-radius: 8px; border: 2px solid var(--ink); font: 400 14px/1.15 'Lilita One'; font-style: normal; color: #fff; background: #ffb31a; rotate: 8deg; }
 .bl-x.b2 { background: #2fae6a; } .bl-x.b3 { background: #8a5cf0; } .bl-x.b10 { background: #2a1f66; color: #ffd85a; }
 .bl-x[hidden] { display: none; }
 /* Fichas ×N: todas claras con su ×N de su color; la escogida se llena de su color, sube, lleva palomita y orilla dorada. */
-.bet-opts { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 14px; }
-.bet-opt { --bc: #8d84b8; --bg: linear-gradient(#cfc8e8, #9a92c4); position: relative; flex: 1 1 0; min-width: 52px; max-width: 90px; height: 52px; display: grid; place-items: center; border-radius: 16px; border: 2.5px solid var(--ink); background: #fffdf7; box-shadow: 0 3px 0 var(--ink); opacity: .85; transition: translate .2s, opacity .2s; }
+.bet-opts { display: flex; flex-wrap: nowrap; justify-content: center; gap: 14px; margin: 18px auto 0; padding: 12px 14px 10px; width: fit-content; max-width: 100%; border-radius: 20px; background: #ece6f8; box-shadow: inset 0 3px 0 #0b062a14; }
+.bet-opt { --bc: #8d84b8; --bg: linear-gradient(#cfc8e8, #9a92c4); position: relative; flex: 0 1 62px; min-width: 50px; height: 50px; display: grid; place-items: center; border-radius: 16px; border: 2.5px solid var(--ink); background: #fffdf7; box-shadow: 0 3px 0 var(--ink); opacity: .85; transition: translate .2s, opacity .2s; }
 .bet-opt.b2 { --bc: #2fae6a; --bg: linear-gradient(#7fe0a0, #2fae6a); } .bet-opt.b3 { --bc: #8a5cf0; --bg: linear-gradient(#b48cff, #8a5cf0); } .bet-opt.b5 { --bc: #e8a10f; --bg: linear-gradient(#ffe08a, #ffb31a); } .bet-opt.b10 { --bc: #2a1f66; --bg: linear-gradient(#4a3a9e, #2a1f66); }
 .bet-opt.sel.b10 b { color: #ffd85a; }
 .bet-opt b { font: 400 24px/1 'Lilita One'; color: var(--bc); -webkit-text-stroke: 0; text-shadow: none; }
-.bet-opt > .ico { position: absolute; top: -9px; right: -9px; width: 22px; height: 22px; padding: 2px; border-radius: 50%; background: var(--gold); border: 2px solid var(--ink); opacity: 0; scale: .4; transition: opacity .2s, scale .25s cubic-bezier(.34, 1.45, .64, 1); }
+.bet-opt > .ico { position: absolute; top: -8px; right: -8px; width: 20px; height: 20px; padding: 2px; border-radius: 50%; background: var(--gold); border: 2px solid var(--ink); opacity: 0; scale: .4; transition: opacity .2s, scale .25s cubic-bezier(.34, 1.45, .64, 1); }
 .bet-opt.sel { background: var(--bg); opacity: 1; translate: 0 -4px; box-shadow: 0 5px 0 var(--ink), 0 0 0 3px var(--gold); }
 .bet-opt.sel b { color: #fff; -webkit-text-stroke: 1.5px var(--ink); paint-order: stroke fill; text-shadow: 0 2px 0 var(--ink); }
 .bet-opt.sel > .ico { opacity: 1; scale: 1; }
@@ -2611,9 +2645,13 @@ html:not(.dev-on) .dev-pill { display: none; }
 .bc-met .ico { width: 16px; height: 16px; }
 .bc-full[hidden], .bc-met[hidden] { display: none; }
 .bet-cost.free { color: #c27a00; } .bet-cost.free .ico { width: 22px; height: 22px; }
+/* 9 nov 2026: las fichas siempre en un renglón; la ventana más ancha para que quepan con aire (en PC se bajaba el ×10)
+   y en teléfono parado se apretan un poco. */
+.modal.bet-modal { width: min(500px, 100%); }
+@media (max-width: 420px) { .bet-opts { gap: 8px; padding: 10px 10px 8px; } .bet-modal .bet-opt { min-width: 46px; height: 46px; } .bet-opt b { font-size: 21px; } }
 /* 1.ª apuesta (gratis): las demás fichas bloqueadas y apagadas. */
 .bet-opt:disabled { opacity: .35; filter: grayscale(.7); box-shadow: 0 2px 0 var(--ink); }
-@media (max-width: 420px) { .bet-top { flex-direction: column; gap: 4px; } .bet-hero { width: 96px; height: 96px; } .bet-big { width: 76px; height: 76px; font-size: 36px; } }
+@media (max-width: 420px) { .bet-top { flex-direction: column; gap: 4px; } .bet-hero { width: 96px; height: 96px; } .bet-big { min-width: 76px; height: 76px; padding: 0 12px 2px; font-size: 36px; } }
 /* Noticia al subir de apuesta (openBetUp, ancho de las presentaciones): la ficha, la frase grande y un cuadrito por
    premio con su etiqueta ×N. La presentación al abrirse usa la de desbloqueo (openUnlock 'apuesta'). */
 .br-lead { margin: 2px 0 0; text-align: center; font: 400 28px/1.1 'Lilita One'; color: #ffc83d; }
@@ -2624,15 +2662,27 @@ html:not(.dev-on) .dev-pill { display: none; }
 .br-pic > .ico { width: 36px; height: 36px; }
 .br-pic .bl-x { top: -8px; right: -20px; }
 .unlock-apuesta .ul-hero .bet-big { animation: none; }
+/* 9 nov 2026: en la presentación (y en las de ×3, ×5, ×10) la ficha se ensancha con su número (×10 cabía apretado),
+   se achica con el hueco del dibujo y la etiqueta va afuera de la esquina, sin taparla. */
+[class*="unlock-apuesta"] .ul-hero .bet-big { width: auto; min-width: 92px; height: 86px; padding: 0 18px 2px; font-size: 44px; border-radius: 26px; }
+[class*="unlock-apuesta"] .ul-new { top: -16px; right: -34px; }
+@media (max-width: 420px) { [class*="unlock-apuesta"] .ul-hero .bet-big { min-width: 80px; height: 76px; padding: 0 14px 2px; font-size: 38px; border-radius: 22px; } }
+@media (max-height: 500px) {
+  [class*="unlock-apuesta"] .ul-hero .bet-big { min-width: 64px; height: 58px; padding: 0 12px 2px; font-size: 30px; border-radius: 18px; box-shadow: 0 3px 0 var(--ink), 0 0 18px #ffc83daa; }
+  [class*="unlock-apuesta"] .ul-new { top: -12px; right: -30px; font-size: 13px; padding: 0 8px 1px; }
+  [class*="unlock-apuesta"] .evi-hero .rays { width: 150px; height: 150px; }
+}
 @media (orientation: landscape) and (max-height: 520px) {
   .bet-hero { width: 76px; height: 76px; } .bet-hero .rays { width: 120px; height: 120px; }
-  .bet-modal .bet-big { width: 62px; height: 62px; font-size: 30px; border-radius: 20px; }
+  .bet-modal .bet-big { min-width: 62px; height: 62px; padding: 0 10px 2px; font-size: 30px; border-radius: 20px; }
   .bet-loot .bl b { font-size: 21px; } .bet-loot .bl > .ico { width: 24px; height: 24px; }
-  .bet-opts { margin-top: 8px; } .bet-modal .bet-opt { height: 44px; }
+  .bet-modal .bet-sell { padding: 6px 14px 8px; gap: 4px; } .bet-lead { font-size: 17px; }
+  /* Acostado, las fichas en un solo renglón (9 nov 2026): en dos, "Cuesta…" ya no cabía abajo. */
+  .bet-opts { flex-wrap: nowrap; margin-top: 10px; padding: 9px 12px 7px; gap: 12px; } .bet-modal .bet-opt { height: 42px; min-width: 54px; }
   .br-lead { font-size: 22px; } .br-tiles { margin-top: 8px; } .br-tile { padding: 8px 6px; gap: 4px; }
 }
 /* Victoria con apuesta: el ×N cae como sello junto a las estrellas; las burbujas llevan su ×N del color de la apuesta. */
-.win-bet { position: absolute; right: 8%; top: 6%; z-index: 2; padding: 2px 10px 4px; border-radius: 14px; border: 2.5px solid var(--ink); background: linear-gradient(#ffe08a, #ffb31a); font: 400 30px/1 'Lilita One'; color: #fff; box-shadow: 0 3px 0 var(--ink); rotate: 12deg; animation: win-bet .5s 1.3s cubic-bezier(.34, 1.45, .64, 1) backwards; }
+.win-bet { position: absolute; left: 50%; bottom: 6px; translate: -50% 0; z-index: 2; padding: 3px 14px 5px; border-radius: 14px; border: 2.5px solid var(--ink); background: linear-gradient(#ffe08a, #ffb31a); font: 400 36px/1 'Lilita One'; color: #fff; box-shadow: 0 3px 0 var(--ink); rotate: -4deg; animation: win-bet .5s 1.3s cubic-bezier(.34, 1.45, .64, 1) backwards; }
 @keyframes win-bet { from { scale: 3; opacity: 0; rotate: -20deg; } }
 .bet-note { color: #c27a00; font-weight: 800; }
 .x2.xbet { background: linear-gradient(#ffe08a, #ffb31a); color: #7a4a00; text-shadow: none; }
@@ -2641,7 +2691,8 @@ html:not(.dev-on) .dev-pill { display: none; }
    ×10 en todos lados (fichas y ficha grande también): morado oscuro con letra dorada. */
 .win-bet, .x2.xbet, .bl-x, .bet-pill { border: 2.5px solid var(--ink); border-radius: 9px; background: #ffb31a; color: #fff; text-shadow: 0 1.5px 0 #0003; box-shadow: 0 2px 0 var(--ink); -webkit-text-stroke: 0; }
 .x2.xbet, .bl-x { border-width: 2px; border-radius: 7px; rotate: 6deg; animation: none; }
-.win-bet { border-radius: 14px; rotate: 6deg; }
+/* 9 nov 2026: el sello va al centro, encimado abajo de la estrella grande (en la orilla casi no se veía). */
+.win-bet { border-radius: 14px; rotate: -4deg; }
 .win-bet.b2, .x2.xbet.b2, .bl-x.b2, .bet-pill.b2 { background: #2fae6a; color: #fff; }
 .win-bet.b3, .x2.xbet.b3, .bl-x.b3, .bet-pill.b3 { background: #8a5cf0; color: #fff; }
 .win-bet.b5, .x2.xbet.b5, .bl-x.b5, .bet-pill.b5 { background: #ffb31a; color: #fff; }
@@ -2678,3 +2729,121 @@ html:not(.dev-on) .dev-pill { display: none; }
 /* ×N en Tu camino y en Cómo jugar: la etiqueta de Jugar, quieta. */
 .rd-pic .go-bet.dbet { font-size: 18px; padding: 1px 6px 2px; }
 .step .ill .go-bet.dbet { font-size: 17px; margin: 0 2px; rotate: 6deg; }
+
+/* Dev: colecciones de personaje todas juntas (openSets, 9 nov 2026). */
+.dsets { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+.dset { display: grid; gap: 8px; padding: 10px 12px 12px; border-radius: 18px; background: #fff; border: 2.5px solid var(--ink); box-shadow: 0 3px 0 var(--ink); text-align: left; }
+.dset header { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+.dset header b { font: 400 19px 'Lilita One'; }
+.dset header small { font-weight: 700; color: #7a6f9d; }
+.dset-k { margin-left: auto; padding: 0 9px 1px; border-radius: 99px; background: #ffe2cc; color: #b8562a; font: 800 12px 'Baloo 2'; }
+.dset-row { display: flex; align-items: center; gap: 12px; }
+.dset-av { flex: none; width: 96px; height: 96px; display: grid; place-items: center; }
+.dset-av .avatar.huge { width: 70px; height: 70px; }
+.dset-mid { min-width: 0; display: grid; justify-items: center; gap: 2px; }
+.dset-mid .title-chip { max-width: 100%; white-space: normal; text-align: center; }
+.dset-mid .trav-prev { width: 96px; height: 96px; }
+.dset-mid small { font-weight: 700; color: #7a6f9d; font-size: 12px; }
+.dset-x { display: flex; align-items: center; justify-content: center; gap: 14px; min-height: 96px; padding: 6px; border-radius: 14px; background: #f6f1e6; }
+.dset-x .frame-prev { zoom: .6; padding: 10px 14px 4px 6px; }
+.dset-x .space-prev { width: 100%; height: 96px; }
+
+/* Colección de personaje: su ficha (openSetSheet). */
+.ss-deal { margin-top: 12px; }
+.ss-all { gap: 6px; }
+.ss-all b { font-weight: 400; }
+.ss-done { display: flex; align-items: center; justify-content: center; gap: 6px; margin: 0; padding: 10px; border-radius: 14px; background: #e3f7ea; color: #1f8a50; font: 400 16px 'Lilita One'; }
+.ss-done.lock { background: #f1ecfb; color: #6e66a3; }
+.ss-done .ico { width: 22px; height: 22px; }
+
+/* Tienda (9 nov 2026): lo recién abierto lleva su etiqueta; los paquetes muestran cuántas piezas tienes. */
+.sitem .s-new { position: absolute; z-index: 2; right: -4px; top: -8px; padding: 1px 8px 2px; border-radius: 99px; background: #ff4d6d; color: #fff; border: 2px solid var(--ink); font: 400 13px 'Lilita One'; font-style: normal; rotate: 8deg; animation: wobble 2.4s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .sitem .s-new { animation: none; } }
+.stabs[hidden] { display: none; }
+.sg-sets .s-art { height: 112px; }
+.sg-sets .sset .avatar.huge { width: 78px; height: 78px; }
+.sset-n { position: relative; display: block; width: 84%; margin: 2px auto 4px; padding: 1px 0 2px; border-radius: 99px; background: #f1ecfb; overflow: hidden; font: 800 12px 'Baloo 2'; color: #5a4a99; }
+.sset-n i { position: absolute; inset: 0 auto 0 0; width: var(--p); background: #c9f0d6; z-index: 0; }
+
+.sset-n span { position: relative; }
+.btn.ss-all::after { content: ''; position: absolute; inset: 0 auto 0 -40%; width: 30%; background: linear-gradient(100deg, transparent, #ffffff88, transparent); animation: ss-shine 2.6s ease-in-out infinite; pointer-events: none; }
+@keyframes ss-pulse { 50% { scale: 1.03; } }
+@keyframes ss-shine { 0%, 40% { translate: 0 0; } 100% { translate: 520% 0; } }
+@media (prefers-reduced-motion: reduce) { .btn.ss-all, .btn.ss-all::after { animation: none; } }
+
+/* 9 nov 2026: las 4 pestañas de la tienda caben en un renglón también en vertical (si no cabe el nombre, "…"). */
+.shop-modal .sgroups { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.shop-modal .sgroup span { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 420px) { .shop-modal .sgroups { gap: 3px; padding: 4px; } .shop-modal .sgroup { gap: 3px; padding: 0 3px 1px; font-size: 13.5px; } .shop-modal .sgroup .ico { width: 20px; height: 20px; } }
+/* Colores vivos en los paquetes (el usuario: "no hay colores apagados en la app"): barra verde con contorno y el
+   el precio como los de la tienda. */
+.sset-n { width: 86%; padding: 2px 0 3px; background: #fff3c4; border: 2px solid var(--ink); color: var(--ink); font-size: 12.5px; }
+.sset-n i { background: linear-gradient(#7fe0a0, #2fae6a); }
+
+/* Ficha del paquete dentro de la tienda (9 nov 2026): "Regresar", el avatar y su título lado a lado (cabe en
+   vertical) y las piezas en columnas: 5 por renglón en la tienda ancha, 3 en el teléfono; si no caben, se bajan. */
+.shead.in-set :is(.sgroups, .stabs) { display: none; }
+.sgrid.sg-setsheet { display: block; }
+.ss-sheet { display: grid; gap: 10px; }
+.ss-back { justify-self: start; display: inline-flex; align-items: center; gap: 4px; height: 38px; padding: 0 14px 2px 8px; border-radius: 13px; background: #fff; border: 2.5px solid var(--ink); box-shadow: inset 0 -3px 0 var(--cream-d), 0 2px 0 var(--ink); font: 400 16px 'Lilita One'; color: var(--ink); }
+.ss-back .ico { width: 22px; height: 22px; }
+.ss-head { display: flex; align-items: center; justify-content: center; gap: 14px; }
+.ss-hero { position: relative; flex: none; width: 108px; height: 108px; display: grid; place-items: center; }
+.ss-hero .rays { width: 190px; height: 190px; z-index: 0; }
+.ss-hero .avatar { z-index: 1; width: 80px; height: 80px; }
+.ss-who { min-width: 0; display: grid; justify-items: start; gap: 4px; text-align: left; }
+.ss-who > b { font: 400 24px/1 'Lilita One'; }
+.ss-who .title-chip { max-width: 100%; white-space: normal; }
+.ss-who small { font-weight: 700; color: #6e66a3; }
+.ss-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; }
+.ss-cell { display: grid; justify-items: center; align-content: start; gap: 2px; padding: 8px 6px 9px; border-radius: 16px; background: #fff; border: 2.5px solid var(--ink); box-shadow: 0 3px 0 var(--ink); text-align: center; }
+.ss-cell > small { font: 800 11px 'Baloo 2'; color: #8a5cf0; text-transform: uppercase; letter-spacing: .05em; }
+.ss-cell > b { font: 400 14px/1.1 'Lilita One'; min-height: 2.2em; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.ss-pic { width: 76px; height: 76px; display: grid; place-items: center; overflow: hidden; border-radius: 12px; background: #fff3c4; }
+.ss-pic .avatar { width: 54px; height: 54px; font-size: 26px; }
+.ss-pic .trav-prev { width: 76px; height: 76px; }
+.ss-pic .card-prev { zoom: .72; }
+.ss-pic .face-prev { zoom: .66; }
+.ss-pic .space-prev { width: 76px; height: 76px; border-radius: 12px; }
+.ss-pic .frame-prev { zoom: .34; padding: 10px 12px 4px 6px; }
+.ssk-title .title-chip { zoom: .6; max-width: none; white-space: normal; text-align: center; }
+.ss-st { margin-top: 4px; }
+@media (max-width: 420px) { .ss-list { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; } .ss-pic { width: 64px; height: 64px; } .ss-pic .trav-prev { width: 64px; height: 64px; } .ss-hero { width: 90px; height: 90px; } .ss-hero .avatar { width: 66px; height: 66px; } .ss-who > b { font-size: 20px; } .ss-cell > b { font-size: 13px; } }
+@media (max-height: 500px) { .ss-hero { width: 80px; height: 80px; } .ss-hero .avatar { width: 60px; height: 60px; } .ss-list { grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); } }
+/* "Llevarte todo" (9 nov 2026): el botón dorado de la tienda con su brillo y pulso; lo tachado como cualquier
+   descuento del market y el −25% en la misma cinta del meteorito. Sin monedas, gris como los precios de la tienda. */
+.btn.ss-all { position: relative; overflow: hidden; animation: ss-pulse 1.8s ease-in-out infinite; }
+.btn.ss-all .ss-off { margin-left: 2px; padding: 1px 8px 2px; border-radius: 99px; background: #ffe2cc; color: #d6451f; font: 400 14px 'Lilita One'; font-style: normal; text-shadow: none; }
+.btn.ss-all.short { background: #eee6d6; box-shadow: inset 0 -5px 0 #d8ccb4, 0 3px 0 var(--ink); color: #8a80ad; animation: none; }
+.btn.ss-all.short::after { display: none; }
+.ss-st :is(.s-price, .s-use, .s-on, .s-lock) { margin-top: 0; }
+.ss-st .s-price s { display: none; }
+.btn.ss-all .ss-off.met { display: inline-flex; align-items: center; gap: 2px; padding-left: 4px; }
+.btn.ss-all .ss-off.met .ico { width: 16px; height: 16px; }
+/* Como las tarjetas de la tienda de la colección (.coffer): etiqueta morada arriba con su tipo y el mismo fondo. */
+.ss-list { row-gap: 18px; padding-top: 8px; }
+.ss-cell { position: relative; padding-top: 14px; box-shadow: inset 0 -5px 0 var(--cream-d), 0 3px 0 var(--ink); background: linear-gradient(#fff, #f6efff); }
+.ss-cell .c-ex .ico, .sset .c-ex .ico { width: 13px; height: 13px; }
+.sg-sets { row-gap: 22px; padding-top: 10px; }
+.sset { background: linear-gradient(#fff, #f6efff); }
+/* Piezas de la ficha centradas: si son pocas no queda hueco a la orilla (9 nov 2026). */
+.ss-list { display: flex; flex-wrap: wrap; justify-content: center; }
+.ss-cell { flex: 0 0 112px; }
+@media (max-width: 420px) { .ss-cell { flex-basis: calc((100% - 14px) / 3); } }
+@media (max-height: 500px) { .ss-cell { flex-basis: 100px; } }
+/* "Usar todas" arriba de "Llevarte todo" (9 nov 2026). */
+.ss-deal { display: grid; gap: 8px; }
+/* Recuento de piezas del paquete: texto con una barrita delgada debajo, sin contorno (no debe parecer botón). */
+.sset-n { width: 78%; margin: 0 auto 6px; padding: 0 0 7px; border: 0; border-radius: 0; background: none; overflow: visible; font: 800 12.5px/1.2 'Baloo 2'; color: #5a4a99; }
+.sset-n::before { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 5px; border-radius: 99px; background: #e6dcf8; }
+.sset-n i { inset: auto auto 0 0; height: 5px; border-radius: 99px; z-index: 1; }
+/* Sticker del personaje en la cabecera de la ventana del perfil (marcos de colección, setCSS). */
+@keyframes mr-sticker { 50% { rotate: -4deg; translate: 0 -3px; } }
+@media (prefers-reduced-motion: reduce) { .modal[class*="mr-"] > .mhead::before { animation: none !important; } }
+/* Recuento del paquete: solo el texto (9 nov 2026, el usuario: sin barras). */
+.sset-n { padding: 0; margin: 0 auto 4px; }
+.sset-n::before { content: none; }
+.ss-deal:empty { display: none; }
+/* En la ficha, los estados en un renglón ("Mundo 326" no se parte). */
+.ss-st :is(.s-price, .s-use, .s-on, .s-lock) { white-space: nowrap; font-size: 14px; padding: 1px 10px 3px 5px; }
+.ss-st .ico { width: 19px; height: 19px; }

@@ -1,6 +1,7 @@
 // Dibujos del juego (SVG): estilo "toon" con contorno de tinta y sombreado por bloques,
 // el mismo trazo de los planetas. Reemplaza a lowpoly.js con la misma interfaz.
 import { THEMES, themeKey } from './themes.js';
+import { setArt } from './set-art.js';
 export const INK = '#2a1f5c';
 const K = INK;
 let uid = 0;
@@ -352,12 +353,30 @@ const ICONS = {
   rocket: () => `<g transform="rotate(35 16 16)">${tshape('M9.5 20 6 26l6-1.5zM22.5 20 26 26l-6-1.5z', '#ff5f7e', '#d63d5f', '', 1.8)}${tshape('M16 3c4.5 3.5 6.5 9 6.5 14.5V23h-13v-5.5C9.5 12 11.5 6.5 16 3z', '#fff6e6', '#d9cfee', '', 2.2)}${tshape(CIRCLE(16, 13.5, 3.2), '#5fc7e8', '#2f86c0', '', 1.8)}${tshape('M13 23h6l-3 6.5z', '#ffc83d', '#ff8a3d', '', 1.6)}</g>`,
   face: () => `<g transform="rotate(-8 16 16)">${tshape('M9 4h14a3 3 0 0 1 3 3v18a3 3 0 0 1-3 3H9a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3z', '#fffdf7', '#efe4d0', '', 2.2)}</g><text x="16" y="22.5" text-anchor="middle" font-family="Lilita One" font-size="15" fill="#e8434f" transform="rotate(-8 16 16)">A</text>`,
   user: () => tshape(CIRCLE(16, 17, 12), '#ff9c5b', '#e2753a', '', 2.2) + `<circle cx="12" cy="16" r="1.8" fill="${K}"/><circle cx="20" cy="16" r="1.8" fill="${K}"/><path d="M12 21q4 3 8 0" fill="none" stroke="${K}" stroke-width="2" stroke-linecap="round"/>`,
+  // Colección de Copito el conejo (9 nov 2026): sus 4 verduras (figuras de su cara de cartas, su marco y su reverso).
+  zanahoria: () => tshape('M21.6 6.6q3.4-.6 4.6 2 1.2 2.8-1.4 4.8L8.4 28.2q-2.6 1.6-3.6.4-.8-1 .6-3.4z', '#ff8a3d', '#e2652a', `<path d="M17 13.4l2.4 1.8M13.6 18.4l2.2 1.6M10.4 23l2 1.4" stroke="#c4501f" stroke-width="1.4" stroke-linecap="round"/><path d="M19.6 10q-3.6 5.2-7.4 10.2" stroke="#ffc08a" stroke-width="1.6" stroke-linecap="round" opacity=".8"/>`, 2.2)
+    + tshape('M22.4 7.4q-2.6-4.4.2-6.4 2.4 2.4 1.4 6.8z', '#5fbf5a', '#3f9a46', '', 1.8) + tshape('M23.6 7.6q2.4-4.8 6-3.8-1.2 3.6-5.4 4.8z', '#5fbf5a', '#3f9a46', '', 1.8) + tshape('M24.4 9.4q4.8-1.4 6.4 1.6-3.8 1.6-6.2-.4z', '#7fd36a', '#56b83a', '', 1.8),
+  lechuga: () => tshape('M16 29C7 29 3.6 23 4.4 17.4 5 13 8.4 10.6 11 11.2 11.6 7 14 5 16 5s4.4 2 5 6.2c2.6-.6 6 1.8 6.6 6.2.8 5.6-2.6 11.6-11.6 11.6z', '#5fbf5a', '#3f9a46', '', 2.2)
+    + tshape('M16 27.4c-5.4 0-8-3.8-7.4-8.2.4-3.6 3.4-6 7.4-6s7 2.4 7.4 6c.6 4.4-2 8.2-7.4 8.2z', '#b8ec8a', '#8fd46a', `<path d="M16 26.4V15.4M16 22l-3.6-3M16 19.4l3.4-2.8M16 24.4l3-2.4" stroke="#6fbf4a" stroke-width="1.3" stroke-linecap="round" fill="none"/><ellipse cx="12.6" cy="16.4" rx="1.8" ry="1" fill="#fff" opacity=".6" transform="rotate(-30 12.6 16.4)"/>`, 1.8),
+  rabano: () => tshape('M16 11.4q-4.4-7.4-9.4-5.4 1.4 5.4 9.4 5.4z', '#5fbf5a', '#3f9a46', '', 1.8) + tshape('M16 11.4q4.4-7.4 9.4-5.4-1.4 5.4-9.4 5.4z', '#7fd36a', '#56b83a', '', 1.8)
+    + `<path d="M16 26.4v4.4" stroke="${K}" stroke-width="3.4" stroke-linecap="round"/><path d="M16 26.4v4.4" stroke="#fff6ee" stroke-width="1.4" stroke-linecap="round"/>`
+    + tshape(CIRCLE(16, 19.4, 8.6), '#ff4f7e', '#d6305f', `<path d="M10.2 22q1.6 4 5.8 4.6 4.2-.6 5.8-4.6" fill="#fff6ee" opacity=".9"/><ellipse cx="12.4" cy="16" rx="2.2" ry="1.4" fill="#fff" opacity=".65" transform="rotate(-35 12.4 16)"/>`, 2.2),
+  elote: () => tshape('M16 2.6c3.8 0 5.8 5 5.8 11.6S19.8 26 16 26s-5.8-5.2-5.8-11.8S12.2 2.6 16 2.6z', '#ffd23d', '#f0a81a', [[13.4, 7], [16, 6], [18.6, 7], [13, 11], [15.6, 10.4], [18.4, 11], [12.8, 15], [15.6, 14.6], [18.4, 15], [13, 19], [15.8, 18.8], [18.4, 19], [14.4, 22.6], [17.2, 22.6]].map(([x, y]) => `<ellipse cx="${x}" cy="${y}" rx="1.1" ry="1.3" fill="#fff3a8"/>`).join(''), 2.2)
+    + tshape('M16 30.4C9 29.4 5.4 22 6.4 13.4 9 18.4 12.4 22.4 16 30.4z', '#5fbf5a', '#3f9a46', '', 2) + tshape('M16 30.4c7-1 10.6-8.4 9.6-17-2.6 5-6 9-9.6 17z', '#7fd36a', '#56b83a', '', 2),
 };
+// Dibujos de las colecciones de personaje (set-art.js): iconos aquí; marcos y reversos se suman más abajo.
+const SA = setArt({ tshape, CIRCLE, starPath, K, ICONS });
+for (const k in SA.icons) {
+  if (ICONS[k]) throw new Error(`Icono repetido: ${k}`);
+  ICONS[k] = SA.icons[k];
+}
 // icon(nombre): los colores viejos (light, dark) ya no se usan; se conserva la firma.
 export const icon = (name, _light, _dark, cls = '') => svg((ICONS[name] || ICONS.star)(), `i-${name} ${cls}`);
 export const star = (on = true, cls = '') => svg(on ? ICONS.star() : ICONS.starOff(), `star ${cls}`);
 export const coin = (cls = '') => svg(ICONS.coin(), `coin ${cls}`);
 // Un icono como imagen de fondo (para dibujos de fondo en CSS): op = opacidad, rot = giro.
+// El dibujo de un icono sin su <svg> (para armar otros SVG: fondos de espacio y postales de sets.js).
+export const iconInner = (name) => (ICONS[name] || ICONS.star)();
 export const iconURL = (name, op = 0.25, rot = 0) => svgUrl(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><g opacity="${op}"${rot ? ` transform="rotate(${rot} 16 16)"` : ''}>${(ICONS[name] || ICONS.star)()}</g></svg>`);
 
 function lockInner(c, d) {
@@ -375,18 +394,8 @@ export const curtainIcon = () => svg(`${tshape('M2 4h28v4H2z', '#c9893a', '#a86a
 // ---------- Reversos ----------
 // emb: planetita del centro · star: estrella grande (premios de racha: carta regalo violeta y comodín dorado).
 export const BACKS = {
-  // 8 nov 2026: reversos nuevos de la tienda.
-  hongos: { a: '#e6f5d0', b: '#b8dc8a', dots: '#7fae5a',
-    art: () => tshape('M42 76h16l3 26H39z', '#fff6e6', '#e6d6b8', '', 3) + tshape('M22 78Q22 46 50 44Q78 46 78 78z', '#e8434f', '#c22c49', '<circle cx="38" cy="60" r="5" fill="#fff"/><circle cx="56" cy="54" r="4" fill="#fff"/><circle cx="64" cy="68" r="3.4" fill="#fff"/><circle cx="46" cy="72" r="2.6" fill="#fff"/>', 3.5) },
-  olas: { a: '#4aa8de', b: '#2f86c0', flat: true, nodots: true,
-    bg: () => Array.from({ length: 8 }, (_, i) => `<path d="M0 ${20 + i * 16}q10.5-8 21 0t21 0 21 0 21 0 21 0" fill="none" stroke="${i % 2 ? '#9fd8ff' : '#e6f6ff'}" stroke-width="4" stroke-linecap="round" opacity=".7"/>`).join(''),
-    art: () => tshape(CIRCLE(50, 70, 16), '#ffc83d', '#ec9a17', '<circle cx="45" cy="65" r="4" fill="#fff3b8"/>', 3.5) },
-  rayo: { a: '#3d2f8f', b: '#2e2270', dots: '#ffe58a', art: () => tshape('M60 34 34 76h17l-9 32 32-46H57l11-28z', '#ffe066', '#ffb31a', '', 3.5) },
-  reloj: { a: '#2fb6a0', b: '#1f9a7c', dots: '#e6fffb',
-    art: () => tshape(CIRCLE(50, 70, 27), '#fff6e6', '#e6d6b8', `${Array.from({ length: 12 }, (_, i) => { const a = (i * Math.PI) / 6, r1 = i % 3 ? 21 : 18; return `<path d="M${(50 + Math.cos(a) * r1).toFixed(1)} ${(70 + Math.sin(a) * r1).toFixed(1)}L${(50 + Math.cos(a) * 24).toFixed(1)} ${(70 + Math.sin(a) * 24).toFixed(1)}" stroke="${K}" stroke-width="${i % 3 ? 1.8 : 3}" stroke-linecap="round"/>`; }).join('')}<path d="M50 70V54M50 70l11 6" stroke="${K}" stroke-width="3.4" stroke-linecap="round"/><circle cx="50" cy="70" r="3" fill="#ff5f7e" stroke="${K}" stroke-width="1.6"/>`, 3.5) },
-  anillo: { a: '#1a1433', b: '#120e26', dots: '#ffe58a',
-    art: () => `<circle cx="50" cy="78" r="22" fill="none" stroke="${K}" stroke-width="15"/><circle cx="50" cy="78" r="22" fill="none" stroke="#ffc83d" stroke-width="9"/><circle cx="50" cy="78" r="22" fill="none" stroke="#fff3b8" stroke-width="2" stroke-dasharray="10 40" stroke-linecap="round"/>`
-      + tshape('M50 40l12 14-12 14-12-14z', '#ff5f7e', '#d63d5f', '<path d="M45 50l5-5" stroke="#fff" stroke-width="2" stroke-linecap="round"/>', 3.5) },
+  // 9 nov 2026: Hongos, Olas, Rayo, Reloj y Anillo se quitaron (muy simples). Los de las colecciones de personaje
+  // están en set-art.js.
   clasico: { a: '#2b2b7a', b: '#22226a', emb: ['#ffc83d', '#ec9a17', '#ff9c5b', '#8fe8ff'] },
   coral: { a: '#ff6f61', b: '#e0524a', moon: true, dots: '#fff1d6' },
   menta: { a: '#2fbf9a', b: '#1f9a7c', emb: ['#ffd27a', '#e8a94a', '#ff7a9a', '#fff6e6'] },
@@ -624,6 +633,10 @@ export const BACKS = {
         + `<path d="${spark(76, 36, 10)}" fill="#fff6c9" stroke="${K}" stroke-width="3" stroke-linejoin="round"/><path d="${spark(25, 104, 8)}" fill="#fff6c9" stroke="${K}" stroke-width="3" stroke-linejoin="round"/>`;
     } },
 };
+for (const k in SA.backs) {
+  if (BACKS[k]) throw new Error(`Reverso repetido: ${k}`);
+  BACKS[k] = SA.backs[k];
+}
 // Reversos de las temáticas (themes.js): su color, puntitos claros y su dibujo grande al centro.
 for (const t of THEMES) BACKS[themeKey(t)] ??= { a: t.main, b: t.dark, dots: t.light, art: () => `<g transform="translate(18 38) scale(2)">${(ICONS[t.ico] || ICONS.star)()}</g>` };
 const backCache = {};
@@ -719,6 +732,118 @@ export const AVATARS = {
     + P('M34 46h32v20Q50 76 34 66z', '#ffd3a8', '#f2b07c', blush(62, 11))
     + eyes(55, 8, 3.8) + smile(63, 4)
     + P('M27 36Q50 28 73 36v7Q50 35 27 43z', '#a9b4d4', '#8f9cc4', `<path d="M36 38h28" stroke="${K}" stroke-width="2" stroke-dasharray="3 3"/>`),
+  // 9 nov 2026 (market de avatares): inspirados en personajes famosos, sin copiarlos.
+  // Segunda tanda (9 nov 2026): anime, caricaturas y cantantes, inspirados sin copiar.
+  // Pip: niño aventurero con gorro blanco de orejas de oso y camisa azul.
+  pip: () => shoulders('#5fc7e8', '#3aa0c8') + P('M30 80l6 24h6l-4-24z', '#5fbf5a', '#3f9a46', '', 2.4)
+    + mirror(P(CIRCLE(28, 22, 9), '#fffdf7', '#e6e0f0', '<circle cx="28" cy="22" r="4" fill="#ffd6e6"/>'))
+    + P('M22 80V46Q22 18 50 18Q78 18 78 46V80Q72 84 68 80V56Q68 40 50 40Q32 40 32 56V80Q28 84 22 80z', '#fffdf7', '#e6e0f0')
+    + P('M32 56Q32 40 50 40Q68 40 68 56V64Q68 80 50 80Q32 80 32 64z', '#ffd3a8', '#f2b07c')
+    + eyes(60, 9, 4) + smile(69, 6) + blush(66, 14),
+  // Gatobot: gato robot redondo azul con cara blanca, nariz roja, bigotes y su cascabel.
+  gatobot: () => shoulders('#2f9ee0', '#1f7ac0') + P('M30 80h40v6H30z', '#e8434f', '#c22c3c', '', 2.4) + P(CIRCLE(50, 90, 6), '#ffd23d', '#e8a12a', '', 2.4)
+    // Orejas de gato con tornillo y antena: que no se confunda con ningún gato robot conocido.
+    + mirror(P('M22 34 18 8 40 22z', '#2f9ee0', '#1f7ac0', '<path d="M23 28 22 15 33 22z" fill="#ff9cc8"/>')) + `<path d="M50 16V6" stroke="${K}" stroke-width="3"/>` + P(CIRCLE(50, 6, 3.6), '#7fe05a', '#56b83a', '', 2)
+    + P(CIRCLE(50, 48, 32), '#2f9ee0', '#1f7ac0') + P('M24 54Q24 30 50 30Q76 30 76 54Q76 76 50 76Q24 76 24 54z', '#fffdf7', '#e6e0f0')
+    + mirror(P(ELL(42, 40, 7, 9), '#fffdf7', '#e6e0f0', `<circle cx="44" cy="42" r="3" fill="${K}"/>`, 3))
+    + P(CIRCLE(50, 51, 4.6), '#e8434f', '#c22c3c', '', 2.6) + `<path d="M50 56v8M38 66q12 8 24 0" stroke="${K}" stroke-width="2.6" fill="none" stroke-linecap="round"/>`
+    + mirror(`<path d="M34 56 20 53M34 61 20 62M34 66 22 70" stroke="${K}" stroke-width="2" stroke-linecap="round"/>`),
+  // Esponjita: esponja de mar rosa con agujeritos, ojos grandes y dientes de conejo.
+  esponjita: () => shoulders('#5fc7e8', '#3aa0c8')
+    // Rosa coral y redondeada (no amarilla ni cuadrada): esponja de mar propia.
+    + P('M24 22Q50 12 76 22Q84 50 76 78Q50 86 24 78Q16 50 24 22z', '#ff9cb4', '#e87a96', [[30, 30, 3], [68, 28, 4], [28, 66, 4], [70, 66, 3], [46, 74, 2.4], [64, 48, 2.4], [30, 48, 2.6]].map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r}" fill="#d6607e"/>`).join(''))
+    + mirror(`<circle cx="40" cy="42" r="8.4" fill="#fff" stroke="${K}" stroke-width="2.6"/><circle cx="41" cy="43" r="4.4" fill="#5fbf5a"/><circle cx="41" cy="43" r="2.2" fill="${K}"/>`)
+    + `<path d="M34 58q16 12 32 0" fill="#8a2a3a" stroke="${K}" stroke-width="2.6"/><path d="M44 60h5v5h-5zM51 60h5v5h-5z" fill="#fff" stroke="${K}" stroke-width="1.6"/>` + blush(56, 22),
+  // Capitán Sombrero: pirata risueño con sombrero de paja de cinta roja y chaleco rojo.
+  capitan: () => shoulders('#e8434f', '#c22c3c') + P('M42 80h16l-8 14z', '#ffd3a8', '#f2b07c', '', 2.4)
+    + mirror(P(CIRCLE(24, 56, 6), '#ffc596', '#eda06c'))
+    + P(CIRCLE(50, 55, 26), '#ffd3a8', '#f2b07c')
+    + P('M26 50Q24 34 50 34Q76 34 74 50L70 44 66 52 60 42 54 50 48 42 42 50 36 42 30 52z', '#2a2a40', '#1a1a2a')
+    + P(ELL(50, 32, 40, 9), '#f2d38a', '#d9b45a', `<path d="M14 32q36 8 72 0" stroke="#c99a3a" stroke-width="1.4" fill="none"/>`)
+    + P('M32 30Q32 12 50 12Q68 12 68 30z', '#f2d38a', '#d9b45a', `<path d="M32 24h36v6H32z" fill="#e8434f"/>`)
+    + eyes(58, 10, 4.4) + `<path d="M40 66q10 10 20 0" fill="#fff" stroke="${K}" stroke-width="2.6" stroke-linejoin="round"/>` + `<path d="M35 62l3 2" stroke="${K}" stroke-width="2" stroke-linecap="round"/>` + blush(64, 18),
+  // Kiko: guerrero de pelo negro en picos, traje naranja con camiseta azul y muñequeras.
+  kiko: () => shoulders('#ff8a1a', '#d6600a') + P('M40 80l10 12 10-12z', '#2f6fc0', '#1f4f9a', '', 2.4)
+    + [[-1, 0], [1, 0]].map(([sx]) => P(`M50 30L${50 + sx * 40} ${22}L${50 + sx * 30} 36L${50 + sx * 44} 46L${50 + sx * 26} 48z`, '#1a1a2a', '#0a0a1a')).join('')
+    + mirror(P(CIRCLE(24, 56, 6), '#ffc596', '#eda06c'))
+    + P(CIRCLE(50, 55, 26), '#ffd3a8', '#f2b07c')
+    + P('M24 46L30 16 40 32 46 8 54 30 64 10 66 32 78 22 76 46Q66 36 58 40 50 32 42 40 34 36 24 46z', '#1a1a2a', '#0a0a1a')
+    + eyes(58, 10, 4.4) + mirror(`<path d="M35 49l9 2" stroke="${K}" stroke-width="3" stroke-linecap="round"/>`) + smile(68, 6),
+  // Luna Estelar: chica mágica de coletas en bolita, tiara con media luna y moño rojo.
+  luna: () => mirror(P('M22 44Q8 60 14 96Q20 100 26 96Q20 70 28 52z', '#ffd84a', '#f0b82a'))
+    + shoulders('#fffdf7', '#e6e0f0') + P('M28 80Q50 92 72 80L68 96H32z', '#2f6fc0', '#1f4f9a', '', 2.4) + P('M42 84q8-6 16 0-8 8-16 0z', '#e8434f', '#c22c3c', '', 2.4)
+    + mirror(P(CIRCLE(24, 32, 11), '#ffd84a', '#f0b82a'))
+    + mirror(P(CIRCLE(23, 56, 6), '#ffc596', '#eda06c'))
+    + P(CIRCLE(50, 54, 26), '#ffd3a8', '#f2b07c')
+    + P('M24 50Q22 26 50 26Q78 26 76 50Q70 40 62 40L58 46 54 38 46 46 42 38 38 46Q30 40 24 50z', '#ffd84a', '#f0b82a')
+    + P('M44 28l6-4 6 4-6 6z', '#ffd23d', '#e8a12a', `<circle cx="50" cy="29" r="1.8" fill="#e8434f"/>`, 2.2)
+    + eyes(58, 10, 4.4) + smile(67, 5) + blush(64, 17),
+  // Estrella Pop: cantante de pelo largo ondulado, diadema con micrófono y vestido de lentejuelas.
+  estrellapop: () => P('M20 40Q10 80 22 100H78Q90 80 80 40z', '#8a4a2a', '#6a331b')
+    + shoulders('#e86ac8', '#c24aa8') + [30, 42, 58, 70].map((x, i) => `<path d="${starPath(x, 92 - (i % 2) * 4, 3, 1.3)}" fill="#fff6c8"/>`).join('')
+    + mirror(P(CIRCLE(24, 56, 6), '#ffc596', '#eda06c'))
+    + P(CIRCLE(50, 54, 26), '#ffd3a8', '#f2b07c')
+    + P('M24 50Q22 22 50 24Q78 22 76 50Q68 36 56 34Q46 42 34 38Q28 42 24 50z', '#8a4a2a', '#6a331b')
+    + `<path d="M24 56Q22 70 34 70" stroke="${K}" stroke-width="5" fill="none"/><path d="M24 56Q22 70 34 70" stroke="#8a8aa8" stroke-width="2.4" fill="none"/>` + P(CIRCLE(36, 70, 3.6), '#4a4270', '#3a3260', '', 2)
+    + eyes(57, 10, 4.4) + `<path d="M44 65q6 6 12 0" fill="#e8434f" stroke="${K}" stroke-width="2.4"/>` + blush(63, 17)
+    + `<path d="${starPath(70, 30, 6, 2.6)}" fill="#ffd23d" stroke="${K}" stroke-width="2" stroke-linejoin="round"/>`,
+  // Rocky: rockero de chamarra negra, pelo en cresta y lentes oscuros.
+  rocky: () => shoulders('#2a2a40', '#1a1a2a') + mirror(P('M30 80l10 6-6 16z', '#3a3a5a', '#2a2a40', '', 2.4)) + P('M42 80h16l-8 12z', '#e8434f', '#c22c3c', '', 2.4)
+    + mirror(P(CIRCLE(24, 56, 6), '#ffc596', '#eda06c'))
+    + P(CIRCLE(50, 55, 26), '#ffd3a8', '#f2b07c')
+    + P('M28 46Q28 30 50 30Q72 30 72 46Q64 40 50 40Q36 40 28 46z', '#2a2a40', '#1a1a2a')
+    + P('M40 34L44 6 50 20 56 4 60 34z', '#e8434f', '#c22c3c')
+    + `<path d="M32 54h36" stroke="${K}" stroke-width="3"/>` + mirror(P('M33 52h14v6a5 5 0 0 1-5 5h-4a5 5 0 0 1-5-5z', '#2a2a40', '#1a1a2a', '<path d="M36 54l4 4" stroke="#8a8aa8" stroke-width="1.6"/>', 2.4))
+    + `<path d="M42 70q8 4 16-2" fill="none" stroke="${K}" stroke-width="3.2" stroke-linecap="round"/>`,
+  // Mina: idol de pelo lila con fleco, aretes de corazón y su moño.
+  mina: () => P('M22 42Q14 76 24 98H76Q86 76 78 42z', '#c9a6ff', '#a07ae0')
+    + shoulders('#fffdf7', '#e6e0f0') + P('M40 80l10 8 10-8v8H40z', '#ff9cc8', '#e8709a', '', 2.4)
+    + mirror(P(CIRCLE(24, 56, 6), '#ffc596', '#eda06c'))
+    + mirror(`<path d="M24 64c-2-1.4-3-2.6-2.4-3.6.6-.8 1.6-.4 2.4.4.8-.8 1.8-1.2 2.4-.4.6 1-.4 2.2-2.4 3.6z" fill="#ff5f9e" stroke="${K}" stroke-width="1"/>`)
+    + P(CIRCLE(50, 54, 26), '#ffd3a8', '#f2b07c')
+    + P('M24 54Q20 24 50 24Q80 24 76 54Q74 44 70 40L66 48 60 38 54 46 48 38 42 46 36 38 32 46Q28 44 24 54z', '#c9a6ff', '#a07ae0')
+    + P('M64 28q6-8 12-2-6 6-12 2zM64 28q-2-10 6-10-2 8-6 10z', '#ff7ab8', '#e8559a', '', 2)
+    + eyes(59, 10, 4.6) + smile(68, 5) + blush(65, 17),
+  // MC Beat: rapero de sudadera verde agua, gorra amarilla y audífonos grandes.
+  mcbeat: () => shoulders('#2fb6a0', '#1f8a7a') + `<path d="M40 82q10 8 20 0" fill="none" stroke="#fff" stroke-width="2.4"/>`
+    + mirror(P(CIRCLE(24, 56, 6), '#c9885a', '#a86a3a'))
+    + P(CIRCLE(50, 55, 26), '#d9a070', '#b8824a')
+    + P('M26 44Q26 24 50 24Q74 24 74 44z', '#ffd23d', '#e8a12a', `<path d="M50 24v20" stroke="#e8a12a" stroke-width="1.6"/>`)
+    + P('M60 40h24q2 6-4 6H60z', '#ffd23d', '#e8a12a', '', 2.6)
+    + `<path d="M22 54Q22 26 50 26Q78 26 78 54" fill="none" stroke="${K}" stroke-width="7"/><path d="M22 54Q22 26 50 26Q78 26 78 54" fill="none" stroke="#2a2a40" stroke-width="3.6"/>` + mirror(P('M16 48h10v16H16z', '#2a2a40', '#1a1a2a', '<path d="M18 52h6v8h-6z" fill="#2fb6a0"/>', 2.6))
+    + eyes(58, 10, 4.4) + `<path d="M43 67q7 5 14 0" fill="none" stroke="${K}" stroke-width="3" stroke-linecap="round"/>`,
+  // Profe Voltaje: científico de bata blanca, pelo blanco alborotado a los lados, goggles en la frente y cara de "¡eureka!".
+  profe: () => shoulders('#fffdf7', '#e3dcf0') + P('M40 80 50 96 60 80z', '#ff9c5b', '#e2753a', '', 2.6)
+    + mirror(P('M24 40Q8 36 12 50Q4 56 14 62Q10 72 24 68Q22 56 26 46z', '#f4f1ff', '#cfc8e8'))
+    + mirror(P(CIRCLE(24, 55, 6), '#ffc596', '#eda06c'))
+    + P(CIRCLE(50, 53, 26), '#ffd3a8', '#f2b07c')
+    + `<path d="M28 34Q50 26 72 34" stroke="${K}" stroke-width="7" fill="none"/><path d="M28 34Q50 26 72 34" stroke="#8a5cf0" stroke-width="3.6" fill="none"/>`
+    + mirror(P(CIRCLE(40, 32, 7), '#d9dde8', '#a8b0c8', `<circle cx="40" cy="32" r="4" fill="#8fe8ff" stroke="${K}" stroke-width="1.6"/>`))
+    + mirror(`<path d="M34 45l11-2" stroke="${K}" stroke-width="3.6" stroke-linecap="round"/>`)
+    + mirror(`<circle cx="40" cy="53" r="6" fill="#fff" stroke="${K}" stroke-width="2.2"/><circle cx="41" cy="53" r="3" fill="${K}"/>`)
+    + P(ELL(50, 67, 4.4, 5), '#8a2a3a', '#6a1a2a', '', 2.6) + blush(62, 19),
+  // Turbo: chico del futuro con chaleco inflado rojo sobre chamarra de mezclilla y copete castaño.
+  turbo: () => shoulders('#4a78c0', '#3a5fa0') + mirror(P('M14 104Q14 82 36 80L42 104z', '#ff4f5e', '#d6303f', `<path d="M20 90h18M18 97h20" stroke="#ff8a95" stroke-width="2"/>`))
+    + mirror(P(CIRCLE(23, 55, 6), '#ffc596', '#eda06c'))
+    + P(CIRCLE(50, 53, 27), '#ffd3a8', '#f2b07c')
+    + P('M23 48Q20 22 50 20Q80 22 77 48Q72 34 60 32Q50 40 38 33Q28 38 23 48z', '#8a5a2a', '#6a3f1a')
+    + P('M36 32Q44 12 66 18Q60 22 58 30Q48 26 36 32z', '#8a5a2a', '#6a3f1a')
+    + kidFace(),
+  // Papaya: piloto de carreras con casco abierto naranja papaya, visera arriba y su traje con franja azul.
+  papaya: () => shoulders('#ff8a1a', '#d6600a') + `<path d="M28 90h44" stroke="#2f86c0" stroke-width="5"/>`
+    + P('M18 66Q14 18 50 16Q86 18 82 66Q80 76 70 78V60Q70 40 50 40Q30 40 30 60V78Q20 76 18 66z', '#ff8a1a', '#d6600a', `<path d="M20 50Q50 40 80 50" stroke="#2f86c0" stroke-width="4" fill="none"/>`)
+    + P('M24 30Q50 18 76 30L72 36Q50 28 28 36z', '#2a3a6a', '#1a2a4a', `<path d="M34 28q16-5 32 0" stroke="#8fe8ff" stroke-width="2" fill="none" stroke-linecap="round"/>`)
+    + P('M30 44Q50 36 70 44V64Q70 80 50 80Q30 80 30 64z', '#ffd3a8', '#f2b07c')
+    + eyes(56, 10, 4.4) + smile(66, 6) + blush(63, 16),
+  // Cora: arqueóloga con sombrero de explorador, trenza y pañuelo verde.
+  cora: () => P('M70 50Q84 64 76 86Q72 90 68 86Q74 70 64 58z', '#7a4a2a', '#5a331b', `<path d="M70 66l6 4M70 74l6 3" stroke="#5a331b" stroke-width="1.6"/>`)
+    + shoulders('#e8c98a', '#c9a46a') + P('M36 80Q50 92 64 80L60 90Q50 96 40 90z', '#2fae6a', '#1f8a52', '', 2.6)
+    + mirror(P(CIRCLE(23, 56, 6), '#ffc596', '#eda06c'))
+    + P(CIRCLE(50, 54, 26), '#ffd3a8', '#f2b07c')
+    + P('M25 50Q24 34 50 32Q76 34 75 50Q66 42 50 42Q34 42 25 50z', '#7a4a2a', '#5a331b')
+    + P('M8 36Q50 22 92 36Q88 42 50 38Q12 42 8 36z', '#c9a46a', '#a8843a')
+    + P('M30 34Q30 12 50 12Q70 12 70 34Q50 28 30 34z', '#c9a46a', '#a8843a', `<path d="M30 30Q50 24 70 30" stroke="#6a4028" stroke-width="4" fill="none"/>`)
+    + kidFace(),
   nino: () => kid('#ff9c5b', '#e2753a')
     + `<path d="M40 82 50 92 60 82" fill="none" stroke="${K}" stroke-width="3" stroke-linejoin="round"/>`
     + P('M22 52Q18 22 50 21Q82 22 78 52Q74 40 64 37Q58 43 47 38Q36 42 22 52z', '#7a4a2a', '#5a331b')
@@ -1281,8 +1406,16 @@ export const RINGS = {
   doblones: () => band(55, '#b8743a', 8) + `<circle cx="70" cy="70" r="55" fill="none" stroke="#e8b06a" stroke-width="3" stroke-dasharray="5 5"/>`
     + `<g class="r-spin">${Array.from({ length: 8 }, (_, i) => { const [x, y] = at(i * 45 + 22.5, 55), k = i % 2 ? 0.5 : 0.62; return `<g class="r-tw" style="animation-delay:${(i * 0.3).toFixed(1)}s"><g transform="translate(${(x - 16 * k).toFixed(1)} ${(y - 16 * k).toFixed(1)}) scale(${k})">${ICONS.doblon()}</g></g>`; }).join('')}</g>`
     + (() => { const [x, y] = at(-90, 57), k = 0.9; return `<g transform="translate(${x - 16 * k} ${y - 16 * k}) scale(${k})">${ICONS.cofre()}</g>`; })(),
+  // Colección de Copito el conejo (9 nov 2026): aro verde con zanahorias que brincan en su lugar (no giran).
+  zanahorias: () => band(55, '#7fd36a', 6) + `<circle cx="70" cy="70" r="55" fill="none" stroke="#e9ffd9" stroke-width="2" stroke-dasharray="2 9" stroke-linecap="round"/>`
+    + Array.from({ length: 6 }, (_, i) => { const d = i * 60 - 90, [x, y] = at(d, 57), k = 0.92; return `<g class="r-hop" style="animation-delay:${(i * 0.22).toFixed(2)}s"><g transform="translate(${(x - 16 * k).toFixed(1)} ${(y - 16 * k).toFixed(1)}) rotate(${d + 135} ${16 * k} ${16 * k}) scale(${k})">${ICONS.zanahoria()}</g></g>`; }).join('')
+    + Array.from({ length: 6 }, (_, i) => { const [x, y] = at(i * 60 - 60, 55); return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3" fill="#5fbf5a" stroke="${K}" stroke-width="1.6"/>`; }).join(''),
   arcoiris: () => `<circle cx="70" cy="70" r="56" fill="none" stroke="${K}" stroke-width="13"/><g class="r-spin">${['#ff5f7e', '#ff9c5b', '#ffc83d', '#6fd36a', '#4aa8de', '#8a5cf0'].map((c, i) => `<circle cx="70" cy="70" r="56" fill="none" stroke="${c}" stroke-width="8" pathLength="6" stroke-dasharray="1 5" stroke-dashoffset="${-i}"/>`).join('')}</g>`,
 };
+for (const k in SA.rings) {
+  if (RINGS[k]) throw new Error(`Marco repetido: ${k}`);
+  RINGS[k] = SA.rings[k];
+}
 const ringOf = (p) => (RINGS[p.ring] ? p.ring : RINGS[p.equip?.ring] ? p.equip.ring : 'sencillo');
 export const ringSVG = (k) => (k !== 'sencillo' && RINGS[k] ? `<svg class="av-ring" viewBox="0 0 140 140" aria-hidden="true">${RINGS[k]()}</svg>` : '');
 // p: { name, avatar (color), look, char, ring } o el guardado entero (lee p.equip.ring).

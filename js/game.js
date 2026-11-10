@@ -69,12 +69,14 @@ export function faceHTML(c, rank = c.rank) {
   if (c.wild) return `<div class="face front wild">${icon('wild')}</div>`;
   if (rank == null) return '';
   const s = suitSVG(SUITS[c.suit]);
+  // Cada palo con su clase (cs s0…s3): las caras de colección cambian el palo por su figura (sets.js).
+  const cs = `cs s${c.suit}`;
   const red = c.suit === 1 || c.suit === 2 ? ' red' : '';
   const arrow = c.arrow ? `<span class="arrow-badge">${arrowIcon(c.arrow > 0)}</span>` : '';
   // Boleto partido: dos mitades con su número, separadas por una línea picada con muescas a los lados.
-  if (c.half != null) return `<div class="face front ticket${red}">${[c.rank, c.half].map((x, i) => `<span class="tk ${i ? 'b' : 'a'}"><span class="cs">${s}</span><b${UL(RANKS[x])}>${RANKS[x]}</b></span>`).join('')}<i class="perf"></i></div>`;
+  if (c.half != null) return `<div class="face front ticket${red}">${[c.rank, c.half].map((x, i) => `<span class="tk ${i ? 'b' : 'a'}"><span class="${cs}">${s}</span><b${UL(RANKS[x])}>${RANKS[x]}</b></span>`).join('')}<i class="perf"></i></div>`;
   // Carta doble: los dos números ("5/8").
-  if (c.alt != null) return `<div class="face front double${red}"><span class="cs">${s}</span><span class="dbl"><b${UL(RANKS[c.rank])}>${RANKS[c.rank]}</b><i></i><b${UL(RANKS[c.alt])}>${RANKS[c.alt]}</b></span></div>`;
+  if (c.alt != null) return `<div class="face front double${red}"><span class="${cs}">${s}</span><span class="dbl"><b${UL(RANKS[c.rank])}>${RANKS[c.rank]}</b><i></i><b${UL(RANKS[c.alt])}>${RANKS[c.alt]}</b></span></div>`;
   const r = RANKS[rank];
   // Carta viva: en la esquina va la flecha de hacia dónde cambia (el número está al centro).
   // Cohete turbo: en la esquina va el cohete (es el que despega al jugarla); por lo demás, carta normal.
@@ -85,7 +87,7 @@ export function faceHTML(c, rank = c.rank) {
   const pair = c.lock ?? c.key;
   const tint = pair != null ? ` style="--kh:${LOCK_HUES[pair]}"` : '';
   const badge = c.lock != null ? `<span class="lk-badge">${lockIcon(LOCK_HUES[c.lock])}</span>` : c.key != null ? `<span class="lk-badge">${keyIcon(LOCK_HUES[c.key])}</span>` : '';
-  return `<div class="face front${red}${kind}"${tint}>${corner}${c.key != null ? '' : c.coin ? `<span class="cs coin-cs">${icon('monedas')}</span>` : `<span class="cs">${s}</span>`}${badge}<span class="big${r === '10' ? ' ten' : ''}${SIXNINE(r)}">${r}</span>${arrow}${c.cham ? `${CHAM_FACE('cham-eyes')}<span class="cham-ov">${CHAM_FACE('cham-face')}</span>` : ''}</div>`;
+  return `<div class="face front${red}${kind}"${tint}>${corner}${c.key != null ? '' : c.coin ? `<span class="cs coin-cs">${icon('monedas')}</span>` : `<span class="${cs}">${s}</span>`}${badge}<span class="big${r === '10' ? ' ten' : ''}${SIXNINE(r)}">${r}</span>${arrow}${c.cham ? `${CHAM_FACE('cham-eyes')}<span class="cham-ov">${CHAM_FACE('cham-face')}</span>` : ''}</div>`;
 }
 // Camaleón: carita de dos puntitos y una sonrisa chiquita (sutil de carta normal; sobre el comodín, cuando se convierte).
 const CHAM_FACE = (cls) => `<span class="${cls}"><i></i><i></i><b></b></span>`;
