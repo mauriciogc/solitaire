@@ -1,9 +1,9 @@
 // Modo dev: probar niveles rápido sin jugarlos a mano.
 // Se prende y apaga con los botones de pruebas de Ajustes (8 toques seguidos al título). Queda guardado en el navegador.
 import { save, prefs, persist, resetProfile, backupOnce, restoreBackup, setDev, backupInfo } from './storage.js';
-import { missions, misDone, LOGROS, LOGRO_TOP, logroGot, logrosVisible } from './missions.js';
+import { missions, misDone, LOGROS, LOGRO_TOP, logroGot, logroNeed, logrosVisible } from './missions.js';
 import { rachaWin, rachaLose, racha, nextGoal, col, daysToNextCol, ev, daysToNextEvent, evEnter, evWin, EVENT_PER_PLANET, EVENT_LEVELS, fiesta, fiEnter, fiWin, nextFiesta, daysToNextFiesta, daysToFiesta, fiShape, isOn, UNLOCK } from './events.js';
-import { TIERS, generateLevel, hardHelp, fiestaPick, fiestaLevel, eventLevel, eventGroup, EVENT_WORLDS, packGroups, worldInfo, specials, specialGroup, SPECIAL_ID, TOTAL_LEVELS, LEVELS_PER_WORLD, MECH_NAMES, MECHANICS, MECH_INTRO, SCROLL_FROM, EXTRA, extraDebut, mareaFirst, hoyoFirst, puertasFirst, bandaFirst } from './levels.js';
+import { TIERS, generateLevel, hardHelp, fiestaPick, fiestaLevel, eventLevel, eventGroup, EVENT_WORLDS, packGroups, worldInfo, specials, specialGroup, SPECIAL_ID, TOTAL_LEVELS, LEVELS_PER_WORLD, MECH_NAMES, MECHANICS, MECH_INTRO, SCROLL_FROM, EXTRA, extraDebut, mareaFirst, hoyoFirst, puertasFirst, bandaFirst, rocasFirst } from './levels.js';
 import { playCasual, solve, initState } from './engine.js';
 import { openModal, toast, updateCoins, popGoal } from './ui.js';
 import { mulberry32 } from './rng.js';
@@ -167,12 +167,13 @@ const TABLE_ICONS = {
   banda: SV('<rect x="3" y="11" width="26" height="11" rx="3" fill="#5d5a7a"/><rect x="9" y="8" width="6" height="9" rx="1.4" fill="#fff"/><rect x="17" y="8" width="6" height="9" rx="1.4" fill="#fff"/><rect x="1" y="7" width="5" height="18" rx="2" fill="#ffb066"/><rect x="26" y="7" width="5" height="18" rx="2" fill="#ffb066"/>'),
   puertas: SV('<rect x="5" y="4" width="22" height="25" rx="3" fill="#b5763f"/><path d="M16 4v25" stroke-width="1.6"/><circle cx="13" cy="17" r="1.6" fill="#2a1f5c"/><circle cx="19" cy="17" r="1.6" fill="#2a1f5c"/>'),
   hoyo: SV('<circle cx="16" cy="16" r="13" fill="#8a5cf0"/><circle cx="16" cy="16" r="9" fill="#ff8a3d"/><circle cx="16" cy="16" r="5.5" fill="#05030f"/>'),
+  rocas: SV('<path d="M8 8l8-3 7 5 1 8-5 6-9 1-5-6z" fill="#a99bbd"/><circle cx="12" cy="13" r="2.4" fill="#7a6c94"/><circle cx="18" cy="18" r="1.8" fill="#7a6c94"/><path d="M25 5l3-2M27 10l3 0" stroke-width="1.8" stroke-linecap="round"/>'),
   marea: SV('<rect x="5" y="3" width="22" height="26" rx="3" fill="#fff6e6"/><path d="M5 18c4-3 7 3 11 0s7 3 11 0v8a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3z" fill="#4aa8de"/>'),
 };
 export const tableIcon = (t) => TABLE_ICONS[t] || '';
 const SCROLL_NAMES = { mesa: 'mesa enrollada', gravedad: 'gravedad', nebulosa: 'nebulosa', plegable: 'mesa plegable' };
 // Mesas que van sobre un tablero normal (no son tira): se filtran por su bandera del nivel.
-const OVERLAY_TABLES = [['marea', 'Marea', mareaFirst() + 1, (L) => !!L.tide], ['hoyo', 'Agujero negro', hoyoFirst() + 1, (L) => !!L.hole], ['puertas', 'Puertas', puertasFirst() + 1, (L) => !!L.doors], ['banda', 'Banda transportadora', bandaFirst() + 1, (L) => !!L.belt]];
+const OVERLAY_TABLES = [['marea', 'Marea', mareaFirst() + 1, (L) => !!L.tide], ['hoyo', 'Agujero negro', hoyoFirst() + 1, (L) => !!L.hole], ['puertas', 'Puertas', puertasFirst() + 1, (L) => !!L.doors], ['banda', 'Banda transportadora', bandaFirst() + 1, (L) => !!L.belt], ['rocas', 'Asteroides', rocasFirst() + 1, (L) => !!L.rocks]];
 const PIECES = [['steps', 3], ['cross', 3], ['crown', 8], ['rosette', 13], ['sandwich', 16], ['tiltFan', 21]];
 // Nombres en español de formas y piezas (galería e Info).
 const TPL_NAMES = { pyramid: 'Pirámide', peaks: 'Picos', clusters: 'Grupitos', star: 'Estrella', layers: 'Capas', wall: 'Muro', towers: 'Torres', butterfly: 'Mariposa', diamond: 'Diamante', spiral: 'Espiral', mesa: 'Mesa enrollada', heart: 'Corazón', gravedad: 'Gravedad', scatter: 'Dispersas', nebulosa: 'Nebulosa', plegable: 'Mesa plegable', invPyramid: 'Pirámide invertida', hourglass: 'Reloj de arena' };
@@ -539,7 +540,7 @@ function devLogroOne() {
   const l = pickOne(logrosVisible().filter((x) => logroGot(x) < LOGRO_TOP));
   if (!l) return '';
   const st = (save.stats ||= {}), k = l.best ? `${l.k}Best` : l.k;
-  st[k] = Math.max(st[k] || 0, l.steps[logroGot(l)]);
+  st[k] = Math.max(st[k] || 0, logroNeed(l));
   return '';
 }
 function devRachaNext() {
@@ -554,7 +555,7 @@ const devDo = (fns, onRefresh) => {
   if (no.length) toast(`Aún no se abren: ${no.join(', ')}`);
   onRefresh();
 };
-export function openDevMenu({ onGallery, onPlanets, onRefresh, card }) {
+export function openDevMenu({ onGallery, onPlanets, onFiestas, onTexts, onGoLevel, onRefresh, card }) {
   const w = Math.min(Math.floor(save.next / LEVELS_PER_WORLD), save.open);
   const r = Math.floor(w / REGION);
   const evNow = ev(), colNow = col();
@@ -607,7 +608,7 @@ export function openDevMenu({ onGallery, onPlanets, onRefresh, card }) {
   // Los eventos de cada tipo (van dentro de su renglón, como acordeón): del mes por mes, colecciones, de un día por fecha.
   const fiDay = (f) => f.date(y);
   const colsOf = (plus) => COLECCIONES.filter((c) => (c.plus || 0) === plus).map((c) => [c.token, c.name, '']);
-  const fisOf = (local) => fis.filter((f) => !!f.local === local).sort((a, b) => fiDay(a) - fiDay(b)).map((f) => [f.ico, f.name, `${fiDay(f).getDate()} ${MES[fiDay(f).getMonth()]}${f.days > 1 ? ` · ${f.days} días` : ''}`, `f:${f.key}`]);
+  const fisOf = (local, grp) => fis.filter((f) => !!f.local === local && (f.grp || 0) === (grp || 0)).sort((a, b) => fiDay(a) - fiDay(b)).map((f) => [f.ico, f.name, `${fiDay(f).getDate()} ${MES[fiDay(f).getMonth()]}${f.days > 1 ? ` · ${f.days} días` : ''}`, `f:${f.key}`]);
   // Todo lo que sale en el camino, en el orden en que aparece (nivel = el primero donde lo ves; los eventos se abren al ganar el anterior).
   const UN = [
     ['Racha cohete', UNLOCK.racha, 'rocket'],
@@ -621,6 +622,8 @@ export function openDevMenu({ onGallery, onPlanets, onRefresh, card }) {
     ['Festividades de un día', UNLOCK.fiesta, 'pinata', fisOf(false)],
     ['Colecciones de Arte, Música y Cine', UNLOCK.col3, 'nota', colsOf(2), 'Se suman a las de antes y se turnan: todas las semanas'],
     ['Festividades de leyendas mexicanas', UNLOCK.fiesta2, 'catrina', fisOf(true)],
+    ['Fiestas de México', UNLOCK.fiesta3, 'piramide', fisOf(false, 3)],
+    ['Fiestas de América', UNLOCK.fiesta4, 'antifaz', fisOf(false, 4)],
   ];
   const KINDS = { ev: 'Evento', card: 'Carta', mesa: 'Mesa' };
   const rows = [
@@ -650,7 +653,9 @@ export function openDevMenu({ onGallery, onPlanets, onRefresh, card }) {
     { t: 'General', items: [], parts: [
       { k: 'gen', h: 'Herramientas', ico: 'gear', items: [
         { l: 'Galería de niveles', cls: 'gold', fn: onGallery },
+        { l: 'Ir al tablero', cls: 'gold', title: 'Escribe un nivel y juega su tablero (gratis, sin guardar), como desde la galería', fn: onGoLevel },
         { l: 'Galería de planetas', cls: 'gold', title: 'Cada tipo de planeta: verlo en el mapa o jugar en su mesa', fn: onPlanets },
+        { l: 'Textos del juego', cls: 'gold', title: 'Todas las ventanas que presentan cartas, mesas, avisos y ayudas, juntas y como se ven, para revisar su redacción', fn: onTexts },
         { l: `Boosters infinitos: ${prefs.devInfinite ? 'sí' : 'no'}`, fn: () => { prefs.devInfinite = !prefs.devInfinite; persist(); toast(`Boosters infinitos: ${prefs.devInfinite ? 'sí' : 'no'}`); } },
         { l: '+20,000 monedas', fn: () => ((save.coins += 20000), persist(), updateCoins()) },
         // 9 nov 2026: para ver todo sin avanzar niveles (dev es caja de pruebas: al apagarlo vuelve tu partida).
@@ -755,8 +760,11 @@ export function openDevMenu({ onGallery, onPlanets, onRefresh, card }) {
         fiOn && { l: 'Siguiente planeta', fn: () => fiSet({ k: Math.min(FL - 1, (Math.floor(fiNow.state.k / FN) + 1) * FN) }) },
         fiOn && { l: 'Ganar todo hasta el último jefe', title: 'Gana los niveles que faltan (con sus premios) y te deja en el jefe del último planeta', fn: () => ((fiesta().state.run = null), winTo(fiesta, fiEnter, fiWin, FL - 1)) },
         fiOn && { l: 'Empezar de cero', fn: () => ((save.fi = null), persist(), onRefresh()) },
+        { l: 'Paquete de las festividades nuevas', cls: 'gold', title: 'Leyendas, fiestas de México y de América: cada una con su mesa y sus 7 exclusivos (solo para ver, no te da nada)', fn: onFiestas },
         { l: 'Ver el aviso de Festividades', title: 'La ventana que sale al desbloquearlas (nivel 120), con 3 iconos', fn: () => (save.intro && delete save.intro.fiesta, persist(), onRefresh()) },
         { l: 'Ver el aviso de Leyendas', title: `La ventana que sale al llegar al nivel ${UNLOCK.fiesta2}, con las festividades nuevas`, fn: () => (save.intro && delete save.intro.fiesta2, persist(), onRefresh()) },
+        { l: 'Ver el aviso de Fiestas de México', title: `La ventana que sale al llegar al nivel ${UNLOCK.fiesta3 + 1}`, fn: () => (save.intro && delete save.intro.fiesta3, persist(), onRefresh()) },
+        { l: 'Ver el aviso de Fiestas de América', title: `La ventana que sale al llegar al nivel ${UNLOCK.fiesta4 + 1}`, fn: () => (save.intro && delete save.intro.fiesta4, persist(), onRefresh()) },
       ] },
       { k: 'col', h: 'Colección', ico: colNow?.token || COLECCIONES[0].token, sub: colNow ? `${colNow.name} · ${colNow.state.n} fichas` : 'no hay esta semana', items: [
         { l: colNow ? 'Siguiente colección' : 'Ir a la próxima', fn: () => ((save.devDay = (save.devDay || 0) + daysToNextCol()), persist(), onRefresh()) },

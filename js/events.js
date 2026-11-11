@@ -15,7 +15,9 @@ import { EVENT_LEVELS, EVENT_PER_PLANET, EVENT_PLANETS, FIESTA_LEVELS, FIESTA_PE
 // fiesta: festividades de 24 h (ver más abajo).
 // 8 nov 2026: separados a 10 niveles o más de las cartas y mesas que estrenan (antes racha 20, mis 30, logros 40, col 50,
 // mes 80, col2 100, fiesta 120, col3 150, fiesta2 200). Los números de los comentarios de abajo son los de antes.
-export const UNLOCK = { racha: 30, mis: 40, logros: 70, col: 90, mes: 130, col2: 159, fiesta: 180, col3: 230, fiesta2: 290 };
+// 10 nov 2026 (pedido del usuario): fiesta3 = fiestas mexicanas nuevas (se ven en el nivel 389), fiesta4 = fiestas de
+// América (nivel 461).
+export const UNLOCK = { racha: 30, mis: 40, logros: 70, col: 90, mes: 130, col2: 159, fiesta: 180, col3: 230, fiesta2: 290, fiesta3: 388, fiesta4: 460 };
 export const isOn = (k) => (save.next || 0) >= UNLOCK[k];
 
 // En estrellas (7 nov 2026: llegaba a 30 victorias sin problema porque contaba cualquiera): cada victoria suma sus
@@ -519,6 +521,16 @@ export { EVENT_PLANETS, EVENT_PER_PLANET, EVENT_LEVELS };
 // date(año) = el día de la fiesta. Si dos caen el mismo día, la segunda se recorre al día siguiente.
 // ready: ya tiene sus dibujos (las que no, todavía no salen).
 const nthSunday = (y, m, n) => { const d = new Date(y, m, 1); return new Date(y, m, 1 + ((7 - d.getDay()) % 7) + (n - 1) * 7); };
+// Domingo de Pascua (algoritmo de Gauss/Meeus, calendario gregoriano). El Carnaval empieza el sábado antes del
+// Miércoles de Ceniza (50 días antes de Pascua) y dura hasta el martes.
+const easter = (y) => {
+  const a = y % 19, b = Math.floor(y / 100), c = y % 100, d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25), g = Math.floor((b - f + 1) / 3);
+  const h = (19 * a + b - d - g + 15) % 30, i = Math.floor(c / 4), k = c % 4, l = (32 + 2 * e + 2 * i - h - k) % 7, m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const mo = Math.floor((h + l - 7 * m + 114) / 31), da = ((h + l - 7 * m + 114) % 31) + 1;
+  return new Date(y, mo - 1, da);
+};
+// El primer lunes después del día d del mes m (Guelaguetza: el lunes después del 16 de julio).
+const mondayAfter = (y, m, d) => { const x = new Date(y, m, d + 1); return new Date(y, m, d + 1 + ((8 - x.getDay()) % 7)); };
 export const FIESTAS = [
   { key: 'anionuevo', name: 'Año Nuevo', date: (y) => new Date(y, 0, 1), ready: true,
     ico: 'reloj', deco: 'uvas', color: 'gold',
@@ -592,6 +604,63 @@ export const FIESTAS = [
     planets: ['Valle de las Bromas', 'Carpa del Bufón', 'Planeta Palomita'],
     ex: [{ space: 'bromas', frame: 'inocente' }, { ring: 'cascabeles', back: 'arlequin' }, { avatar: 'bufoncito', title: 'bromista', traveler: 'sorpresa' }] },
 ];
+// ---------- Festividades nuevas (10 nov 2026, pedido del usuario) ----------
+// grp 3: fiestas mexicanas (nivel 389). grp 4: fiestas de América (nivel 461). zone: dónde se celebra (lo dice la
+// entrada: «Celebrando en …»). Las de varios días van como el Nahual (4 planetas de 4).
+FIESTAS.push(
+  { key: 'bandera', name: 'Día de la Bandera', date: (y) => new Date(y, 1, 24), grp: 3, ready: true, zone: 'México',
+    ico: 'banderita', deco: 'escarapela', color: 'green',
+    planets: ['Plaza de las Banderas', 'Valle Tricolor', 'Planeta Abanderado'],
+    ex: [{ space: 'abanderado', frame: 'banderin' }, { ring: 'banderines', back: 'tricolorb' }, { avatar: 'abanderado', title: 'escolta', traveler: 'astabandera' }] },
+  { key: 'equinoccio', name: 'Equinoccio de Primavera', date: (y) => new Date(y, 2, 21), grp: 3, ready: true, zone: 'México',
+    ico: 'piramide', deco: 'serpiente', color: 'gold',
+    planets: ['Cenote Sagrado', 'Escalinata del Sol', 'Planeta Serpiente de Luz'],
+    ex: [{ space: 'kukulcan', frame: 'grecas' }, { ring: 'plumaje', back: 'piramides' }, { avatar: 'serpientita', title: 'guardiansol', traveler: 'serpientevuela' }] },
+  { key: 'posadas', name: 'Las Posadas', date: (y) => new Date(y, 11, 16), days: 9, p: 4, n: 4, grp: 3, ready: true, zone: 'México',
+    ico: 'pinatestrella', deco: 'ponche', color: 'red',
+    planets: ['Calle de los Faroles', 'Patio de la Piñata', 'Pueblo del Ponche', 'Planeta Posada'],
+    ex: [{ space: 'posada', frame: 'papelpicado' }, { ring: 'farolitos7', back: 'pinatas7' }, { title: 'peregrino', traveler: 'pinatavuela' }, { avatar: 'pinatin' }] },
+  { key: 'alasitas', name: 'Alasitas', date: (y) => new Date(y, 0, 24), grp: 4, ready: true, zone: 'Bolivia',
+    ico: 'miniatura', deco: 'billetito', color: 'orange',
+    planets: ['Feria Miniatura', 'Valle de los Deseos', 'Planeta Chiquitito'],
+    ex: [{ space: 'feriamini', frame: 'deseos' }, { ring: 'casitas', back: 'miniaturas' }, { avatar: 'ekekito', title: 'sonador', traveler: 'casitavuela' }] },
+  { key: 'tapati', name: 'Tapati Rapa Nui', date: (y) => new Date(y, 1, 1), grp: 4, ready: true, zone: 'Rapa Nui, Chile',
+    ico: 'moai', deco: 'hibisco', color: 'blue',
+    planets: ['Costa de los Moáis', 'Volcán Rano Kau', 'Planeta Isla de Pascua'],
+    ex: [{ space: 'rapanui', frame: 'tapati' }, { ring: 'hibiscos', back: 'moais' }, { avatar: 'moaisito', title: 'isleno', traveler: 'canoa' }] },
+  { key: 'carnaval', name: 'Carnaval', date: (y) => { const e = easter(y); return new Date(y, e.getMonth(), e.getDate() - 50); }, days: 4, p: 4, n: 4, grp: 4, ready: true, zone: 'toda Latinoamérica',
+    ico: 'antifaz', deco: 'serpentina', color: 'violet',
+    planets: ['Desfile de Comparsas', 'Calle de los Tambores', 'Plaza de las Máscaras', 'Planeta Carnaval'],
+    ex: [{ space: 'carnaval', frame: 'comparsa' }, { ring: 'serpentinas', back: 'mascaras' }, { title: 'reycarnaval', traveler: 'carroza' }, { avatar: 'carnavalito' }] },
+  { key: 'boyero', name: 'Día del Boyero', date: (y) => nthSunday(y, 2, 2), grp: 4, ready: true, zone: 'Costa Rica',
+    ico: 'ruedacarreta', deco: 'buey', color: 'red',
+    planets: ['Camino de las Carretas', 'Valle del Café', 'Planeta Boyero'],
+    ex: [{ space: 'cafetal', frame: 'carreta' }, { ring: 'ruedas', back: 'carretas' }, { avatar: 'boyerito', title: 'boyero', traveler: 'carretavuela' }] },
+  { key: 'guelaguetza', name: 'Guelaguetza', date: (y) => mondayAfter(y, 6, 16), grp: 4, ready: true, zone: 'Oaxaca, México',
+    ico: 'flordepina', deco: 'canasta', color: 'pink',
+    planets: ['Cerro del Fortín', 'Valle de las Ocho Regiones', 'Planeta Guelaguetza'],
+    ex: [{ space: 'oaxaca', frame: 'bordado' }, { ring: 'listones', back: 'bordados' }, { avatar: 'chinita', title: 'danzante', traveler: 'canastavuela' }] },
+  { key: 'papalotes', name: 'Día de los Papalotes', date: (y) => new Date(y, 8, 18), grp: 4, ready: true, zone: 'Chile y Guatemala',
+    ico: 'volantin', deco: 'carrete', color: 'blue',
+    planets: ['Cerro de los Volantines', 'Cielo de Barriletes', 'Planeta Viento'],
+    ex: [{ space: 'vientos', frame: 'volantines' }, { ring: 'colitas', back: 'barriletes' }, { avatar: 'volantinito', title: 'elevado', traveler: 'barrilete' }] },
+  { key: 'dulcedeleche', name: 'Día del Dulce de Leche', date: (y) => new Date(y, 9, 11), grp: 4, ready: true, zone: 'Argentina',
+    ico: 'frasco', deco: 'alfajor', color: 'orange',
+    planets: ['Valle del Alfajor', 'Río de Cajeta', 'Planeta Dulcecito'],
+    ex: [{ space: 'dulceria', frame: 'alfajores' }, { ring: 'alfajorcitos', back: 'frascos' }, { avatar: 'alfajorcito', title: 'dulcero', traveler: 'frascovuela' }] },
+  { key: 'pupusa', name: 'Día de la Pupusa', date: (y) => nthSunday(y, 10, 2), grp: 4, ready: true, zone: 'El Salvador',
+    ico: 'pupusa', deco: 'curtido', color: 'green',
+    planets: ['Comal Gigante', 'Valle del Curtido', 'Planeta Pupusa'],
+    ex: [{ space: 'pupuseria', frame: 'comal' }, { ring: 'pupusitas', back: 'pupusas' }, { avatar: 'pupusita', title: 'pupusero', traveler: 'comalvuela' }] },
+  { key: 'velitas', name: 'Día de las Velitas', date: (y) => new Date(y, 11, 7), grp: 4, ready: true, zone: 'Colombia',
+    ico: 'farolpapel', deco: 'vela', color: 'gold',
+    planets: ['Calle de los Faroles', 'Balcón de las Velitas', 'Planeta Luz'],
+    ex: [{ space: 'nochevelitas', frame: 'faroles' }, { ring: 'velas', back: 'farolespapel' }, { avatar: 'farolin', title: 'luminoso', traveler: 'farolvuela' }] },
+  { key: 'anioviejo', name: 'Año Viejo', date: (y) => new Date(y, 11, 31), grp: 4, ready: true, zone: 'Ecuador y Colombia',
+    ico: 'monigote', deco: 'bengala', color: 'violet',
+    planets: ['Calle de los Monigotes', 'Plaza del Reloj', 'Planeta Último Día'],
+    ex: [{ space: 'aniviejo', frame: 'monigotes' }, { ring: 'chispasviejo', back: 'anioviejo' }, { avatar: 'monigotito', title: 'despedida', traveler: 'monigotevuela' }] },
+);
 // Subidas 50% el 6 nov 2026 (antes 20-50 y 300/200/400), como las del evento del mes.
 export const FI_COINS = [30, 45, 60, 75];
 export const FI_REPEAT = [{ coins: 450, undo: 2 }, { wild: 1, coins: 300 }, { wild: 2, coins: 600 }];
@@ -602,8 +671,11 @@ const dayOf = (d) => Math.floor((d.getTime() - d.getTimezoneOffset() * 6e4) / DA
 // all: también las de leyendas aunque aún no se abran (para el modo dev).
 export function fiestaDays(y, all = false) {
   const out = [];
-  for (const f of FIESTAS.filter((x) => x.ready && (all || !x.local || isOn('fiesta2'))).map((x) => ({ f: x, day: dayOf(x.date(y)) })).sort((a, b) => a.day - b.day)) {
-    while (out.some((o) => o.day === f.day)) f.day++;
+  for (const f of FIESTAS.filter((x) => x.ready && (all || ((!x.local || isOn('fiesta2')) && (!x.grp || isOn(`fiesta${x.grp}`))))).map((x) => ({ f: x, day: dayOf(x.date(y)) })).sort((a, b) => a.day - b.day)) {
+    // 10 nov 2026: con las de varios días se mira que no se encimen (antes solo el día de inicio). La que empieza
+    // después se recorre hasta que quede libre (p. ej. el Carnaval de 2031 cae del 22 al 25 de feb: la Bandera pasa al 26).
+    const len = (x) => x.f.days || 1;
+    while (out.some((o) => f.day < o.day + len(o) && o.day < f.day + len(f))) f.day++;
     out.push(f);
   }
   return out;

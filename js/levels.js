@@ -490,9 +490,20 @@ export const bandaFirst = () => {
   return bandaDebut;
 };
 export const bandaKind = (g) => !mareaKind(g) && !hoyoKind(g) && !puertasKind(g) && (g === bandaFirst() || (g > bandaFirst() && !((hash(g * 2477 + 71) >>> 5) % 6)));
+// Cinturón de asteroides (10 nov 2026, pedido del usuario): mesa sobre un tablero normal, nunca con otra. Cada
+// ROCK_EVERY robos caen 2 o 3 piedras que tapan cartas libres por unas jugadas (ver dropRocks en engine.js). Desde
+// ROCAS_FROM, ~1 de cada 6 normales que no traen otra mesa.
+export const ROCAS_FROM = 505;
+let rocasDebut = null;
+export const rocasFirst = () => {
+  if (rocasDebut == null) for (rocasDebut = ROCAS_FROM; scrollKind(rocasDebut) || hardHelp(rocasDebut) || isRespite(rocasDebut) || mareaKind(rocasDebut) || hoyoKind(rocasDebut) || puertasKind(rocasDebut) || bandaKind(rocasDebut); rocasDebut++);
+  return rocasDebut;
+};
+export const rocasKind = (g) => !mareaKind(g) && !hoyoKind(g) && !puertasKind(g) && !bandaKind(g) && (g === rocasFirst() || (g > rocasFirst() && !((hash(g * 5303 + 89) >>> 5) % 6)));
 export const hoyoKind = (g) => !mareaKind(g) && (g === hoyoFirst() || (g > hoyoFirst() && !((hash(g * 4241 + 97) >>> 6) % 5)));
 export const GRAV_SHOWN = 2; // cartas boca arriba en cada columna
-export const HOLE_MAX = 12; // cartas que atrapa el agujero negro, como mucho
+export const HOLE_MAX = 99; // cartas que atrapa el agujero negro, como mucho (10 nov 2026: todas; antes 12)
+export const HOLE_TAKE = 1; // parte que se traga y revuelve en cada vuelta (10 nov 2026: todas; antes 0.4)
 export const DOOR_STEP = 0.3; // paso entre las cartas de la pila de una puerta
 export const NEB_SLOTS = 3;
 export const SCROLL_VIEW = 8.2, SCROLL_GAP = 0.45, SCROLL_SHOW = 0.5;
@@ -629,6 +640,27 @@ export function overlaps(a, b) {
   return true;
 }
 
+// Lo mínimo que se enciman dos cartas giradas para que una tape a la otra (la carta mide 1 × 1.4 = 1.4).
+const COVER_MIN = 0.01;
+// Área (en unidades de carta) de lo que se enciman dos cartas: recorte de un cuadrilátero convexo con el otro.
+export function overlapArea(a, b) {
+  let poly = corners(a);
+  const B = corners(b);
+  for (let i = 0; i < 4 && poly.length; i++) {
+    const [x1, y1] = B[i], [x2, y2] = B[(i + 1) % 4];
+    const side = ([x, y]) => (x2 - x1) * (y - y1) - (y2 - y1) * (x - x1);
+    const out = [];
+    for (let k = 0; k < poly.length; k++) {
+      const P = poly[k], Q = poly[(k + 1) % poly.length], sp = side(P), sq = side(Q);
+      if (sp >= 0) out.push(P);
+      if ((sp >= 0) !== (sq >= 0)) { const t = sp / (sp - sq); out.push([P[0] + (Q[0] - P[0]) * t, P[1] + (Q[1] - P[1]) * t]); }
+    }
+    poly = out;
+  }
+  let A = 0;
+  for (let k = 0; k < poly.length; k++) { const [x1, y1] = poly[k], [x2, y2] = poly[(k + 1) % poly.length]; A += x1 * y2 - x2 * y1; }
+  return Math.abs(A) / 2;
+}
 // Normaliza un grupo para que su caja (con giros) empiece en 0,0 y devuelve su tamaño.
 function normalizeGroup(cards) {
   const pts = cards.flatMap(corners);
@@ -770,11 +802,13 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
   const hoyo = overlay && hoyoKind(base);
   const puertas = overlay && puertasKind(base);
   const banda = overlay && !puertas && bandaKind(base);
+  const rocas = overlay && !hoyo && !puertas && !banda && rocasKind(base);
   // Agujero negro y banda ya cuestan por sí mismas: el tablero va un poco más amable (como las otras mesas). Las
   // puertas, apenas (sus pilas no cuentan si no las abres). La banda pesa más (al bot le costaba 31% contra 47%): la mitad.
   if (hoyo) d *= base === hoyoFirst() ? 0.25 : 0.6; // su estreno, más amable
   if (puertas) d *= 0.9;
   if (banda) d *= 0.5;
+  if (rocas) d *= base === rocasFirst() ? 0.4 : 0.9;
   // Evento: en cada planeta salen más seguido las formas que más cuestan (medido con el bot casual).
   const template = ev?.scroll || ev?.template || (ev && (index === LEVELS_PER_WORLD - 1 || r() < 0.15 + ev.tight * 0.17) ? pick(r, ['peaks', 'peaks', 'scatter', 'invPyramid']) : scroll || (respite ? pick(r, RESPITE_SHAPES) : chooseTemplate(r, ev ? Math.max(3, base) : base, d, true)));
 
@@ -791,9 +825,11 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
   const pos = groups.flatMap((gr, gi) => gr.cards.map((c) => ({ ...c, group: gi })));
   const n = pos.length;
 
-  // Solo se tapan cartas del mismo grupo.
+  // Solo se tapan cartas del mismo grupo. 11 nov 2026 (el usuario: la A tapaba la carta regalo «y no se nota»): con
+  // cartas giradas, un roce de esquinas (redondeadas, no se ve) no tapa; hace falta encimarse COVER_MIN.
+  const covers = (p, q) => overlaps(p, q) && (!(p.rot || q.rot) || overlapArea(p, q) >= COVER_MIN);
   const coveredBy = pos.map((p) =>
-    pos.reduce((acc, q, j) => (q.group === p.group && q.z > p.z && overlaps(p, q) ? (acc.push(j), acc) : acc), []),
+    pos.reduce((acc, q, j) => (q.group === p.group && q.z > p.z && covers(p, q) ? (acc.push(j), acc) : acc), []),
   );
   // Mesa enrollada: una carta sale completa del rollo cuando la tira ya empieza en su orilla derecha − SCROLL_VIEW
   // o más adelante; o sea, cuando ya se fueron todas las cartas que empiezan antes de eso.
@@ -821,7 +857,8 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
   const boss = index === LEVELS_PER_WORLD - 1;
   // Mecánicas del nivel: cada una aparece a partir de su mundo y luego se combinan (máximo 2 tipos).
   // Respiro: una sola mecánica como mucho.
-  const mech = new Set(chooseMechanics(r, world, index, boss, n, ev, T).slice(0, respite ? 1 : T ? T.mechs[0] : 2));
+  // Agujero negro (10 nov 2026, el usuario: «¿no puede jalar todas?»): sin otras cartas especiales, para que se las trague todas.
+  const mech = new Set(chooseMechanics(r, world, index, boss, n, ev, T).slice(0, hoyo ? 0 : respite ? 1 : T ? T.mechs[0] : 2));
   // Mesa enrollada y nebulosa sin bombas: su cuenta correría con la carta todavía escondida.
   if (scroll) mech.delete('bomb');
   const marea = fresh && !secret && !respite && !scroll && mareaKind(base);
@@ -947,7 +984,7 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
 
   const cards = pos.map((p, i) => ({ id: i, ...p, rank: ranks[i], suit: randInt(r, 0, 3), coveredBy: coveredBy[i], ...(under && { under: under[i] }), ...(neb?.[i] && { neb: neb[i] }) }));
   for (const id of [...bombIds, ...cometIds]) delete cards[id].rank;
-  const SPECIAL = ['lock', 'key', 'pack', 'ice', 'alt', 'arrow', 'curtain', 'curtainKey', 'bomb', 'live', 'comet', 'turbo', 'half', 'ghost', 'coin', 'cham', 'ring', 'doorKey', 'belt'];
+  const SPECIAL = ['lock', 'key', 'pack', 'ice', 'alt', 'arrow', 'curtain', 'curtainKey', 'bomb', 'live', 'comet', 'turbo', 'half', 'ghost', 'coin', 'cham', 'ring', 'doorKey', 'belt', 'bolt', 'shield'];
   const plain = (id) => SPECIAL.every((f) => cards[id][f] == null);
 
   // Boleto partido (1-2): la referencia juega primero la mitad de arriba (su número de la cadena) y la de abajo al final
@@ -1032,6 +1069,7 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
   // y si la jugada siguiente va sin robar en medio. Las mecánicas se colocan para que la referencia las cumpla.
   const act = [];
   const drew = [];
+  const seq = []; // pasos de la referencia en orden: { id, k, tail, dn = robos antes }
   const bombFree = {}; // acciones al quedar destapada cada bomba (o cometa) en la referencia
   {
     const stk = stock.slice();
@@ -1048,6 +1086,7 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
         dn++;
       }
       if (!tail) (drew[k] = dn), (act[k] = a);
+      seq.push({ id, k, tail, dn });
       if (tail || cards[id].half == null) rem[id] = true;
       top = { rank };
       a++;
@@ -1167,6 +1206,7 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
     }
   }
   // Agujero negro (9 nov 2026, rehecho dos veces a pedido del usuario): elige hasta HOLE_MAX cartas de todo el tablero
+  // (10 nov 2026: todas las que no tienen otra mecánica, ~80%; con 12 parecía que siempre se tragaba las mismas)
   // (boca arriba y boca abajo, sin marcarlas) y en cada vuelta se traga unas al azar (40%) y las escupe con
   // números nuevos; las demás se quedan igual. Cada carta guarda su número de cada vuelta (c.ring, ver rankOf). Como la
   // carta viva, se arma para que la referencia vea cada carta con su número: el que sacó en la última vuelta que se la
@@ -1176,11 +1216,11 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
   if (hoyo) {
     const rh = mulberry32(hash(g * 8111 + t * 61 + 29));
     const ok = [];
-    for (let k = 1; k < np; k++) if (plain(play[k])) ok.push(k);
+    for (let k = 0; k < np; k++) if (plain(play[k])) ok.push(k);
     const P = shuffle(rh, ok).slice(0, HOLE_MAX);
     if (P.length >= 4) {
       const T = Math.floor(Math.max(...P.map((k) => act[k])) / HOLE_EVERY) + 2;
-      const took = Array.from({ length: T }, (_, v) => new Set(v ? P.filter(() => rh() < 0.4) : P));
+      const took = Array.from({ length: T }, (_, v) => new Set(v ? P.filter(() => rh() < HOLE_TAKE) : P));
       for (const k of P) {
         const tk = Math.floor(act[k] / HOLE_EVERY), want = ranks[play[k]];
         const seq = [];
@@ -1219,9 +1259,10 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
       if (k != null) cards[play[k]].cham = rcm() < 0.5 ? 1 : 2;
     }
   }
-  // Fantasma (1-2): su fase se escoge para que se vea justo cuando la referencia lo juega.
+  // Fantasma (11 nov 2026, pedido del usuario: de 1 a 4 o más, no solo uno): 1-4 y en tableros grandes a veces 5.
+  // Su fase se escoge para que se vea justo cuando la referencia lo juega.
   if (mech.has('ghost')) {
-    for (let t = r() < 0.4 ? 2 : 1; t > 0; t--) {
+    for (let t = 1 + Math.floor(r() * 4) + (n >= 28 && r() < 0.35 ? 1 : 0); t > 0; t--) {
       const k = pickPlain(1, np);
       if (k != null) cards[play[k]].ghost = Math.floor(act[k] / 2) % 2 === 0 ? 1 : 2;
     }
@@ -1266,7 +1307,7 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
     }
   }
   const level = {
-    g, world, index, d, template, boss, secret, event: !!ev, fresh, ...(respite && { respite }), ...(scroll && { scroll }), ...(marea && cards.some((c) => c.wet) && { tide: 1 }), ...(hole && { hole }), ...(doors && { doors }), ...(belt && { belt }),
+    g, world, index, d, template, boss, secret, event: !!ev, fresh, ...(respite && { respite }), ...(scroll && { scroll }), ...(marea && cards.some((c) => c.wet) && { tide: 1 }), ...(hole && { hole }), ...(doors && { doors }), ...(belt && { belt }), ...(rocas && { rocks: { n: base === rocasFirst() ? 2 : 2 + (hash(g * 211 + 7) % 2) } }),
     ...(raw.names && { pieces: raw.names }),
     ...((nebula || fold) && { neb: tramos }),
     ...(grav && { cols: tramos }),
@@ -1287,7 +1328,7 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
   if (ev) level.rewardStep = 2;
   if (mech.has('ship')) level.ship = 1;
   // Primero el camino acertado (instantáneo); el solucionador solo si ese no llega a tiempo.
-  const check = () => (!level.ship && !level.tide && !level.hole && !level.belt && !cards.some((c) => c.live || c.bomb || c.ghost)) || refLeft(level) >= 0 || !!solve(level, initState(level), 60000);
+  const check = () => (!level.ship && !level.tide && !level.hole && !level.belt && !level.rocks && !cards.some((c) => c.live || c.bomb || c.ghost)) || refLeft(level) >= 0 || !!solve(level, initState(level), 60000);
   // La banda: si no se puede ganar, se para (queda como una fila de cartas sueltas).
   if (level.belt && !check()) {
     level.groups[level.belt.g] = { w: groups[level.belt.g].w, h: groups[level.belt.g].h };
@@ -1299,6 +1340,8 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
     delete level.hole;
     for (const c of cards) if (c.ring) (c.rank = ranks[c.id]), delete c.ring;
   }
+  // Los asteroides también se quitan si no se puede ganar.
+  if (level.rocks && !check()) delete level.rocks;
   // La marea es lo primero que se quita (luego la nave y el fantasma).
   if (level.tide && !check()) {
     delete level.tide;
@@ -1306,7 +1349,8 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
   }
   // La nave y el fantasma son lo primero que se quita (los niveles sin ellos quedan igual que antes).
   if (level.ship && !check()) delete level.ship;
-  if (cards.some((c) => c.ghost) && !check()) for (const c of cards) delete c.ghost;
+  // Fantasmas: se quitan de uno en uno (el último primero) hasta que se pueda ganar.
+  for (let gs = cards.filter((c) => c.ghost); gs.length && !check(); ) delete gs.pop().ghost;
   if (!check()) {
     for (const c of cards) if (c.live) (c.rank = ranks[c.id]), delete c.live;
     for (let extra = 4; !check() && extra <= 40; extra *= 2) for (const c of cards) if (c.bomb) c.bomb += extra;
@@ -1318,6 +1362,38 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
     // Si el camino acertado termina con el mazo vacío, ganar ya son 3★ (ganar es lo difícil).
     const best = Math.max(0, refLeft(level));
     level.stars = [Math.ceil(best / 2), Math.max(0, best - T.miss)];
+  }
+  // Rayo, escudo y constelación (10 nov 2026): al final, cada uno con su sorteo, y solo ayudan o dan premio (no hace
+  // falta volver a comprobar). Los niveles que no los traen quedan igual. Fuera de las mesas que se recorren (scroll).
+  if (n >= 10 && !scroll) {
+    // Rayo: una carta sin otra mecánica en la primera mitad de la referencia (así tiene a quién sacar). 11 nov 2026: se
+    // lleva al mazo de 1 a 3 cartas enterradas; eso puede romper la referencia, así que se comprueba (si no, sin rayo).
+    const rbo = mulberry32(hash(g * 7333 + t * 67 + 41));
+    if (world >= MECH_INTRO.bolt && (world === MECH_INTRO.bolt || rbo() < BOLT_ODDS)) {
+      const ks = [];
+      for (let k = 1; k < Math.ceil(np * 0.55); k++) if (plain(play[k])) ks.push(k);
+      if (ks.length) {
+        const c = cards[play[pick(rbo, ks)]];
+        c.bolt = 1 + Math.floor(rbo() * 3);
+        if (!(refLeft(level) >= 0 || solve(level, initState(level), 60000))) delete c.bolt;
+      }
+    }
+    // (El escudo ya no es carta: desde el 11 nov 2026 es una ayuda que se compra, ver HELPS en economy.js.)
+    // Constelación: 3 (o 4) cartas que la referencia juega una tras otra sin robar. Pueden traer otra mecánica (hielo,
+    // candado…), menos el boleto partido (se juega en dos veces).
+    const rcs = mulberry32(hash(g * 3301 + t * 73 + 47));
+    if (world >= MECH_INTRO.cst && (world === MECH_INTRO.cst || rcs() < CST_ODDS)) {
+      const m = n >= 22 && rcs() < 0.4 ? 4 : 3, at = [];
+      for (let i = 0; i + m <= seq.length; i++) {
+        const run = seq.slice(i, i + m);
+        if (run.every((x, j) => !x.tail && cards[x.id].half == null && (!j || !x.dn))) at.push(i);
+      }
+      if (at.length) {
+        const i = pick(rcs, at);
+        for (const x of seq.slice(i, i + m)) cards[x.id].cst = 1;
+        level.cst = m;
+      }
+    }
   }
   level.meta.mechs = MECHANICS.filter((m) => cards.some((c) => c[MECH_FIELD[m]] != null) || (m === 'turbo' && stock.some((c) => c.turbo)) || (m === 'ship' && level.ship));
   return level;
@@ -1435,14 +1511,18 @@ export function fiestaLevel(seed, k, world, n = FIESTA_PER_PLANET) {
 }
 
 // ---------- Mecánicas por mundo ----------
-export const MECHANICS = ['lock', 'pack', 'ice', 'double', 'arrow', 'curtain', 'bomb', 'live', 'ticket', 'comet', 'turbo', 'ghost', 'ship', 'coin', 'cham'];
-const MECH_FIELD = { lock: 'lock', pack: 'pack', ice: 'ice', double: 'alt', arrow: 'arrow', curtain: 'curtain', bomb: 'bomb', live: 'live', ticket: 'half', comet: 'comet', turbo: 'turbo', ghost: 'ghost', ship: 'ship', coin: 'coin', cham: 'cham' };
+export const MECHANICS = ['lock', 'pack', 'ice', 'double', 'arrow', 'curtain', 'bomb', 'live', 'ticket', 'comet', 'turbo', 'ghost', 'ship', 'coin', 'cham', 'bolt', 'cst'];
+const MECH_FIELD = { lock: 'lock', pack: 'pack', ice: 'ice', double: 'alt', arrow: 'arrow', curtain: 'curtain', bomb: 'bomb', live: 'live', ticket: 'half', comet: 'comet', turbo: 'turbo', ghost: 'ghost', ship: 'ship', coin: 'coin', cham: 'cham', bolt: 'bolt', cst: 'cst' };
+// Van con su sorteo, fuera de chooseMechanics (si entraran, cambiarían todos los niveles ya probados).
+const OWN_DRAW = ['ticket', 'ghost', 'ship', 'coin', 'cham', 'bolt', 'cst'];
 // Mundo (índice desde 0) en el que se presenta cada una.
 // 8 nov 2026: corridas para que cada estreno quede a 10 niveles o más del anterior (antes lock 1, pack 2, ice 4, double 7,
 // arrow 11, curtain 15, bomb 19, live 24, ticket 20, comet 12, turbo 16, ghost 29, ship 34, coin 26, cham 32).
-export const MECH_INTRO = { lock: 1, pack: 2, ice: 6, double: 12, arrow: 17, curtain: 22, bomb: 27, live: 33, ticket: 28, comet: 19, turbo: 24, ghost: 39, ship: 44, coin: 36, cham: 42 };
+// 10 nov 2026: rayo 47, constelación 49 y escudo 52 (a 10 niveles o más de las festividades del 461 y de los asteroides
+// del ROCAS_FROM).
+export const MECH_INTRO = { lock: 1, pack: 2, ice: 6, double: 12, arrow: 17, curtain: 22, bomb: 27, live: 33, ticket: 28, comet: 19, turbo: 24, ghost: 39, ship: 44, coin: 36, cham: 42, bolt: 47, cst: 49 };
 export const MECH_NAMES = {
-  lock: 'Candado', pack: 'Carta regalo', ice: 'Hielo', double: 'Carta doble', arrow: 'Flecha', curtain: 'Cortina', bomb: 'Bomba', live: 'Carta viva', ticket: 'Boleto partido', comet: 'Cometa', turbo: 'Cohete turbo', ghost: 'Fantasma', ship: 'Nave ladrona', coin: 'Carta moneda', cham: 'Camaleón',
+  lock: 'Candado', pack: 'Carta regalo', ice: 'Hielo', double: 'Carta doble', arrow: 'Flecha', curtain: 'Cortina', bomb: 'Bomba', live: 'Carta viva', ticket: 'Boleto partido', comet: 'Cometa', turbo: 'Cohete turbo', ghost: 'Fantasma', ship: 'Nave ladrona', coin: 'Carta moneda', cham: 'Camaleón', bolt: 'Rayo', cst: 'Constelación',
 };
 // Cartas de regalo (cometa y cohete turbo): no entran al sorteo de mecánicas, van aparte (buildLevel).
 // En el camino sin ayudas cada una sale de 1 a 4 veces en cada tramo de 30-35 niveles (extraPlan, pedido 6 nov 2026).
@@ -1459,6 +1539,8 @@ export const SHIP_ODDS = 0.1;
 export const COIN_ODDS = 0.18;
 // Camaleón (7 nov 2026): regalo como la moneda, con su sorteo.
 export const CHAM_ODDS = 0.12;
+// Rayo, constelación y escudo (10 nov 2026): con su sorteo. El escudo, en la mitad de los niveles con nave.
+export const BOLT_ODDS = 0.12, CST_ODDS = 0.12;
 export const EXTRA_ODDS = 0.047;
 // Estreno: el primer nivel de su mundo que no es duro ni mesa especial.
 const debuts = {};
@@ -1497,7 +1579,7 @@ export const extraPlanned = (m, g) => (extraAt[m] ||= extraPlan(m)).has(g);
 
 function chooseMechanics(r, world, index, boss, n, ev = null, T = null) {
   if (n < 8) return [];
-  const avail = MECHANICS.filter((m) => !EXTRA.includes(m) && m !== 'ticket' && m !== 'ghost' && m !== 'ship' && m !== 'coin' && m !== 'cham' && world >= MECH_INTRO[m]);
+  const avail = MECHANICS.filter((m) => !EXTRA.includes(m) && !OWN_DRAW.includes(m) && world >= MECH_INTRO[m]);
   if (!avail.length) return [];
   // Evento: siempre trae alguna de las que ya conoces (dos en los jefes). En los últimos planetas
   // la carta viva y la bomba (las más duras) van primero si ya las conoces.

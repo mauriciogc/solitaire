@@ -2,7 +2,8 @@
 // Misiones: cada día (medianoche, hora del teléfono) tocan 3 de una lista de ~25, escogidas con la fecha (iguales en
 // todo el día). Solo las que ya puedes hacer (las de cartas especiales, cuando ya llegaste a su mundo). Cada una da
 // monedas y las 3 juntas un cofre extra; desde el 10 nov 2026 se cobran solas al cumplirse (autoClaim).
-// Logros: para siempre. Cada uno tiene 3 escalones (bronce, plata y oro) con monedas; el oro da además un título.
+// Logros: para siempre. Cada uno tiene 5 escalones (bronce → diamante), cada uno desde cero, con monedas; el oro de
+// algunos da además un título.
 // Los dos se alimentan de lo mismo: track(stats) al terminar cada nivel (y al tronar burbujas o globos).
 import { save, persist } from './storage.js';
 import { MECH_INTRO, LEVELS_PER_WORLD } from './levels.js';
@@ -176,8 +177,11 @@ export const LOGROS = [
   { id: 'meteors', k: 'meteoro', name: 'Cazameteoros', ico: 'meteoro', steps: [25, 100, 300, 700, 1500], text: (n) => `Truena ${fmtN(n)} meteoros en el cielo` },
   { id: 'missions', k: 'missions', name: 'Cumplidor', ico: 'check', steps: [30, 150, 365, 700, 1200], text: (n) => `Completa ${fmtN(n)} misiones del día`, title: 'cumplidor' },
   { id: 'events', k: 'event', name: 'Fiestero', ico: 'calavera', steps: [15, 75, 200, 400, 750], text: (n) => `Gana ${n} niveles de eventos` },
-  // 10 nov 2026 (pedido del usuario): niveles seguidos ganados con apuesta (×2 o más). Sale cuando ya se puede apostar.
-  { id: 'betrow', k: 'betrow', best: true, bet: true, name: 'Apostador', ico: 'coin', steps: [3, 5, 8, 12, 20], text: (n) => `Gana ${n} apuestas seguidas` },
+  // 10 nov 2026 (pedido del usuario): uno por cada apuesta (×2, ×3, ×5, ×10), niveles ganados apostando eso. Cada uno
+  // sale cuando ya se puede apostar tanto. Sus metas van tal cual (raw: sin LOGRO_UP). Antes era uno solo, «Apostador»,
+  // de apuestas seguidas (betrow) con cualquier ×N.
+  ...[[2, [20, 40, 80, 150, 300]], [3, [15, 30, 60, 120, 240]], [5, [10, 20, 40, 80, 160]], [10, [5, 10, 20, 40, 80]]].map(([m, steps]) =>
+    ({ id: `bet${m}`, k: `bet${m}`, bet: m, raw: true, name: `Apostador ×${m}`, ico: 'coin', steps, text: (n) => `Gana ${fmtN(n)} niveles apostando ×${m}` })),
   { id: 'secrets', k: 'secret', name: 'Explorador secreto', ico: 'starSecret', steps: [5, 25, 100, 250, 520], text: (n) => `Gana ${n} niveles secretos`, title: 'explorador_secreto' },
 ];
 // 8 nov 2026: los logros pedían poco (el usuario: "no están tan complicados"): todas las metas ×LOGRO_UP desde el
@@ -188,7 +192,7 @@ const nice = (n) => {
   const v = n * LOGRO_UP, s = v < 50 ? 1 : v < 200 ? 5 : v < 1000 ? 10 : v < 10000 ? 50 : 500;
   return Math.round(v / s) * s;
 };
-for (const l of LOGROS) if (!l.best) l.steps = l.steps.map(nice);
+for (const l of LOGROS) if (!l.best && !l.raw) l.steps = l.steps.map(nice);
 // Premio de cada escalón (bronce → diamante).
 // 8 nov 2026: 10% menos monedas (el usuario: endurecer los logros, no dar más dinero). Antes 200/600/1,500/3,000/6,000.
 export const LOGRO_PRIZES = [{ coins: 180 }, { coins: 540 }, { coins: 1350 }, { coins: 2700, wild: 1 }, { coins: 5400, wild: 2, undo: 3 }];
@@ -197,17 +201,30 @@ export const LOGRO_MEDAL = ['Bronce', 'Plata', 'Oro', 'Platino', 'Diamante'];
 export const LOGRO_TOP = LOGRO_MEDAL.length;
 const fmtN = (n) => n.toLocaleString('es-MX');
 const stat = (l) => (save.stats || {})[l.best ? `${l.k}Best` : l.k] || 0;
-// Escalón alcanzado (0-5) y reclamado.
-export const logroAt = (l) => l.steps.filter((n) => stat(l) >= n).length;
 export const logroGot = (l) => Math.min(LOGRO_TOP, (save.logros || {})[l.id] || 0);
-export const logroStat = stat;
-export const logrosVisible = () => LOGROS.filter((l) => (!l.mech || (save.open || 0) >= MECH_INTRO[l.mech]) && (!l.bet || maxBet(save.next || 0) > 1));
+// 10 nov 2026 (pedido del usuario): cada medalla empieza desde cero. Lo que se suma (niveles, cartas, estrellas…) cuenta
+// desde que se cobró la anterior (save.logroBase = lo que llevaba entonces); para plata hay que juntar su meta completa
+// otra vez. Los de mejor de un nivel (racha, cartas en el mazo) ya se hacen de nuevo en cada nivel. Las partidas de
+// antes: las medallas ya cobradas se respetan y la siguiente cuenta desde hoy.
+const base = (l) => {
+  if (l.best) return 0;
+  const b = (save.logroBase ||= {});
+  if (b[l.id] == null) b[l.id] = logroGot(l) ? stat(l) : 0;
+  return b[l.id];
+};
+// Lo que lleva hacia la medalla que sigue y lo que pide (la absoluta, para el modo dev).
+export const logroProg = (l) => stat(l) - base(l);
+export const logroNeed = (l) => base(l) + l.steps[Math.min(logroGot(l), LOGRO_TOP - 1)];
+// Escalón alcanzado: el siguiente, si ya juntó su meta.
+export const logroAt = (l) => { const got = logroGot(l); return got < LOGRO_TOP && logroProg(l) >= l.steps[got] ? got + 1 : got; };
+export const logrosVisible = () => LOGROS.filter((l) => (!l.mech || (save.open || 0) >= MECH_INTRO[l.mech]) && (!l.bet || maxBet(save.next || 0) >= l.bet));
 export const logrosReady = () => isLogrosOn() && logrosVisible().some((l) => logroAt(l) > logroGot(l));
 export function logroClaim(id) {
   const l = LOGROS.find((x) => x.id === id);
   const got = logroGot(l);
   if (!l || logroAt(l) <= got) return null;
   (save.logros ||= {})[id] = got + 1;
+  if (!l.best) save.logroBase[id] = stat(l);
   const p = { ...LOGRO_PRIZES[got] };
   save.coins += p.coins;
   save.wild += p.wild || 0;
@@ -225,8 +242,8 @@ export function logroClaim(id) {
 // bombs, comets, turbo, halves, coincards, ghosts, cham, event, secret, burbuja, globo, meteoro, arrows, doubles, lives,
 // curtains, brooms, boss3, pure }. Los "best" (streak, left) se
 // comparan; lo demás se suma. Devuelve las misiones que se acaban de completar (para avisar).
-// Los que guardan el mejor (no se suman): racha de un nivel, cartas en el mazo y apuestas seguidas.
-const BEST = ['streak', 'left', 'betrow'];
+// Los que guardan el mejor (no se suman): racha de un nivel y cartas en el mazo.
+const BEST = ['streak', 'left'];
 export function track(stats) {
   const st = (save.stats ||= {});
   for (const [k, v] of Object.entries(stats)) {

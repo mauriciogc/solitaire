@@ -36,6 +36,13 @@
 //   doorKey   carta llave: al jugarla te da una llave (s.keys) para abrir la puerta que tú escojas
 //   neb       nebulosa: la carta está en un tramo escondido que sale cuando ya se vaciaron `neb` tramos, cualesquiera
 //             (level.neb = ids de cada tramo)
+//   bolt      rayo (1-3; 11 nov 2026): al jugarla, las `bolt` cartas más enterradas se van del tablero al final del mazo
+//             de robo (ya no cuentan para ganar). Antes (10 nov) sacaba una libre encima de las demás (s.lift) y tapaba
+//   (escudo: desde el 11 nov 2026 ya no es carta; es la ayuda Escudo, useShield: s.shield = la nave ya no roba)
+//   cst       constelación (10 nov 2026): estrellita. Jugar todas las del nivel seguidas (sin robar ni jugar otra en
+//             medio) da un premio (lo da el juego). s.cst = cuántas van (0 sin empezar, -1 perdida, level.cst lograda)
+//
+// Mesas del nivel: level.rocks = { n } cinturón de asteroides (10 nov 2026, ver dropRocks).
 import { hash } from './rng.js';
 
 export const mod13 = (n) => ((n % 13) + 13) % 13;
@@ -80,6 +87,10 @@ function giveBack(level, s, at) {
 export const useClock = (s0) => ({ ...cloneState(s0), freeze: (s0.freeze || 0) + CLOCK_TURNS });
 // Llave maestra: abre todos los candados y cortinas del tablero.
 export const useMaster = (s0) => ({ ...cloneState(s0), master: true });
+// Láser (10 nov 2026): rompe todas las piedras de los asteroides.
+export const useLaser = (s0) => ({ ...cloneState(s0), rock: {} });
+// Ayuda Escudo: la nave ladrona ya no se lleva nada en lo que queda del nivel.
+export const useShield = (s0) => ({ ...cloneState(s0), shield: true });
 
 export function initState(level, extra = {}) {
   return {
@@ -98,12 +109,14 @@ export function initState(level, extra = {}) {
     ...(level.tide && { tq: 0, tide: 0 }),
     // Puertas: llaves en la mano y puertas abiertas.
     ...(level.doors && { keys: 0, open: [] }),
+    // Asteroides: robos desde la última caída y piedras en el tablero (id -> jugadas que les quedan).
+    ...(level.rocks && { rq: 0, rock: {} }),
     ...extra,
   };
 }
 
 // (Partidas guardadas antes del boleto partido no traen cut.)
-export const cloneState = (s) => ({ ...s, rem: s.rem.slice(), stock: s.stock.slice(), boom: s.boom.slice(), cut: (s.cut || []).slice(), ...(s.open && { open: s.open.slice() }) });
+export const cloneState = (s) => ({ ...s, rem: s.rem.slice(), stock: s.stock.slice(), boom: s.boom.slice(), cut: (s.cut || []).slice(), ...(s.open && { open: s.open.slice() }), ...(s.lift && { lift: s.lift.slice() }), ...(s.rock && { rock: { ...s.rock } }) });
 
 // Mitad del boleto partido que ya se jugó (0 = está entero, 1 = la de arriba, 2 = la de abajo).
 export const cutOf = (c, s) => (c.half != null && s.cut?.[c.id]) || 0;
@@ -142,7 +155,8 @@ export const nebOut = (level, s) => (level.neb ? level.neb.reduce((n, t) => n + 
 export const doorOpen = (level, d, s) => !!s.open?.[d];
 // ¿Cuenta para ganar? Las cartas tras una puerta cerrada no.
 export const counts = (level, c, s) => c.door == null || doorOpen(level, c.door, s);
-export const isFree = (c, s, level) => c.coveredBy.every((j) => s.rem[j]) && (!c.neb || nebOut(level, s) >= c.neb) && (c.door == null || doorOpen(level, c.door, s));
+// El rayo de antes (s.lift, partidas guardadas del 10 nov) sacaba una carta de abajo: queda libre aunque sigan ahí.
+export const isFree = (c, s, level) => (c.coveredBy.every((j) => s.rem[j]) || !!s.lift?.includes(c.id)) && (!c.neb || nebOut(level, s) >= c.neb) && (c.door == null || doorOpen(level, c.door, s));
 export const curtainOpen = (level, c, s) => c.curtain == null || !!s.master || !!s.rem[level.curtains[c.curtain]];
 export const lockOpen = (level, c, s) => c.lock == null || !!s.master || !!s.rem[level.keys[c.lock]];
 export const iceLeft = (c, s) => (c.ice ? Math.max(0, c.ice - s.plays) : 0);
@@ -172,7 +186,33 @@ export const underWater = (c, s) => !!c.wet && (s.tide || 0) >= c.wet;
 export const BELT_W = 4; // 8 nov 2026: con 3 el bot casual ganaba 30% (47% en uno normal)
 export const beltPos = (level, c, s) => (((c.belt - 1 - s.actions) % level.belt.K) + level.belt.K) % level.belt.K;
 export const beltShown = (level, c, s) => !c.belt || !level.belt || beltPos(level, c, s) < level.belt.W;
-export const isOpen = (level, c, s) => faceUp(level, c, s) && lockOpen(level, c, s) && !iceLeft(c, s) && ghostShown(c, s) && !underWater(c, s) && beltShown(level, c, s);
+export const isOpen = (level, c, s) => faceUp(level, c, s) && lockOpen(level, c, s) && !iceLeft(c, s) && ghostShown(c, s) && !underWater(c, s) && beltShown(level, c, s) && !rockOn(c, s);
+// Cinturón de asteroides (10 nov 2026, pedido del usuario): cada ROCK_EVERY robos caen level.rocks.n piedras (2 o 3)
+// sobre cartas libres; cada una la tapa ROCK_PLAYS turnos (jugadas o robos; 11 nov 2026, antes solo jugadas) o hasta usar la ayuda Láser. Como la marea,
+// tiene límite: nunca más de ROCK_MAX piedras a la vez y siempre deja ROCK_KEEP cartas libres sin piedra. El reloj de
+// arena detiene la cuenta de robos. Dónde caen sale del estado (determinista: juego, solucionador y bot coinciden).
+export const ROCK_EVERY = 4, ROCK_PLAYS = 3, ROCK_MAX = 3, ROCK_KEEP = 1;
+export const rockOn = (c, s) => !!s.rock?.[c.id];
+export const rockLeft = (s) => ROCK_EVERY - ((s.rq || 0) % ROCK_EVERY);
+function dropRocks(level, s, frozen) {
+  if (!level.rocks || frozen) return [];
+  s.rq = (s.rq || 0) + 1;
+  if (s.rq < ROCK_EVERY) return [];
+  s.rq = 0;
+  const free = level.cards.filter((c) => faceUp(level, c, s) && !rockOn(c, s) && counts(level, c, s));
+  const room = Math.min(level.rocks.n, ROCK_MAX - Object.keys(s.rock).length, free.length - ROCK_KEEP);
+  if (room <= 0) return [];
+  const ids = free.map((c) => [c.id, hash(level.g * 7919 + s.actions * 131 + c.id * 17)]).sort((a, b) => a[1] - b[1]).slice(0, room).map(([id]) => id);
+  for (const id of ids) s.rock[id] = ROCK_PLAYS;
+  return ids;
+}
+// Cada jugada le quita 1 a cada piedra; las que llegan a 0 se rompen.
+function wearRocks(s) {
+  if (!s.rock) return [];
+  const out = [];
+  for (const id of Object.keys(s.rock)) if (--s.rock[id] <= 0) (delete s.rock[id]), out.push(+id);
+  return out;
+}
 // Sube 1 franja cada 3 robos y baja 1 cada 3 jugadas (tq entre 0 y 3·TIDE_MAX + 2; el comodín cuenta como jugada y el
 // +5 no la mueve). Nunca deja sin cartas libres: si el agua taparía todas las que se ven, se queda una franja abajo.
 export function setTide(level, s, d = 0) {
@@ -255,6 +295,7 @@ function applyReward(level, s, at = s.streak) {
   if (BROOM[kind]) {
     const ids = buried(level, s, BROOM[kind]);
     for (const id of ids) s.rem[id] = true;
+    if (level.cst && s.cst !== level.cst && ids.some((id) => level.cards[id].cst)) s.cst = -1;
     return { kind: 'broom', ids, pos: -1 };
   }
   let pos = -1;
@@ -269,7 +310,7 @@ function applyReward(level, s, at = s.streak) {
 
 // Las n cartas más enterradas que quedan: las que tienen más cartas encima (contando las de encima de esas), sin las
 // especiales ni los boletos partidos. Empates: la de id menor. Determinista, como todo el motor.
-function buried(level, s, n) {
+function buried(level, s, n, ok = () => true) {
   const memo = new Map();
   const depth = (id) => {
     if (memo.has(id)) return memo.get(id);
@@ -279,7 +320,7 @@ function buried(level, s, n) {
     return d;
   };
   return level.cards
-    .filter((c) => !s.rem[c.id] && !special(c) && c.half == null && counts(level, c, s) && !isFree(c, s, level))
+    .filter((c) => !s.rem[c.id] && !special(c) && c.half == null && counts(level, c, s) && !isFree(c, s, level) && ok(c))
     .map((c) => [c.id, depth(c.id)])
     .sort((a, b) => b[1] - a[1] || a[0] - b[0])
     .slice(0, n)
@@ -361,6 +402,8 @@ export function play(level, s0, id, low = false) {
   s.streak++;
   // Carta llave: una llave más en la mano.
   if (c.doorKey) s.keys = (s.keys || 0) + 1;
+  // Constelación: suma si es estrellita; cualquier otra carta a la mitad la apaga.
+  const cst = cstStep(level, s, !!c.cst && !split);
   const at = s.streak;
   // Turbo: esta jugada suma un punto más (y su premio, si toca).
   const boosted = s0.turbo > 0;
@@ -383,7 +426,16 @@ export function play(level, s0, id, low = false) {
   let shipBack = null;
   if (level.ship) for (let k = at; k <= s.streak; k++) if (k % SHIP_STREAK === 0) shipBack = giveBack(level, s, k) || shipBack;
   setTide(level, s, -1);
-  return { s, ev: { t: 'play', id, rank: r, packs, defused, reward, boost, boom, wished, wishes, gone, ...(c.turbo && { turbo: true }), ...(split && { split }), ...(shipBack && { shipBack }), ...(c.doorKey && { key: true }) } };
+  const rockOff = wearRocks(s);
+  // Rayo: las cartas más enterradas (1-3) se van al final del mazo de robo (después de todo lo demás de la jugada).
+  // Ni la carta llave de las puertas ni las de la constelación (se perderían).
+  const bolted = c.bolt ? buried(level, s, c.bolt, (x) => x.curtain == null && x.door == null && !x.doorKey && !x.cst) : [];
+  for (const b of bolted) {
+    const x = level.cards[b];
+    s.rem[b] = true;
+    s.stock.push({ rank: rankOf(x, s), suit: x.suit, ...(x.alt != null && { alt: x.alt }), ...(x.arrow && { arrow: x.arrow }) });
+  }
+  return { s, ev: { t: 'play', id, rank: r, packs, defused, reward, boost, boom, wished, wishes, gone, ...(c.turbo && { turbo: true }), ...(split && { split }), ...(shipBack && { shipBack }), ...(c.doorKey && { key: true }), ...(cst && { cst }), ...(rockOff.length && { rockOff }), ...(bolted.length && { bolted }) } };
 }
 
 // Abrir la puerta d con una llave. No es jugada ni robo: no mueve la racha ni las cuentas, salvo su premio
@@ -407,6 +459,14 @@ export function openDoor(level, s0, d) {
   return { s, ev: { t: 'door', d, prize, wishes, from: s0.streak } };
 }
 
+// Constelación: on = la carta es estrellita. Devuelve 'on' (sumó), 'done' (las juntó todas), 'lost' (se apagó) o null.
+export function cstStep(level, s, on) {
+  if (!level.cst || s.cst === -1 || s.cst === level.cst) return null;
+  if (on) return (s.cst = (s.cst || 0) + 1) === level.cst ? 'done' : 'on';
+  if (s.cst > 0) return (s.cst = -1), 'lost';
+  return null;
+}
+
 export function draw(level, s0) {
   const s = cloneState(s0);
   const card = s.stock.shift();
@@ -419,10 +479,15 @@ export function draw(level, s0) {
   const act = { packs: [], defused: [], wished: [] };
   const wishes = [];
   if (boom.length || gone.length) activateAfter(level, s, act, wishes);
-  // Nave ladrona: llega tras unos robos y se lleva una carta del mazo.
-  const ship = level.ship && s.shipIn > 0 && --s.shipIn === 0 ? steal(level, s) : null;
+  // Nave ladrona: llega tras unos robos y se lleva una carta del mazo (con el escudo ya no).
+  const ship = level.ship && !s.shield && s.shipIn > 0 && --s.shipIn === 0 ? steal(level, s) : null;
   setTide(level, s, 1);
-  return { s, ev: { t: 'draw', card, boom, gone, ...act, wishes, ...(card.turbo && { turbo: true }), ...(ship && { ship }) } };
+  const cst = cstStep(level, s, false);
+  // 11 nov 2026 (el usuario se quedó atorado: la única carta del tablero con piedra y robar no la quitaba): las piedras
+  // también se gastan al robar. Primero se gastan las que ya estaban y luego caen las nuevas (con sus 3 turnos).
+  const rockOff = wearRocks(s);
+  const rocks = dropRocks(level, s, s0.freeze > 0);
+  return { s, ev: { t: 'draw', card, boom, gone, ...act, wishes, ...(card.turbo && { turbo: true }), ...(ship && { ship }), ...(cst && { cst }), ...(rockOff.length && { rockOff }), ...(rocks.length && { rocks }) } };
 }
 
 // ---------- Solucionador y bot ----------
@@ -441,7 +506,7 @@ export function solve(level, s0, limit = 250000, wilds = 0) {
   const dfs = (s, w = wilds) => {
     if (won(s, level)) return true;
     if (++nodes > limit) return false;
-    const key = `${w}|${s.rem.map((b, i) => (b ? 1 : s.cut?.[i] ? s.cut[i] + 1 : 0)).join('')}|${s.stock.map(sig).join(',')}|${sig(s.top)}|${(s.streak <= LAST_REWARD ? s.streak : LAST_REWARD + 1 + ((s.streak - LAST_REWARD) % 3))}${timed ? `|${s.actions}|${s.boom}|${s.freeze || 0}` : ''}${level.ship ? `|${s.shipIn}|${s.stolen.map(sig).join('.')}` : ''}${level.tide ? `|${s.tq}` : ''}${s.master ? '|m' : ''}${turbo ? `|${s.turbo}` : ''}`;
+    const key = `${w}|${s.rem.map((b, i) => (b ? 1 : s.cut?.[i] ? s.cut[i] + 1 : 0)).join('')}|${s.stock.map(sig).join(',')}|${sig(s.top)}|${(s.streak <= LAST_REWARD ? s.streak : LAST_REWARD + 1 + ((s.streak - LAST_REWARD) % 3))}${timed ? `|${s.actions}|${s.boom}|${s.freeze || 0}` : ''}${level.ship ? `|${s.shipIn}|${s.stolen.map(sig).join('.')}` : ''}${level.tide ? `|${s.tq}` : ''}${s.master ? '|m' : ''}${turbo ? `|${s.turbo}` : ''}${level.rocks ? `|${s.rq}|${Object.entries(s.rock).join(';')}` : ''}${s.lift ? `|${s.lift}` : ''}${s.shield ? '|S' : ''}`;
     if (seen.has(key)) return false;
     seen.add(key);
     const moves = legal(level, s);

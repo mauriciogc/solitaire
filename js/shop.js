@@ -5,6 +5,8 @@ import { save, persist } from './storage.js';
 import { icon } from './art.js';
 import { themeItems, TRAVELER_VARIANTS } from './themes.js';
 import { SETS, setItems, SET_PRICE } from './sets.js';
+import { FIESTAS } from './events.js';
+import { fiestaItems, fiestaTitleIcons } from './fiesta-art.js';
 
 // Las secciones van en 3 grupos para que las pestañas quepan en un teléfono.
 export const GROUPS = [
@@ -442,6 +444,9 @@ export const ITEMS = {
   const tm = themeItems();
   for (const sec in tm) ITEMS[sec].push(...tm[sec].filter((it) => !ITEMS[sec].some((x) => x.k === it.k)));
   ITEMS.traveler.push(...TRAVELER_VARIANTS.map(({ k, name, text, price, need }) => ({ k, name, text, price, need })));
+  // Exclusivos de las festividades nuevas (10 nov 2026, fiesta-art.js).
+  const fi = fiestaItems(FIESTAS);
+  for (const sec in fi) ITEMS[sec].push(...fi[sec]);
   // Colecciones de personaje (sets.js): cada pieza cuesta según su avatar y se abre en el mismo mundo que él.
   for (const { sec, ...it } of setItems()) {
     const av = ITEMS.avatar.find((x) => x.k === it.set), base = av.price || 300;
@@ -456,6 +461,8 @@ const ONE_NAME = {
   // Exclusivos de eventos.
   cangrejo: 'Cangrejo', topo: 'Topo minero', ardilla: 'Ardilla', osito: 'Osito de gomita', triceratops: 'Triceratops', robodog: 'Perro robot', pulpopintor: 'Pulpo pintor', ranita: 'Ranita rockera', mapache: 'Mapache director/Mapache directora', tamalito: 'Tamalito', taquito: 'Taquito', arbolito: 'Arbolito', pinatita: 'Piñatita', clavelito: 'Clavelito', bigoton: 'Bigotón', atigrado: 'Michi atigrado', dalmata: 'Dálmata', chaneque: 'Chaneque', xologuia: 'Xolo guía', lloronita: 'Lloronita', catrinita: 'Catrín/Catrina', revolucionario: 'Revolucionario/Revolucionaria', audifonos: 'Gamer pro', bichito: 'Bichito', bufoncito: 'Bufoncito', uvita: 'Uvita', xolo: 'Xólotl', reno: 'Reno', reymago: 'Rey Mago/Reina Maga', cupido: 'Cupido', catarina: 'Catarina', foca: 'Foca playera', chihuahua: 'Chihuahua charro', gatobruja: 'Gato brujo/Gata bruja', loro: 'Loro pirata', meteorin: 'Meteorín',
 };
+// Avatares de las festividades nuevas: su nombre ya viene en fiesta-art.js (con «/» si cambia para niña).
+for (const it of ITEMS.avatar) if (FIESTAS.some((f) => f.grp && f.key === it.ev)) ONE_NAME[it.k] = it.name;
 for (const it of ITEMS.avatar) {
   const n = ONE_NAME[it.k];
   if (!n) continue;
@@ -553,6 +560,7 @@ export function buy(sec, k, cost = item(sec, k)?.price) {
 // Cada título se ve distinto: color, icono y forma (los más caros, más vistosos).
 const TITLE_ICO = { novato: 'star', explorador: 'flag', cazacometas: 'rocket', maestro: 'trophy', viajero: 'planet', bombas: 'bomb', leyenda: 'crown', buscaconchas: 'concha', cazagemas: 'gema', guardabosques: 'bellota', golosito: 'caramelo', paleontologo: 'fosil', inventor: 'tuerca', tamalero: 'tamal', taquero: 'taco', heroeverde: 'tierra', jugueton: 'pinata', consentido: 'clavel', orgullo: 'corbata', amigomichi: 'gatito', mejoramigo: 'hueso', catrin: 'calavera', duende: 'esfera', buscador: 'rosca', flechazo: 'corazon', jardinero: 'tulipan', olas: 'sol', mariachi: 'sombrero', hechicero: 'calabaza', jefefinal: 'control', cerobugs: 'llaves', bromista: 'bufon', propositos: 'reloj', artista: 'gota', estrellarock: 'nota', director: 'claqueta', nahual: 'nahual', guiaalmas: 'xolito', almadelrio: 'velita', elegancia: 'catrina', valiente: 'locomotora', cazatesoros: 'cofre', cazaestrellas: 'meteoro', perfeccionista: 'crown', imparable: 'flame', artificiero: 'bomb', cazafantasmas: 'ghost', cumplidor: 'check', explorador_secreto: 'starSecret', chispa: 'flame', estratega: 'card', cronista: 'reloj', guardiananillo: 'gema', magocartas: 'wild', invencible: 'trophy' };
 for (const s of SETS) TITLE_ICO[s.title[0]] = s.title[2];
+Object.assign(TITLE_ICO, fiestaTitleIcons(FIESTAS));
 export const titleName = (k = equipped('title')) => item('title', k).name;
 export const titleIcon = (k) => icon(TITLE_ICO[k] || 'star');
 export const titleHTML = (k = equipped('title'), cls = '', tag = 'span', attrs = '') =>

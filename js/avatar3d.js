@@ -15,6 +15,7 @@ import dE from './disfraces/e.js';
 import dF from './disfraces/f.js';
 import dG from './disfraces/g.js';
 import dH from './disfraces/h.js';
+import dI from './disfraces/i.js';
 
 const TAU = Math.PI * 2;
 const calm = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -785,7 +786,7 @@ export const COSTUME_LIST = [['nino', 'Ropa de inicio'], ['gato', 'Gatito'], ['a
 // default (H) => ({ clave: { name, moves, sleeve, hood?, wig?, build(part, head, torso, k, toon) => [ticks] } }), con H los
 // ayudantes de aquí. hood: gorro (tu pelo no se dibuja) · wig: peluca (el disfraz pone su pelo y el tuyo no se dibuja).
 const H = { THREE, TAU, flat, flatShape, dim, shirt, starGeo, cap, fringe, hoodCap, onCap, belly, neckRing, KID_HAIRS };
-for (const mk of [dA, dB, dC, dD, dE, dF, dG, dH]) for (const [k, c] of Object.entries(mk(H))) { COSTUMES[k] = c; if (!COSTUME_LIST.some((x) => x[0] === k)) COSTUME_LIST.push([k, c.name || k]); }
+for (const mk of [dA, dB, dC, dD, dE, dF, dG, dH, dI]) for (const [k, c] of Object.entries(mk(H))) { COSTUMES[k] = c; if (!COSTUME_LIST.some((x) => x[0] === k)) COSTUME_LIST.push([k, c.name || k]); }
 
 // Un avatar listo para la escena: { obj, tick(segundos) }. moves: los 3 de su ropa o 'all' (los 10, para dev).
 // Con "reducir movimiento" se queda feliz y quieto.

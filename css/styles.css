@@ -451,6 +451,7 @@ html.dev-on .galaxy .res .me { display: none; }
 .streak { color: #fff; text-shadow: 2px 0 0 var(--ink), -2px 0 0 var(--ink), 0 2px 0 var(--ink), 0 -2px 0 var(--ink), 0 4px 0 var(--ink); }
 .streak.reward { color: var(--ink); text-shadow: none; background: var(--gold); border: 2.5px solid var(--ink); box-shadow: inset 0 -4px 0 #e89a17, 0 3px 0 var(--ink); padding: 2px 14px 4px; border-radius: 99px; font-size: calc(17px * var(--k)); }
 .streak.pop { animation: pop 0.9s var(--ease-out); }
+.streak .ico { width: 1.15em; height: 1.15em; vertical-align: -0.2em; }
 @keyframes pop { 0% { opacity: 0; scale: 0.8; } 15% { opacity: 1; scale: 1.1; } 70% { opacity: 1; scale: 1; } 100% { opacity: 0; translate: -50% -10px; } }
 
 /* Bandeja: deshacer · mazo · descarte · comodín */
@@ -601,6 +602,14 @@ html.dev-on .galaxy .res .me { display: none; }
 .front .rk.tb-rk .ico { display: block; width: 100%; height: 100%; }
 .back .tb-ico { position: absolute; left: 50%; top: 50%; width: 58%; aspect-ratio: 1; translate: -50% -50%; display: grid; place-items: center; border-radius: 50%; background: #ff8a3d; border: 2px solid var(--ink); box-shadow: inset 0 -3px 0 #e0602a; }
 .back .tb-ico .ico { width: 80%; height: 80%; }
+/* 11 nov 2026: rayo, constelación, fantasma y carta llave de las puertas, igual que el turbo: boca abajo, la orilla de
+   su color y su dibujo al centro; boca arriba, su dibujo arriba a la derecha en el lugar del palo (la constelación, abajo). */
+.back .tb-ico.mk-bolt { background: #5a4ad0; box-shadow: inset 0 -3px 0 #3a2a9e; }
+.back .tb-ico.mk-cst { background: #ffe58a; box-shadow: inset 0 -3px 0 #ec9a17; }
+.back .tb-ico.mk-ghost { background: #8a7ad8; box-shadow: inset 0 -3px 0 #6a5ab8; }
+.back .tb-ico.mk-door { background: #ffe08a; box-shadow: inset 0 -3px 0 #c9893a; }
+.front .cs.mk-cs { right: 5%; top: 4%; width: calc(var(--cw) * 0.32); height: calc(var(--cw) * 0.32); }
+.front .cs.mk-cs .ico { display: block; width: 100%; height: 100%; }
 .turbo-fly { position: fixed; z-index: 10000; width: 54px; height: 54px; margin: -27px 0 0 -27px; pointer-events: none; filter: drop-shadow(0 0 8px #ffb02e); }
 .turbo-fly .ico { width: 100%; height: 100%; }
 .combo.turbo { box-shadow: 0 0 0 2px #ff8a3d, 0 0 14px #ff8a3d99; }
@@ -761,6 +770,29 @@ html.dev-on .galaxy .res .me { display: none; }
 .row.ok { background: #e4f6e9; border-color: #a8dcb8; }
 .rows.tools[hidden] { display: none; }
 .rows.tools .row em { font-size: 15px; }
+.prof-tools { margin-top: 14px; text-align: left; }
+/* Ventana de una carta nueva (11 nov 2026): como en Cómo jugar, la carta y al lado su nombre y su texto. */
+.tip-card { display: flex; align-items: center; gap: 16px; text-align: left; margin: 4px 0; }
+.tip-pic { position: relative; flex: none; width: 59px; height: 83px; }
+.tip-pic > .card { --cw: 59px; position: absolute; left: 0 !important; top: 0; rotate: -5deg; }
+/* Mesas y ayudas: su icono o su carta de ayuda en el lugar de la carta. */
+.tip-pic.tip-ico { display: grid; place-items: center; height: 59px; }
+.tip-pic.tip-ico > svg, .tip-pic.tip-ico > .ico { width: 100%; height: 100%; }
+.tip-pic.tip-help .help-tip-card { display: block; width: 100%; rotate: -6deg; }
+.tip-card p { margin: 0; font-weight: 700; font-size: 16.5px; line-height: 1.35; }
+.tip-card p b:first-child { display: block; margin-bottom: 2px; font: 400 22px/1.1 'Lilita One'; color: var(--ink); }
+.tip-card p b { color: #c22c49; }
+/* Ayuda en una ventana de presentación (helpTip en game.js): su carta y su texto en un renglón aparte. */
+.help-tip { display: flex; align-items: center; gap: 14px; margin: 12px 0 4px; padding: 10px 14px; border-radius: 16px; background: #fff; border: 2px solid #e3d3b5; text-align: left; }
+.help-tip-card { flex: none; width: 52px; aspect-ratio: 100 / 140; background: center / contain no-repeat; filter: drop-shadow(0 2px 0 var(--ink)); }
+.help-tip p { margin: 0; font-weight: 700; font-size: 16px; line-height: 1.3; }
+/* Nota chiquita (la ayuda que sirve contra la carta o la mesa). */
+.help-tip.small { gap: 10px; margin-top: 14px; padding: 6px 10px; border-style: dashed; background: #fffaf0; }
+.help-tip.small .help-tip-card { width: 30px; rotate: -10deg; }
+/* Lista de ayudas (mini guía): una nota por ayuda, juntas. */
+.help-list { display: grid; gap: 6px; margin-top: 12px; }
+.help-list .help-tip.small { margin: 0; }
+.help-tip.small p { font-size: 13.5px; color: #6e66a3; }
 .row .avatar { width: 34px; height: 34px; font-size: 17px; }
 .row > .app-ico { border-radius: 9px; border: 2px solid var(--ink); }
 .sw { width: 58px; height: 34px; flex: none; border-radius: 17px; border: 2.5px solid var(--ink); background: #d9cdb6; position: relative; box-shadow: inset 0 3px 0 #0001; }
@@ -1679,6 +1711,12 @@ html:not(.dev-on) .dev-pill { display: none; }
   .modal:not(.buy-modal) .mbtns .btn { flex: 1 1 0; min-width: 0; padding: 0 12px 3px; font-size: 17px; white-space: nowrap; }
   .modal:not(.buy-modal) .mbtns .btn.sq { flex: 0 0 50px; }
   .modal:not(.buy-modal) .mbtns .btn.link { flex: 0 0 auto; }
+  /* 10 nov 2026: «¿Finalizar el nivel?» acostado: el cuadro de comprar +5 más chico (abanico, letras y aire). */
+  .offer.buy { gap: 10px; padding: 6px 12px 8px; border-radius: 14px; }
+  .offer.buy .fan { zoom: .62; }
+  .offer.buy > div > b { font-size: 18px; }
+  .offer.buy > div > span { font-size: 12px; margin-top: 1px; }
+  .offer.buy .cost { margin-top: 3px; }
   .mbody:last-child { padding-bottom: 14px; }
   /* Misiones: las 3 y el cofre en 2 columnas, para que quepan sin desplazarse. */
   .mis-modal:not(.lg-modal) { width: min(680px, 100%); }
@@ -1822,6 +1860,12 @@ html:not(.dev-on) .dev-pill { display: none; }
 .evi-pl .ico { width: 100%; height: 100%; filter: drop-shadow(0 3px 0 #0b062a33); }
 .evi-ico { position: relative; z-index: 2; }
 .evi-ico .ico { width: 92px; height: 92px; filter: drop-shadow(0 4px 0 #0b062a33); animation: wobble 2.4s ease-in-out infinite; }
+/* Cuáles son las nuevas (colecciones y festividades): fichas en dos columnas. */
+.ul-list { list-style: none; display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 5px; margin: 4px 0 10px; padding: 0; }
+.ul-list li { display: flex; align-items: center; gap: 6px; padding: 3px 7px; border-radius: 10px; background: #fff; border: 2px solid #e3d3b5; text-align: left; }
+.ul-list li > .ico { flex: none; width: 22px; height: 22px; }
+.ul-list b { display: block; font: 400 12.5px/1.1 'Lilita One'; color: var(--ink); }
+.ul-list small { display: block; font: 700 10.5px/1.15 'Baloo 2'; color: #7a6f9d; }
 .evi-rules { list-style: none; display: grid; gap: 7px; margin: 6px 0 4px; padding: 0; }
 .evi-rules li { display: flex; align-items: center; gap: 10px; text-align: left; font-weight: 700; color: #4a3f73; line-height: 1.25; }
 .evi-rules li > .ico { flex: none; width: 30px; height: 30px; }
@@ -1937,6 +1981,17 @@ html:not(.dev-on) .dev-pill { display: none; }
 .unlock-fiesta2 .ul-hero { align-items: center; gap: 8px; }
 .unlock-fiesta2 .ul-hero .ico { width: 46px; height: 46px; }
 .unlock-fiesta2 .ul-hero .ico.main { width: 74px; height: 74px; }
+/* 11 nov 2026 (pedido del usuario): los iconos de colecciones, eventos y festividades más chicos, sobre todo acostado. */
+:is([class*="unlock-col"], [class*="unlock-fiesta"], .unlock-mes) .evi-hero { height: 104px; }
+:is([class*="unlock-col"], [class*="unlock-fiesta"], .unlock-mes) .ul-hero { align-items: center; gap: 8px; }
+:is([class*="unlock-col"], [class*="unlock-fiesta"], .unlock-mes) .ul-hero .ico { width: 44px; height: 44px; }
+:is([class*="unlock-col"], [class*="unlock-fiesta"], .unlock-mes) .ul-hero .ico.main { width: 64px; height: 64px; }
+@media (max-height: 500px) {
+  :is([class*="unlock-col"], [class*="unlock-fiesta"], .unlock-mes) .evi-hero { height: 58px; margin: -8px 0 0; }
+  :is([class*="unlock-col"], [class*="unlock-fiesta"], .unlock-mes) .ul-hero .ico { width: 30px; height: 30px; }
+  :is([class*="unlock-col"], [class*="unlock-fiesta"], .unlock-mes) .ul-hero .ico.main { width: 44px; height: 44px; }
+  :is([class*="unlock-col"], [class*="unlock-fiesta"], .unlock-mes) .ul-new { font-size: 13px; padding: 0 7px 1px; }
+}
 /* Encima del dibujo (no en la orilla), para que se vea parte de él. */
 .ul-new { position: absolute; z-index: 3; top: -6px; right: -18px; padding: 1px 10px 2px; border-radius: 10px; background: #ff4d6d; border: 2.5px solid var(--ink); font: 400 16px 'Lilita One'; rotate: 8deg; animation: wobble 2.4s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) { .iconbtn.spot::after, .ul-new { animation: none; } }
@@ -2005,6 +2060,7 @@ html:not(.dev-on) .dev-pill { display: none; }
    personaje a la izquierda y el paso a la derecha. */
 .pf-first .mbody { padding-bottom: 16px; }
 .pf-wiz { display: grid; gap: 4px; }
+.pf-wiz.at-0 .pf-stage .avatar-preview { display: none; }
 .pf-stage { display: grid; justify-items: center; gap: 12px; padding-top: 2px; }
 .pf-first .avatar-preview .avatar.huge { width: 124px; height: 124px; border-width: 4px; }
 .pf-dots { display: flex; gap: 7px; }
@@ -2314,6 +2370,7 @@ html:not(.dev-on) .dev-pill { display: none; }
 .ep-main small { font-weight: 800; font-size: 12px; color: #6e66a3; text-transform: uppercase; letter-spacing: .04em; }
 .ep-main b { font: 400 22px/1.05 'Lilita One'; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ep-main em { font-style: normal; font-weight: 800; font-size: 14px; color: #4a3f73; }
+.ep-main .ep-zone { text-transform: none; letter-spacing: 0; font-size: 12.5px; color: #2f9e5c; }
 .ep-clock { font: 400 24px 'Lilita One'; color: var(--ink); font-variant-numeric: tabular-nums; }
 /* Brillo que cruza el pase de vez en cuando (dan ganas de tocarlo). */
 .ev-pass.buy .ep-card::after, .ev-pass.soon .ep-card::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(105deg, transparent 35%, #ffffffb0 48%, transparent 60%) -150% 0 / 60% 100% no-repeat; animation: pass-shine 3.4s ease-in-out 1s infinite; }
@@ -2558,15 +2615,26 @@ html:not(.dev-on) .dev-pill { display: none; }
 .hole .hd-streak.b { animation-duration: 1.1s; }
 .hole .hd-glow { transform-origin: 60px 42px; animation: hd-breathe 2.6s ease-in-out infinite; }
 .hole .hd-halo { animation: hd-halo 2.6s ease-in-out infinite; }
-.hole b { position: relative; z-index: 3; margin-top: -6%; font: 400 calc(var(--cw) * 0.4)/1 'Lilita One'; color: #fff; }
-.hole.hot .hd-streak { animation-duration: .5s; }
+/* 11 nov 2026 (pedido del usuario: más dramático): a 2, además late y se mece; a 1, late fuerte y las cartas tiemblan.
+   (.hole-pull también lo usan los asteroides a 1 robo de caer.) */
+.hole.warm svg { animation: hd-throb 1s ease-in-out infinite; }
+.hole.hot svg { animation: hd-throb-hot .45s ease-in-out infinite; }
+@keyframes hd-throb { 0%, 100% { scale: 1; rotate: 0deg; } 50% { scale: 1.08; rotate: -4deg; } }
+@keyframes hd-throb-hot { 0%, 100% { scale: 1; rotate: 2deg; } 50% { scale: 1.16; rotate: -3deg; } }
+.hole-pull .card:not(.removed) > .inner { animation: hole-pull .22s ease-in-out infinite alternate; }
+.hole-pull .card:nth-child(odd) > .inner { animation-delay: -.11s; }
+@keyframes hole-pull { from { translate: -1.5px 0; } to { translate: 1.5px -1px; } }
+.hole.warm .hd-streak { animation-duration: .9s; }
+.hole.warm .hd-glow, .hole.warm .hd-halo { animation-duration: 1.4s; }
+.hole.hot .hd-streak { animation-duration: .4s; }
+.hole.hot .hd-glow, .hole.hot .hd-halo { animation-duration: .7s; }
 .hole.hot .hd-halo { stroke: #ffc83d; }
 .hole.frozen svg { filter: saturate(.4) hue-rotate(160deg) brightness(1.15); }
-.hole.frozen :is(.hd-streak, .hd-glow, .hd-halo) { animation-play-state: paused; }
+.hole.frozen :is(.hd-streak, .hd-glow, .hd-halo), .hole.frozen svg { animation-play-state: paused; }
 @keyframes hd-spin { to { stroke-dashoffset: -48; } }
 @keyframes hd-breathe { 50% { transform: scale(1.08); opacity: .8; } }
 @keyframes hd-halo { 50% { stroke: #ffc4a0; } }
-@media (prefers-reduced-motion: reduce) { .hole :is(.hd-streak, .hd-glow, .hd-halo) { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .hole :is(.hd-streak, .hd-glow, .hd-halo), .hole svg, .hole-pull .card > .inner { animation: none; } }
 .step .ill .h-hole { position: absolute; left: 76px; top: 10px; width: 40px; height: 32px; border-radius: 50%; background: radial-gradient(circle at 50% 50%, #071433 0 22%, #2f7fd6 30%, #fff 33%, #ffc4dc 36%, #ff7a59 44%, transparent 52%), linear-gradient(transparent 38%, #ff8a5c 44%, #ff4f7a 52%, transparent 60%); box-shadow: 0 0 10px #ff6a8a88; }
 /* Puertas (9 nov 2026): puertitas del tamaño de una carta en la orilla, con su premio y su cerradura (sin decir
    cuántas cartas traen). Con llave en la mano brillan (.can). Abierta: las hojas se abren, queda el marco atrás de su pila. */
@@ -2589,8 +2657,6 @@ html:not(.dev-on) .dev-pill { display: none; }
 .door.open .door-hole { opacity: 0; }
 .door.open .door-frame { opacity: .45; }
 .card.in-door { opacity: 0; pointer-events: none; }
-.card .door-key { position: absolute; left: -10%; top: -8%; z-index: 3; width: 44%; aspect-ratio: 1; display: grid; place-items: center; border-radius: 50%; background: linear-gradient(#ffe08a, #ffb31a); border: 2px solid var(--ink); box-shadow: 0 0 8px #ffc83d; pointer-events: none; }
-.card .door-key .ico { width: 70%; height: 70%; }
 .key-pill { gap: 3px; font: 400 18px 'Lilita One'; color: #a49bc6; transition: background .3s, color .3s; }
 .key-pill .ico { width: 20px; height: 20px; }
 .key-pill.on { background: linear-gradient(#ffe08a, #ffb31a); color: #7a4a00; box-shadow: 0 0 12px #ffc83d; }
@@ -2835,6 +2901,34 @@ html:not(.dev-on) .dev-pill { display: none; }
 .ss-pic .frame-prev { zoom: .34; padding: 10px 12px 4px 6px; }
 .ssk-title .title-chip { zoom: .6; max-width: none; white-space: normal; text-align: center; }
 .ss-st { margin-top: 4px; }
+/* Dev: textos del juego (openTexts). Cada cosa con la ventana tal como sale y su texto de Tu camino. */
+.tx-body { gap: 16px; }
+.tx-item { display: grid; gap: 8px; padding: 12px; border-radius: 18px; background: #fff; border: 2px solid #e3d3b5; text-align: left; }
+.tx-item h5 { display: flex; align-items: center; gap: 10px; margin: 0; font-weight: 400; }
+.tx-item h5 b { font: 400 20px/1.1 'Lilita One'; }
+.tx-item h5 small { margin-left: auto; font: 700 13px 'Baloo 2'; color: #6e66a3; }
+.tx-pic { flex: none; display: grid; place-items: center; width: 44px; height: 44px; }
+.tx-pic > .ico { width: 36px; height: 36px; }
+.tx-where { display: grid; gap: 4px; }
+.tx-where > small { font: 800 11px 'Baloo 2'; color: #8a5cf0; text-transform: uppercase; letter-spacing: .05em; }
+.tx-p { margin: 0; font-weight: 700; color: #4a3f73; }
+.tx-win { border: 2.5px solid var(--ink); border-radius: 16px; overflow: hidden; background: var(--cream); box-shadow: 0 3px 0 var(--ink); }
+.tx-win h6 { margin: 0; padding: 6px 12px 8px; color: #fff; font: 400 18px/1.1 'Lilita One'; text-align: center; text-shadow: 0 2px 0 var(--ink); border-bottom: 2.5px solid var(--ink); }
+.tx-b { padding: 10px 14px; text-align: center; }
+.tx-b .lead { margin: 0 0 6px; }
+/* Dev: paquete de las festividades nuevas (openFiestaPack). Pestañas por grupo y, por festividad, su mesa y sus exclusivos. */
+.fp-tabs { position: sticky; top: -2px; z-index: 2; display: flex; gap: 6px; padding: 2px 0 10px; background: var(--cream, #fdf5e8); }
+.fp-tab { flex: 1; height: 40px; padding: 0 8px 2px; border-radius: 13px; background: #fff; border: 2.5px solid var(--ink); box-shadow: 0 2px 0 var(--ink); font: 400 15px/1 'Lilita One'; color: var(--ink); }
+.fp-tab small { font: 800 12px 'Baloo 2'; color: #8a5cf0; }
+.fp-tab.on { background: #ffc83d; }
+.fp-body { display: grid; gap: 18px; }
+.fp-fest h5 { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; font-weight: 400; }
+.fp-fest h5 .ico { width: 34px; height: 34px; flex: none; }
+.fp-fest h5 b { font: 400 20px/1 'Lilita One'; }
+.fp-fest h5 small { margin-left: auto; font: 700 13px 'Baloo 2'; color: #6e66a3; text-align: right; }
+.fp-mesa { position: relative; isolation: isolate; display: block; width: 100%; height: 100%; overflow: hidden; --k: .32; --sl: 0px; --sr: 0px; --st: -14px; --sb: 0px; }
+.fp-mesa .table, .fp-mesa .prop { z-index: 0; }
+.fp-mesa .prop.bl, .fp-mesa .prop.br { bottom: 2px; }
 @media (max-width: 420px) { .ss-list { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; } .ss-pic { width: 64px; height: 64px; } .ss-pic .trav-prev { width: 64px; height: 64px; } .ss-hero { width: 90px; height: 90px; } .ss-hero .avatar { width: 66px; height: 66px; } .ss-who > b { font-size: 20px; } .ss-cell > b { font-size: 13px; } }
 @media (max-height: 500px) { .ss-hero { width: 80px; height: 80px; } .ss-hero .avatar { width: 60px; height: 60px; } .ss-list { grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); } }
 /* "Llevarte todo" (9 nov 2026): el botón dorado de la tienda con su brillo y pulso; lo tachado como cualquier
@@ -2883,17 +2977,31 @@ html:not(.dev-on) .dev-pill { display: none; }
 .buy-modal .s-zoom { display: grid; place-items: center; margin: 4px auto 14px; min-height: 120px; }
 .buy-modal .s-zoom .avatar.huge { width: 128px; height: 128px; }
 .buy-modal .s-zoom .trav-prev { width: 150px; height: 150px; }
-.buy-modal .s-zoom .card-prev, .buy-modal .s-zoom .face-prev, .buy-modal .s-zoom .space-prev, .buy-modal .s-zoom .frame-prev { transform: scale(1.4); margin: 18px 0; }
+.buy-modal .s-zoom .card-prev, .buy-modal .s-zoom .face-prev { transform: scale(1.4); margin: 18px 0; }
+/* 10 nov 2026 (el usuario: «solo veo los colores»): los detalles de cada fondo son un dibujo de 340×300 que se repite;
+   en la vista previa solo cabía una esquina (casi vacía). En grande va sin escalar y con el dibujo completo; en las
+   tarjetas de la tienda, el dibujo a 0.8 para que se alcance a ver algo. */
+.buy-modal .s-zoom .space-prev { width: min(100%, 300px); height: 210px; margin: 0 auto; }
+.buy-modal .s-zoom .space-prev .ico { width: 84px; height: 84px; }
+.space-prev .space::after { background-size: 272px 240px !important; }
+.buy-modal .s-zoom .space-prev .space::after { background-size: 340px 300px !important; }
+/* 10 nov 2026: la postal no se escala (con el ancho completo se salía de la ventana): va a su tamaño, centrada, con
+   aire para el sello y los adornos del marco que salen por la orilla. */
+.buy-modal .s-zoom .frame-prev { width: min(100%, 300px); padding: 16px 16px 6px 8px; margin: 0 auto; text-align: left; font-weight: initial; }
 
 /* ---------- Misiones y logros: se cobran solos (10 nov 2026) ---------- */
 /* El botón enseña cuánto llevas con un anillo que se llena (--p de 0 a 1), sin punto rojo: no hay nada que reclamar. */
 @property --p { syntax: '<number>'; inherits: true; initial-value: 0; }
 .iconbtn.prog { transition: translate var(--press), box-shadow var(--press), --p 0.9s var(--ease-out); }
-.iconbtn.prog::before { content: ''; position: absolute; inset: -6px; border-radius: calc(22px * var(--k)); padding: 4px; pointer-events: none;
+/* 10 nov 2026 (el usuario): botón + anillo miden lo mismo que un botón normal; el botón se encoge lo que ocupa el anillo. */
+.galaxy .side .iconbtn.prog { width: calc(var(--bs) - 12px); height: calc(var(--bs) - 12px); margin: 6px; border-radius: calc(14px * var(--k)); }
+.galaxy .side .iconbtn.prog .ico { width: 74%; height: 74%; }
+.iconbtn.prog::before { content: ''; position: absolute; inset: -6px; border-radius: calc(14px * var(--k) + 6px); padding: 4px; pointer-events: none;
   background: conic-gradient(var(--pc) calc(var(--p) * 1turn), #ffffff2e 0);
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; }
 .mis-btn.prog { --pc: #5ad68c; }
 .logros-btn.prog { --pc: #ffc83d; }
+.racha-btn.prog { --pc: #ff8a3d; }
 .logros-btn .rn { position: absolute; bottom: -7px; left: 50%; translate: -50% 0; min-width: 22px; padding: 0 6px 1px; border-radius: 9px; background: #d98a10; border: 2px solid var(--ink); color: #fff; font: 400 13px 'Lilita One'; line-height: 1.3; text-align: center; }
 
 /* Festejo de misiones, logros y racha (10 nov 2026): todo se oscurece y al centro una tarjeta con su etiqueta de qué es.
@@ -2975,3 +3083,32 @@ html:not(.dev-on) .dev-pill { display: none; }
 .devmenu .dp-gen { --dpc: #9a8fc4; --dpd: #4a3f7a; }
 .devmenu .dp-cod { --dpc: #ff7aa2; --dpd: #d63d6f; }
 .devmenu .dp-exp { --dpc: #4aa8de; --dpd: #2f86c0; }
+
+/* ---------- Rayo, escudo, constelación y asteroides (10 nov 2026) ---------- */
+/* Constelación: una estrellita dorada dentro de la carta, abajo a la derecha, que titila; si se apaga, gris. */
+.card .cst-mk { position: absolute; right: 5%; bottom: 4%; width: calc(var(--cw) * 0.27); aspect-ratio: 1; display: grid; place-items: center; pointer-events: none; animation: cst-tw 1.8s ease-in-out infinite; }
+.card .cst-mk .ico { width: 100%; height: 100%; }
+@keyframes cst-tw { 50% { scale: 1.18; rotate: 12deg; } }
+.cst-lines { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 5000; pointer-events: none; overflow: visible; }
+.cst-lines polyline { fill: none; stroke: #ffe58a; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 0 6px #ffc83d); stroke-dasharray: 2000; stroke-dashoffset: 2000; animation: cst-draw 1s ease-out forwards, cst-fade .5s 1.2s forwards; }
+.cst-lines circle { fill: #fff6c4; stroke: #ffc83d; stroke-width: 3; animation: cst-fade .5s 1.2s forwards; }
+@keyframes cst-draw { to { stroke-dashoffset: 0; } }
+@keyframes cst-fade { to { opacity: 0; } }
+/* Rayo: la carta liberada va encima de las que la tapaban, con brillo amarillo; el relámpago cae sobre ella. */
+.card.lifted .face { box-shadow: 0 0 0 3px #ffd84a, 0 0 14px #ffd84a; }
+.card .bolt-fx { position: absolute; left: 50%; top: -60%; z-index: 5; width: 90%; aspect-ratio: 1; translate: -50% 0; pointer-events: none; filter: drop-shadow(0 0 10px #ffd84a); animation: bolt-hit .7s ease-out forwards; }
+.card .bolt-fx .ico { width: 100%; height: 100%; }
+@keyframes bolt-hit { 0% { opacity: 0; translate: -50% -60%; scale: .6; } 25% { opacity: 1; translate: -50% 0; scale: 1.1; } 45% { opacity: .3; } 60% { opacity: 1; } 100% { opacity: 0; scale: 1.3; } }
+/* Escudo puesto: burbuja con el escudo sobre el mazo. */
+.shield-on { position: absolute; left: -14px; top: -16px; z-index: 6; width: 36px; height: 36px; display: grid; place-items: center; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #ffffffcc, #9ee3f7aa 60%, #5fc7e888); border: 2.5px solid var(--ink); box-shadow: 0 0 12px #5fc7e8; pointer-events: none; }
+.shield-on .ico { width: 70%; height: 70%; }
+/* Asteroides: franja de piedras flotando en la orilla con la cuenta de robos encima. */
+/* Piedra sobre una carta: la tapa casi toda; su número = jugadas que le quedan. */
+.card .rock-ov { position: absolute; inset: 6% 2%; z-index: 4; display: grid; place-items: center; pointer-events: none; }
+.card .rock-ov .ico { position: absolute; inset: 0; width: 100%; height: 100%; filter: drop-shadow(0 3px 0 #0005); }
+/* Fuego de la piedra al caer (arriba de ella, apunta hacia donde viene); se apaga al llegar. */
+.card .rock-ov .rock-fire { position: absolute; left: 22%; bottom: 45%; width: 56%; height: 150%; opacity: 0; transform-origin: 50% 100%; rotate: 10deg; border-radius: 50% 50% 45% 45% / 70% 70% 30% 30%; background: linear-gradient(to top, #fff3a8, #ffc83d 25%, #ff7a3d 55%, #ff5f3d00); filter: blur(2px); }
+/* Rayo del láser: baja de arriba de la pantalla hasta la piedra. */
+.laser-beam { position: fixed; top: 0; z-index: 9500; width: 8px; margin-left: -4px; transform-origin: 50% 0; border-radius: 0 0 6px 6px; background: linear-gradient(90deg, #ff7aa0, #fff0f5 50%, #ff7aa0); box-shadow: 0 0 12px #ff5f7e, 0 0 24px #ff7aa0; pointer-events: none; }
+.card .rock-ov b { position: relative; font: 400 calc(var(--cw) * 0.42)/1 'Lilita One'; color: #fff; }
+@media (prefers-reduced-motion: reduce) { .card .cst-mk { animation: none; } }

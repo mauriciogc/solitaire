@@ -1,5 +1,5 @@
 import { save, persist } from './storage.js';
-import { openModal, toast, confetti, updateCoins, money, starsHTML, reduced, buzz, sparkle, wait, spendFromWallet, flyToWallet, balloons, lootBubbles, rachaWarnHTML, betLoseHTML, shownCoins } from './ui.js';
+import { openModal, toast, confetti, updateCoins, money, starsHTML, reduced, buzz, sparkle, wait, spendFromWallet, flyToWallet, balloons, lootBubbles, rachaWarnHTML, betLoseHTML, shownCoins, popPrize } from './ui.js';
 import { worldInfo, packGroups, MECH_NAMES, LEVELS_PER_WORLD, scrollStrip, scrollSpan, scrollCover, SCROLL_VIEW, SCROLL_SHOW, NEB_SLOTS, GRAV_SHOWN, W, H } from './levels.js';
 import * as E from './engine.js';
 import { price, EV_MARKUP, MET_OFF, round5, HELPS, buyable } from './economy.js';
@@ -13,25 +13,52 @@ export const RANKS = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q
 const LOCK_HUES = [350, 45, 200]; // color de cada pareja candado/llave
 const FLY_MS = 400;
 const FLY_EASE = 'cubic-bezier(0.33, 0.6, 0.35, 1)';
-// Explicación de cada mecánica la primera vez que aparece (modo jugador).
-const TIPS = {
-  lock: 'Esta carta tiene <b>candado</b>: no se puede jugar hasta que juegues la carta con la <b>llave</b> del mismo color.',
-  pack: 'La <b>carta regalo</b> no se juega: cuando la destapes por completo, mete cartas extra al final de tu mazo.',
-  ice: 'Carta de <b>hielo</b>: cada carta que juegas del tablero le quita 1. Cuando llega a 0 se derrite y ya la puedes jugar.',
-  double: 'La <b>carta doble</b> es dos números a la vez. Puedes jugarla si conecta con cualquiera de los dos, y cuando queda abajo puedes seguir desde cualquiera de sus dos números.',
-  arrow: 'Después de jugar una carta con <b>flecha</b>, la siguiente tiene que ser justo un número arriba (↑) o abajo (↓).',
-  curtain: 'Estas cartas tienen <b>cortina</b>: siguen boca abajo hasta que juegues la carta con el telón.',
-  bomb: 'La <b>bomba</b> no se juega: tienes que <b>destaparla</b> antes de que su cuenta llegue a 0 (baja con cada jugada o robo). Si no, explota y quema 3 cartas de tu mazo.',
-  comet: 'El <b>cometa</b> no se juega: <b>destápalo</b> antes de que su cuenta llegue a 0 (baja con cada jugada o robo) y vuela a tu <b>racha</b> con los puntos que marca. Si no llegas a tiempo, se va.',
-  turbo: 'El <b>cohete turbo</b> se juega como cualquier carta. Al usarlo, las <b>3 jugadas siguientes</b> valen <b>doble</b> en tu racha. Si robas, se apaga.',
-  ticket: 'El <b>boleto partido</b> tiene dos números. Juégalo con cualquiera de las dos mitades: se parte y la otra mitad se queda para jugarla después. Lo de abajo se destapa cuando juegas las dos.',
-  live: 'La <b>carta viva</b> cambia de número cada vez que juegas o robas: sube (↑) o baja (↓). Juégala cuando encaje.',
-  coin: 'La <b>carta moneda</b> se juega como cualquier otra y al jugarla te da <b>monedas</b>. ¡Un regalo!',
-  ship: 'En este nivel pasa una <b>nave ladrona</b>: cada pocos robos llega y se lleva una carta de tu mazo. Cada <b>4 de racha</b> se asusta y te regresa la última que se llevó. ¡Piensa antes de robar!',
-  cham: 'El <b>camaleón</b> cambia cada <b>3 jugadas o robos</b>: un rato es <b>comodín</b> (va sobre cualquier carta y luego sigues con la que quieras) y otro rato vuelve a su número. ¡Agárralo dorado!',
-  ghost: 'El <b>fantasma</b> aparece y desaparece cada 2 jugadas o robos. Solo lo puedes jugar cuando se ve: ¡atínale al momento!',
+// Explicación de cada carta especial (11 nov 2026, homologadas a pedido del usuario: simples y por grupos). Es el
+// mismo texto en su ventana al aparecer, en Tu camino y en Cómo jugar. Cada una: qué hace y, si hace falta, cuándo.
+export const MECH_KINDS = [
+  ['Se abren después', ['lock', 'curtain', 'ice']],
+  ['Cambian con los turnos', ['live', 'ghost', 'cham']],
+  ['Reglas al jugar', ['double', 'arrow', 'ticket']],
+  ['No se juegan', ['pack', 'bomb', 'comet']],
+  ['Te ayudan', ['coin', 'turbo', 'bolt', 'cst']],
+];
+// Dibujos que viven en main.js y dev.js (la carta de ejemplo y el icono de cada mesa): main.js los pone al arrancar.
+export const ART = { mechCard: () => '', tableIcon: () => '' };
+export const TIPS = {
+  lock: 'No se juega hasta que juegues la carta con la <b>llave</b> del mismo color.',
+  curtain: 'Sigue <b>boca abajo</b> hasta que juegues la carta con el <b>telón</b>.',
+  ice: 'No se juega hasta que se <b>derrite</b>: cada carta que juegas del tablero le quita 1.',
+  live: 'Su número <b>sube (↑) o baja (↓)</b> con cada jugada o robo. Juégala cuando encaje.',
+  ghost: '<b>Aparece y desaparece</b> cada 2 jugadas o robos. Solo se juega cuando se ve.',
+  cham: 'Cada 3 jugadas o robos se vuelve <b>comodín</b> y luego regresa a su número. Juégalo cuando esté dorado.',
+  double: 'Vale <b>dos números</b>: juégala con cualquiera y sigue desde cualquiera.',
+  arrow: 'Después de jugarla, la siguiente tiene que ser <b>uno más (↑)</b> o <b>uno menos (↓)</b>.',
+  ticket: 'Tiene <b>dos mitades</b>: juega una y la otra se queda para después.',
+  pack: 'No se juega: <b>destápala</b> y mete cartas extra a tu mazo.',
+  bomb: 'No se juega: <b>destápala</b> antes de que su cuenta llegue a 0. Si no, explota y quema 3 cartas de tu mazo.',
+  comet: 'No se juega: <b>destápalo</b> antes de que su cuenta llegue a 0 y suma puntos a tu racha. Si no, se va.',
+  coin: 'Se juega normal y te da <b>monedas</b>.',
+  turbo: 'Se juega normal y tus <b>3 jugadas siguientes</b> valen doble en la racha. Si robas, se apaga.',
+  bolt: 'Se juega normal y manda de <b>1 a 3</b> cartas enterradas a tu mazo.',
+  cst: 'Juega <b>todas</b> las de estrellita seguidas y ganas un premio. Si robas o juegas otra en medio, se apaga.',
 };
-const MECH_FIELD = { lock: 'lock', pack: 'pack', ice: 'ice', double: 'alt', arrow: 'arrow', curtain: 'curtain', bomb: 'bomb', live: 'live', ticket: 'half', comet: 'comet', turbo: 'turbo', ghost: 'ghost', ship: 'ship', coin: 'coin', cham: 'cham' };
+// La ayuda que sirve contra cada carta (11 nov 2026, pedido del usuario): sale con su carta en la ventana de la primera
+// carta que la necesite, una sola vez por ayuda (save.seen['ayuda-…']; el escudo usa save.seen.escudo).
+export const TIP_HELP = {
+  lock: ['llave', 'hllave', '<b>Llave maestra:</b> abre todos los candados y cortinas.'],
+  curtain: ['llave', 'hllave', '<b>Llave maestra:</b> abre todos los candados y cortinas.'],
+  comet: ['reloj', 'hreloj', '<b>Reloj de arena:</b> congela 3 turnos todo lo que cuenta.'],
+  bomb: ['reloj', 'hreloj', '<b>Reloj de arena:</b> congela 3 turnos todo lo que cuenta.'],
+  live: ['reloj', 'hreloj', '<b>Reloj de arena:</b> congela 3 turnos todo lo que cuenta.'],
+  ghost: ['reloj', 'hreloj', '<b>Reloj de arena:</b> congela 3 turnos todo lo que cuenta.'],
+};
+const MECH_FIELD = { lock: 'lock', pack: 'pack', ice: 'ice', double: 'alt', arrow: 'arrow', curtain: 'curtain', bomb: 'bomb', live: 'live', ticket: 'half', comet: 'comet', turbo: 'turbo', ghost: 'ghost', ship: 'ship', coin: 'coin', cham: 'cham', bolt: 'bolt', cst: 'cst' };
+// Constelación (10 nov 2026, pedido del usuario): al juntarla, CST_HELP de las veces una ayuda y si no monedas, de 50 a
+// 200 (casi siempre de las bajas: el promedio queda en ~100, unas 2 veces lo que paga un nivel ahí).
+const CST_HELP = 0.15;
+const cstCoins = () => Math.round((50 + 150 * Math.random() ** 2) / 5) * 5;
+// La ayuda que puede tocar (el láser solo donde hay asteroides).
+const pickHelp = (level) => { const ks = ['reloj', 'ver2', 'ver3', ...(level.rocks ? ['laser', 'laser'] : []), ...(level.ship ? ['escudo'] : [])]; return ks[Math.floor(Math.random() * ks.length)]; };
 
 // Asentarse al aterrizar: un aplastón leve, el protagonismo es el vuelo.
 function squash(el) {
@@ -87,7 +114,56 @@ export function faceHTML(c, rank = c.rank) {
   const pair = c.lock ?? c.key;
   const tint = pair != null ? ` style="--kh:${LOCK_HUES[pair]}"` : '';
   const badge = c.lock != null ? `<span class="lk-badge">${lockIcon(LOCK_HUES[c.lock])}</span>` : c.key != null ? `<span class="lk-badge">${keyIcon(LOCK_HUES[c.key])}</span>` : '';
-  return `<div class="face front${red}${kind}"${tint}>${corner}${c.key != null ? '' : c.coin ? `<span class="cs coin-cs">${icon('monedas')}</span>` : `<span class="${cs}">${s}</span>`}${badge}<span class="big${r === '10' ? ' ten' : ''}${SIXNINE(r)}">${r}</span>${arrow}${c.cham ? `${CHAM_FACE('cham-eyes')}<span class="cham-ov">${CHAM_FACE('cham-face')}</span>` : ''}</div>`;
+  // 11 nov 2026 (pedido del usuario: igual que el cohete turbo): rayo, fantasma y llave de puerta llevan su dibujo
+  // arriba a la derecha, en el lugar del palo; la constelación, su estrellita abajo a la derecha, dentro de la carta.
+  const mk = c.bolt ? 'rayo' : c.ghost ? 'ghost' : c.doorKey ? 'llavePuerta' : null;
+  const suit = c.key != null ? '' : c.coin ? `<span class="cs coin-cs">${icon('monedas')}</span>` : mk ? `<span class="cs mk-cs">${icon(mk)}</span>` : `<span class="${cs}">${s}</span>`;
+  return `<div class="face front${red}${kind}"${tint}>${corner}${suit}${badge}<span class="big${r === '10' ? ' ten' : ''}${SIXNINE(r)}">${r}</span>${arrow}${c.cst ? `<span class="cst-mk">${icon('star')}</span>` : ''}${c.cham ? `${CHAM_FACE('cham-eyes')}<span class="cham-ov">${CHAM_FACE('cham-face')}</span>` : ''}</div>`;
+}
+// Ayuda en una ventana de presentación (11 nov 2026): su carta y, al lado, para qué sirve, en su propio renglón.
+// small: nota chiquita abajo (11 nov 2026, el usuario: «agrupar las ayudas en pequeño, o una nota»).
+const helpTip = (back, text, small = false) => `<div class="help-tip${small ? ' small' : ''}"><span class="help-tip-card" style="background-image:${cardBackURL(back)}"></span><p>${text}</p></div>`;
+// Ventanas de presentación de las mesas y del escudo (la primera vez que salen). Exportadas para el modo dev
+// («Textos del juego», 11 nov 2026): ahí se leen todas juntas.
+// Mesas (11 nov 2026, homologadas a pedido del usuario): a = qué es, b = cómo funciona. La ventana pone cada una en su
+// renglón y Tu camino las dos juntas (MESA_TEXT). Todas azules, como las de las cartas.
+export const MESA_TEXT = {
+  mesa: ['Esta mesa llega <b>enrollada</b>.', 'Limpia las primeras cartas y la mesa avanza: salen más del rollo.'],
+  gravedad: ['Las cartas van en <b>columnas</b>.', 'Solo juegas la de <b>abajo</b>; al quitarla, la columna cae.'],
+  nebulosa: ['Solo ves <b>3 grupos</b> de cartas.', 'Vacía <b>cualquiera</b> y de la nebulosa sale otro.'],
+  plegable: ['Esta mesa llega <b>doblada</b>.', 'Limpia el panel de <b>en medio</b> y se desdobla: salen más cartas a los lados.'],
+  marea: ['Aquí sube la <b>marea</b>.', 'Cada <b>3 robos</b> sube y tapa las cartas de abajo; cada <b>3 jugadas</b> baja. Bajo el agua no se juegan.'],
+  puertas: ['Detrás de cada <b>puerta</b> hay cartas.', 'Juega una <b>carta llave</b> y escoge qué puerta abrir: sus cartas salen al tablero.'],
+  banda: ['Estas cartas dan vueltas en una <b>banda</b>.', 'Solo ves <b>4</b> a la vez y avanza con cada jugada o robo. ¡Atrápalas cuando pasen!'],
+  hoyo: ['Un <b>agujero negro</b> atrapó las cartas del tablero.', 'Cada <b>4 jugadas o robos</b> se las traga y las escupe con los números revueltos. Cuando está por tragárselas, gira más rápido.'],
+  // La nave (11 nov 2026, pedido del usuario): no es carta, es mecánica: va como mesa.
+  nave: ['Por aquí pasa una <b>nave ladrona</b>.', 'Cada pocos robos se lleva una carta de tu <b>mazo</b>. Con racha de 4 te regresa la última.'],
+  rocas: ['Por aquí pasa un <b>cinturón de asteroides</b>.', 'Cada <b>4 robos</b> caen piedras que tapan cartas <b>3 turnos</b>.'],
+};
+const MESA_NAME = { nave: 'Nave ladrona', mesa: 'Mesa enrollada', gravedad: 'Gravedad', nebulosa: 'Nebulosa', plegable: 'Mesa plegable', marea: 'Marea', puertas: 'Puertas', banda: 'Banda transportadora', hoyo: 'Agujero negro', rocas: 'Asteroides' };
+const MESA_HELP = { rocas: helpTip('hlaser', '<b>Láser:</b> rompe todas las piedras.', true), nave: helpTip('hescudo', '<b>Escudo:</b> la nave ya no te roba en todo el nivel.', true) };
+// Ventana con el formato de las cartas (11 nov 2026): dibujo a la izquierda y, al lado, su nombre y su texto.
+const tipCard = (pic, name, text, cls = '') => `<div class="tip-card"><span class="tip-pic${cls}">${pic}</span><p><b>${name}</b>${text}</p></div>`;
+const helpPic = (back) => `<span class="help-tip-card" style="background-image:${cardBackURL(back)}"></span>`;
+// Ventanas de presentación de las mesas, del escudo y de ver cartas (la primera vez que salen). Exportadas para el
+// modo dev («Textos del juego»): ahí se leen todas juntas.
+export const MESA_INTRO = {
+  // Mismo formato que las cartas: su icono (el de Tu camino; la nave, su nave), su nombre y su texto; la ayuda abajo.
+  // body es un getter: el icono viene de dev.js (ART).
+  ...Object.fromEntries(Object.entries(MESA_TEXT).map(([k, [a, b]]) => [k, { title: `Nuevo: ${MESA_NAME[k].toLowerCase()}`, color: 'blue', get body() { return tipCard(k === 'nave' ? icon('nave') : ART.tableIcon(k), MESA_NAME[k], `${a} ${b}`, ' tip-ico') + (MESA_HELP[k] || ''); } }])),
+  // Mini guía de ayudas (11 nov 2026, pedido del usuario): una vez, en el nivel 2. Qué son, cuáles hay y dónde están.
+  ayudas: { title: 'Nuevo: ayudas', color: 'blue', get body() { return `${tipCard(icon('ayudas'), 'Ayudas', 'Cartas que te sacan de apuros. Están en el <b>botón dorado</b> de abajo: toca una para usarla y abajo de cada una compras <b>+1</b>.', ' tip-ico')}<div class="help-list">${[['comodin', '<b>Comodín:</b> vale cualquier número.'], ['hreloj', '<b>Reloj de arena:</b> congela 3 turnos todo lo que cuenta.'], ['hver', '<b>Ver cartas:</b> voltea las cartas tapadas unos segundos.'], ['hllave', '<b>Llave maestra:</b> abre todos los candados y cortinas.']].map(([b, t]) => helpTip(b, t, true)).join('')}</div><p class="note">Solo salen las que sirven en cada nivel.</p>`; } },
+  // Ver cartas: una vez, en un tablero grande.
+  ver: { title: 'Ayuda: ver cartas', color: 'blue', body: tipCard(helpPic('hver'), 'Ver cartas', 'Voltea todas las cartas del tablero unos segundos. En tableros grandes como este te ayuda a planear.', ' tip-help') },
+  escudo: { title: 'Nuevo: escudo', color: 'blue', body: tipCard(helpPic('hescudo'), 'Escudo', 'La <b>nave ladrona</b> ya no te roba en <b>todo el nivel</b>. Lo compras en tus ayudas, como las demás.', ' tip-help') },
+};
+// La ayuda de una carta en su ventana (TIP_HELP), una sola vez por ayuda.
+function tipHelp(m) {
+  const h = TIP_HELP[m], key = h && `ayuda-${h[0]}`;
+  if (!h || save.seen[key]) return '';
+  save.seen[key] = true;
+  persist();
+  return helpTip(h[1], h[2], true);
 }
 // Camaleón: carita de dos puntitos y una sonrisa chiquita (sutil de carta normal; sobre el comodín, cuando se convierte).
 const CHAM_FACE = (cls) => `<span class="${cls}"><i></i><i></i><b></b></span>`;
@@ -120,9 +196,15 @@ const LIVE_DIR = {
 // Boleto partido: el reverso de siempre con la línea picada y las muescas del boleto.
 // Candado: la orilla del color de su pareja y el candado al centro. La llave no se ve tapada: hay que buscarla.
 const pairColor = (h) => `hsl(${h},75%,60%)`;
+// 11 nov 2026: igual que el turbo, el rayo (morado), la constelación (dorada), el fantasma (lila) y la carta llave de
+// las puertas (madera): la orilla de su color y su dibujo al centro. Así se reconocen boca abajo.
 const BACK_MARK = (c) =>
   c.turbo ? ['#ff8a3d', 'tb-ico', icon('rocket')]
   : c.lock != null ? [pairColor(LOCK_HUES[c.lock]), 'lk-ico', lockIcon(LOCK_HUES[c.lock])]
+  : c.bolt ? ['#7a6ae8', 'tb-ico mk-bolt', icon('rayo')]
+  : c.cst ? ['#ffc83d', 'tb-ico mk-cst', icon('star')]
+  : c.ghost ? ['#b9aef0', 'tb-ico mk-ghost', icon('ghost')]
+  : c.doorKey ? ['#c9893a', 'tb-ico mk-door', icon('llavePuerta')]
   : null;
 export const backHTML = (c) => {
   const m = BACK_MARK(c);
@@ -134,10 +216,11 @@ const marks = (c) =>
   (c.ice ? `<span class="ice-ov"><b></b></span>` : '') +
   (c.curtainKey != null ? `<span class="curtain-mark">${curtainIcon()}</span>` : '') +
   (c.wet ? '<span class="tide-ov"><i></i></span>' : '') +
-  (c.doorKey ? `<span class="door-key">${icon('door')}</span>` : '') +
+  // (11 nov 2026: la carta llave, el rayo y la constelación ya no llevan marca encima, que tapaba las de atrás: van en
+  // su cara y en su reverso, como el turbo.)
   '';
 
-// opts: onExit, onAbandon(gaveUp), onRetry, onReplay, rachaRisk() → { n, pend } | null, onWin(stars) → { coins, tickets, prev, gold, wild, chest }, onDone(res), onSave(state)?,
+// opts: onExit, onAbandon(gaveUp), onReplay, rachaRisk() → { n, pend } | null, onWin(stars) → { coins, tickets, prev, gold, wild, chest }, onDone(res), onSave(state)?,
 //       resume (estado guardado), saved (la partida se guarda al salir), tutorial, dev
 //       meteor: empezó durante una lluvia de meteoritos (la ficha de monedas lleva ×2 y su reloj; ver meteor.js)
 //       event: { ico, table } = nivel del evento del mes (table = la mesa de su temática) (sin estrellas; perder gasta su boleto y no se reintenta)
@@ -145,6 +228,8 @@ export class Game {
   constructor(root, level, opts) {
     // Mesa enrollada: copia propia, porque sus tapas cambian si en la pantalla cabe más tira (scrollView).
     this.level = level.scroll === 'mesa' ? { ...level, cards: level.cards.map((c) => ({ ...c })) } : level;
+    // Banda: copia propia de su lado (acostada o parada) y de los grupos, porque se escoge al acomodar (layout).
+    if (level.belt) this.level = { ...this.level, belt: { ...level.belt }, groups: level.groups.slice() };
     level = this.level;
     this.opts = opts;
     this.info = worldInfo(level.world);
@@ -180,6 +265,7 @@ export class Game {
     this.layout();
     this.cards.forEach((c) => !c.removed && this.makeCardEl(c));
     this.makeHole();
+    this.makeRocks();
     this.makeDoors();
     this.makeBelt();
     this.renderPiles();
@@ -222,10 +308,8 @@ export class Game {
       persist();
       this.modalOpen = true;
       return openModal({
-        title: 'Nuevo: mesa enrollada',
-        color: 'blue',
+        ...MESA_INTRO.mesa,
         closable: false,
-        body: `<p class="lead">Esta mesa llega <b>enrollada</b>. Cuando limpias las primeras cartas, la mesa avanza y salen más cartas del rollo.</p>`,
         onClose: () => {
           this.modalOpen = false;
           if (!reduced()) this.rollEl?.animate([{ scale: 1 }, { scale: 1.15 }, { scale: 1 }], { duration: 500, iterations: 2 });
@@ -239,10 +323,8 @@ export class Game {
       persist();
       this.modalOpen = true;
       return openModal({
-        title: 'Nuevo: gravedad',
-        color: 'blue',
+        ...MESA_INTRO.gravedad,
         closable: false,
-        body: `<p class="lead">Las cartas van en <b>columnas</b>. Solo juegas la de <b>abajo</b>; la de encima te deja ver la que sigue. Al quitar una, la columna <b>cae</b>.</p>`,
         onClose: () => {
           this.modalOpen = false;
           if (!reduced()) for (const c of this.cards) if (c.el && c.gPos?.k === 0) c.el.animate([{ translate: '0 0' }, { translate: `0 ${-this.u * 0.25}px` }, { translate: '0 0' }], { duration: 420, easing: 'ease-in-out', iterations: 2 });
@@ -256,10 +338,8 @@ export class Game {
       persist();
       this.modalOpen = true;
       return openModal({
-        title: 'Nuevo: mesa plegable',
-        color: 'blue',
+        ...MESA_INTRO.plegable,
         closable: false,
-        body: `<p class="lead">Esta mesa llega <b>doblada</b>. Limpia el panel de <b>en medio</b> y la mesa se <b>desdobla</b>: salen más cartas a los lados.</p>`,
         onClose: () => {
           this.modalOpen = false;
           if (!reduced()) this.foldMid?.animate([{ scale: 1 }, { scale: 1.06 }, { scale: 1 }], { duration: 450, iterations: 2 });
@@ -273,9 +353,7 @@ export class Game {
       persist();
       this.modalOpen = true;
       return openModal({
-        title: 'Nuevo: marea',
-        color: 'blue',
-        body: '<p class="lead">En este planeta sube la <b>marea</b>: cada <b>3 robos</b> el agua sube y tapa las cartas de abajo, y cada <b>3 jugadas</b> baja. Bajo el agua no se pueden jugar. ¡Juega seguido para que no suba!</p>',
+        ...MESA_INTRO.marea,
         closable: false,
         onClose: () => {
           this.modalOpen = false;
@@ -289,9 +367,7 @@ export class Game {
       persist();
       this.modalOpen = true;
       return openModal({
-        title: 'Nuevo: banda transportadora',
-        color: 'blue',
-        body: '<p class="lead">Estas cartas dan vueltas en una <b>banda</b>: solo ves <b>4</b> a la vez y con cada jugada o robo avanza un lugar. La que se va regresa después de dar la vuelta. ¡Atrápala cuando pase!</p>',
+        ...MESA_INTRO.banda,
         closable: false,
         onClose: () => {
           this.modalOpen = false;
@@ -306,9 +382,7 @@ export class Game {
       persist();
       this.modalOpen = true;
       return openModal({
-        title: 'Nuevo: puertas',
-        color: 'orange',
-        body: `<p class="lead">Detrás de cada <b>puerta</b> hay unas cartas y un premio (${coin()} monedas, ${icon('comet')} cometa o ${icon('rocket')} cohete). Juega una <b>carta llave</b> ${icon('door')} y tú escoges qué puerta abrir: se activa su premio y sus cartas salen al tablero. Hay <b>menos llaves que puertas</b>. Las que no abras <b>no cuentan</b> para ganar.</p>`,
+        ...MESA_INTRO.puertas,
         closable: false,
         onClose: () => {
           this.modalOpen = false;
@@ -323,13 +397,25 @@ export class Game {
       persist();
       this.modalOpen = true;
       return openModal({
-        title: 'Nuevo: agujero negro',
-        color: 'violet',
-        body: `<p class="lead">Este <b>agujero negro</b> atrapó muchas cartas del tablero con su remolino, boca arriba y boca abajo: no sabes cuáles. Cada <b>${E.HOLE_EVERY} jugadas o robos</b> se las traga y las escupe con los <b>números revueltos</b>. Su número dice cuánto falta. ¡Juega lo que ves antes de que cambie!</p>`,
+        ...MESA_INTRO.hoyo,
         closable: false,
         onClose: () => {
           this.modalOpen = false;
           if (!reduced()) this.holeEl?.animate([{ scale: 1 }, { scale: 1.3 }, { scale: 1 }], { duration: 500, iterations: 2 });
+          setTimeout(() => this.tips(), 300);
+        },
+        buttons: [{ label: '¡Entendido!', cls: 'green' }],
+      });
+    }
+    if (this.level.rocks && !save.seen.rocas) {
+      save.seen.rocas = true;
+      persist();
+      this.modalOpen = true;
+      return openModal({
+        ...MESA_INTRO.rocas,
+        closable: false,
+        onClose: () => {
+          this.modalOpen = false;
           setTimeout(() => this.tips(), 300);
         },
         buttons: [{ label: '¡Entendido!', cls: 'green' }],
@@ -340,10 +426,8 @@ export class Game {
       persist();
       this.modalOpen = true;
       return openModal({
-        title: 'Nuevo: nebulosa',
-        color: 'blue',
+        ...MESA_INTRO.nebulosa,
         closable: false,
-        body: `<p class="lead">Aquí solo ves <b>3 grupos</b> de cartas. Cuando vacías <b>cualquiera</b>, los demás se recorren y de la <b>nebulosa</b> sale otro.</p>`,
         onClose: () => {
           this.modalOpen = false;
           if (!reduced()) this.nebEl?.animate([{ scale: 1 }, { scale: 1.2 }, { scale: 1 }], { duration: 500, iterations: 2 });
@@ -352,7 +436,70 @@ export class Game {
         buttons: [{ label: '¡Entendido!', cls: 'green' }],
       });
     }
+    // Ayudas: una vez, desde el nivel 2 (no en eventos). Al cerrar brilla su botón.
+    if (!save.seen.ayudas && (this.level.g ?? 0) >= 1 && !this.level.event && !this.opts.event && !this.opts.tutorial) {
+      save.seen.ayudas = true;
+      persist();
+      this.modalOpen = true;
+      return openModal({
+        ...MESA_INTRO.ayudas,
+        closable: false,
+        onClose: () => {
+          this.modalOpen = false;
+          const btn = this.el.querySelector('.wild-card');
+          if (btn && !reduced()) btn.animate([{ scale: 1 }, { scale: 1.25, rotate: '-8deg' }, { scale: 1 }], { duration: 500, iterations: 3 });
+          setTimeout(() => this.tips(), 300);
+        },
+        buttons: [{ label: '¡Entendido!', cls: 'green' }],
+      });
+    }
+    // Nave ladrona (11 nov 2026): se presenta como mesa, con la ayuda Escudo abajo.
+    if (this.level.ship && !save.seen.ship) {
+      save.seen.ship = save.seen.escudo = true;
+      persist();
+      this.modalOpen = true;
+      return openModal({
+        ...MESA_INTRO.nave,
+        closable: false,
+        onClose: () => {
+          this.modalOpen = false;
+          setTimeout(() => this.tips(), 300);
+        },
+        buttons: [{ label: '¡Entendido!', cls: 'green' }],
+      });
+    }
     const next = (this.level.meta.mechs || []).find((m) => TIPS[m] && !save.seen[m]);
+    // Escudo (11 nov 2026: ayuda, ya no carta): se presenta una vez, en un nivel con nave que no sea el primero (ahí
+    // ya sale la nave).
+    this.shipKnown ??= !!save.seen.ship;
+    if (!next && this.level.ship && this.shipKnown && !save.seen.escudo) {
+      save.seen.escudo = true;
+      persist();
+      this.modalOpen = true;
+      return openModal({
+        ...MESA_INTRO.escudo,
+        closable: false,
+        onClose: () => {
+          this.modalOpen = false;
+          setTimeout(() => this.tips(), 300);
+        },
+        buttons: [{ label: '¡Entendido!', cls: 'green' }],
+      });
+    }
+    if (!next && !save.seen['ayuda-ver'] && this.cards.length >= 32 && (this.level.g || 0) >= 60) {
+      save.seen['ayuda-ver'] = true;
+      persist();
+      this.modalOpen = true;
+      return openModal({
+        ...MESA_INTRO.ver,
+        closable: false,
+        onClose: () => {
+          this.modalOpen = false;
+          setTimeout(() => this.tips(), 300);
+        },
+        buttons: [{ label: '¡Entendido!', cls: 'green' }],
+      });
+    }
     // Nave ladrona: cada vez que empieza el nivel se avisa (sin decir cuándo llega).
     if (!next && this.level.ship && !this.shipTold) {
       this.shipTold = true;
@@ -367,7 +514,9 @@ export class Game {
       title: `Nuevo: ${MECH_NAMES[next].toLowerCase()}`,
       color: 'blue',
       closable: false,
-      body: `<p class="lead">${TIPS[next]}</p>`,
+      // 11 nov 2026 (pedido del usuario): como en Cómo jugar, su carta y al lado su nombre y su texto; la ayuda, abajo
+      // en chiquito.
+      body: `<div class="tip-card"><span class="tip-pic">${ART.mechCard(next)}</span><p><b>${MECH_NAMES[next]}</b>${TIPS[next]}</p></div>${tipHelp(next)}`,
       onClose: () => {
         this.modalOpen = false;
         if (c?.el) {
@@ -625,6 +774,7 @@ export class Game {
     if (this.level.scroll) return this.layoutNeb(r);
     // La carta doble se ve 10% más grande: se deja un poco de aire para que no se salga del tablero.
     const room = this.cards.some((c) => c.alt != null) ? 0.93 : 1;
+    if (this.level.belt) this.beltSide((r.width - 10) * room, (r.height - 10) * room);
     const { u, bw, bh, offsets } = this.railItems().length ? this.packRail((r.width - 10) * room, (r.height - 10) * room) : packGroups(this.level.groups, (r.width - 10) * room, (r.height - 10) * room);
     this.u = Math.max(18, u);
     this.offsets = offsets;
@@ -651,6 +801,17 @@ export class Game {
     this.boardEl.append(b);
     this.beltEl = b;
     this.placeBeltBox();
+  }
+  // 11 nov 2026 (el usuario: «¿no es mejor parada, por espacio?»): la banda va acostada o parada según donde las
+  // cartas salgan más grandes en esta pantalla (antes se sorteaba al armar el nivel). Empate: como venía.
+  beltSide(W0, H0) {
+    const B = this.level.belt, G = this.level.groups;
+    const dims = { h: { w: B.W * 1.08 - 0.08, h: 1.4 }, v: { w: 1, h: B.W * 1.55 - 0.15 } };
+    const uOf = (d) => packGroups(G.map((x, i) => (i === B.g ? dims[d] : x)), W0, H0).u;
+    const other = B.dir === 'h' ? 'v' : 'h';
+    if (uOf(other) > uOf(B.dir) * 1.03) B.dir = other;
+    G[B.g] = dims[B.dir];
+    if (this.beltEl && !this.beltEl.classList.contains(`belt-${B.dir}`)) this.beltEl.className = `belt belt-${B.dir}`;
   }
   placeBeltBox() {
     const B = this.level.belt, o = B && this.offsets?.[B.g];
@@ -883,8 +1044,8 @@ export class Game {
 
   // ---------- Agujero negro (8 nov 2026; 9 nov: en la orilla y como la foto que mandó el usuario) ----------
   // Un ojo de luz: el disco de fuego rosa y naranja girando de lado, el anillo de luz alrededor y adentro la sombra azul
-  // oscuro con su orilla blanca. Encima, cuántas jugadas o robos faltan para que se trague sus cartas (no se marca
-  // cuáles son: se ven volar al remolino) y las escupa con los números revueltos. Va en la franja de la orilla.
+  // oscuro con su orilla blanca. Sin número (11 nov 2026): cuando faltan 2 jugadas o robos para que se trague sus cartas
+  // gira más rápido, y con 1 todavía más (no se marca cuáles: se ven volar al remolino). Va en la franja de la orilla.
   makeHole() {
     if (!this.level.hole) return;
     const h = document.createElement('div');
@@ -901,7 +1062,7 @@ export class Game {
       ${disk('hd-back')}
       <circle cx="60" cy="40" r="27" fill="none" stroke="#2a1f5c" stroke-width="10"/><circle class="hd-halo" cx="60" cy="40" r="27" fill="none" stroke="#ff9a6a" stroke-width="5"/>
       <circle cx="60" cy="40" r="21" fill="url(#hcr)" stroke="#2a1f5c" stroke-width="3"/><circle cx="60" cy="40" r="18.5" fill="none" stroke="#ffffff" stroke-width="2" opacity=".9"/>
-      <g clip-path="url(#hfr)">${disk('hd-front')}</g></svg><b class="outl"></b>`;
+      <g clip-path="url(#hfr)">${disk('hd-front')}</g></svg>`;
     this.boardEl.append(h);
     this.holeEl = h;
     this.holeTurn = E.holeTurn(this.st);
@@ -912,6 +1073,138 @@ export class Game {
     if (!this.holeEl || !b) return;
     Object.assign(this.holeEl.style, { left: `${b.x * this.u}px`, top: `${b.y * this.u}px`, width: `${b.w * this.u}px`, height: `${b.h * this.u}px` });
   }
+  // ---------- Cinturón de asteroides (10 nov 2026) ----------
+  // En la orilla, una franja de piedras que flotan; encima, cuántos robos faltan para que caigan (ROCK_EVERY). Las
+  // piedras que tapan cartas van en cada carta (.rock-ov, con las jugadas que les quedan; ver refresh).
+  // 11 nov 2026 (pedido del usuario: estorbaba y no servía, ya saben que es cada 4 robos, como la nave o la marea): sin
+  // franja ni cuenta en la orilla; las piedras caen desde arriba del tablero.
+  makeRocks() {}
+  // Piedras en las cartas: caen girando desde arriba (las nuevas) y se rompen en pedacitos al llegar a 0.
+  paintRocks() {
+    // 11 nov 2026 (pedido del usuario): caen de arriba con su fuego, de grandes a chicas; el láser las rompe con un rayo
+    // y las que ya cumplieron sus jugadas se van volando hacia arriba.
+    const st = this.st, laser = this.laserHit;
+    this.laserHit = false;
+    let k = 0;
+    for (const c of this.cards) {
+      if (!c.el || c.removed) continue;
+      const n = st.rock?.[c.id], ov = c.el.querySelector('.rock-ov');
+      c.el.classList.toggle('rocked', !!n);
+      if (n && !ov) {
+        const o = document.createElement('span');
+        o.className = 'rock-ov';
+        o.innerHTML = `<i class="rock-fire"></i>${icon('asteroide')}<b class="outl">${n}</b>`;
+        c.el.append(o);
+        if (!this.dealing && !reduced()) {
+          const [, y] = center(c.el.getBoundingClientRect()), dy = -(y + 120), dx = -dy * 0.18, t = { duration: 700, delay: k++ * 120, easing: 'cubic-bezier(0.45, 0, 0.9, 0.55)', fill: 'backwards' };
+          o.animate([{ translate: `${dx}px ${dy}px`, rotate: '-120deg', scale: 2.4 }, { translate: '0 0', rotate: '0deg', scale: 1.1, offset: 0.85 }, { translate: '0 0', scale: 1 }], t);
+          o.querySelector('.rock-fire').animate([{ opacity: 1, scale: '1 1.3' }, { opacity: 1, scale: '1 1', offset: 0.8 }, { opacity: 0, scale: '1 0.4' }], { ...t, fill: 'both' });
+          setTimeout(() => this.shake(c.el), t.delay + 600);
+        }
+      } else if (n) {
+        const t = ov.querySelector('b');
+        if (t.textContent !== String(n)) {
+          t.textContent = n;
+          if (!reduced()) ov.animate([{ scale: 1 }, { scale: 0.85, rotate: '-8deg' }, { scale: 1 }], { duration: 260 });
+        }
+      } else if (ov && !ov.classList.contains('crumble')) {
+        ov.classList.add('crumble');
+        if (reduced()) ov.remove();
+        else if (laser) this.laserBreak(ov, k++);
+        else ov.animate([{ translate: '0 0', scale: 1, rotate: '0deg', opacity: 1 }, { translate: `${this.u * 0.3}px ${-this.u * 0.5}px`, scale: 1.1, rotate: '40deg', opacity: 1, offset: 0.3 }, { translate: `${this.u * 1.2}px ${-innerHeight}px`, scale: 0.4, rotate: '200deg', opacity: 0 }], { duration: 700, easing: 'cubic-bezier(0.5, 0, 0.8, 0.4)' }).finished.then(() => ov.remove());
+      }
+    }
+  }
+  // Láser: un rayo rosa baja de arriba hasta la piedra y la rompe en chispas.
+  laserBreak(ov, k) {
+    const [x, y] = center(ov.getBoundingClientRect());
+    const beam = document.createElement('i');
+    beam.className = 'laser-beam';
+    Object.assign(beam.style, { left: `${x}px`, height: `${y}px` });
+    document.body.append(beam);
+    const d = k * 110;
+    beam.animate([{ scale: '1 0', opacity: 1 }, { scale: '1 1', opacity: 1, offset: 0.4 }, { scale: '1 1', opacity: 0 }], { duration: 420, delay: d, easing: 'ease-out', fill: 'backwards' }).finished.then(() => beam.remove());
+    setTimeout(() => sparkle({ x, y }, 12), d + 170);
+    ov.animate([{ scale: 1, opacity: 1, filter: 'brightness(1)' }, { scale: 1.15, opacity: 1, filter: 'brightness(2.2)', offset: 0.45 }, { scale: 1.6, opacity: 0, rotate: '30deg', filter: 'brightness(2.2) blur(3px)' }], { duration: 480, delay: d, easing: 'ease-out', fill: 'backwards' }).finished.then(() => ov.remove());
+  }
+  // Rayo (11 nov 2026, pedido del usuario: la carta liberada tapaba a las de atrás): a cada carta enterrada le cae un
+  // relámpago y vuela boca abajo al final de tu mazo (las de la izquierda).
+  boltFx(ids) {
+    toast(`${icon('rayo')} ¡Rayo! ${ids.length === 1 ? 'Una carta de abajo se va' : `${ids.length} cartas de abajo se van`} a tu mazo`);
+    buzz(25);
+    const slots = this.stockEls.slice(0, ids.length);
+    ids.forEach((id, k) => {
+      const c = this.cards[id], el = c.el, slot = slots[ids.length - 1 - k];
+      c.el = null;
+      if (!el) return;
+      if (reduced() || !slot) return el.remove();
+      slot.style.opacity = 0;
+      el.style.zIndex = 9000;
+      const f0 = document.createElement('span');
+      f0.className = 'bolt-fx';
+      f0.innerHTML = icon('rayo');
+      el.append(f0);
+      el.animate([{ scale: 1 }, { scale: 1.15, offset: 0.5 }, { scale: 1 }], { duration: 360, delay: k * 150, easing: 'ease-out' });
+      setTimeout(() => {
+        const a = el.getBoundingClientRect(), to = slot.getBoundingClientRect();
+        el.remove();
+        const left = a.left + a.width / 2 - to.width / 2, top = a.top + a.height / 2 - (to.width * 1.4) / 2;
+        const f = this.flyer({}, { left, top, width: to.width }, false);
+        this.intoSlot(f, slot, to.left - left, to.top - top, 360).then(() => squash(slot));
+      }, 380 + k * 150);
+    });
+  }
+  // Escudo: una burbuja cubre el mazo; la nave ya no se lleva nada.
+  shieldFx() {
+    toast(`${icon('escudito')} ¡Escudo! La nave ya no te puede robar`);
+    buzz(20);
+    if (reduced()) return;
+    this.stockEl.querySelector('.shield-on')?.animate([{ scale: 0.2, opacity: 0 }, { scale: 1.25, opacity: 1, offset: 0.6 }, { scale: 1 }], { duration: 520, easing: 'ease-out' });
+  }
+  // Constelación: cuenta cuántas lleva; al juntarlas, sus lugares se unen con líneas de luz y cae el premio. Si se
+  // apaga, las estrellitas que quedan se ponen grises.
+  cstFx(ev, at) {
+    const L = this.level.cst;
+    if (ev.cst === 'on') {
+      (this.cstPts ||= []).push(at);
+      this.showStreak(`${icon('star')} Constelación ${this.st.cst}/${L}`);
+      return;
+    }
+    if (ev.cst === 'lost') {
+      this.cstPts = [];
+      return toast(`${icon('star')} Se apagó la constelación`);
+    }
+    (this.cstPts ||= []).push(at);
+    const pts = this.cstPts.slice();
+    this.cstPts = [];
+    const p = Math.random() < CST_HELP ? { help: pickHelp(this.level) } : { coins: cstCoins() };
+    if (p.coins) save.coins += p.coins;
+    else save.helps[p.help] = (save.helps[p.help] || 0) + 1;
+    persist();
+    const h = this.history[this.history.length - 1];
+    if (h) h.cstPrize = p;
+    buzz([20, 40, 20]);
+    const [x, y] = center(this.wasteEl.getBoundingClientRect());
+    if (!reduced() && pts.length > 1) {
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svg.setAttribute('class', 'cst-lines');
+      svg.innerHTML = `<polyline points="${pts.map(([a, b]) => `${a},${b}`).join(' ')}"/>${pts.map(([a, b]) => `<circle cx="${a}" cy="${b}" r="7"/>`).join('')}`;
+      document.body.append(svg);
+      setTimeout(() => svg.remove(), 1700);
+      pts.forEach((q, i) => setTimeout(() => sparkle({ x: q[0], y: q[1] }, 8), 150 * i));
+    }
+    setTimeout(() => {
+      if (p.coins) {
+        flyToWallet('coins', { x, y }, p.coins, shownCoins() - p.coins);
+        this.showStreak(`¡Constelación! +${p.coins} monedas`);
+      } else {
+        popPrize(icon(HELPS[p.help].ico), '+1', { x, y });
+        this.showStreak(`¡Constelación! ${HELPS[p.help].name}`);
+        this.updateCounts();
+      }
+    }, reduced() ? 0 : 600);
+  }
+
   // Se las traga: cada carta que se tragó en esta vuelta (cambia de número) vuela al remolino girando y regresa.
   // Al deshacer (vuelta para atrás) vuelan las de la vuelta que se deshizo.
   holeSpin(turn) {
@@ -1396,14 +1689,44 @@ export class Game {
       const turn = E.holeTurn(st);
       if (turn !== this.holeTurn && this.holeTurn != null) this.holeSpin(turn);
       this.holeTurn = turn;
-      this.holeEl.querySelector('b').textContent = E.holeLeft(st);
+      // 11 nov 2026 (pedido del usuario): sin número; a 2 de tragarse las cartas gira más rápido y a 1, todavía más.
+      this.holeEl.classList.toggle('warm', E.holeLeft(st) === 2);
       this.holeEl.classList.toggle('hot', E.holeLeft(st) === 1);
+      // A 1 de tragárselas, las cartas del tablero tiemblan como si las jalara (no con el reloj de arena).
+      this.boardEl.classList.toggle('hole-pull', E.holeLeft(st) === 1 && !(st.freeze > 0));
       this.holeEl.classList.toggle('frozen', st.freeze > 0);
+    }
+    if (level.rocks) {
+      this.paintRocks();
+      // 11 nov 2026 (pedido del usuario): a 1 robo de que caigan piedras, las cartas tiemblan (como con el agujero negro).
+      this.boardEl.classList.toggle('hole-pull', E.rockLeft(st) === 1 && !(st.freeze > 0));
+    }
+    // Escudo puesto: una burbuja con el escudo sobre el mazo.
+    if (level.ship) {
+      const on = !!st.shield, b = this.stockEl.querySelector('.shield-on');
+      if (on && !b) this.stockEl.insertAdjacentHTML('beforeend', `<span class="shield-on">${icon('escudito')}</span>`);
+      else if (!on && b) b.remove();
+    }
+    // Constelación apagada (11 nov 2026, pedido del usuario): sus cartas vuelven a ser normales, de frente y boca abajo
+    // (sin estrellita ni orilla dorada). Al deshacer, regresan.
+    if (level.cst && (st.cst === -1) !== !!this.cstOff) {
+      this.cstOff = st.cst === -1;
+      for (const c of this.cards) {
+        const box = c.cst && c.el?.querySelector('.inner');
+        const x = { ...c, cst: this.cstOff ? 0 : 1 };
+        if (box) box.innerHTML = faceHTML(x, E.rankOf(c, st)) + backHTML(x);
+      }
     }
     for (const c of this.cards) {
       if (c.removed || !c.el) continue;
       const el = c.el;
       if (!this.dealing) el.classList.toggle('up', this.shownUp(c));
+      // Rayo: la carta liberada va por encima de las que la tapaban.
+      const lifted = !!st.lift?.includes(c.id);
+      if (lifted !== el.classList.contains('lifted')) {
+        el.classList.toggle('lifted', lifted);
+        el.style.zIndex = lifted ? 9000 + c.id : c.z * 100 + c.id;
+      }
       if (c.lock != null) el.classList.toggle('unlocked', E.lockOpen(level, c, st));
       if (c.curtain != null) el.classList.toggle('curtain-open', E.curtainOpen(level, c, st));
       if (c.ice) {
@@ -1648,7 +1971,8 @@ export class Game {
   showStreak(text) {
     this.showCombo();
     if (!text && this.streak < 2) return;
-    this.streakEl.textContent = text || `Racha ×${this.streak}`;
+    // Con HTML (los textos son del juego): la constelación lleva su estrellita.
+    this.streakEl.innerHTML = text || `Racha ×${this.streak}`;
     this.streakEl.classList.toggle('reward', !!text);
     this.streakEl.classList.remove('pop');
     void this.streakEl.offsetWidth;
@@ -1713,6 +2037,8 @@ export class Game {
     this.best = Math.max(this.best, s.streak);
     this.bonus += s.streak;
 
+    // Dónde estaba (para dibujar la constelación).
+    this.flewFrom = c.el ? center(c.el.getBoundingClientRect()) : null;
     // Vuela de centro a centro dando una vuelta y se asienta al caer.
     // Boleto partido: la primera vez solo se va la mitad jugada; la otra se queda.
     if (ev.split) this.splitTicket(c, ev);
@@ -1817,6 +2143,8 @@ export class Game {
     if (ev.turbo) this.launchTurbo(ev);
     if (ev.key) this.gainKey();
     if (ev.shipBack) this.shipGives(ev.shipBack);
+    if (ev.bolted) this.boltFx(ev.bolted);
+    if (ev.cst) this.cstFx(ev, this.flewFrom || [0, 0]);
     if (this.cards[ev.id].coin && !ev.split) this.coinCard(this.cards[ev.id]);
     this.burn(ev.boom, burnRects);
     this.cometsGone(ev.gone);
@@ -2290,6 +2618,8 @@ export class Game {
     if (ev.wished.length) this.flyComets(ev, 0, this.rewardSlots(ev.wishes));
     this.caught = (this.caught || 0) + ev.wished.length;
     if (ev.turbo) this.launchTurbo(ev);
+    if (ev.cst) this.cstFx(ev);
+    if (ev.rocks) toast(`${icon('asteroide')} ¡Cayeron asteroides!`), buzz(30);
     this.refresh();
     if (missed.length) setTimeout(() => this.warnMissed(missed), FLY_MS);
     this.save();
@@ -2408,6 +2738,13 @@ export class Game {
       if (r && r.kind !== 'broom') this.unflyReward(rewardRects[i], r.kind);
     });
     (ev.packs || []).forEach((id, i) => this.unflyPack(this.cards[id], packRects[i]));
+    // Constelación juntada: el premio se regresa.
+    if (h.cstPrize) {
+      if (h.cstPrize.coins) save.coins = Math.max(0, save.coins - h.cstPrize.coins);
+      else save.helps[h.cstPrize.help] = Math.max(0, (save.helps[h.cstPrize.help] || 0) - 1);
+      updateCoins();
+    }
+    this.cstPts = (this.cstPts || []).slice(0, Math.max(0, this.st.cst || 0));
     if (h.t === 'play') {
       // Carta moneda: se devuelven las monedas.
       const cc = this.cards[ev.id];
@@ -2431,7 +2768,7 @@ export class Game {
       squash(this.el.querySelector('.wild-card'));
     }
     // Bombas que se desactivaron o explotaron con esa acción vuelven al tablero (y los cometas, atrapados o idos).
-    const swept = rewards.flatMap((r) => (r?.kind === 'broom' ? r.ids : []));
+    const swept = [...rewards.flatMap((r) => (r?.kind === 'broom' ? r.ids : [])), ...(ev.bolted || [])];
     for (const id of [...(ev.defused || []), ...(ev.boom || []).map((b) => b.id), ...(ev.wished || []), ...(ev.gone || []), ...swept]) {
       const c = this.cards[id];
       if (c.el || c.removed) continue;
@@ -2457,17 +2794,19 @@ export class Game {
   helpKeys() {
     const { level, st } = this, left = (c) => !st.rem[c.id] && c.el;
     const useful = {
-      reloj: this.cards.some((c) => left(c) && (c.bomb || c.comet || c.live || c.ghost || c.cham || c.ring || c.belt)),
+      reloj: this.cards.some((c) => left(c) && (c.bomb || c.comet || c.live || c.ghost || c.cham || c.ring || c.belt)) || !!level.rocks,
+      laser: !!level.rocks,
+      escudo: !!level.ship && !st.shield,
       llave: this.cards.some((c) => left(c) && ((c.lock != null && !E.lockOpen(level, c, st)) || (c.curtain != null && !E.curtainOpen(level, c, st)))),
       ver: this.cards.some((c) => left(c) && !this.shownUp(c)),
     };
-    return ['wild', 'reloj', 'ver2', 'ver3', 'ver4', 'ver5', 'llave'].filter((k) => k === 'wild' || ((buyable(k) || (save.helps[k] || 0) > 0) && useful[HELPS[k].secs ? 'ver' : k]));
+    return ['wild', 'reloj', 'laser', 'escudo', 'ver2', 'ver3', 'ver4', 'ver5', 'llave'].filter((k) => k === 'wild' || ((buyable(k) || (save.helps[k] || 0) > 0) && useful[HELPS[k].secs ? 'ver' : k]));
   }
   helpName(k) {
-    return k === 'wild' ? 'Comodín' : HELPS[k].secs ? `Ver ${HELPS[k].secs} s` : k === 'reloj' ? 'Reloj' : 'Llave';
+    return k === 'wild' ? 'Comodín' : HELPS[k].secs ? `Ver ${HELPS[k].secs} s` : k === 'reloj' ? 'Reloj' : k === 'laser' ? 'Láser' : k === 'escudo' ? 'Escudo' : 'Llave';
   }
   helpBack(k) {
-    return cardBackURL(k === 'wild' ? 'comodin' : k === 'reloj' ? 'hreloj' : k === 'llave' ? 'hllave' : 'hver');
+    return cardBackURL(k === 'wild' ? 'comodin' : k === 'reloj' ? 'hreloj' : k === 'llave' ? 'hllave' : k === 'laser' ? 'hlaser' : k === 'escudo' ? 'hescudo' : 'hver');
   }
   helpHave(k) {
     return k === 'wild' ? save.wild : save.helps[k] || 0;
@@ -2592,7 +2931,9 @@ export class Game {
   helpUseless(k) {
     if (k === 'wild') return this.st.top?.wild ? 'Ya tienes un comodín en juego' : null;
     const { level, st } = this, left = (c) => !st.rem[c.id] && c.el;
-    if (k === 'reloj' && !this.cards.some((c) => left(c) && (c.bomb || c.comet || c.live || c.ghost || c.cham || c.ring || c.belt))) return 'Aquí no hay cuentas que congelar';
+    if (k === 'reloj' && !level.rocks && !this.cards.some((c) => left(c) && (c.bomb || c.comet || c.live || c.ghost || c.cham || c.ring || c.belt))) return 'Aquí no hay cuentas que congelar';
+    if (k === 'laser' && !Object.keys(st.rock || {}).length) return 'No hay piedras que romper';
+    if (k === 'escudo') return !level.ship ? 'Aquí no pasa la nave ladrona' : st.shield ? 'Ya tienes el escudo puesto' : null;
     if (k === 'llave' && !this.cards.some((c) => left(c) && ((c.lock != null && !E.lockOpen(level, c, st)) || (c.curtain != null && !E.curtainOpen(level, c, st))))) return 'No hay candados ni cortinas cerrados';
     if (HELPS[k].secs && !this.cards.some((c) => left(c) && !this.shownUp(c))) return 'Ya ves todas las cartas';
     return null;
@@ -2613,9 +2954,12 @@ export class Game {
     if (HELPS[k].secs) return this.peekAll(HELPS[k].secs);
     const st = this.st;
     this.history.push({ t: 'help', k, before: st, best: this.best, bonus: this.bonus });
-    this.st = k === 'reloj' ? E.useClock(st) : E.useMaster(st);
-    toast(k === 'reloj' ? `${icon('arena')} ¡Todo congelado ${E.CLOCK_TURNS} turnos!` : `${icon('llaveMaestra')} ¡Candados y cortinas abiertos!`);
+    this.st = k === 'reloj' ? E.useClock(st) : k === 'laser' ? E.useLaser(st) : k === 'escudo' ? E.useShield(st) : E.useMaster(st);
+    if (k === 'laser') this.laserHit = true;
+    // (El escudo trae su propio aviso: shieldFx, con la burbuja sobre el mazo.)
+    if (k !== 'escudo') toast(k === 'reloj' ? `${icon('arena')} ¡Todo congelado ${E.CLOCK_TURNS} turnos!` : k === 'laser' ? `${icon('laser')} ¡Piedras rotas!` : `${icon('llaveMaestra')} ¡Candados y cortinas abiertos!`);
     this.refresh();
+    if (k === 'escudo') this.shieldFx();
     this.updateCounts();
     this.save();
   }
@@ -2670,6 +3014,8 @@ export class Game {
     this.history.push({ t: 'wild', before: this.st, best: this.best, bonus: this.bonus });
     // Marea: el comodín cuenta como jugada (baja el agua).
     this.st = E.setTide(this.level, { ...E.cloneState(this.st), top: { wild: true } }, -1);
+    // Constelación a la mitad: el comodín la apaga (es otra carta en medio).
+    if (E.cstStep(this.level, this.st, false) === 'lost') this.cstFx({ cst: 'lost' });
     this.updateStuck(); // con el comodín arriba ya hay jugada: se quita el aviso de atorado
     const a = from || this.el.querySelector('.wild-card').getBoundingClientRect();
     const b = this.wasteEl.getBoundingClientRect();
@@ -2911,7 +3257,8 @@ export class Game {
   }
 
 
-  // "Finalizar nivel": reintentar con boleto nuevo, rendirse o seguir jugando (para usar comodín o deshacer).
+  // "Finalizar nivel": rendirse o seguir jugando (para usar comodín o deshacer). 10 nov 2026: sin «Reintentar · nuevo
+  // boleto» (acostado se veía mal; el usuario lo quitó): para reintentar se rinde y vuelve a entrar.
   endLevel() {
     if (this.done || this.modalOpen) return;
     this.modalOpen = true;
@@ -2923,13 +3270,12 @@ export class Game {
       color: 'pink',
       // El cuadro grande es el botón de comprar +5: dice el precio y se toca para gastar (gris si no alcanza).
       body: `<button class="offer buy press"${short ? ' disabled' : ''}><div class="fan">${fan}</div><div><b>Comprar +5 cartas</b><span>Quedan ${left} carta${left === 1 ? '' : 's'} en el tablero. ${this.opts.event ? 'Te pueden salvar el nivel.' : 'Con +5 siempre te llevas al menos 1 estrella.'}</span>
-          <em class="cost${short ? ' short' : ''}">${coin()} ${cost || 'gratis'}${short ? ' · te faltan monedas' : ''}</em></div></button>${this.opts.event || this.opts.free ? '' : betLoseHTML(this.opts.bet, this.opts.betPaid, 'si te rindes o reintentas')}${this.rachaWarn(true)}`,
+          <em class="cost${short ? ' short' : ''}">${coin()} ${cost || 'gratis'}${short ? ' · te faltan monedas' : ''}</em></div></button>${this.opts.event || this.opts.free ? '' : betLoseHTML(this.opts.bet, this.opts.betPaid, 'si te rindes')}${this.rachaWarn(true)}`,
       onClose: () => (this.modalOpen = false),
       buttons: [
-        !this.opts.event && { label: this.opts.free ? 'Reintentar' : 'Reintentar · nuevo boleto', cls: 'ghost wide', onClick: () => this.opts.onRetry() },
         { label: 'Rendirse', cls: 'pink grow', onClick: () => (this.trackEnd(false), this.opts.onAbandon(true)) },
         { label: 'Seguir jugando', cls: 'ghost grow' },
-      ].filter(Boolean),
+      ],
     });
     m.el.querySelector('.offer.buy').addEventListener('click', () => {
       if (short) return;
@@ -2943,7 +3289,7 @@ export class Game {
   rachaWarn(end) {
     const r = this.opts.rachaRisk?.();
     if (!r) return '';
-    const when = !end ? 'Si abandonas' : r.isNew ? 'Si reintentas o te rindes' : 'Si te rindes';
+    const when = !end ? 'Si abandonas' : 'Si te rindes';
     return rachaWarnHTML(r.n, r.pend, when);
   }
 
@@ -2959,22 +3305,17 @@ export class Game {
       if (r) rewards++;
       if (E.BROOM[r]) brooms++;
     }
-    // Apuestas seguidas (10 nov 2026, logro Apostador): cada nivel ganado con ×2 o más suma; perder o abandonar uno con
-    // apuesta la regresa a 0. Los niveles sin apuesta no la cortan.
-    let betrow = 0;
-    if (this.opts.bet > 1) {
-      save.betRow = won ? (save.betRow || 0) + 1 : 0;
-      betrow = save.betRow;
-    }
     const turboLeft = st.stock.filter((c) => c.turbo).length;
     const stats = {
       cards: st.plays, streak: this.best, rewards, locks: gone('lock'), packs: gone('pack'), ice: gone('ice'),
       bombs: level.cards.filter((c) => c.bomb && st.rem[c.id] && !st.boom.includes(c.id)).length, comets: this.caught || 0,
       turbo: gone('turbo') + Math.max(0, level.stock.filter((c) => c.turbo).length - turboLeft), halves: gone('half'),
       coincards: gone('coin'), ghosts: gone('ghost'), cham: gone('cham'),
-      arrows: gone('arrow'), doubles: gone('alt'), lives: gone('live'), curtains: gone('curtain'), brooms, betrow,
+      arrows: gone('arrow'), doubles: gone('alt'), lives: gone('live'), curtains: gone('curtain'), brooms,
       ...(won && { win: 1, stars, three: +(stars === 3), noundo: +!this.usedUndo, noextra: +!this.extras, nowild: +!this.usedWild, left, boss: +!!(level.boss && !level.secret), event: +!!this.opts.event, secret: +!!level.secret, coins,
-        boss3: +!!(level.boss && !level.secret && stars === 3), pure: +(stars === 3 && !this.usedUndo && !this.usedWild && !this.extras) }),
+        boss3: +!!(level.boss && !level.secret && stars === 3), pure: +(stars === 3 && !this.usedUndo && !this.usedWild && !this.extras),
+        // Logros Apostador ×N (10 nov 2026): niveles ganados con cada apuesta.
+        ...(this.opts.bet > 1 && { [`bet${this.opts.bet}`]: 1 }) }),
     };
     const done = track(stats);
     done.forEach((x, i) => setTimeout(() => toast(`${icon('check')} ¡Misión cumplida! ${misDef(x.id).text(x.goal)}`), 900 + i * 1600));

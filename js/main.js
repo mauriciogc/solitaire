@@ -1,20 +1,21 @@
 import { save, prefs, persist, resetProfile, deleteProfile, renameProfile, exportCode, readCode, loadProfile, setDev } from './storage.js';
 import { UNLOCK, EVENTOS, FIESTAS, COLECCIONES, evSoon, isOn, nextEvent, daysToNextCol, plusCols, RACHA_GOALS, RACHA_STEP, rachaGoal, nextIndex, racha, rachaTheme, rachaReady, rachaHot, rachaWin, rachaLose, rachaPendToFeats, msToMidnight, col, colLeft, colWin, colOffers, colBuy, ev, evLeft, evTicketLeft, evTicketPrice, evBuyTicket, evPrize, evEnter, evWin, evLose, evAlbum, fiAlbum, EVENT_PLANETS, EVENT_PER_PLANET, EVENT_LEVELS, fiesta, fiestaLeft, fiestaSoon, soonLeft, evPrePrice, evPreOwned, evPreBuy, nextFiesta, fiEnter, fiWin, fiLose, fiShape, fiPrice, fiPaid, fiBuy, fiPre, FI_PRE, FI_ENTRY, EV_FIRST } from './events.js';
-import { WORLD_COUNT, LEVELS_PER_WORLD, TOTAL_LEVELS, worldInfo, generateLevel, variantLevel, MECH_INTRO, MECH_NAMES, MECHANICS, EXTRA, extraDebut, SCROLL_FROM, mareaFirst, hoyoFirst, puertasFirst, bandaFirst, secretId, isSecret, eventLevel, fiestaLevel } from './levels.js';
-import { Game, faceHTML, backHTML } from './game.js';
+import { WORLD_COUNT, LEVELS_PER_WORLD, TOTAL_LEVELS, worldInfo, generateLevel, variantLevel, MECH_INTRO, MECH_NAMES, MECHANICS, EXTRA, extraDebut, SCROLL_FROM, mareaFirst, hoyoFirst, puertasFirst, bandaFirst, rocasFirst, secretId, isSecret, eventLevel, fiestaLevel } from './levels.js';
+import { Game, faceHTML, backHTML, TIPS, MESA_INTRO, MESA_TEXT, MECH_KINDS, TIP_HELP, ART } from './game.js';
 import { maxBet, betFee, betSteps, BET_STEPS, HELPS, DAILY_PATH, dailyState, starsNeeded, TICKET_PRICE, ticketCost, ticketRefund, coinsFor, bossChest, rollChest, CONST_PRIZE, openCost, boosted, secretCoins, rollSecret, openSurprise, MET_OFF, metShopPrice } from './economy.js';
-import { missions, misDef, misDone, misAllDone, autoClaim, LOGROS, LOGRO_PRIZES, LOGRO_MEDAL, LOGRO_TOP, logroGot, logroStat, logrosVisible } from './missions.js';
+import { missions, misDef, misDone, misAllDone, autoClaim, LOGROS, LOGRO_PRIZES, LOGRO_MEDAL, LOGRO_TOP, logroGot, logroProg, logrosVisible } from './missions.js';
 import { pauseOffscreen, openModal, toast, updateCoins, money, esc, reduced, wait, flyToWallet, spendFromWallet, sparkle, confetti, starsHTML, warp, buzz, balloons, lootBubbles, floatBubbles, rachaWarnHTML, popPrize, popBalloon, countPop, HEADS, betLoseHTML, shownCoins } from './ui.js';
 import { icon, iconURL, iconInner, charSVG, star, coin, miniPlanet, avatarHTML, AVATAR_COLORS, kidOf, KID_SKINS, KID_HAIRS, KID_STYLES, cardBackURL, setDeck, lockIcon, curtainIcon, chestBody, chestLid, boxBody, boxLid } from './art.js';
 import { GROUPS, SECTIONS, ITEMS, shopItems, groupOf, owns, equipped, equip, buy, item, lockedUntil, titleHTML, titleIcon, sell, sellable, sellPrice } from './shop.js';
-import { BIOMES, biomeKey, EVENT_BIOMES } from './biomes.js';
+import { BIOMES, biomeKey, EVENT_BIOMES, tableHTML } from './biomes.js';
 import { redeem } from './codes.js';
 import { meteor, metWin, metCoins, MET_FROM } from './meteor.js';
 import { dev, gallery, attachDevBar, galleryScreen, openDevMenu, planetGal, planetsScreen, casualRate, rateTag, tableIcon } from './dev.js';
 import { themeCSS } from './themes.js';
 import { setCSS, SETS, setOf, setItems, SET_DEAL } from './sets.js';
+import { fiestaCSS } from './fiesta-art.js';
 // Caras, fondos y marcos de las temáticas de la tienda (themes.js): su CSS se arma de su paleta.
-document.head.append(Object.assign(document.createElement('style'), { textContent: themeCSS(iconURL) + setCSS(iconURL, iconInner) }));
+document.head.append(Object.assign(document.createElement('style'), { textContent: themeCSS(iconURL) + setCSS(iconURL, iconInner) + fiestaCSS(FIESTAS, iconInner) }));
 
 document.documentElement.classList.toggle('dev-on', !!prefs.dev);
 // Reversos de los premios de racha (carta regalo violeta y comodín dorado), para todo el documento:
@@ -919,7 +920,9 @@ const rachaBtn = (prev = null) => {
   if (!isOn('racha')) return '';
   const r = racha(), t = rachaTheme(), old = prev != null;
   const ready = !old && rachaReady(), hot = !old && !ready && rachaHot();
-  return `<button class="iconbtn tb press racha-btn ${fresh('racha')} ${ready ? 'ready' : ''} ${hot ? 'hot' : ''}" data-a="racha" aria-label="${t.name}" title="${t.name}">${hot ? `<span class="fire">${icon('flame')}</span>` : ''}${icon(t.ico)}<small class="rn">${old ? prev : r.n}</small>${ready ? '<span class="dot"></span>' : ''}</button>`;
+  // 10 nov 2026: el anillo de misiones y logros, lleno con lo que lleva hacia el siguiente premio.
+  const i = nextIndex(r), from = i ? rachaGoal(i - 1).n : 0, p = ready ? 1 : Math.max(0, Math.min(1, ((old ? prev : r.n) - from) / (rachaGoal(i).n - from)));
+  return `<button class="iconbtn tb press prog racha-btn ${fresh('racha')} ${ready ? 'ready' : ''} ${hot ? 'hot' : ''}" data-a="racha" style="--p:${p.toFixed(3)}" aria-label="${t.name}" title="${t.name}">${hot ? `<span class="fire">${icon('flame')}</span>` : ''}${icon(t.ico)}<small class="rn">${old ? prev : r.n}</small>${ready ? '<span class="dot"></span>' : ''}</button>`;
 };
 // Colección: la ficha de su temática, arriba cuánto le queda y abajo cuántas lleva (como la racha; con 0 no sale);
 // se mueve con punto rojo si ya alcanza para algo.
@@ -943,7 +946,7 @@ const misBtn = () => {
 const logrosBtn = () => {
   if (!isOn('logros')) return '';
   const ls = logrosVisible(), open = ls.filter((l) => logroGot(l) < LOGRO_TOP);
-  const p = Math.max(0, ...open.map((l) => Math.min(1, logroStat(l) / l.steps[logroGot(l)]))), medals = ls.reduce((n, l) => n + logroGot(l), 0);
+  const p = Math.max(0, ...open.map((l) => Math.min(1, logroProg(l) / l.steps[logroGot(l)]))), medals = ls.reduce((n, l) => n + logroGot(l), 0);
   return `<button class="iconbtn tb press prog logros-btn ${fresh('logros')}" data-a="logros" style="--p:${open.length ? p.toFixed(3) : 1}" aria-label="Logros" title="Logros">${icon('trophy')}${medals ? `<small class="rn">${medals}</small>` : ''}</button>`;
 };
 // 8 nov 2026: con más de 3 botones, cada lado se agrupa en un botón dorado con lo más urgente (listo > arde > nuevo) y
@@ -969,7 +972,7 @@ const eventButtons = (res) => {
 const sideButtons = () => grouped('l', 'Menú', `${ibtn('gift', 'Regalo diario', 'daily', !dailyState(save.daily).claimed)}${ticketBtn()}${ibtn('bag', 'Tienda', 'shop', shopNew())}${ibtn('album', 'Álbum de postales', 'album')}${roadBtn()}${ibtn('gear', 'Ajustes', 'settings')}`);
 function sideAction(a) {
   if (a === 'grp-r' || a === 'grp-l') return openGroup(a.slice(4)), true;
-  const act = { me: () => !document.querySelector('.touring') && openProfile(), camino: openRoad, shop: () => openShop(), daily: openDaily, dticket: openDailyTicket, racha: openRacha, mis: openMis, logros: openLogros, col: openCol, evento: openEvento, 'evento-next': openEventoNext, fiesta: () => openFiesta(), 'fiesta-next': () => openFiesta(fiestaSoon(), 'fiesta-next'), album: openAlbum, settings: openSettings, dev: () => openDevMenu({ onGallery: () => showGallery(save.next), onPlanets: showPlanets, onRefresh: boot, card: mechCard }) }[a];
+  const act = { me: () => !document.querySelector('.touring') && openProfile(), camino: openRoad, shop: () => openShop(), daily: openDaily, dticket: openDailyTicket, racha: openRacha, mis: openMis, logros: openLogros, col: openCol, evento: openEvento, 'evento-next': openEventoNext, fiesta: () => openFiesta(), 'fiesta-next': () => openFiesta(fiestaSoon(), 'fiesta-next'), album: openAlbum, settings: openSettings, dev: () => openDevMenu({ onGallery: () => showGallery(save.next), onPlanets: showPlanets, onFiestas: openFiestaPack, onTexts: openTexts, onGoLevel: openGoLevel, onRefresh: boot, card: mechCard }) }[a];
   // Usar un botón cierra su cajón (menos durante el recorrido, que los va enseñando).
   if (act && !document.querySelector('.side-touring')) closeGroups();
   act?.();
@@ -997,23 +1000,8 @@ const SUITS = ['s', 'h', 'd', 'c'];
 const R = { A: 0, J: 10, Q: 11, K: 12 };
 const rk = (r) => R[r] ?? +r - 1;
 const mini = (x, r, s, extra = {}, cls = '') => `<div class="card up ${cls}" style="left:${x}px">${faceHTML({ rank: rk(r), suit: SUITS.indexOf(s), ...extra })}${extra.marks || ''}</div>`;
-const MECH_TEXT = {
-  lock: 'No se juega hasta que quitas la carta con la llave del mismo color.',
-  pack: 'No se juega: al destaparla, sus cartas se van al final de tu mazo.',
-  ice: 'Se derrite cuando juegas tantas cartas de la mesa como marca.',
-  double: 'Vale los dos números: se juega con cualquiera y te deja seguir desde los dos.',
-  arrow: 'Si apunta arriba, la siguiente carta tiene que ser un número más; si apunta abajo, uno menos.',
-  curtain: 'Sigue boca abajo hasta que quitas su carta con telón.',
-  bomb: 'Destápala antes de que su cuenta llegue a cero, o quema 3 cartas de tu mazo.',
-  coin: 'Se juega como cualquier carta y te da monedas.',
-  ship: 'Cada pocos robos pasa y se lleva una carta de tu mazo. Con racha de 4 te regresa la última que se llevó (si no se llevó nada, no regresa nada).',
-  ghost: 'Aparece y desaparece cada 2 jugadas o robos: solo se juega cuando se ve.',
-  cham: 'Cada 3 jugadas o robos cambia: un rato es comodín (va sobre cualquier carta) y otro rato vuelve a su número.',
-  live: 'Con la flecha arriba, su número sube cada vez que juegas o robas; con la flecha abajo, baja.',
-  ticket: 'Tiene dos números: juégalo con cualquiera. Se parte y la otra mitad queda para después.',
-  turbo: 'Al jugarlo, tus 3 jugadas siguientes valen doble en la racha. Si robas, se apaga.',
-  comet: 'Destápalo antes de que su cuenta llegue a cero y suma a tu racha los puntos que marca. Si no, se va.',
-};
+// Texto corto de cada carta (Tu camino, Cómo jugar, «Aquí aparece»): el mismo de su ventana (TIPS en game.js).
+const MECH_TEXT = TIPS;
 // Flecha y carta viva: se enseñan los dos casos (arriba y abajo). Candado y cortina: con la carta que los abre.
 const MECH_BOTH = {
   lock: () => mini(0, '8', 'c', { key: 0 }) + mini(0, '9', 'd', { lock: 0 }),
@@ -1022,12 +1010,8 @@ const MECH_BOTH = {
   live: () => mini(0, 'K', 's', { live: 1 }) + mini(0, '4', 'h', { live: -1 }),
 };
 // Ayuda → Cartas especiales, en bloques como "Cómo jugar".
-const MECH_GROUPS = [
-  ['Se abren después', ['lock', 'ice', 'curtain', 'ghost']],
-  ['Cambian el número', ['double', 'arrow', 'live', 'ticket', 'cham']],
-  ['No se juegan', ['pack', 'bomb', 'ship']],
-  ['Te ayudan', ['comet', 'turbo', 'coin']],
-];
+// Grupos de Cómo jugar: los mismos de las ventanas (MECH_KINDS en game.js).
+const MECH_GROUPS = MECH_KINDS;
 // Reverso de la baraja del jugador, para los dibujos de la ayuda.
 const helpBack = (x, extra = '') => `<div class="card" style="left:${x}px;${extra};--back:${cardBackURL()}"><div class="inner">${backHTML({})}</div></div>`;
 function mechCard(m, x = 0) {
@@ -1044,15 +1028,19 @@ function mechCard(m, x = 0) {
   if (m === 'turbo') return mini(x, '7', 'h', { turbo: true });
   if (m === 'coin') return mini(x, '5', 'd', { coin: 20 });
   if (m === 'ship') return `<div class="card up ship-demo" style="left:${x}px">${faceHTML({ rank: 6, suit: 2 })}<span class="ship-mark">${icon('nave')}</span></div>`;
-  if (m === 'ghost') return mini(x, '8', 'h', {}, 'ghost-demo');
+  if (m === 'ghost') return mini(x, '8', 'h', { ghost: 1 }, 'ghost-demo');
   if (m === 'cham') return mini(x, '7', 'c', { cham: 1 }, 'cham-demo');
+  if (m === 'bolt') return mini(x, '6', 'h', { bolt: 1 });
+  if (m === 'cst') return mini(x, 'J', 'd', { cst: 1 });
   if (m === 'comet') return `<div class="card comet-card up" style="left:${x}px"><div class="inner"><div class="face front"></div></div><span class="comet-face">${icon('comet')}<b>4</b><em>+3</em></span></div>`;
   return '';
 }
 
+ART.mechCard = (m) => mechCard(m);
+ART.tableIcon = tableIcon;
 // Misiones y logros de una carta especial (8 nov 2026): llevan la carta misma de ejemplo (la de la ayuda), no un ícono.
 // Carta especial: su carta de ejemplo · Apostador: la etiqueta ×N de la apuesta (la de Jugar).
-const misIco = (m) => (m.mech ? `<span class="mis-card">${mechCard(m.mech)}</span>` : m.bet ? '<span class="mis-bet"><i class="go-bet dbet b3">×N</i></span>' : icon(m.ico));
+const misIco = (m) => (m.mech ? `<span class="mis-card">${mechCard(m.mech)}</span>` : m.bet ? `<span class="mis-bet"><i class="go-bet dbet b${m.bet}">×${m.bet}</i></span>` : icon(m.ico));
 
 // ---------- Tu camino (8 nov 2026) ----------
 // Todo lo que se abre jugando (eventos, cartas especiales y mesas) en el orden en que sale. Lo que ya alcanzaste se ve
@@ -1078,18 +1066,22 @@ function roadItems() {
     ['fiesta', UNLOCK.fiesta, 'Festividades', 'pinata', 'Fiestas de un día con sus niveles y sus premios.'],
     ['col3', UNLOCK.col3, 'Arte, Música y Cine', 'nota', 'Colecciones nuevas: ya hay colección todas las semanas.'],
     ['fiesta2', UNLOCK.fiesta2, 'Leyendas mexicanas', 'catrina', 'Festividades nuevas de leyendas mexicanas.'],
+    ['fiesta3', UNLOCK.fiesta3, 'Fiestas de México', 'piramide', 'Día de la Bandera, Equinoccio de Primavera y Las Posadas.'],
+    ['fiesta4', UNLOCK.fiesta4, 'Fiestas de América', 'antifaz', 'Festividades de toda América: Carnaval, Alasitas, Tapati, Guelaguetza y más.'],
   ].map(([id, n, name, ico, text]) => ({ id, n: n + 1, k: 'ev', name, pic: icon(ico), text }));
   // Apuesta (9 nov 2026): una parada por cada ×N, con su etiqueta.
   const BET_TXT = { 2: 'En los niveles nuevos apuesta al tocar Jugar y gana hasta el doble de todo. Tu primer ×2 va por nuestra cuenta.', 3: 'Ya puedes apostar ×3 y ganar hasta el triple. Tu primer ×3, gratis.' };
   const bets = betStarts().map(([m, g]) => ({ id: `apuesta${m}`, n: g + 1, k: 'ev', name: m === 2 ? 'Apuestas' : `Apuesta ×${m}`, pic: `<i class="go-bet dbet b${m}">×${m}</i>`, text: BET_TXT[m] || `Ya puedes apostar ×${m} y ganar hasta ×${m} de todo. Tu primer ×${m}, gratis.` }));
-  const cards = MECHANICS.map((m) => ({ id: m, n: (EXTRA.includes(m) ? extraDebut(m) : MECH_INTRO[m] * LEVELS_PER_WORLD) + 1, k: 'card', name: MECH_NAMES[m], pic: `<span class="rd-card">${mechCard(m)}</span>`, text: MECH_TEXT[m] }));
+  const cards = MECHANICS.filter((m) => TIPS[m]).map((m) => ({ id: m, n: (EXTRA.includes(m) ? extraDebut(m) : MECH_INTRO[m] * LEVELS_PER_WORLD) + 1, k: 'card', name: MECH_NAMES[m], pic: `<span class="rd-card">${mechCard(m)}</span>`, text: MECH_TEXT[m] }));
   const tables = [
     ...ROAD_TABLES.map(([id, name, text]) => ({ id, n: SCROLL_FROM[id] + 1, name, text })),
     { id: 'marea', n: mareaFirst() + 1, name: 'Marea', text: 'Cada robo sube el agua y cada carta que juegas la baja.' },
-    { id: 'puertas', n: puertasFirst() + 1, name: 'Puertas', text: 'Cada carta llave abre la puerta que tú escojas. Las que no abras no cuentan.' },
+    { id: 'puertas', n: puertasFirst() + 1, name: 'Puertas', text: 'Juega una carta llave y escoge qué puerta abrir: sus cartas salen al tablero.' },
     { id: 'banda', n: bandaFirst() + 1, name: 'Banda transportadora', text: 'Sus cartas dan vueltas: solo ves 4 a la vez y avanza con cada jugada o robo.' },
-    { id: 'hoyo', n: hoyoFirst() + 1, name: 'Agujero negro', text: 'Cada 4 jugadas o robos se traga sus cartas y las escupe con los números revueltos.' },
-  ].map((x) => ({ ...x, k: 'mesa', pic: tableIcon(x.id) }));
+    { id: 'hoyo', n: hoyoFirst() + 1, name: 'Agujero negro', text: 'Cada 4 jugadas o robos se traga todas sus cartas y las escupe con los números revueltos.' },
+    { id: 'nave', n: MECH_INTRO.ship * LEVELS_PER_WORLD + 1, name: 'Nave ladrona', text: '' },
+    { id: 'rocas', n: rocasFirst() + 1, name: 'Asteroides', text: '' },
+  ].map((x) => ({ ...x, k: 'mesa', pic: x.id === 'nave' ? icon('nave') : tableIcon(x.id), text: MESA_TEXT[x.id] ? MESA_TEXT[x.id].join(' ') : x.text }));
   const order = Object.keys(ROAD_KINDS);
   return [...evs, ...bets, ...cards, ...tables].sort((a, b) => a.n - b.n || order.indexOf(a.k) - order.indexOf(b.k));
 }
@@ -1474,11 +1466,6 @@ function startLevel(g, { resume = false, free = false, anim = 'up', bet = 1, pai
       clearRun();
       back();
     },
-    onRetry: () => {
-      if (counts) rachaLose();
-      clearRun();
-      enterLevel(g);
-    },
     // Sin las 3 estrellas: lo vuelve a jugar ya (gratis, porque ya lo ganó).
     onReplay: () => startLevel(g),
     // Tras la ventana de victoria: de vuelta al planeta, con el avance animado (o a la galería en dev).
@@ -1587,6 +1574,23 @@ function showGallery(start) {
   }
   mount(galleryScreen({ onPlay: (g) => startLevel(g, save.run?.g === g ? { resume: true, anim: null } : { free: true, anim: null }), onPlayLevel: playDevLevel, onBack: () => showMap() }));
 }
+// Dev (11 nov 2026, pedido del usuario): ir directo al tablero de un nivel, como al tocarlo en la galería (gratis, sin
+// guardar; al salir vuelves a la galería).
+function openGoLevel() {
+  const m = openModal({ title: 'Ir al tablero', color: 'gray',
+    body: `<p class="lead">¿Qué nivel? (1 a ${fmt(TOTAL_LEVELS)})</p><input class="text-in go-lvl" type="number" inputmode="numeric" min="1" max="${TOTAL_LEVELS}" value="${Math.min((save.next || 0) + 1, TOTAL_LEVELS)}">`,
+    buttons: [{ label: 'Jugar', cls: 'green', keep: true, onClick: () => go() }] });
+  const input = m.el.querySelector('.go-lvl');
+  const go = () => {
+    const n = Math.round(+input.value);
+    if (!(n >= 1 && n <= TOTAL_LEVELS)) return toast(`Escribe un nivel del 1 al ${fmt(TOTAL_LEVELS)}`);
+    document.getElementById('modal-root').replaceChildren();
+    gallery.active = true;
+    startLevel(n - 1, { free: true, anim: null });
+  };
+  input.addEventListener('keydown', (e) => e.key === 'Enter' && go());
+  setTimeout(() => (input.focus(), input.select()), 50);
+}
 // Modo dev: jugar un tablero del evento del mes o de una festividad desde la galería, con su mesa, sin guardar nada.
 function playDevLevel(level, look) {
   const old = [...app.children];
@@ -1601,7 +1605,6 @@ function playDevLevel(level, look) {
     event: look,
     onExit: back,
     onAbandon: back,
-    onRetry: () => playDevLevel(level, look),
     onReplay: () => playDevLevel(level, look),
     onDone: back,
     onWin: () => ({ coins: 0, tickets: 0, prev: 0, title: '¡Nivel superado!' }),
@@ -1875,6 +1878,82 @@ function openShop(tab = 'avatar') {
   });
   show(tab, false);
 }
+// Dev (11 nov 2026, pedido del usuario: «quiero ver sus redacciones y ver si hay que homologar»): todos los textos que
+// presentan algo, juntos y como se ven. Cartas (su ventana al aparecer y su texto de Tu camino), mesas, avisos de
+// desbloqueo y ayudas. Sale de las mismas listas que usa el juego (TIPS, MESA_INTRO, UNLOCK_INFO, MECH_TEXT, HELPS).
+function openTexts() {
+  const HEX = { blue: '#4aa8de', violet: '#8a5cf0', orange: '#ff9c5b', gold: '#e8a91a', green: '#3fb86f', pink: '#ff5f7e', gray: '#9a8fc4', red: '#e8434f' };
+  const road = Object.fromEntries(roadItems().map((x) => [x.id, x]));
+  const win = (title, color, body) => `<div class="tx-win"><h6 style="background:${HEX[color] || color || HEX.blue}">${title}</h6><div class="tx-b">${body}</div></div>`;
+  const where = (label, html) => `<div class="tx-where"><small>${label}</small>${html}</div>`;
+  const item = (pic, name, lvl, blocks) => `<section class="tx-item"><h5>${pic ? `<span class="tx-pic">${pic}</span>` : ''}<b>${name}</b>${lvl ? `<small>nivel ${lvl}</small>` : ''}</h5>${blocks.filter(Boolean).join('')}</section>`;
+  const roadTxt = (id) => road[id] && where('Tu camino', `<p class="tx-p">${road[id].text}</p>`);
+  const unlockBody = (i) => `<p class="lead">${i.lead}</p>${ulList(i.list)}<ul class="evi-rules">${i.rules.map(([ico, html, cls]) => `<li${cls ? ` class="${cls}"` : ''}>${icon(ico)}<span>${html}</span></li>`).join('')}</ul>`;
+  const MESAS = [['nave', 'Nave ladrona'], ['mesa', 'Mesa enrollada'], ['gravedad', 'Gravedad'], ['nebulosa', 'Nebulosa'], ['plegable', 'Mesa plegable'], ['marea', 'Marea'], ['puertas', 'Puertas'], ['banda', 'Banda transportadora'], ['hoyo', 'Agujero negro'], ['rocas', 'Asteroides']];
+  const HELP_BACK = { reloj: 'hreloj', ver2: 'hver', ver3: 'hver', ver4: 'hver', ver5: 'hver', llave: 'hllave', laser: 'hlaser', escudo: 'hescudo' };
+  const TABS = [
+    // Por grupo, como en Cómo jugar. (La ayuda sale solo en la primera carta de su grupo que llegue.)
+    ['Cartas', () => MECH_KINDS.flatMap(([, ms]) => ms).map((m) => item(`<span class="rd-card">${mechCard(m)}</span>`, MECH_NAMES[m], road[m]?.n, [
+      TIPS[m] && where('Ventana al aparecer', win(`Nuevo: ${MECH_NAMES[m].toLowerCase()}`, 'blue', `<div class="tip-card"><span class="tip-pic">${mechCard(m)}</span><p><b>${MECH_NAMES[m]}</b>${TIPS[m]}</p></div>${TIP_HELP[m] ? `<div class="help-tip small"><span class="help-tip-card" style="background-image:${cardBackURL(TIP_HELP[m][1])}"></span><p>${TIP_HELP[m][2]}</p></div>` : ''}`)),
+      roadTxt(m),
+    ])).join('')],
+    ['Mesas', () => MESAS.map(([k, name]) => item(k === 'nave' ? icon('nave') : tableIcon(k), name, road[k]?.n, [
+      MESA_INTRO[k] && where('Ventana al aparecer', win(MESA_INTRO[k].title, MESA_INTRO[k].color, MESA_INTRO[k].body)),
+      roadTxt(k),
+    ])).join('')],
+    ['Avisos', () => [
+      ...Object.keys(UNLOCK_INFO).map((k) => { const i = UNLOCK_INFO[k](); return i && item(icon(i.ico || 'star'), i.title, road[k]?.n, [where('Ventana al desbloquear', win(i.title, i.color, unlockBody(i))), roadTxt(k)]); }),
+      ...[true, false].map((first) => { const i = betInfo(first); return item('', i.title, first ? road.apuesta2?.n : null, [where('Ventana', win(i.title, i.color, unlockBody(i))), first && roadTxt('apuesta2')]); }),
+    ].filter(Boolean).join('')],
+    ['Ayudas', () => [
+      item('', 'Comodín', null, [where('Panel de ayudas', `<div class="help-tip"><span class="help-tip-card" style="background-image:${cardBackURL('comodin')}"></span><p>Vale cualquier número.</p></div>`)]),
+      // Ver cartas 3, 4 y 5 s dicen lo mismo que la de 2 (solo cambian los segundos).
+      item('', 'Mini guía de ayudas', null, [where('Ventana en el nivel 2', win(MESA_INTRO.ayudas.title, MESA_INTRO.ayudas.color, MESA_INTRO.ayudas.body))]),
+      ...Object.entries(HELPS).filter(([k]) => !/^ver[345]$/.test(k)).map(([k, h]) => item('', h.name, null, [
+        where('Panel de ayudas', `<div class="help-tip"><span class="help-tip-card" style="background-image:${cardBackURL(HELP_BACK[k])}"></span><p>${h.text}</p></div>`),
+        (k === 'escudo' || k === 'ver2') && where(k === 'escudo' ? 'Ventana (si ya conocías la nave)' : 'Ventana en un tablero grande', win(MESA_INTRO[k === 'escudo' ? 'escudo' : 'ver'].title, MESA_INTRO[k === 'escudo' ? 'escudo' : 'ver'].color, MESA_INTRO[k === 'escudo' ? 'escudo' : 'ver'].body)),
+      ])),
+    ].join('')],
+  ];
+  const m = openModal({ title: 'Textos del juego', color: 'gray', wide: true, cls: 'fp-pack tx-all',
+    body: `<div class="fp-tabs">${TABS.map(([n], i) => `<button class="fp-tab${i ? '' : ' on'}" data-t="${i}">${n}</button>`).join('')}</div><div class="fp-body tx-body"></div>` });
+  const body = m.el.querySelector('.tx-body');
+  const show = (i) => {
+    body.innerHTML = TABS[i][1]();
+    m.el.querySelectorAll('.fp-tab').forEach((b) => b.classList.toggle('on', +b.dataset.t === i));
+    if (!reduced()) body.querySelectorAll('.tx-item').forEach((el, k) => k < 8 && el.animate([{ opacity: 0, translate: '0 12px' }, { opacity: 1, translate: '0 0' }], { duration: 300, delay: k * 50, easing: 'ease-out', fill: 'backwards' }));
+  };
+  m.el.querySelector('.fp-tabs').addEventListener('click', (e) => { const b = e.target.closest('.fp-tab'); if (b) show(+b.dataset.t); });
+  show(0);
+}
+// Dev (11 nov 2026, pedido del usuario): el paquete completo de las festividades nuevas, una pestaña por grupo. Cada
+// festividad con su fecha, su mesa y sus 7 exclusivos dibujados como en la tienda. Solo para ver: no da nada.
+function openFiestaPack() {
+  const TABS = [['Leyendas', (f) => f.local], ['Fiestas de México', (f) => f.grp === 3], ['Fiestas de América', (f) => f.grp === 4]];
+  const LBL = { avatar: 'Disfraz', ring: 'Marco', title: 'Título', traveler: 'Nave', back: 'Reverso', space: 'Espacio', frame: 'Postal' };
+  const MES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+  const y = new Date().getFullYear(), when = (f) => { const d = f.date(y); return `${d.getDate()} ${MES[d.getMonth()]}${f.days > 1 ? ` · ${f.days} días` : ''}`; };
+  const cell = (lbl, ico, pic, name, cls = '') => `<li class="ss-cell"><em class="c-ex">${icon(ico)}${lbl}</em><span class="ss-pic ${cls}">${pic}</span><b>${esc(name)}</b></li>`;
+  const fest = (f) => {
+    const ex = Object.assign({}, ...f.ex), name = (sec) => item(sec, ex[sec])?.name || ex[sec];
+    const pic = (sec) => sec === 'ring' ? avatarHTML({ ...save, look: 'char', char: ex.avatar, ring: ex.ring }) : sec === 'title' ? titleHTML(ex[sec]) : shopPreview(sec, ex[sec]);
+    return `<section class="fp-fest"><h5>${icon(f.ico)}<b>${esc(f.name)}</b><small>${when(f)}${f.zone ? ` · ${esc(f.zone)}` : ''}</small></h5>
+      <ul class="ss-list">${cell('Mesa', 'card', `<span class="fp-mesa">${tableHTML(0, f.key)}</span>`, 'Su mesa', 'ssk-mesa')}${Object.keys(LBL).filter((sec) => ex[sec]).map((sec) => cell(LBL[sec], SHOP_ICO[sec], pic(sec), name(sec), `ssk-${sec}`)).join('')}</ul></section>`;
+  };
+  const pane = (i) => FIESTAS.filter((f) => TABS[i][1](f) && f.ready).sort((a, b) => a.date(y) - b.date(y)).map(fest).join('');
+  const m = openModal({ title: 'Festividades nuevas', color: 'orange', wide: true, cls: 'fp-pack', onClose: closeShelf,
+    body: `<div class="fp-tabs">${TABS.map(([n, of], i) => `<button class="fp-tab${i ? '' : ' on'}" data-t="${i}">${n} <small>${FIESTAS.filter((f) => of(f) && f.ready).length}</small></button>`).join('')}</div><div class="fp-body"></div>` });
+  const body = m.el.querySelector('.fp-body');
+  const show = (i) => {
+    body.innerHTML = pane(i);
+    body.scrollTop = 0;
+    m.el.querySelectorAll('.fp-tab').forEach((b) => b.classList.toggle('on', +b.dataset.t === i));
+    if (!reduced()) body.querySelectorAll('.fp-fest').forEach((el, k) => el.animate([{ opacity: 0, translate: '0 14px' }, { opacity: 1, translate: '0 0' }], { duration: 320, delay: k * 60, easing: 'cubic-bezier(0.34, 1.45, 0.64, 1)', fill: 'backwards' }));
+    travShelf(body);
+  };
+  m.el.querySelector('.fp-tabs').addEventListener('click', (e) => { const b = e.target.closest('.fp-tab'); if (b) show(+b.dataset.t); });
+  show(0);
+}
 // Ficha de la colección de un personaje (9 nov 2026): su propia ventana (openSetSheet) o dentro de otra (host), con
 // "Regresar" si se da back. El avatar con su marco y su título, las piezas en columnas (se compran o se ponen de un toque)
 // y abajo "Llevarte todo" con SET_DEAL menos por lo que falta: lo compra todo y lo pone. Con candado por mundo, todo
@@ -2110,7 +2189,7 @@ function openRacha() {
   const c = m.el.querySelector('.rclock');
   const tick = setInterval(() => (c.isConnected ? (c.textContent = clock(msToMidnight())) : clearInterval(tick)), 1000);
 }
-const refreshRacha = () => document.querySelectorAll('[data-a="racha"]').forEach((b) => (b.outerHTML = rachaBtn()));
+
 // Al volver de ganar: el número sube con un +1 que sale del botón.
 function bumpRacha() {
   refreshRacha();
@@ -2125,6 +2204,8 @@ const swapBtn = (a, html) => document.querySelectorAll(`[data-a="${a}"]`).forEac
   b.style.cssText = n.style.cssText;
   b.innerHTML = n.innerHTML;
 });
+// 10 nov 2026: se repinta en su lugar (como misiones y logros) para que su anillo se llene poco a poco.
+const refreshRacha = () => swapBtn('racha', rachaBtn());
 const refreshMis = () => swapBtn('mis', misBtn());
 const refreshLogros = () => swapBtn('logros', logrosBtn());
 const barHTML = (n, goal) => `<span class="mbar"><i style="width:${Math.min(100, (n / goal) * 100)}%"></i><b>${money(Math.min(n, goal))}/${money(goal)}</b></span>`;
@@ -2158,7 +2239,7 @@ function openMis() {
     cls: 'mis-modal',
     body: `<p class="tk-clock mis-clock">${clock(msToMidnight())}</p><ul class="mis-list">${s.list.map(row).join('')}${bonus()}</ul>
       <p class="note">Se cobran solas al cumplirlas. A medianoche llegan otras.</p>`,
-    buttons: [{ label: '¡A jugar!', cls: 'green wide' }],
+    // 10 nov 2026: sin botón «¡A jugar!» (solo es vista; se cierra con la X).
     onClose: () => refreshMis(),
   });
   const c = m.el.querySelector('.mis-clock');
@@ -2168,7 +2249,7 @@ function openMis() {
 function openLogros() {
   const list = logrosVisible();
   const row = (l) => {
-    const T = LOGRO_TOP, got = logroGot(l), next = l.steps[Math.min(got, T - 1)], v = logroStat(l), done = got >= T;
+    const T = LOGRO_TOP, got = logroGot(l), next = l.steps[Math.min(got, T - 1)], v = logroProg(l), done = got >= T;
     const medals = LOGRO_MEDAL.map((x, i) => `<i class="medal m${i} ${i < got ? 'on' : ''}" title="${x}"></i>`).join('');
     // Premio del escalón que sigue: monedas y, en platino y diamante, comodines y deshacer.
     const pz = LOGRO_PRIZES[Math.min(got, T - 1)];
@@ -2178,14 +2259,14 @@ function openLogros() {
   };
   // Primero lo que va más avanzado (10 nov 2026: se cobran solos, ya no hay nada que reclamar).
   const step = (l) => l.steps[Math.min(logroGot(l), LOGRO_TOP - 1)];
-  const sorted = () => [...list].sort((a, b) => (logroGot(a) >= LOGRO_TOP) - (logroGot(b) >= LOGRO_TOP) || logroStat(b) / step(b) - logroStat(a) / step(a));
+  const sorted = () => [...list].sort((a, b) => (logroGot(a) >= LOGRO_TOP) - (logroGot(b) >= LOGRO_TOP) || logroProg(b) / step(b) - logroProg(a) / step(a));
   const m = openModal({
     title: 'Logros',
     ico: 'trophy',
     color: 'gold',
     wide: true,
     cls: 'mis-modal lg-modal',
-    body: `<ul class="mis-list">${sorted().map(row).join('')}</ul>`,
+    body: `<p class="note lg-note">Cada medalla empieza desde cero.</p><ul class="mis-list">${sorted().map(row).join('')}</ul>`,
     onClose: () => refreshLogros(),
   });
 }
@@ -2503,7 +2584,7 @@ function showEvent({ anim, after = null, start = null, kind = null } = {}) {
     <div class="space space-${e.ex[0].space}"></div><div class="g3d"></div><div class="glabels g-only"></div>
     <div class="g-only">
       <button class="hbtn tb press out-btn" data-a="back" aria-label="Volver al mapa" title="Mapa">${icon('prev')}</button>
-      <div class="wtitle info">${icon(e.ico, 0, 0, 'em')}<div><b>${e.name}</b><small>¡A jugar! Quedan <span data-evleft>${evDays()}</span></small></div><button class="ev-help tb press" data-a="ev-help" aria-label="Cómo funciona el evento" title="Cómo funciona">?</button></div>
+      <div class="wtitle info">${icon(e.ico, 0, 0, 'em')}<div><b>${e.name}</b><small>${e.zone ? `Celebrando en ${e.zone} · ` : ''}¡A jugar! Quedan <span data-evleft>${evDays()}</span></small></div><button class="ev-help tb press" data-a="ev-help" aria-label="Cómo funciona el evento" title="Cómo funciona">?</button></div>
     </div>
     <div class="p-only phud"></div>
     <div class="res">${EVS.tk ? evTicketPill(e) : ''}<div class="pill info" aria-label="Monedas">${coin()}<span data-coins>${money(shownCoins() - (after?.coins || 0))}</span></div>
@@ -2701,7 +2782,7 @@ function passHTML(e, { ico = e.tk || e.ico, state = 'buy', label = 'Boleto de en
   const [hc, hd] = HEADS[e.color] || HEADS.violet;
   return `<div class="ev-pass-wrap"><div class="rays"></div><div class="ev-pass ${state}" style="--pc:${hc};--pd:${hd}">
     <div class="ep-card"><span class="ep-stub">${icon(ico, 0, 0, 'big')}</span>
-    <span class="ep-main"><small>${label}</small><b>${e.name}</b><em>${sub}</em></span></div>
+    <span class="ep-main"><small>${label}</small><b>${e.name}</b>${e.zone ? `<small class="ep-zone">Celebrando en ${e.zone}</small>` : ''}<em>${sub}</em></span></div>
     ${off ? `<i class="ep-off">${off}</i>` : ''}${state === 'owned' ? `<i class="ep-stamp">${icon('check')}¡Lista!</i>` : ''}
   </div></div>`;
 }
@@ -2788,7 +2869,6 @@ function startEvent() {
     },
     onExit: () => back(),
     onAbandon: lose,
-    onRetry: lose,
     onDone: async (res) => {
       if (res.items?.length) await openEvPrize(e, res);
       back(res.counted ? res : null);
@@ -3154,7 +3234,7 @@ async function notices() {
     if (!(await calm(gen))) return;
     if (meteor() && !meteor().state.intro) await openMetIntro();
   }
-  for (const k of ['racha', 'mis', 'logros', 'meteoro', 'col', 'apuesta', 'mes', 'col2', 'fiesta', 'col3', 'fiesta2']) {
+  for (const k of ['racha', 'mis', 'logros', 'meteoro', 'col', 'apuesta', 'mes', 'col2', 'fiesta', 'col3', 'fiesta2', 'fiesta3', 'fiesta4']) {
     // La lluvia: solo si nunca se ha visto una (quien ya la vio caer no necesita la ventana). La apuesta: nivel 101.
     if (!(k === 'meteoro' ? (save.next || 0) >= MET_FROM && !save.metSeen : k === 'apuesta' ? maxBet(save.next) > 1 : isOn(k)) || save.intro?.[k]) continue;
     if (!(await calm(gen))) return;
@@ -3216,69 +3296,93 @@ const BET_WORD = { 2: 'el doble', 3: 'el triple' };
 function betInfo(first) {
   const m = maxBet(save.next), w = BET_WORD[m] || `×${m}`;
   const gift = ['gift', `¡Tu primer <b>×${m}</b> va por nuestra cuenta!`, 'evi-gift'];
+  // Mismo formato que los demás avisos (11 nov 2026): nivel y esencia arriba; premios, reglas y el regalo.
+  const lvl = (betStarts().find(([x]) => x === m)?.[1] ?? save.next) + 1;
   return first
     ? {
         title: '¡Nuevo: Apuestas!', color: 'gold', hero: `<span class="bet-big b${m} outl">×${m}</span>`,
-        lead: `En los niveles nuevos puedes <b>apostar</b> y ganar <b>hasta ${w} de todo</b>.`,
+        lead: ulLead(lvl, 'la apuesta', `En los niveles nuevos apuestas al tocar Jugar y ganas <b>hasta ${w} de todo</b>.`),
         rules: [
-          ['coin', `Todo lo que ganes va <b>×${m}</b>: monedas, boletos, comodines, fichas y el cofre del jefe.`],
-          ['ticket', `Al entrar pagas tus boletos <b>×${m}</b> y unas monedas.`],
-          ['close', 'Si no ganas, lo apostado <b>no regresa</b>.'],
+          ['gift', `Todo lo que ganes va <b>×${m}</b>: monedas, boletos, comodines, fichas y el cofre del jefe.`],
+          ['ticket', `Al entrar pagas tus boletos <b>×${m}</b> y unas monedas. Si no ganas, <b>no regresa</b>.`],
           ['flag', 'Los niveles que ya ganaste y los eventos se juegan <b>normal</b>.'],
           gift,
         ],
       }
     : {
         title: `¡Subiste a ×${m}!`, color: 'gold', badge: '¡Subiste!', hero: `<span class="bet-big b${m} outl">×${m}</span>`,
-        lead: `Ya puedes apostar <b>×${m}</b> y ganar <b>hasta ${w} de todo</b>.`,
+        lead: ulLead(lvl, `la apuesta ×${m}`, `Ahora ganas <b>hasta ${w} de todo</b>.`),
         rules: [
-          ['coin', `Monedas, boletos, comodines, deshacer, fichas y el cofre del jefe: todo <b>×${m}</b>.`],
-          ['ticket', `Al entrar pagas tus boletos <b>×${m}</b> y unas monedas.`],
+          ['gift', `Monedas, boletos, comodines, deshacer, fichas y el cofre del jefe: todo <b>×${m}</b>.`],
+          ['ticket', `Al entrar pagas tus boletos <b>×${m}</b> y unas monedas. Si no ganas, <b>no regresa</b>.`],
           gift,
         ],
       };
 }
+// Avisos de lo que se abre jugando (11 nov 2026, pedido del usuario: homologados). Todos igual: arriba «Llegaste al
+// nivel N: se abre X» y en una frase su esencia; luego, en este orden y con el mismo icono, cuándo y cuánto dura
+// (reloj), planetas y niveles si tiene (planet), premios (gift), reglas (ticket, flame…) y al final dónde está o cuándo
+// llega el próximo (flag). El nivel es el que ves en Tu camino (lo ganado + 1).
+const ulLead = (lvl, what, essence) => `Llegaste al <b>nivel ${lvl}</b>: se abre${/^(las|los|\d)/.test(what) ? 'n' : ''} <b>${what}</b>. ${essence}`;
+const inDays = (n) => `<b>${n} ${n === 1 ? 'día' : 'días'}</b>`;
+const colNow = (c, days) => ['flag', c ? '¡Hay una ahora mismo! Búscala a la <b>derecha</b>.' : `La próxima llega en ${inDays(days)}.`];
+const fiNow = (f, nx) => ['flag', f ? (f.soon ? `${f.inDays > 1 ? `En ${f.inDays} días` : 'Mañana'} es <b>${f.name}</b>. Su botón ya está a la <b>derecha</b>.` : `¡Hoy es <b>${f.name}</b>! Búscala a la <b>derecha</b>.`) : nx ? `La próxima, <b>${nx.name}</b>, llega en ${inDays(nx.days)}.` : 'Pronto llega la primera.'];
+// Reglas de todas las festividades (las de un día y los grupos nuevos).
+const FI_RULES = () => [
+  ['reloj', 'El día de la fiesta, <b>24 horas</b> (algunas duran varios días).'],
+  ['planet', '<b>3 planetas</b> de 3 niveles: <b>9 niveles</b> difíciles.'],
+  ['gift', 'Cada planeta termina con un <b>regalo</b>: entre más estrellas, más fácil que sea un <b>exclusivo</b>.'],
+  ['ticket', `Pagas la entrada <b>una vez</b> y reintentas las veces que quieras. <b>3 días antes</b> sale su botón y la entrada cuesta <b>${Math.round(FI_PRE * 100)}% menos</b>.`],
+];
+// Cuáles son las nuevas (11 nov 2026, el usuario: «faltó poner cuáles son»): fichas con su icono, nombre y fecha.
+const MES3 = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+const fiDate = (f) => { const d = f.date(new Date().getFullYear()); return `${d.getDate()} ${MES3[d.getMonth()]}`; };
+const fiList = (fs) => fs.slice().sort((a, b) => a.date(2026) - b.date(2026)).map((f) => [f.ico, f.name, `${fiDate(f)}${f.zone ? ` · ${f.zone}` : ''}`]);
+const colList = (cs) => cs.map((x) => [x.token, x.name, '']);
+const evList = () => Object.keys(EVENTOS).map(Number).sort((a, b) => a - b).filter((m) => EVENTOS[m].ready).map((m) => [EVENTOS[m].ico, EVENTOS[m].name, MES_LARGO[m]]);
+const MES_LARGO = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+const ulList = (list) => (list?.length ? `<ul class="ul-list">${list.map(([ico, name, sub]) => `<li>${icon(ico)}<span><b>${name}</b>${sub ? `<small>${sub}</small>` : ''}</span></li>`).join('')}</ul>` : '');
 const UNLOCK_INFO = {
-
-  // Lluvia de meteoritos (8 nov 2026): antes se descubría sola, sin aviso; ahora al abrirse sale esta ventana una vez.
   meteoro: () => ({
     title: '¡Nueva: Lluvia de meteoritos!', ico: 'meteoro', color: 'orange', hero: icon('meteoro', 0, 0, 'big'),
-    lead: `Ganaste <b>${MET_FROM} niveles</b>: desde hoy pueden caer <b>lluvias de meteoritos</b> sobre tu mapa.`,
+    lead: ulLead(MET_FROM + 1, 'la lluvia de meteoritos', 'De vez en cuando caen meteoritos sobre tu mapa y todo da más.'),
     rules: [
-      ['meteoro', '2 o 3 veces por semana, <b>30 minutos</b> a cualquier hora y <b>sin aviso</b>.'],
-      ['coin', 'Mientras cae, tus niveles dan <b>el doble de monedas</b> y la tienda tiene descuento.'],
-      ['star', 'Tu primer nivel con <b>3 estrellas</b> en cada lluvia trae un <b>premio sorpresa</b>.'],
-      ['flag', '<b>Entre más juegues, más fácil que te toque verla.</b> ¡Entra seguido!'],
+      ['reloj', '2 o 3 veces por semana, <b>30 minutos</b>, a cualquier hora y <b>sin aviso</b>.'],
+      ['gift', 'Mientras cae, <b>el doble de monedas</b>, descuento en la tienda y un <b>premio sorpresa</b> en tu primer nivel con 3★.'],
+      ['flag', 'Entre más juegues, más fácil que te toque verla.'],
     ],
   }),
   mis: () => ({
     title: '¡Nuevas: Misiones del día!', ico: 'misiones', color: 'green', hero: icon('misiones', 0, 0, 'big'),
-    lead: `Ganaste <b>${UNLOCK.mis} niveles</b>: cada día te tocan <b>3 misiones</b> nuevas.`,
+    lead: ulLead(UNLOCK.mis + 1, 'las misiones del día', 'Cada día, 3 retos para jugar como siempre.'),
     rules: [
-      ['check', 'Juega como siempre: cartas, estrellas, rachas, bombas, burbujas… todo cuenta.'],
-      ['coin', 'Cada misión cumplida te da <b>monedas</b>. Las 3 juntas, un <b>cofre</b> con más.'],
-      ['flag', 'Se cobran <b>solas</b> al cumplirlas. A medianoche llegan otras. Las ves a la <b>derecha</b>.'],
+      ['reloj', '<b>3 misiones</b> cada día. A medianoche llegan otras.'],
+      ['gift', 'Cada una da <b>monedas</b>, y las 3 juntas, un <b>cofre</b>.'],
+      ['check', 'Todo cuenta: cartas, estrellas, rachas, bombas, burbujas… Se cobran <b>solas</b>.'],
+      ['flag', 'Las ves a la <b>derecha</b>.'],
     ],
   }),
   logros: () => ({
     title: '¡Nuevos: Logros!', ico: 'trophy', color: 'gold', hero: icon('trophy', 0, 0, 'big'),
-    lead: `Ganaste <b>${UNLOCK.logros} niveles</b>: ahora todo lo que haces suma para tus <b>logros</b>, para siempre.`,
+    lead: ulLead(UNLOCK.logros + 1, 'los logros', 'Todo lo que haces suma, para siempre.'),
     rules: [
-      ['medal', 'Cada logro tiene <b>bronce, plata, oro, platino y diamante</b>. Los últimos traen <b>comodines</b>.'],
-      ['crown', 'Algunos oros te dan un <b>título</b> que no se compra.'],
-      ['flag', 'Se cobran <b>solos</b> al lograrlos. Los ves a la <b>derecha</b>.'],
+      ['reloj', 'No se acaban: siguen sumando siempre.'],
+      ['gift', 'Medallas de <b>bronce, plata, oro, platino y diamante</b>. Las últimas dan <b>comodines</b> y algunos oros, un <b>título</b>.'],
+      ['check', 'Se cobran <b>solos</b> al lograrlos.'],
+      ['flag', 'Los ves a la <b>derecha</b>.'],
     ],
   }),
   racha: () => {
     const t = rachaTheme();
     return {
       title: `¡Nueva: ${t.name}!`, ico: t.ico, color: t.color, hero: icon(t.ico, 0, 0, 'big'),
-      lead: `Ganaste <b>${UNLOCK.racha} niveles</b>: ¡se abrió la racha! Gana niveles seguidos, junta estrellas y llévate premios cada día.`,
+      lead: ulLead(UNLOCK.racha + 1, 'la racha', 'Gana niveles seguidos, junta estrellas y llévate premios.'),
       rules: [
-        ['flag', 'Cada nivel <b>nuevo</b> que ganes (también los secretos) suma sus <b>estrellas</b>: con 3★ avanzas más rápido. Repetir no suma.'],
-        ['gift', `Premios a las <b>${RACHA_GOALS.map((g) => g.n).join(', ')}</b> estrellas y luego cada <b>${RACHA_STEP}</b>: monedas, <b>deshacer</b> y <b>comodines</b>.`],
-        ['flame', 'Si pierdes o abandonas un nivel nuevo, o te rindes en uno repetido, la racha <b>vuelve a 0</b>.'],
-        ['rocket', 'Los premios se cobran <b>solos</b>. Los eventos no cuentan. A medianoche empieza otra; la ves a la <b>derecha</b>.'],
+        ['reloj', 'Una racha <b>cada día</b>: a medianoche empieza otra.'],
+        ['gift', `Premios a las <b>${RACHA_GOALS.map((g) => g.n).join(', ')}</b> estrellas y luego cada <b>${RACHA_STEP}</b>: monedas, <b>deshacer</b> y <b>comodines</b>. Se cobran solos.`],
+        ['star', 'Cada nivel <b>nuevo</b> que ganes suma sus estrellas (también los secretos). Repetir y los eventos no suman.'],
+        ['flame', 'Si pierdes o abandonas un nivel nuevo, o te rindes en uno repetido, vuelve a <b>0</b>.'],
+        ['flag', 'La ves a la <b>derecha</b>.'],
       ],
     };
   },
@@ -3286,86 +3390,86 @@ const UNLOCK_INFO = {
     const c = col(), days = daysToNextCol();
     return {
       title: '¡Nuevas: Colecciones!', ico: c?.token || 'concha', color: c?.color || 'blue', hero: ['concha', 'gema', 'bellota', 'caramelo'].map((t) => icon(t)).join(''),
-      lead: 'Una o dos semanas al mes llega una <b>colección</b> con su temática y su <b>tienda</b> de premios exclusivos.',
+      lead: ulLead(UNLOCK.col + 1, 'las colecciones', 'Junta fichas con tus estrellas y cámbialas por premios.'),
+      list: colList(COLECCIONES.filter((x) => !x.plus)),
       rules: [
-        ['star', 'Cada <b>estrella nueva</b> que ganas te da <b>1 ficha</b> de la colección.'],
-        ['bag', 'Cámbialas por disfraces, reversos, viajeros y más que <b>solo salen ahí</b>.'],
-        ['flag', 'Termina el <b>domingo</b>: las fichas que sobren se pierden.'],
-        ['gift', c ? '¡Ya llegó una! Búscala a la <b>derecha</b>.' : `La próxima llega en <b>${days} ${days === 1 ? 'día' : 'días'}</b>.`],
+        ['reloj', '<b>2 semanas al mes</b>, de lunes a domingo. Las fichas que sobren se pierden.'],
+        ['gift', 'Su <b>tienda</b> tiene disfraces, reversos, naves y más que <b>solo salen ahí</b>.'],
+        ['star', 'Cada <b>estrella nueva</b> que ganas te da <b>1 ficha</b>.'],
+        colNow(c, days),
       ],
     };
   },
-  // Nivel 100: se suman las colecciones nuevas y hay colección 3 semanas al mes.
   col2: () => {
     const c = col(), days = daysToNextCol(), nuevas = plusCols(), n = nuevas.length;
     return {
       title: n === 1 ? '¡Una colección nueva!' : `¡${n} colecciones nuevas!`, ico: nuevas[0].token, color: nuevas[0].color, hero: nuevas.map((x) => icon(x.token)).join(''),
-      lead: `Llegaste al <b>nivel ${UNLOCK.col2}</b>: ${n === 1 ? 'se suma una colección nueva' : `se suman ${n} colecciones nuevas`} y ahora hay colección <b>3 semanas al mes</b>.`,
+      lead: ulLead(UNLOCK.col2 + 1, n === 1 ? 'una colección nueva' : `${n} colecciones nuevas`, 'Con sus propios exclusivos.'),
+      list: colList(nuevas),
       rules: [
-        ...nuevas.map((x) => [x.token, `<b>${x.name}</b>: junta <b>${x.tokens}</b> y gana sus exclusivos.`]),
-        ['star', 'Se turnan con las de siempre: <b>conchas, gemas, bellotas y caramelos</b>.'],
-        ['gift', c ? 'Hay una ahora mismo: búscala a la <b>derecha</b>.' : `La próxima llega en <b>${days} ${days === 1 ? 'día' : 'días'}</b>.`],
+        ['reloj', 'Ahora hay colección <b>3 semanas al mes</b>, de lunes a domingo.'],
+        ['gift', 'Cada una con su <b>tienda</b> de premios que <b>solo salen ahí</b>.'],
+        ['star', 'Se turnan con las de antes. Igual que siempre: <b>1 ficha</b> por cada estrella nueva.'],
+        colNow(c, days),
       ],
     };
   },
-  // Nivel 150: se suman arte, música y cine, y hay colección todas las semanas.
   col3: () => {
     const c = col(), days = daysToNextCol(), nuevas = plusCols(2), n = nuevas.length;
     return {
       title: `¡${n} colecciones nuevas!`, ico: nuevas[0].token, color: nuevas[0].color, hero: nuevas.map((x) => icon(x.token)).join(''),
-      lead: `Llegaste al <b>nivel ${UNLOCK.col3}</b>: se suman ${n} colecciones nuevas y ahora hay colección <b>todas las semanas</b>.`,
+      lead: ulLead(UNLOCK.col3 + 1, `${n} colecciones nuevas`, 'Con sus propios exclusivos.'),
+      list: colList(nuevas),
       rules: [
-        ...nuevas.map((x) => [x.token, `<b>${x.name}</b>: junta <b>${x.tokens}</b> y gana sus exclusivos.`]),
-        ['star', 'Cada semana cambia: se turnan las <b>9 temáticas</b>, una tras otra.'],
-        ['gift', c ? 'Hay una ahora mismo: búscala a la <b>derecha</b>.' : `La próxima llega en <b>${days} ${days === 1 ? 'día' : 'días'}</b>.`],
+        ['reloj', 'Ahora hay colección <b>todas las semanas</b>, de lunes a domingo.'],
+        ['gift', 'Cada una con su <b>tienda</b> de premios que <b>solo salen ahí</b>.'],
+        ['star', 'Se turnan las <b>9 temáticas</b>, una tras otra. <b>1 ficha</b> por cada estrella nueva.'],
+        colNow(c, days),
       ],
     };
   },
-  // Nivel 200: festividades de leyendas mexicanas. Igual que la de las festividades (nivel 120), con sus iconos
-  // arriba y solo cuáles son.
-  fiesta2: () => {
-    const nuevas = FIESTAS.filter((f) => f.local && f.ready), f = fiesta(), nx = nextFiesta(), mid = nuevas[Math.floor(nuevas.length / 2)];
-    const nombres = nuevas.map((x) => `<b>${x.name}</b>`), lista = `${nombres.slice(0, -1).join(', ')} y ${nombres.at(-1)}`;
-    return {
-      title: '¡Nuevas: Leyendas de México!', ico: mid.ico, color: mid.color, hero: nuevas.map((x) => icon(x.ico, 0, 0, x === mid ? 'main' : '')).join(''),
-      lead: `Llegaste al <b>nivel ${UNLOCK.fiesta2}</b>: se suman <b>${nuevas.length} festividades</b> nuevas: ${lista}.`,
-      rules: [
-        ['ticket', 'Pagas la entrada <b>una vez</b> y reintentas <b>las veces que quieras</b>.'],
-        ['flame', 'Niveles <b>difíciles</b>. Entre más estrellas en el último de cada planeta, más fácil que su regalo sea un exclusivo.'],
-        ['flag', `3 días antes aparece su botón a la <b>derecha</b>: si compras la entrada desde ahí, cuesta <b>${Math.round(FI_PRE * 100)}% menos</b>.`],
-        ['gift', f ? (f.soon ? `${f.inDays > 1 ? `En ${f.inDays} días` : 'Mañana'} es <b>${f.name}</b>. ¡No te lo pierdas!` : `¡Hoy es <b>${f.name}</b>! Búscalo a la <b>derecha</b>.`) : nx ? `La próxima, <b>${nx.name}</b>, llega en <b>${nx.days} ${nx.days === 1 ? 'día' : 'días'}</b>.` : 'Pronto llega la primera.'],
-      ],
-    };
-  },
-  // Nivel 120: festividades de 24 h.
   fiesta: () => {
     const f = fiesta(), nx = nextFiesta();
     return {
       title: '¡Nuevo: Festividades!', ico: f?.ico || nx?.ico || 'tamal', color: 'gold', hero: evHeroIcons(f?.ico || nx?.ico, FIESTAS),
-      lead: 'Los días de fiesta llega un <b>evento especial de 24 horas</b>: 3 planetas, 9 niveles y premios <b>exclusivos</b>.',
-      rules: [
-        ['ticket', 'Pagas la entrada <b>una vez</b> y reintentas <b>las veces que quieras</b>.'],
-        ['flame', 'Niveles <b>difíciles</b>. Entre más estrellas en el último de cada planeta, más fácil que su regalo sea un exclusivo.'],
-        ['flag', `3 días antes aparece su botón a la <b>derecha</b>: si compras la entrada desde ahí, cuesta <b>${Math.round(FI_PRE * 100)}% menos</b>.`],
-        ['gift', f ? (f.soon ? `${f.inDays > 1 ? `En ${f.inDays} días` : 'Mañana'} es <b>${f.name}</b>. ¡No te lo pierdas!` : `¡Hoy es <b>${f.name}</b>! Búscalo a la <b>derecha</b>.`) : nx ? `La próxima, <b>${nx.name}</b>, llega en <b>${nx.days} ${nx.days === 1 ? 'día' : 'días'}</b>.` : 'Pronto llega la primera.'],
-      ],
+      lead: ulLead(UNLOCK.fiesta + 1, 'las festividades', 'Los días de fiesta llega un evento especial con premios exclusivos.'),
+      list: fiList(FIESTAS.filter((x) => x.ready && !x.local && !x.grp)),
+      rules: [...FI_RULES(), fiNow(f, nx)],
     };
   },
+  fiesta2: () => fiGroupIntro((f) => f.local, 'fiesta2', '¡Nuevas: Leyendas de México!'),
+  fiesta3: () => fiGroupIntro((f) => f.grp === 3, 'fiesta3', '¡Nuevas: Fiestas de México!'),
+  fiesta4: () => fiGroupIntro((f) => f.grp === 4, 'fiesta4', '¡Nuevas: Fiestas de América!'),
   mes: () => {
     const e = ev(), nx = !e && nextEvent();
     return {
       // Arriba, los iconos de todos los eventos del año; el de este mes (o el próximo) va al centro y más grande.
       title: '¡Nuevo: Evento del mes!', ico: e?.ico || nx?.ico || 'calavera', color: e?.color || 'orange', hero: evHeroIcons(e?.ico || nx?.ico),
-      lead: 'Algunos meses llega un <b>evento de temporada</b>: 5 planetas, 25 niveles y premios que <b>solo salen ese mes</b>.',
+      lead: ulLead(UNLOCK.mes + 1, 'los eventos del mes', 'Algunos meses llega un evento de temporada con premios que solo salen ese mes.'),
+      list: evList(),
       rules: [
-        ['flame', 'Niveles <b>difíciles</b>. Cada uno se juega con tu <b>boleto</b>: si pierdes, llega otro en <b>48 horas</b> o lo compras.'],
-        ['gift', 'Gana el <b>nivel 5</b> de cada planeta y abre su <b>regalo sorpresa</b>: entre más estrellas, más fácil que sea un exclusivo.'],
-        ['flag', 'Dura todo el mes. Si lo empiezas tarde, juega lo que alcances.'],
-        ['ticket', e ? `¡Este mes hay uno: <b>${e.name}</b>! Búscalo a la <b>derecha</b>.` : nx ? `El próximo, <b>${nx.name}</b>, llega en <b>${nx.days} ${nx.days === 1 ? 'día' : 'días'}</b>.` : 'Pronto llega el primero.'],
+        ['reloj', 'Dura <b>todo el mes</b>. Si lo empiezas tarde, juega lo que alcances.'],
+        ['planet', '<b>5 planetas</b> de 5 niveles: <b>25 niveles</b> difíciles.'],
+        ['gift', 'El último nivel de cada planeta abre un <b>regalo sorpresa</b>: entre más estrellas, más fácil que sea un <b>exclusivo</b>.'],
+        ['ticket', 'Cada nivel se juega con tu <b>boleto</b>: si pierdes, llega otro en <b>48 horas</b> o lo compras.'],
+        ['flag', e ? `¡Este mes hay uno: <b>${e.name}</b>! Búscalo a la <b>derecha</b>.` : nx ? `El próximo, <b>${nx.name}</b>, llega en ${inDays(nx.days)}.` : 'Pronto llega el primero.'],
       ],
     };
   },
 };
+// Aviso de un grupo de festividades nuevas (leyendas, fiestas de México y de América): hasta 5 iconos arriba, cuáles
+// son y las mismas reglas que las festividades.
+function fiGroupIntro(of, k, title) {
+  const nuevas = FIESTAS.filter((f) => of(f) && f.ready), f = fiesta(), nx = nextFiesta();
+  if (!nuevas.length) return null;
+  const shown = nuevas.slice(0, 5), mid = shown[Math.floor(shown.length / 2)];
+  return {
+    title, ico: mid.ico, color: mid.color, hero: shown.map((x) => icon(x.ico, 0, 0, x === mid ? 'main' : '')).join(''),
+    lead: ulLead(UNLOCK[k] + 1, `${nuevas.length} festividades nuevas`, 'Con sus propios exclusivos.'),
+    list: fiList(nuevas),
+    rules: [...FI_RULES(), fiNow(f, nx)],
+  };
+}
 // Solo 3: el evento anterior, el de ahora (o el próximo) al centro y más grande, y el siguiente (en orden del año).
 // list: los eventos del mes (por omisión) o las festividades.
 function evHeroIcons(main, list = Object.keys(EVENTOS).map(Number).sort((a, b) => a - b).map((m) => EVENTOS[m])) {
@@ -3374,7 +3478,7 @@ function evHeroIcons(main, list = Object.keys(EVENTOS).map(Number).sort((a, b) =
   return [at(-1), at(0), at(1)].map((x, k) => icon(x, 0, 0, k === 1 ? 'main' : '')).join('');
 }
 async function openUnlock(k) {
-  const sel = k === 'meteoro' || k.startsWith('apuesta') ? null : `.side.r [data-a="${{ racha: 'racha', mis: 'mis', logros: 'logros', col: 'col', mes: 'evento', col2: 'col', col3: 'col', fiesta: 'fiesta', fiesta2: 'fiesta' }[k]}"]`;
+  const sel = k === 'meteoro' || k.startsWith('apuesta') ? null : `.side.r [data-a="${{ racha: 'racha', mis: 'mis', logros: 'logros', col: 'col', mes: 'evento', col2: 'col', col3: 'col', fiesta: 'fiesta', fiesta2: 'fiesta', fiesta3: 'fiesta', fiesta4: 'fiesta' }[k]}"]`;
   if (sel) openGroup('r', 'open');
   const btn = sel && document.querySelector(sel);
   revealed.add(k);
@@ -3389,6 +3493,8 @@ async function openUnlock(k) {
     }
   }
   const info = k.startsWith('apuesta') ? betInfo(k === 'apuesta') : UNLOCK_INFO[k]();
+  // (Un grupo de festividades sin ninguna lista todavía no tiene aviso: sale cuando lleguen.)
+  if (!info) return;
   await new Promise((done) => {
     const m = openModal({
       title: info.title,
@@ -3396,7 +3502,7 @@ async function openUnlock(k) {
       wide: true,
       cls: `ev-intro unlock-${k}`,
       body: `<div class="evi-hero"><div class="rays"></div><span class="evi-ico ul-hero">${info.hero}<span class="ul-new outl">${info.badge || '¡Nuevo!'}</span></span></div>
-        <p class="lead">${info.lead}</p>
+        <p class="lead">${info.lead}</p>${ulList(info.list)}
         <ul class="evi-rules">${info.rules.map(([ico, html, cls]) => `<li${cls ? ` class="${cls}"` : ''}>${icon(ico)}<span>${html}</span></li>`).join('')}</ul>`,
       buttons: [{ label: '¡Entendido!', cls: 'gold wide' }],
       onClose: () => {
@@ -4019,7 +4125,7 @@ function openProfile() {
         <div class="stat">${icon('starSecret')}<div><b>${secrets}</b><span>secretos</span></div></div>
         <div class="stat">${icon('user')}<div><b>${mine('avatar')}</b><span>disfraces</span></div></div>
         <div class="stat">${icon('bag')}<div><b>${things}</b><span>tesoros</span></div></div>
-      </div></div>`,
+      </div></div>${prefs.tools ? `<div class="rows tools prof-tools">${toolRows()}</div>` : ''}`,
     buttons: [
       {
         label: 'Reiniciar perfil',
@@ -4042,6 +4148,9 @@ function openProfile() {
     document.getElementById('modal-root').replaceChildren();
     editProfile();
   }));
+  // Botones de pruebas (11 nov 2026, pedido del usuario): si ya están a la vista en Ajustes, también aquí.
+  const pt = pm.el.querySelector('.prof-tools');
+  pt?.addEventListener('click', (e) => toolClick(e, pt));
   // Las fichas de datos entran en cascada.
   if (!reduced()) pm.el.querySelectorAll('.stat').forEach((el, i) => el.animate([{ opacity: 0, translate: '0 12px', scale: 0.9 }, { opacity: 1, translate: '0 0', scale: 1 }], { duration: 360, delay: 260 + i * 50, easing: 'cubic-bezier(0.34, 1.45, 0.64, 1)', fill: 'backwards' }));
 }
@@ -4115,7 +4224,8 @@ function profileForm({ title, p, action, onSave, noCancel = false, first = false
     // Creación (10 nov 2026, el usuario: «muy saturada de tanta opción»): 3 pasos cortos con tu personaje grande
     // arriba: 1) tu nombre, 2) niño o niña, 3) tu look (piel, pelo y peinado). Color, marco y título se quedan
     // como vienen; se cambian después al editar tu jugador.
-    body: first ? `<div class="pf-wiz"><div class="pf-stage"><div class="avatar-preview">${avatarHTML(p, 'huge')}</div>
+    // 11 nov 2026 (pedido del usuario): en el paso del nombre no sale tu personaje; aparece en «¿Quién eres?».
+    body: first ? `<div class="pf-wiz at-0"><div class="pf-stage"><div class="avatar-preview">${avatarHTML(p, 'huge')}</div>
       <div class="pf-dots" aria-hidden="true"><i class="on"></i><i></i><i></i></div></div>
       <div class="pf-side"><div class="pf-steps">
         <section class="pf-step" data-step="0"><h3 class="pf-q">¿Cómo te llamas?</h3>
@@ -4146,6 +4256,8 @@ function profileForm({ title, p, action, onSave, noCancel = false, first = false
       now.animate([{ opacity: 0, translate: `${dir * 40}px 0` }, { opacity: 1, translate: '0 0' }], { duration: 320, easing: 'cubic-bezier(0.34, 1.3, 0.64, 1)' });
       [...now.querySelectorAll('button')].slice(0, 16).forEach((el, i) => el.animate([{ opacity: 0, scale: 0.7 }, { opacity: 1, scale: 1 }], { duration: 280, delay: 60 + i * 30, easing: 'cubic-bezier(0.34, 1.45, 0.64, 1)', fill: 'backwards' }));
     }
+    box.querySelector('.pf-wiz').classList.toggle('at-0', to === 0);
+    if (from === 0 && !reduced()) box.querySelector('.pf-stage .avatar-preview').animate([{ opacity: 0, scale: 0.4 }, { opacity: 1, scale: 1.1, offset: 0.7 }, { opacity: 1, scale: 1 }], { duration: 420, easing: 'ease-out' });
     box.querySelectorAll('.pf-dots i').forEach((d, i) => d.classList.toggle('on', i === to));
     box.querySelectorAll('.pf-dots i').forEach((d, i) => d.classList.toggle('done', i < to));
     const back = box.querySelector('.pf-back'), next = box.querySelector('.pf-next');
@@ -4164,9 +4276,10 @@ function profileForm({ title, p, action, onSave, noCancel = false, first = false
     box.className = box.className.replace(/\bmr-\S+/, `mr-${p.ring}`);
     if (pop && !reduced()) box.querySelector('.avatar-preview .avatar').animate([{ scale: 0.7, rotate: '-8deg' }, { scale: 1.1, rotate: '4deg', offset: 0.6 }, { scale: 1, rotate: '0deg' }], { duration: 420, easing: 'ease-out' });
   };
+  // El nombre solo cambia el dibujo si el avatar es tu inicial (si no, se volvía a armar con cada letra).
   input.addEventListener('input', () => {
     p.name = input.value;
-    paint();
+    if (p.look === 'letter') paint();
   });
   input.addEventListener('keydown', (e) => e.key === 'Enter' && box.querySelector('.mbtns .btn, .pf-next')?.click());
   const pick = (sel, b) => box.querySelectorAll(sel).forEach((x) => x.classList.toggle('on', x === b));
@@ -4401,16 +4514,18 @@ function openSettings(then) {
     tools.hidden = !prefs.tools;
     toast(prefs.tools ? 'Pruebas: a la vista' : 'Pruebas: escondidas y apagadas');
   });
-  tools.addEventListener('click', (e) => {
-    const a = e.target.closest('[data-a]')?.dataset.a;
-    if (a === 't-diff') {
-      prefs.diffInfo = !prefs.diffInfo;
-      persist();
-      toast(prefs.diffInfo ? 'Dificultad del nivel: sí' : 'Dificultad del nivel: no');
-    }
-    if (a === 't-dev') toggleDev();
-    paintTools();
-  });
+  tools.addEventListener('click', (e) => toolClick(e, tools));
+}
+// Tocar un botón de pruebas (en Ajustes o en el perfil): lo prende o apaga y repinta los botones.
+function toolClick(e, box) {
+  const a = e.target.closest('[data-a]')?.dataset.a;
+  if (a === 't-diff') {
+    prefs.diffInfo = !prefs.diffInfo;
+    persist();
+    toast(prefs.diffInfo ? 'Dificultad del nivel: sí' : 'Dificultad del nivel: no');
+  }
+  if (a === 't-dev') toggleDev();
+  if (box.isConnected) box.innerHTML = toolRows();
 }
 // Botones de pruebas en Ajustes (8 toques al título): cada uno dice si está prendido.
 const toolRows = () => [['t-diff', 'flame', 'Vista de dificultad', 'El tablero dice qué tan difícil es el nivel', prefs.diffInfo], ['t-dev', 'gear', 'Modo dev', 'Botones de pruebas en el mapa y el tablero', prefs.dev]]
@@ -4657,6 +4772,8 @@ function openHelp(tab = 'basico', then) {
         <div class="step" data-u="bomb|comet|live|ghost|cham"><div class="ill c"><span class="help-card" style="background-image:${cardBackURL('hreloj')}"></span></div><p><b>Reloj de arena:</b> congela 3 turnos todo lo que cuenta: bombas, cometas, cartas vivas, fantasmas y camaleones.</p></div>
         <div class="step"><div class="ill c"><span class="help-card" style="background-image:${cardBackURL('hver')}"></span></div><p><b>Ver cartas:</b> voltea todas las cartas de la mesa unos segundos.</p></div>
         <div class="step" data-u="lock|curtain"><div class="ill c"><span class="help-card" style="background-image:${cardBackURL('hllave')}"></span></div><p><b>Llave maestra:</b> abre todos los candados y cortinas.</p></div>
+        <div class="step" data-u="rocas"><div class="ill c"><span class="help-card" style="background-image:${cardBackURL('hlaser')}"></span></div><p><b>Láser:</b> rompe todas las piedras de los asteroides.</p></div>
+        <div class="step" data-u="ship"><div class="ill c"><span class="help-card" style="background-image:${cardBackURL('hescudo')}"></span></div><p><b>Escudo:</b> la nave ladrona ya no te roba en todo el nivel.</p></div>
         <div class="step"><div class="ill c"><span class="help-btn">${icon('undo')}</span></div><p><b>Deshacer:</b> regresa tu última jugada o la carta que robaste.</p></div>
         <div class="step"><div class="ill c"><span class="help-five"><b>+5</b></span></div><p>¿Se acabó el mazo? Toca el <b>+5</b> para comprar 5 cartas. Con ellas te llevas solo 1 estrella.</p></div>
         <h3 class="help-h">Estrellas y boletos</h3>
@@ -4669,14 +4786,16 @@ function openHelp(tab = 'basico', then) {
       : t === 'mesas'
         ? `<div class="steps">
         <h3 class="help-h">Mesas que se descubren</h3>
-        <div class="step" data-u="mesa"><div class="ill"><span class="h-rug"></span>${mini(2, '4', 'c')}${mini(40, '5', 'h')}<span class="h-roll"></span></div><p><b>Mesa enrollada:</b> limpia las cartas del <b>principio</b> y la mesa avanza: salen más cartas del rollo.</p></div>
-        <div class="step" data-u="nebulosa"><div class="ill">${mini(0, '9', 's')}${mini(34, '10', 'd')}<span class="h-neb"></span></div><p><b>Nebulosa:</b> solo ves 3 grupos. Vacía <b>cualquiera</b> y de la nebulosa sale otro.</p></div>
-        <div class="step" data-u="gravedad"><div class="ill"><span class="h-rail" style="left:10px"></span><span class="h-rail" style="left:58px"></span>${helpBack(14, 'top:0px')}${mini(14, '8', 'c', {}, 'h-low')}${helpBack(62, 'top:0px')}${mini(62, 'J', 'h', {}, 'h-low')}</div><p><b>Gravedad:</b> solo juegas la carta de <b>abajo</b> de cada columna. Al quitarla, la columna <b>cae</b>.</p></div>
-        <div class="step" data-u="marea"><div class="ill">${mini(10, '7', 's')}${mini(48, '8', 'h')}<span class="h-tide"></span></div><p><b>Marea:</b> cada vez que robas sube el agua y cada carta que juegas la baja. Lo que queda bajo el agua no se juega.</p></div>
-        <div class="step" data-u="hoyo"><div class="ill">${mini(6, '4', 'd')}${mini(44, '9', 's')}<span class="h-hole"></span></div><p><b>Agujero negro:</b> atrapa muchas cartas (no se sabe cuáles) y cada <b>4 jugadas o robos</b> se las traga y las escupe con los <b>números revueltos</b>. Su número dice cuánto falta.</p></div>
-        <div class="step" data-u="puertas"><div class="ill"><span class="h-door"><i></i><i></i></span>${mini(56, '6', 'h', { marks: `<span class="door-key">${icon('door')}</span>` })}</div><p><b>Puertas:</b> cada <b>carta llave</b> te da una llave y tú escoges qué puerta abrir: suelta su premio y sus cartas. Hay menos llaves que puertas; las que no abras no cuentan.</p></div>
-        <div class="step" data-u="banda"><div class="ill"><span class="h-belt"><i></i></span>${mini(24, 'K', 'c', {}, 'h-belt-c')}${mini(58, '2', 'h', {}, 'h-belt-c')}</div><p><b>Banda transportadora:</b> sus cartas dan vueltas y solo ves <b>4</b> a la vez. Con cada jugada o robo avanza un lugar. ¡Atrápala cuando pase!</p></div>
-        <div class="step" data-u="plegable"><div class="ill"><span class="h-fold" style="left:4px;transform:perspective(90px) rotateY(55deg);transform-origin:right"></span><span class="h-fold" style="left:40px"></span><span class="h-fold" style="left:76px;transform:perspective(90px) rotateY(-55deg);transform-origin:left"></span>${mini(41, 'Q', 'h')}</div><p><b>Mesa plegable:</b> llega <b>doblada</b>. Limpia el panel de <b>en medio</b> y se desdobla: salen más cartas a los lados.</p></div>
+        <div class="step" data-u="ship"><div class="ill c">${mechCard('ship')}</div><p><b>Nave ladrona:</b> ${MESA_TEXT.nave.join(' ')}</p></div>
+        <div class="step" data-u="mesa"><div class="ill"><span class="h-rug"></span>${mini(2, '4', 'c')}${mini(40, '5', 'h')}<span class="h-roll"></span></div><p><b>Mesa enrollada:</b> ${MESA_TEXT.mesa.join(' ')}</p></div>
+        <div class="step" data-u="nebulosa"><div class="ill">${mini(0, '9', 's')}${mini(34, '10', 'd')}<span class="h-neb"></span></div><p><b>Nebulosa:</b> ${MESA_TEXT.nebulosa.join(' ')}</p></div>
+        <div class="step" data-u="gravedad"><div class="ill"><span class="h-rail" style="left:10px"></span><span class="h-rail" style="left:58px"></span>${helpBack(14, 'top:0px')}${mini(14, '8', 'c', {}, 'h-low')}${helpBack(62, 'top:0px')}${mini(62, 'J', 'h', {}, 'h-low')}</div><p><b>Gravedad:</b> ${MESA_TEXT.gravedad.join(' ')}</p></div>
+        <div class="step" data-u="marea"><div class="ill">${mini(10, '7', 's')}${mini(48, '8', 'h')}<span class="h-tide"></span></div><p><b>Marea:</b> ${MESA_TEXT.marea.join(' ')}</p></div>
+        <div class="step" data-u="hoyo"><div class="ill">${mini(6, '4', 'd')}${mini(44, '9', 's')}<span class="h-hole"></span></div><p><b>Agujero negro:</b> ${MESA_TEXT.hoyo.join(' ')}</p></div>
+        <div class="step" data-u="rocas"><div class="ill">${mini(10, '7', 's')}${mini(48, '8', 'h', { marks: `<span class="rock-ov">${icon('asteroide')}<b class="outl">3</b></span>` })}</div><p><b>Asteroides:</b> ${MESA_TEXT.rocas.join(' ')}</p></div>
+        <div class="step" data-u="puertas"><div class="ill"><span class="h-door"><i></i><i></i></span>${mini(56, '6', 'h', { doorKey: 1 })}</div><p><b>Puertas:</b> ${MESA_TEXT.puertas.join(' ')}</p></div>
+        <div class="step" data-u="banda"><div class="ill"><span class="h-belt"><i></i></span>${mini(24, 'K', 'c', {}, 'h-belt-c')}${mini(58, '2', 'h', {}, 'h-belt-c')}</div><p><b>Banda transportadora:</b> ${MESA_TEXT.banda.join(' ')}</p></div>
+        <div class="step" data-u="plegable"><div class="ill"><span class="h-fold" style="left:4px;transform:perspective(90px) rotateY(55deg);transform-origin:right"></span><span class="h-fold" style="left:40px"></span><span class="h-fold" style="left:76px;transform:perspective(90px) rotateY(-55deg);transform-origin:left"></span>${mini(41, 'Q', 'h')}</div><p><b>Mesa plegable:</b> ${MESA_TEXT.plegable.join(' ')}</p></div>
       </div>`
         : `<div class="steps">${MECH_GROUPS.map(([h, ms]) => `<h3 class="help-h">${h}</h3>${ms.map((m) => `<div class="step" data-u="${m}"><div class="ill c${MECH_BOTH[m] ? ' pair' : ''}">${MECH_BOTH[m]?.() || mechCard(m)}</div><p><b>${MECH_NAMES[m]}:</b> ${MECH_TEXT[m]}</p></div>`).join('')}`).join('')}</div>`);
   }

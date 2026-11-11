@@ -2,6 +2,7 @@
 // el mismo trazo de los planetas. Reemplaza a lowpoly.js con la misma interfaz.
 import { THEMES, themeKey } from './themes.js';
 import { setArt } from './set-art.js';
+import { fiestaArt } from './fiesta-art.js';
 export const INK = '#2a1f5c';
 const K = INK;
 let uid = 0;
@@ -61,6 +62,13 @@ const ICONS = {
     const sp = (x, y, R) => `M${x} ${y - R}Q${x + R * 0.18} ${y - R * 0.18} ${x + R} ${y}Q${x + R * 0.18} ${y + R * 0.18} ${x} ${y + R}Q${x - R * 0.18} ${y + R * 0.18} ${x - R} ${y}Q${x - R * 0.18} ${y - R * 0.18} ${x} ${y - R}z`;
     return `${tshape(sp(14, 17, 12), '#fff6c9', '#ffc83d', `<path d="${sp(14, 17, 4.5)}" fill="#ff9c2b"/>`, 2.2)}${tshape(sp(25, 7, 5), '#fff6c9', '#ffc83d', '', 1.8)}${tshape(sp(26, 25, 3.6), '#fff6c9', '#ffc83d', '', 1.6)}`;
   },
+  // 10 nov 2026: cartas y ayuda nuevas. Rayo (carta), escudo (carta), asteroide (mesa) y láser (ayuda que rompe piedras).
+  rayo: () => tshape('M18.5 2 6.5 18h8l-3 12L25.5 13h-8.5z', '#ffd84a', '#f0a91a', '<path d="M17 5.5 10 15h4.5" fill="none" stroke="#fff6c4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>', 2.2),
+  escudito: () => tshape('M16 2.5 27 6.5v8c0 7-4.6 12.2-11 15-6.4-2.8-11-8-11-15v-8z', '#5fc7e8', '#3a8fc8', '<path d="M16 6v20.5C11 24 8.5 20 8.5 14.5V8.8z" fill="#9ee3f7"/><path d="M11.5 15.5l3.3 3.2 6-6.4" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>', 2.2),
+  asteroide: () => tshape('M9 6.5 19 4l8.5 6.5 1.5 9.5-6 7.5-11 1L4.5 21 3.5 12z', '#a99bbd', '#7a6c94', '<circle cx="12" cy="13" r="3" fill="#8a7ca4"/><circle cx="21" cy="19" r="2.4" fill="#8a7ca4"/><circle cx="13.5" cy="22" r="1.6" fill="#8a7ca4"/><path d="M10 9.5l5-1.5" stroke="#d6cce6" stroke-width="1.8" stroke-linecap="round"/>', 2.2),
+  laser: () => `<path d="M17 15 30 2.5" stroke="${K}" stroke-width="6" stroke-linecap="round"/><path d="M17 15 30 2.5" stroke="#ff5f7e" stroke-width="3" stroke-linecap="round"/><path d="M17 15 30 2.5" stroke="#ffd6e0" stroke-width="1.1" stroke-linecap="round"/>`
+    + tshape('M3.5 20.5 13 11l8 8-9.5 9.5a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8z', '#8a5cf0', '#6c3fd4', '<path d="M7 21.5l5-5" stroke="#c9b4ff" stroke-width="2" stroke-linecap="round"/>', 2.2)
+    + tshape(CIRCLE(17, 15, 3.6), '#ffd84a', '#f0a91a', '', 1.8),
   arena: () => `${tshape('M8 4h16v3l-6 9 6 9v3H8v-3l6-9-6-9z', '#bfeaff', '#7ec8f0', `<path d="M11 8h10l-5 6.5zM11.5 26.5h9L16 21z" fill="#ffc83d"/><path d="M16 15v6" stroke="#ffc83d" stroke-width="1.6"/>`, 2.2)}${tshape('M6 2.5h20v3.2H6zM6 26.3h20v3.2H6z', '#c98a4b', '#a0602c', '', 1.8)}`,
   ojo: () => tshape('M2.5 16S8 7 16 7s13.5 9 13.5 9S24 25 16 25 2.5 16 2.5 16z', '#fffaf0', '#e3d6ee', `<circle cx="16" cy="16" r="5.6" fill="#5fc7e8" stroke="${K}" stroke-width="2"/><circle cx="16" cy="16" r="2.4" fill="${K}"/><circle cx="14.2" cy="14.2" r="1.2" fill="#fff"/>`, 2.2),
   llaveMaestra: () => `<g transform="rotate(-40 16 16)">${tshape('M14.6 13h2.8v15h-2.8zM17.4 21.5h4v2.6h-4zM17.4 25.2h3v2.6h-3z', '#ffc83d', '#ec9a17', '', 1.8)}${tshape(CIRCLE(16, 8.5, 6.5), '#ffc83d', '#ec9a17', `<circle cx="16" cy="8.5" r="2.4" fill="#fff4c7" stroke="${K}" stroke-width="1.6"/><path d="${starPath(16, 8.5, 1.6, 0.7)}" fill="#ff5f7e"/>`, 2)}</g>`,
@@ -323,6 +331,9 @@ const ICONS = {
   pencil: () => `<g transform="rotate(45 16 16)">${tshape('M13 4h6v18l-3 5-3-5z', '#ffc83d', '#ec9a17', '<path d="M13 22h6" stroke="#f6dcb0" stroke-width="5"/>', 2)}${tshape('M13 4h6v4h-6z', '#ff8aa3', '#e0496b', '', 2)}</g>`,
   check: () => glyph('M6 17l6 6 14-14', 7) + glyph('M6 17l6 6 14-14', 3.4, '#5ad68c'),
   door: () => tshape('M7 4h14v24H7z', '#c9893a', '#a86a22', '', 2.2) + `<circle cx="17.5" cy="16.5" r="1.6" fill="${K}"/>` + glyph('M23 16h7M27 12.5l3.5 3.5-3.5 3.5', 3.2),
+  // Llave de puerta (11 nov 2026): puerta de madera con una llave dorada encima (carta llave de las puertas).
+  llavePuerta: () => tshape('M5 3h15v26H5z', '#c9893a', '#a86a22', '<path d="M8.5 6.5h8v19h-8z" fill="none" stroke="#a86a22" stroke-width="1.4"/>', 2.2)
+    + `<g transform="rotate(-35 19 21)">${tshape('M18 19.4h12v3.2h-2v3h-2.6v-3h-1.6v2.6h-2.6v-2.6H18z', '#ffc83d', '#ec9a17', '', 1.8)}${tshape(CIRCLE(14, 21, 5.4), '#ffc83d', '#ec9a17', '<circle cx="13.2" cy="19.6" r="1.9" fill="#fff4c7"/>', 2)}</g>`,
   backup: () => tshape('M5 13h22v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2z', '#5ad68c', '#3bb26c', '', 2.2) + glyph('M16 3v15M11 13l5 5 5-5', 3.2),
   // Tu camino (8 nov 2026): una carretera que serpentea con sus paradas y la bandera al final.
   camino: () => {
@@ -378,6 +389,12 @@ const SA = setArt({ tshape, CIRCLE, starPath, K, ICONS });
 for (const k in SA.icons) {
   if (ICONS[k]) throw new Error(`Icono repetido: ${k}`);
   ICONS[k] = SA.icons[k];
+}
+// Festividades nuevas (10 nov 2026, fiesta-art.js): sus iconos, reversos, marcos y avatares se mezclan igual.
+const FA = fiestaArt({ tshape, CIRCLE, starPath, K, ICONS });
+for (const k in FA.icons) {
+  if (ICONS[k]) throw new Error(`Icono repetido: ${k}`);
+  ICONS[k] = FA.icons[k];
 }
 // icon(nombre): los colores viejos (light, dark) ya no se usan; se conserva la firma.
 export const icon = (name, _light, _dark, cls = '') => svg((ICONS[name] || ICONS.star)(), `i-${name} ${cls}`);
@@ -634,6 +651,8 @@ export const BACKS = {
   hreloj: { a: '#ffb35c', b: '#ec8a2f', dots: '#fff1d6', art: () => `<g transform="translate(19 39) scale(1.95)">${ICONS.arena()}</g>` },
   hver: { a: '#5fc7e8', b: '#3aa0c8', dots: '#e6fbff', art: () => `<g transform="translate(17 37) scale(2.06)">${ICONS.ojo()}</g>` },
   hllave: { a: '#8a5cf0', b: '#6c3fd4', dots: '#efe6ff', art: () => `<g transform="translate(17 37) scale(2.06)">${ICONS.llaveMaestra()}</g>` },
+  hlaser: { a: '#ff7aa0', b: '#e8507e', dots: '#ffe6ee', art: () => `<g transform="translate(17 37) scale(2.06)">${ICONS.laser()}</g>` },
+  hescudo: { a: '#5fc7e8', b: '#3a8fc8', dots: '#e6fbff', art: () => `<g transform="translate(17 37) scale(2.06)">${ICONS.escudito()}</g>` },
   // Mazo de ayudas (botón de la bandeja): genérico, turquesa con un destello mágico (no es el comodín).
   ayudas: { a: '#2fb4b0', b: '#1f9490', dots: '#e6fffb',
     art: () => {
@@ -642,9 +661,9 @@ export const BACKS = {
         + `<path d="${spark(76, 36, 10)}" fill="#fff6c9" stroke="${K}" stroke-width="3" stroke-linejoin="round"/><path d="${spark(25, 104, 8)}" fill="#fff6c9" stroke="${K}" stroke-width="3" stroke-linejoin="round"/>`;
     } },
 };
-for (const k in SA.backs) {
+for (const k in { ...SA.backs, ...FA.backs }) {
   if (BACKS[k]) throw new Error(`Reverso repetido: ${k}`);
-  BACKS[k] = SA.backs[k];
+  BACKS[k] = SA.backs[k] || FA.backs[k];
 }
 // Reversos de las temáticas (themes.js): su color, puntitos claros y su dibujo grande al centro.
 for (const t of THEMES) BACKS[themeKey(t)] ??= { a: t.main, b: t.dark, dots: t.light, art: () => `<g transform="translate(18 38) scale(2)">${(ICONS[t.ico] || ICONS.star)()}</g>` };
@@ -1421,9 +1440,13 @@ export const RINGS = {
     + Array.from({ length: 6 }, (_, i) => { const [x, y] = at(i * 60 - 60, 55); return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3" fill="#5fbf5a" stroke="${K}" stroke-width="1.6"/>`; }).join(''),
   arcoiris: () => `<circle cx="70" cy="70" r="56" fill="none" stroke="${K}" stroke-width="13"/><g class="r-spin">${['#ff5f7e', '#ff9c5b', '#ffc83d', '#6fd36a', '#4aa8de', '#8a5cf0'].map((c, i) => `<circle cx="70" cy="70" r="56" fill="none" stroke="${c}" stroke-width="8" pathLength="6" stroke-dasharray="1 5" stroke-dashoffset="${-i}"/>`).join('')}</g>`,
 };
-for (const k in SA.rings) {
+for (const k in { ...SA.rings, ...FA.rings }) {
   if (RINGS[k]) throw new Error(`Marco repetido: ${k}`);
-  RINGS[k] = SA.rings[k];
+  RINGS[k] = SA.rings[k] || FA.rings[k];
+}
+for (const k in FA.avatars) {
+  if (AVATARS[k]) throw new Error(`Avatar repetido: ${k}`);
+  AVATARS[k] = FA.avatars[k];
 }
 const ringOf = (p) => (RINGS[p.ring] ? p.ring : RINGS[p.equip?.ring] ? p.equip.ring : 'sencillo');
 export const ringSVG = (k) => (k !== 'sencillo' && RINGS[k] ? `<svg class="av-ring" viewBox="0 0 140 140" aria-hidden="true">${RINGS[k]()}</svg>` : '');

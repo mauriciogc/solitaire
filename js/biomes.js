@@ -1,7 +1,7 @@
 // Tipos de mundo: colores del planeta 3D, planetita 2D y la mesa donde se juega.
 // Cada lugar de levels.js (Bosque, Isla, Volcán…) usa uno de estos tipos.
 import { worldInfo } from './levels.js';
-import { INK, tshape, CIRCLE, starPath, planetInner, setPlaceColors, marigold, icon } from './art.js';
+import { INK, tshape, CIRCLE, starPath, planetInner, setPlaceColors, marigold, icon, iconInner } from './art.js';
 
 const K = INK;
 
@@ -252,6 +252,85 @@ export const EVENT_BIOMES = {
       planet: { amp: 0.12, freq: 1.6, seed: 269, outline: 0x3a1a0a, glow: 0xffc890, prop: 'cactus', crown: '#7fae5a', path: '#fff6e6' } },
     [[0.38, 0.6, 1.0], [0.32, 0.54, 1.2], [0.26, 0.48, 1.4]],
   ),
+  // Festividades nuevas (10 nov 2026): fiestas de México (389) y de América (461). [agua, color desde, cuántas matas].
+  // Día de la Bandera: campos verdes con banderitas rojas (las «flores» rojas suben en cada planeta).
+  bandera: sameLook(
+    { emblem: ['#2f9e5c', '#fffdf7', '#e8434f'], colors: [['#2f86c8', '#5fb6e0', '#fff6e6', '#5fbf5a', '#2f9e5c', '#e8434f']],
+      planet: { amp: 0.12, freq: 1.7, seed: 271, outline: 0x0a2a14, glow: 0x9be8a0, prop: 'flower', crown: '#e8434f', path: '#fffdf7' } },
+    [[0.42, 0.62, 1.1], [0.36, 0.56, 1.3], [0.3, 0.5, 1.5]],
+  ),
+  // Equinoccio: selva maya con pirámides doradas; el dorado sube en cada planeta.
+  equinoccio: sameLook(
+    { emblem: ['#f2c24a', '#3f9a46', '#2fbf9a'], colors: [['#1f6a8a', '#2fbf9a', '#f6e6b0', '#3f9a46', '#d49a2a', '#f2c24a']],
+      planet: { amp: 0.14, freq: 1.8, seed: 277, outline: 0x2a1a06, glow: 0xffe08a, prop: 'pyramid', crown: '#f2c24a', path: '#fff6d6' } },
+    [[0.4, 0.6, 1.1], [0.34, 0.54, 1.3], [0.3, 0.5, 1.5]],
+  ),
+  // Las Posadas (4 planetas): pueblitos de noche con farolitos; el rojo sube en cada planeta.
+  posadas: sameLook(
+    { emblem: ['#e8434f', '#ffc83d', '#3a1a4a'], colors: [['#2a1a5a', '#4a3a8a', '#f6dcc4', '#6a3a5a', '#e8434f', '#ffc83d']],
+      planet: { amp: 0.12, freq: 1.7, seed: 281, outline: 0x1a0a14, glow: 0xffc83d, prop: 'candle', crown: '#ffc83d', path: '#fff6e6' } },
+    [[0.42, 0.62, 1.1], [0.38, 0.56, 1.3], [0.34, 0.52, 1.4], [0.3, 0.48, 1.6]],
+  ),
+  // Alasitas: el altiplano naranja con casitas; lo seco sube en cada planeta.
+  alasitas: sameLook(
+    { emblem: ['#ff9c3d', '#8a5cf0', '#ffd27a'], colors: [['#3a4ab0', '#6a7ae0', '#f6e0c0', '#c98a5a', '#ff9c3d', '#ffd27a']],
+      planet: { amp: 0.12, freq: 1.6, seed: 283, outline: 0x2a1006, glow: 0xffc890, prop: 'house', crown: '#e8434f', path: '#fff6e6' } },
+    [[0.38, 0.6, 1.0], [0.32, 0.54, 1.2], [0.28, 0.48, 1.4]],
+  ),
+  // Tapati Rapa Nui: islas verdes en mar azul con palmeras; la isla crece en cada planeta.
+  tapati: sameLook(
+    { emblem: ['#5fbf5a', '#2f86c0', '#ff5f7e'], colors: [['#14468a', '#2fa8d8', '#fff1c9', '#5fbf5a', '#3f9a46', '#a8a0b8']],
+      planet: { amp: 0.16, freq: 1.6, seed: 293, outline: 0x06203a, glow: 0x8fe8ff, prop: 'palm', crown: '#3f9a46', path: '#fff6e0' } },
+    [[0.56, 0.72, 1.0], [0.5, 0.68, 1.2], [0.46, 0.64, 1.3]],
+  ),
+  // Carnaval (4 planetas): todo de colores; el morado sube en cada planeta.
+  carnaval: sameLook(
+    { emblem: ['#8a5cf0', '#ffc83d', '#ff5f7e'], colors: [['#2a3ab0', '#4a8ae0', '#fff0d6', '#ff9c3d', '#8a5cf0', '#ff5f7e']],
+      planet: { amp: 0.14, freq: 1.9, seed: 307, outline: 0x1a0a30, glow: 0xffc83d, prop: 'lollipop', crown: '#ff5f7e', path: '#fff6ee' } },
+    [[0.4, 0.62, 1.1], [0.36, 0.58, 1.2], [0.32, 0.54, 1.4], [0.28, 0.5, 1.6]],
+  ),
+  // Día del Boyero: cafetales verdes y tierra roja; el rojo sube en cada planeta.
+  boyero: sameLook(
+    { emblem: ['#c22c3c', '#3f9a46', '#ffc83d'], colors: [['#2f6aa8', '#5fa0d8', '#f6dcb0', '#3f9a46', '#a8502a', '#c22c3c']],
+      planet: { amp: 0.13, freq: 1.8, seed: 311, outline: 0x2a0a06, glow: 0xffc890, prop: 'round', crown: '#c22c3c', path: '#fff6e6' } },
+    [[0.4, 0.6, 1.2], [0.34, 0.54, 1.4], [0.3, 0.5, 1.6]],
+  ),
+  // Guelaguetza: cerros de Oaxaca rosas y dorados con magueyes.
+  guelaguetza: sameLook(
+    { emblem: ['#ff7ab8', '#ffd23d', '#3f9a46'], colors: [['#2a5aa8', '#5f9ae0', '#fff0e0', '#7fae5a', '#ff7ab8', '#ffd23d']],
+      planet: { amp: 0.14, freq: 1.8, seed: 313, outline: 0x2a0a1a, glow: 0xff9cc8, prop: 'cactus', crown: '#ff7ab8', path: '#fff6ee' } },
+    [[0.38, 0.6, 1.0], [0.32, 0.54, 1.2], [0.28, 0.48, 1.4]],
+  ),
+  // Papalotes: llanos de pasto con mucho cielo (agua clara); lo verde claro sube en cada planeta.
+  papalotes: sameLook(
+    { emblem: ['#4aa8de', '#ff5f7e', '#ffc83d'], colors: [['#3a8ad8', '#8fd6ff', '#fff6e0', '#7fd36a', '#5fbf5a', '#c8f0a8']],
+      planet: { amp: 0.11, freq: 1.5, seed: 317, outline: 0x0a2a40, glow: 0xbfeaff, prop: 'flower', crown: '#ff5f7e', path: '#fffdf7' } },
+    [[0.36, 0.62, 0.9], [0.32, 0.58, 1.1], [0.28, 0.54, 1.3]],
+  ),
+  // Dulce de leche: campos color cajeta y crema; el café sube en cada planeta.
+  dulcedeleche: sameLook(
+    { emblem: ['#c98a3a', '#fff6dc', '#7a4a2a'], colors: [['#4a6aa8', '#7f9ad8', '#fff6dc', '#e8c48a', '#c98a3a', '#7a4a2a']],
+      planet: { amp: 0.13, freq: 1.7, seed: 331, outline: 0x2a1406, glow: 0xffd9a8, prop: 'lollipop', crown: '#7a4a2a', path: '#fff6e6' } },
+    [[0.38, 0.6, 1.0], [0.32, 0.54, 1.2], [0.28, 0.48, 1.4]],
+  ),
+  // Pupusa: milpas verdes y comales dorados; el dorado sube en cada planeta.
+  pupusa: sameLook(
+    { emblem: ['#f6dca0', '#3f9a46', '#ff9c3d'], colors: [['#2f6aa8', '#5fa0d8', '#fff6e0', '#5fbf5a', '#e0b870', '#f6dca0']],
+      planet: { amp: 0.13, freq: 1.7, seed: 337, outline: 0x1a2a06, glow: 0xffe08a, prop: 'wheat', crown: '#f6dca0', path: '#fff6e6' } },
+    [[0.4, 0.62, 1.1], [0.34, 0.56, 1.3], [0.3, 0.5, 1.5]],
+  ),
+  // Velitas: noche azul con velitas encendidas; el dorado sube en cada planeta.
+  velitas: sameLook(
+    { emblem: ['#ffc83d', '#2a2a5a', '#ff7ab8'], colors: [['#14185a', '#2a3a8a', '#e8e0ff', '#3a3a7a', '#ec9a17', '#ffc83d']],
+      planet: { amp: 0.12, freq: 1.7, seed: 347, outline: 0x06061a, glow: 0xffe08a, prop: 'candle', crown: '#ffc83d', path: '#fff6c8' } },
+    [[0.42, 0.62, 1.2], [0.36, 0.56, 1.4], [0.3, 0.5, 1.6]],
+  ),
+  // Año Viejo: noche morada con chispas doradas; el dorado sube en cada planeta.
+  anioviejo: sameLook(
+    { emblem: ['#6c3fd4', '#ffc83d', '#ff5f7e'], colors: [['#1a1050', '#3a2a8a', '#efe6ff', '#4a2a8a', '#ffb13d', '#ffe27a']],
+      planet: { amp: 0.13, freq: 1.9, seed: 349, outline: 0x0a0420, glow: 0xffd27a, prop: 'candle', crown: '#ffc83d', path: '#fff6e6' } },
+    [[0.42, 0.64, 1.1], [0.36, 0.58, 1.3], [0.3, 0.52, 1.5]],
+  ),
   // Halloween: mares morados, huertos de calabaza naranjas y árboles otoñales; el naranja sube en cada planeta.
   halloween: sameLook(
     { emblem: ['#5a2f9a', '#3a1a6a', '#ff8a1a'], colors: [['#3a1a6a', '#6a3fb0', '#c9b0e8', '#4a6a3a', '#ff8a1a', '#ffb13d']],
@@ -295,6 +374,13 @@ const enc = (s) => `url('data:image/svg+xml,${encodeURIComponent(s)}')`;
 // así lo que se sale por una orilla (una nube, un pétalo) sigue por la de enfrente y no se ve cortado.
 // El fondo (primer rectángulo del tamaño del cuadro) va una vez abajo y el tinte (último, con opacidad) una vez
 // arriba, para que las copias no los tapen ni se queden sin oscurecer.
+// Mantel de las festividades nuevas (10 nov 2026): su color con sus dos figuras regadas, suaves.
+const mantelIcoTile = (bg, a, b, dark) => () => {
+  let s = `<rect width="120" height="120" fill="${bg}"/>`;
+  [[8, 8, a, -12], [66, 34, b, 18], [26, 70, b, -20], [80, 86, a, 10]].forEach(([x, y, n, r]) => (s += `<g opacity=".4" transform="translate(${x} ${y}) rotate(${r} 14 14) scale(.9)">${iconInner(n)}</g>`));
+  s += `<rect width="120" height="120" fill="${dark}" opacity=".5"/>`;
+  return tileOut(120, 120, s);
+};
 const tileOut = (W, H, s) => {
   const full = `<rect width="${W}" height="${H}" fill="`;
   let base = '', tint = '';
@@ -956,6 +1042,23 @@ const EVENT_TABLES = {
   catrina: { tile: mantelCatrinaTile, tint: '#1a041a', props: [['bigIco', 'catrina'], ['pairIco', 'pluma'], ['mug', ['#ff5fa8', '#e0408a', '#ffc2dc']], ['pairIco', 'calavera']] },
   revolucion: { tile: mantelRevolucionTile, tint: '#1a0a04', props: [['bigIco', 'locomotora'], ['pairIco', 'herradura'], ['mug', ['#e8434f', '#c22c3c', '#ffb0b6']], ['pairIco', 'sombrero']] },
   halloween: { tile: mantelHalloweenTile, tint: '#0e0618', props: ['pumpkin', 'bats', ['mug', ['#6fd36a', '#3fae4a', '#b8f0a0']], 'cauldron'] },
+  // Festividades nuevas (10 nov 2026): mantel de su color con sus dos figuras y, en la mesa, su icono grande, un par de
+  // adornos, su taza y otro par.
+  ...Object.fromEntries([
+    ['bandera', '#2f9e5c', 'banderita', 'escarapela', '#041a0c', ['#e8434f', '#c22c3c', '#ffb0b6']],
+    ['equinoccio', '#c98a3a', 'piramide', 'serpiente', '#1a1004', ['#3f9a46', '#2f7a3a', '#a8e8b8']],
+    ['posadas', '#c22c3c', 'pinatestrella', 'ponche', '#1a0408', ['#c96a3a', '#a8502a', '#f0b08a']],
+    ['alasitas', '#e2753a', 'miniatura', 'billetito', '#1a0a04', ['#e8434f', '#c22c3c', '#ffb0b6']],
+    ['tapati', '#2f86c0', 'moai', 'hibisco', '#04142a', ['#ff5f7e', '#e0407e', '#ffc2d0']],
+    ['carnaval', '#8a5cf0', 'antifaz', 'serpentina', '#0e0620', ['#ffc83d', '#e89a17', '#fff0c0']],
+    ['boyero', '#c22c3c', 'ruedacarreta', 'buey', '#1a0604', ['#7a4a2a', '#5a3218', '#d8b08a']],
+    ['guelaguetza', '#e8559a', 'flordepina', 'canasta', '#1a0410', ['#ffd23d', '#f0a81a', '#fff0c0']],
+    ['papalotes', '#4aa8de', 'volantin', 'carrete', '#04142a', ['#ff5f7e', '#d63d5f', '#ffc2d0']],
+    ['dulcedeleche', '#a86a3a', 'frasco', 'alfajor', '#140a04', ['#4aa8de', '#2f86c0', '#bfe2ff']],
+    ['pupusa', '#3f9a46', 'pupusa', 'curtido', '#041408', ['#c96a3a', '#a8502a', '#f0b08a']],
+    ['velitas', '#2a2a5a', 'farolpapel', 'vela', '#04041a', ['#ffc83d', '#e89a17', '#fff0c0']],
+    ['anioviejo', '#4a2a8a', 'monigote', 'bengala', '#0a0420', ['#ffc83d', '#e89a17', '#fff0c0']],
+  ].map(([k, bg, a, b, tint, mug]) => [k, { tile: mantelIcoTile(bg, a, b, tint), tint, props: [['bigIco', a], ['pairIco', b], ['mug', mug], ['pairIco', a]] }])),
 };
 // HTML del fondo de la mesa para el mundo w (o la del evento del mes: theme = su clave).
 export function tableHTML(w, theme) {
