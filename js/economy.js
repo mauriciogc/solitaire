@@ -85,7 +85,8 @@ export const betFee = (g, m) => (m < 2 ? 0 : (g % LEVELS_PER_WORLD === LEVELS_PE
 export const EV_MARKUP = 0.15;
 export const MET_OFF = { help: 0.3, shop: 0.1 };
 export const round5 = (n) => Math.round(n / 5) * 5;
-export const metShopPrice = (p, met) => (met && p ? round5(p * (1 - MET_OFF.shop)) : p);
+// met: la lluvia que cae (meteor()): la de estrellas rebaja más (SHOWERS en meteor.js).
+export const metShopPrice = (p, met) => (met && p ? round5(p * (1 - (met.K?.shop ?? MET_OFF.shop))) : p);
 
 // ---------- Regalo diario: camino de 28 días ----------
 // Premios modestos para que dure semanas. Si un día no se reclama, se vuelve al día 1.

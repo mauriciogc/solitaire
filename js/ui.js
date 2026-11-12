@@ -375,14 +375,15 @@ export const rachaWarnHTML = (n, pend, when) =>
 // La meta se duplica en cada premio y el conteo vuelve a 0. Si la siguiente pasaría de POP_TOP, vuelve a empezar desde
 // `from` (globos 100…800, burbujas 20…640, meteoros 50…800). Los meteoros tienen antes una sola meta de 25 (`intro`).
 const POP_TOP = 1000;
-const POPS = { globo: { from: 100 }, burbuja: { from: 20, coins: 50 }, meteoro: { from: 50, intro: 25, coins: 50, first: 100 } };
+// estrella (12 nov 2026): las estrellas fugaces de la lluvia de estrellas cuentan aparte, con las metas de los meteoros.
+const POPS = { globo: { from: 100 }, burbuja: { from: 20, coins: 50 }, meteoro: { from: 50, intro: 25, coins: 50, first: 100 }, estrella: { from: 50, intro: 25, coins: 50, first: 100 } };
 export const popGoal = (kind, lvl) => {
   const { from, intro } = POPS[kind];
   if (intro && !lvl) return intro;
   return from * 2 ** ((lvl - (intro ? 1 : 0)) % (Math.floor(Math.log2(POP_TOP / from)) + 1));
 };
 export function countPop(kind, at) {
-  track({ [kind]: 1 }); // misiones y logros: burbujas, globos y meteoros
+  track({ [kind]: 1 }); // misiones y logros: burbujas, globos, meteoros y estrellas fugaces
   const p = ((save.pops ||= {})[kind] ||= { n: 0, lvl: 0 });
   if (++p.n < popGoal(kind, p.lvl)) return persist();
   p.n = 0;

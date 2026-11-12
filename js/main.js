@@ -1,21 +1,24 @@
 import { save, prefs, persist, resetProfile, deleteProfile, renameProfile, exportCode, readCode, loadProfile, setDev } from './storage.js';
 import { UNLOCK, EVENTOS, FIESTAS, COLECCIONES, evSoon, isOn, nextEvent, daysToNextCol, plusCols, RACHA_GOALS, RACHA_STEP, rachaGoal, nextIndex, racha, rachaTheme, rachaReady, rachaHot, rachaWin, rachaLose, rachaPendToFeats, msToMidnight, col, colLeft, colWin, colOffers, colBuy, ev, evLeft, evTicketLeft, evTicketPrice, evBuyTicket, evPrize, evEnter, evWin, evLose, evAlbum, fiAlbum, EVENT_PLANETS, EVENT_PER_PLANET, EVENT_LEVELS, fiesta, fiestaLeft, fiestaSoon, soonLeft, evPrePrice, evPreOwned, evPreBuy, nextFiesta, fiEnter, fiWin, fiLose, fiShape, fiPrice, fiPaid, fiBuy, fiPre, FI_PRE, FI_ENTRY, EV_FIRST } from './events.js';
 import { WORLD_COUNT, LEVELS_PER_WORLD, TOTAL_LEVELS, worldInfo, generateLevel, variantLevel, MECH_INTRO, MECH_NAMES, MECHANICS, EXTRA, extraDebut, SCROLL_FROM, mareaFirst, hoyoFirst, puertasFirst, bandaFirst, rocasFirst, secretId, isSecret, eventLevel, fiestaLevel } from './levels.js';
-import { Game, faceHTML, backHTML, TIPS, MESA_INTRO, MESA_TEXT, MECH_KINDS, TIP_HELP, ART } from './game.js';
+import { Game, faceHTML, backHTML, TIPS, MESA_TEXT, MECH_KINDS, ART } from './game.js';
 import { maxBet, betFee, betSteps, BET_STEPS, HELPS, DAILY_PATH, dailyState, starsNeeded, TICKET_PRICE, ticketCost, ticketRefund, coinsFor, bossChest, rollChest, CONST_PRIZE, openCost, boosted, secretCoins, rollSecret, openSurprise, MET_OFF, metShopPrice } from './economy.js';
 import { missions, misDef, misDone, misAllDone, autoClaim, LOGROS, LOGRO_PRIZES, LOGRO_MEDAL, LOGRO_TOP, logroGot, logroProg, logrosVisible } from './missions.js';
 import { pauseOffscreen, openModal, toast, updateCoins, money, esc, reduced, wait, flyToWallet, spendFromWallet, sparkle, confetti, starsHTML, warp, buzz, balloons, lootBubbles, floatBubbles, rachaWarnHTML, popPrize, popBalloon, countPop, HEADS, betLoseHTML, shownCoins } from './ui.js';
-import { icon, iconURL, iconInner, charSVG, star, coin, miniPlanet, avatarHTML, AVATAR_COLORS, kidOf, KID_SKINS, KID_HAIRS, KID_STYLES, cardBackURL, setDeck, lockIcon, curtainIcon, chestBody, chestLid, boxBody, boxLid } from './art.js';
+import { icon, iconURL, iconInner, star, coin, miniPlanet, avatarHTML, AVATAR_COLORS, kidOf, KID_SKINS, KID_HAIRS, KID_STYLES, cardBackURL, setDeck, lockIcon, curtainIcon, chestBody, chestLid, boxBody, boxLid, capChute, capBody, capLid } from './art.js';
 import { GROUPS, SECTIONS, ITEMS, shopItems, groupOf, owns, equipped, equip, buy, item, lockedUntil, titleHTML, titleIcon, sell, sellable, sellPrice } from './shop.js';
 import { BIOMES, biomeKey, EVENT_BIOMES, tableHTML } from './biomes.js';
 import { redeem } from './codes.js';
-import { meteor, metWin, metCoins, MET_FROM } from './meteor.js';
+import { meteor, metWin, metCoins, helpOff, MET_FROM, STAR_FROM, SHOWERS } from './meteor.js';
 import { dev, gallery, attachDevBar, galleryScreen, openDevMenu, planetGal, planetsScreen, casualRate, rateTag, tableIcon } from './dev.js';
 import { themeCSS } from './themes.js';
 import { setCSS, SETS, setOf, setItems, SET_DEAL } from './sets.js';
-import { fiestaCSS } from './fiesta-art.js';
+import { fiestaCSS } from './festival-art.js';
+import { mulberry32, hash } from './rng.js';
+import { starCSS } from './starshower.js';
+import { PASS_MAX, secretGoal, PASS_FRAMES, passGoal, passPrize, secretPrize, passCount, secretCount, passCSS } from './passport.js';
 // Caras, fondos y marcos de las temáticas de la tienda (themes.js): su CSS se arma de su paleta.
-document.head.append(Object.assign(document.createElement('style'), { textContent: themeCSS(iconURL) + setCSS(iconURL, iconInner) + fiestaCSS(FIESTAS, iconInner) }));
+document.head.append(Object.assign(document.createElement('style'), { textContent: themeCSS(iconURL) + setCSS(iconURL, iconInner) + fiestaCSS(FIESTAS, iconInner) + passCSS(iconInner) + starCSS(iconInner) + `.go.met.sh-star::before { background-image: ${iconURL('starFall', 1)}; }` }));
 
 document.documentElement.classList.toggle('dev-on', !!prefs.dev);
 // Reversos de los premios de racha (carta regalo violeta y comodín dorado), para todo el documento:
@@ -98,14 +101,20 @@ let Universe = null; // todas las constelaciones (mismo módulo)
 // anim: 'up' = la nueva sube desde abajo (entrar al tablero) · 'down' = la actual baja y deja ver la nueva (salir).
 // Girar el teléfono vuelve a armar el mapa 3D (parado y acostado se acomodan distinto): las ventanas abiertas se
 // quedan (8 nov 2026: antes se borraban y la del evento terminado se perdía).
+// Las escenas encima del mapa con .keep-turn (la nave de rescate) también se quedan: pasan a la pantalla nueva y
+// reciben 'remount' para acomodarse (12 nov 2026: antes al girar se borraba y empezaba otra desde cero).
 let keepModals = false;
 function remount() {
   keepModals = true;
+  const keep = [...document.querySelectorAll('#app .screen .keep-turn')];
+  keep.forEach((e) => e.remove());
   try {
     current?.();
   } finally {
     keepModals = false;
   }
+  const scr = document.querySelector('#app .screen');
+  if (scr) for (const e of keep) scr.append(e), e.dispatchEvent(new Event('remount'));
 }
 function mount(el, anim) {
   game?.destroy();
@@ -219,7 +228,7 @@ const betStarts = () => BET_STEPS.slice(1).map((m) => { let g = 0; while (g < TO
 // Lo que da el nivel al ganarlo con 3★, cada cosa con su número (n) o solo su ×N: monedas, la devolución de boletos,
 // fichas de la colección y el cofre del jefe (la lluvia va en las monedas: tachado y ×2).
 const betLoot = (g) => [
-  { ico: coin(), n: boosted(coinsFor(g, 3, 0), save.coins, g), met: !!meteor() },
+  { ico: coin(), n: boosted(coinsFor(g, 3, 0), save.coins, g), met: meteor()?.K.x || 0 },
   { ico: icon('ticket'), n: ticketRefund(g) },
   col() && { ico: icon(col().token), n: 3 },
   g % LEVELS_PER_WORLD === LEVELS_PER_WORLD - 1 && { ico: icon('cofre') },
@@ -227,10 +236,10 @@ const betLoot = (g) => [
 // Sin etiqueta ×N donde hay número (9 nov 2026): ya va multiplicado y la etiqueta hacía creer que era eso ×N otra vez.
 // El cofre y el meteoro (sin número: su premio sale al ganar) sí llevan su ×N.
 // Con la lluvia, las monedas enseñan lo de la apuesta tachado y al lado lo final (×2 del meteoro), con su meteorito.
-const lootN = (x, m) => x.n * m * (x.met ? 2 : 1);
+const lootN = (x, m) => x.n * m * (x.met || 1);
 // Cada número aparta el ancho del más grande (M, la apuesta más alta): al cambiar la apuesta la ventana no se mueve.
 const wch = (n) => `style="min-width:${money(n).length}ch"`;
-const betLootHTML = (loot, m, M = m) => loot.map((x, i) => `<span class="bl${x.met ? ' met' : ''}">${x.ico}${x.met ? `<s ${wch(x.n * M)}>${money(x.n * m)}</s>` : ''}${x.n != null ? `<b class="outl" data-i="${i}" data-n="${lootN(x, m)}" ${wch(lootN(x, M))}>${money(lootN(x, m))}</b>${x.met ? icon('meteoro') : ''}` : `<i class="bl-x b${m}"${m > 1 ? '' : ' hidden'}>×${m}</i>`}</span>`).join('');
+const betLootHTML = (loot, m, M = m) => loot.map((x, i) => `<span class="bl${x.met ? ' met' : ''}">${x.ico}${x.met ? `<s ${wch(x.n * M)}>${money(x.n * m)}</s>` : ''}${x.n != null ? `<b class="outl" data-i="${i}" data-n="${lootN(x, m)}" ${wch(lootN(x, M))}>${money(lootN(x, m))}</b>${x.met ? icon(meteor()?.K.ico || 'meteoro') : ''}` : `<i class="bl-x b${m}"${m > 1 ? '' : ' hidden'}>×${m}</i>`}</span>`).join('');
 // Cuenta de a poco hasta el número nuevo (sube o baja).
 function countTo(el, to) {
   const from = +el.dataset.n || 0;
@@ -271,7 +280,7 @@ function openBet() {
     } }],
   });
   const go = m.el.querySelector('.bet-go'), big = m.el.querySelector('.bet-big');
-  go.insertAdjacentHTML('afterend', gift ? `<p class="bet-cost free">${icon('gift')}¡Tu primer ×${cur} va por nuestra cuenta!</p>` : `<p class="bet-cost">Cuesta <s class="bc-full"${p0.met ? '' : ' hidden'}>${p0.full}</s><b data-tk data-n="${p0.tk}">${p0.tk}</b>${icon('ticket')}<span class="bc-met"${p0.met ? '' : ' hidden'}>${icon('meteoro')}−50%</span><span class="bc-fee"${p0.fee ? '' : ' hidden'}>+ ${coin()}<b data-fee data-n="${p0.fee}">${money(p0.fee)}</b></span></p>`);
+  go.insertAdjacentHTML('afterend', gift ? `<p class="bet-cost free">${icon('gift')}¡Tu primer ×${cur} va por nuestra cuenta!</p>` : `<p class="bet-cost">Cuesta <s class="bc-full"${p0.met ? '' : ' hidden'}>${p0.full}</s><b data-tk data-n="${p0.tk}">${p0.tk}</b>${icon('ticket')}<span class="bc-met"${p0.met ? '' : ' hidden'}>${icon(meteor()?.K.ico || 'meteoro')}−50%</span><span class="bc-fee"${p0.fee ? '' : ' hidden'}>+ ${coin()}<b data-fee data-n="${p0.fee}">${money(p0.fee)}</b></span></p>`);
   const paint = () => (go.innerHTML = `${icon('play')} ${cur > 1 ? `¡Jugar ×${cur}${gift ? ' gratis' : ''}!` : 'Jugar sin apostar'}`);
   paint();
   m.el.querySelectorAll('.bet-opt').forEach((b) =>
@@ -310,7 +319,7 @@ const playNow = () => (save.run ? enterLevel(save.run.g) : pendingWorld() != nul
 const goBtn = (title, sub, act, bet = 1) => {
   // Lluvia de meteoritos: el Jugar del camino lleva orilla de fuego y lo que le queda (el del evento no: ahí no cuenta).
   const m = ['continue', 'play-next'].includes(act) && meteor();
-  return `<button class="go${m ? ' met' : ''}" data-a="${act}">${icon('play')}<span class="t"><b class="outl">${title}</b>${sub ? `<small>${sub}</small>` : ''}</span>${m ? `<small class="met-clock">${mmss(m.left())}</small>` : ''}${betSticker(bet)}</button>`;
+  return `<button class="go${m ? ` met sh-${m.K.kind}` : ''}" data-a="${act}">${icon('play')}<span class="t"><b class="outl">${title}</b>${sub ? `<small>${sub}</small>` : ''}</span>${m ? `<small class="met-clock">${mmss(m.left())}</small>` : ''}${betSticker(bet)}</button>`;
 };
 
 // Estado de un mundo para dibujarlo. gate: forzar que se vea por abrir (antes de animar su desbloqueo).
@@ -972,7 +981,7 @@ const eventButtons = (res) => {
 const sideButtons = () => grouped('l', 'Menú', `${ibtn('gift', 'Regalo diario', 'daily', !dailyState(save.daily).claimed)}${ticketBtn()}${ibtn('bag', 'Tienda', 'shop', shopNew())}${ibtn('album', 'Álbum de postales', 'album')}${roadBtn()}${ibtn('gear', 'Ajustes', 'settings')}`);
 function sideAction(a) {
   if (a === 'grp-r' || a === 'grp-l') return openGroup(a.slice(4)), true;
-  const act = { me: () => !document.querySelector('.touring') && openProfile(), camino: openRoad, shop: () => openShop(), daily: openDaily, dticket: openDailyTicket, racha: openRacha, mis: openMis, logros: openLogros, col: openCol, evento: openEvento, 'evento-next': openEventoNext, fiesta: () => openFiesta(), 'fiesta-next': () => openFiesta(fiestaSoon(), 'fiesta-next'), album: openAlbum, settings: openSettings, dev: () => openDevMenu({ onGallery: () => showGallery(save.next), onPlanets: showPlanets, onFiestas: openFiestaPack, onTexts: openTexts, onGoLevel: openGoLevel, onRefresh: boot, card: mechCard }) }[a];
+  const act = { me: () => !document.querySelector('.touring') && openProfile(), camino: openRoad, shop: () => openShop(), daily: openDaily, dticket: openDailyTicket, racha: openRacha, mis: openMis, logros: openLogros, col: openCol, evento: openEvento, 'evento-next': openEventoNext, fiesta: () => openFiesta(), 'fiesta-next': () => openFiesta(fiestaSoon(), 'fiesta-next'), album: openAlbum, settings: openSettings, dev: () => openDevMenu({ onGallery: () => showGallery(save.next), onPlanets: showPlanets, onFiestas: openFiestaPack, onGoLevel: openGoLevel, onRefresh: boot, onRescue: () => (document.getElementById('modal-root').replaceChildren(), openRescue()), card: mechCard }) }[a];
   // Usar un botón cierra su cajón (menos durante el recorrido, que los va enseñando).
   if (act && !document.querySelector('.side-touring')) closeGroups();
   act?.();
@@ -1060,6 +1069,7 @@ function roadItems() {
     ['mis', UNLOCK.mis, 'Misiones del día', 'misiones', 'Cada día 3 misiones con monedas, y un cofre si cumples las 3.'],
     ['logros', UNLOCK.logros, 'Logros', 'trophy', 'Todo suma para siempre: bronce, plata, oro, platino y diamante.'],
     ['meteoro', MET_FROM, 'Lluvia de meteoritos', 'meteoro', 'Cae sin aviso 30 minutos: doble de monedas y un premio sorpresa.'],
+    ['estrellas', STAR_FROM, 'Lluvia de estrellas', 'starFall', 'Cae sin aviso 15 minutos: triple de monedas y hasta 3 premios.'],
     ['col', UNLOCK.col, 'Colecciones', 'concha', 'Junta fichas con tus estrellas y cámbialas por exclusivos.'],
     ['mes', UNLOCK.mes, 'Eventos del mes', 'planet', 'Cada mes un evento con sus planetas y premios que solo salen ahí.'],
     ['col2', UNLOCK.col2, 'Más colecciones', 'fosil', 'Llegan colecciones nuevas y hay colección 3 semanas al mes.'],
@@ -1082,8 +1092,18 @@ function roadItems() {
     { id: 'nave', n: MECH_INTRO.ship * LEVELS_PER_WORLD + 1, name: 'Nave ladrona', text: '' },
     { id: 'rocas', n: rocasFirst() + 1, name: 'Asteroides', text: '' },
   ].map((x) => ({ ...x, k: 'mesa', pic: x.id === 'nave' ? icon('nave') : tableIcon(x.id), text: MESA_TEXT[x.id] ? MESA_TEXT[x.id].join(' ') : x.text }));
+  // Pasaporte y secretos (12 nov 2026): los sellos y premios ganados, en el nivel en que ibas; el siguiente sello, en el
+  // nivel en que llegaría ganando un nivel nuevo por nivel (se mueve si ganas eventos o secretos).
+  const P = save.pass || {}, PA = P.at || { s: [], x: [] }, ns = (P.s || 0) + 1;
+  const stampTxt = (i) => `Ganaste ${fmt(passGoal(i))} niveles distintos (camino, secretos, eventos y festividades): ${passWhat(passPrize(i))}.`;
+  const pase = (i, n) => ({ id: `pase${i}`, n, k: 'ev', name: `Sello ${i} del pasaporte`, pic: icon('pasaporte'), text: stampTxt(i) });
+  const pass = [
+    ...Array.from({ length: P.s || 0 }, (_, i) => pase(i + 1, PA.s[i] || roadAt())),
+    ...(ns <= PASS_MAX ? [pase(ns, Math.min(TOTAL_LEVELS, roadAt() + passGoal(ns) - passCount()))] : []),
+    ...Array.from({ length: P.x || 0 }, (_, i) => ({ id: `secreto${i + 1}`, n: PA.x[i] || roadAt(), k: 'ev', name: `${secretGoal(i + 1)} niveles secretos`, pic: icon('starSecret'), text: `Ganaste ${secretGoal(i + 1)} niveles secretos: ${passWhat(secretPrize(i + 1))}.` })),
+  ];
   const order = Object.keys(ROAD_KINDS);
-  return [...evs, ...bets, ...cards, ...tables].sort((a, b) => a.n - b.n || order.indexOf(a.k) - order.indexOf(b.k));
+  return [...evs, ...bets, ...cards, ...tables, ...pass].sort((a, b) => a.n - b.n || order.indexOf(a.k) - order.indexOf(b.k));
 }
 // Nivel en que vas (el siguiente por jugar) y cuántas paradas ya alcanzaste (siempre son las primeras de la lista).
 const roadAt = () => Math.min((save.next || 0) + 1, TOTAL_LEVELS);
@@ -1388,6 +1408,155 @@ function openShort(g, bet, cost, fee, base) {
   }
 }
 
+// ---------- Nave de rescate (11 nov 2026, pedido del usuario) ----------
+// Si en la galaxia o el planeta ya no te alcanza para el siguiente nivel (sin boletos, sin monedas para comprarlos y
+// sin el regalo de boletos listo) y no hay partida a medias, llega una nave y suelta 4 cápsulas: escoges una. Todas
+// traen 1 comodín, 3 deshacer y 1 ver cartas 3 s; lo que cambia son los boletos: de los que pide el nivel a 50% más.
+// Al abrir la tuya se abren las otras (en gris) para que veas qué había. Una vez cada RESCUE_EVERY.
+const RESCUE_EVERY = 7 * 864e5;
+const RESCUE_ITEMS = { wild: 1, undo: 3, helps: { ver3: 1 } };
+const RESCUE_HUES = [['#ff9c5b', '#e2753a'], ['#5fd4c4', '#2fa79a'], ['#ff6f8e', '#e0496b'], ['#a785ff', '#8a5cf0']];
+const rescueNeed = () => {
+  const g = save.next || 0;
+  if (g >= TOTAL_LEVELS || save.run || save.stars[g] || ticketLeft() <= 0) return 0;
+  const need = ticketCost(g);
+  return save.tickets < need && save.coins < (need - save.tickets) * TICKET_PRICE ? need : 0;
+};
+const rescueDue = () => !!rescueNeed() && Date.now() - (save.rescueAt || 0) >= RESCUE_EVERY;
+// Boletos de cada cápsula: de need a need × 1.5 (redondeado arriba), revueltos.
+const rescueBoxes = (need) => {
+  const top = Math.ceil(need * 1.5);
+  return [0, 1, 2, 3].map((k) => need + Math.round((k * (top - need)) / 3)).sort(() => Math.random() - 0.5);
+};
+// 12 nov 2026 (el usuario: sin ventana y con más producción): se oscurece la pantalla y la nave cruza despacio echando
+// humo; al pasar suelta las cápsulas, que bajan con paracaídas a su lugar (2×2 parado, en fila acostado). Al tocar una:
+// tiembla, se le va el paracaídas, salta la tapa y salen en burbujas todos sus premios (ya quedaron en tu inventario);
+// las demás pierden el paracaídas y se caen, y todo se va. No se dice qué traían las otras.
+// Una sola a la vez: si ya va una (p. ej. los avisos vuelven a empezar al girar), se espera esa.
+let rescueRun = null;
+function openRescue(need) {
+  return (rescueRun ||= playRescue(need).finally(() => (rescueRun = null)));
+}
+async function playRescue(need = rescueNeed() || ticketCost(Math.min(save.next || 0, TOTAL_LEVELS - 1))) {
+  const screen = document.querySelector('#app .screen.galaxy');
+  if (!screen) return;
+  const boxes = rescueBoxes(need), fast = reduced();
+  const back = h(`<div class="rs-back keep-turn"><div class="rs-title"><b class="outl">¡Nave de rescate!</b><span>¿Sin boletos? <b>Escoge una cápsula.</b></span></div>
+    <div class="rs-ship"><span class="rs-fire"></span>${icon('rocket')}</div></div>`);
+  screen.append(back);
+  // El monedero queda encima de lo oscuro (también el de la pantalla nueva si giras).
+  const lift = (on) => document.querySelector('#app .screen .res')?.classList.toggle('feat-lift', on);
+  lift(true);
+  back.addEventListener('remount', () => lift(true));
+  // Lugares de las cápsulas (centro de cada una), la altura de la nave y el tamaño: se vuelven a medir si giras el
+  // teléfono a la mitad (12 nov 2026: antes se quedaban con las medidas viejas, fuera de la vista).
+  let W, H, land, cw, slots, sy;
+  const caps = boxes.map((n, i) => {
+    const c = h(`<button class="rs-cap" aria-label="Cápsula ${i + 1}"><span class="rs-chute">${capChute(RESCUE_HUES[i])}</span><span class="rs-pod">${capBody(RESCUE_HUES[i])}<span class="rs-lid">${capLid(RESCUE_HUES[i])}</span></span></button>`);
+    c.disabled = true;
+    // Escondida hasta que la nave la suelta (antes ya estaban abajo cuando llegaba la nave).
+    if (!fast) c.style.opacity = '0';
+    back.append(c);
+    return c;
+  });
+  const ship = back.querySelector('.rs-ship');
+  const layout = () => {
+    W = back.clientWidth; H = back.clientHeight; land = W > H;
+    cw = land ? Math.min(150, W / 5.5, H / 3.2) : Math.min(150, W / 3);
+    slots = land
+      ? [0, 1, 2, 3].map((k) => ({ x: W / 2 + (k - 1.5) * cw * 1.2, y: H * 0.6 }))
+      : [0, 1, 2, 3].map((k) => ({ x: W / 2 + (k % 2 ? 0.62 : -0.62) * cw, y: H * (k < 2 ? 0.46 : 0.7) }));
+    sy = H * (land ? 0.2 : 0.24);
+    ship.style.top = `${sy}px`;
+    caps.forEach((c, i) => {
+      c.style.setProperty('--w', `${cw}px`);
+      c.style.left = `${slots[i].x}px`;
+      c.style.top = `${slots[i].y}px`;
+    });
+  };
+  layout();
+  const ro = new ResizeObserver(() => back.isConnected && (back.clientWidth !== W || back.clientHeight !== H) && layout());
+  ro.observe(back);
+  const anim = (node, kf, o) => (fast ? Promise.resolve() : node.animate(kf, { fill: 'forwards', ...o }).finished.catch(() => {}));
+  return new Promise((done) => {
+    let picked = false;
+    const finish = async () => {
+      await anim(back, [{ opacity: 1 }, { opacity: 0 }], { duration: 450, delay: 500 });
+      ro.disconnect();
+      back.remove();
+      lift(false);
+      updateCoins();
+      done();
+    };
+    // Entra lo oscuro y el letrero; la nave cruza despacio (con humo) y suelta cada cápsula al pasar por su columna.
+    anim(back, [{ opacity: 0 }, { opacity: 1 }], { duration: 400 });
+    const title = back.querySelector('.rs-title');
+    anim(title, [{ translate: '0 -60px', opacity: 0 }, { translate: '0 6px', opacity: 1, offset: 0.7 }, { translate: '0 0', opacity: 1 }], { duration: 600, delay: 300, easing: 'ease-out' });
+    // 12 nov 2026: cruza en 3 s (antes 5.2). Va de orilla a orilla con left en %, así sigue bien aunque gires.
+    const D = 3000, x0 = -140;
+    const shipAt = (x) => (x - x0) / (W + 280);
+    if (!fast) {
+      ship.animate([{ left: `${x0}px` }, { left: 'calc(100% + 140px)' }], { duration: D, delay: 500, easing: 'cubic-bezier(0.35, 0.1, 0.65, 0.9)', fill: 'both' });
+      ship.animate([{ rotate: '-3deg' }, { rotate: '3deg' }], { duration: 900, direction: 'alternate', iterations: Infinity, easing: 'ease-in-out', composite: 'add' });
+      const t0 = performance.now() + 500;
+      const smoke = setInterval(() => {
+        if (!back.isConnected || performance.now() > t0 + D) return clearInterval(smoke);
+        const r = ship.getBoundingClientRect(), b = back.getBoundingClientRect();
+        if (r.right < b.left) return;
+        const p = h('<i class="rs-puff"></i>');
+        p.style.cssText = `left:${r.left - b.left + 6}px;top:${r.top - b.top + r.height / 2 + (Math.random() - 0.5) * 14}px`;
+        back.insertBefore(p, ship);
+        p.animate([{ scale: 0.4, opacity: 0.9 }, { scale: 2.4, opacity: 0, translate: `${-30 - Math.random() * 30}px ${(Math.random() - 0.5) * 30}px` }], { duration: 1300, easing: 'ease-out' }).finished.then(() => p.remove());
+      }, 70);
+    }
+    const drop = (c, i) => {
+      const s = slots[i];
+      c.style.opacity = '';
+      return anim(c, [{ translate: `0 ${sy - s.y}px`, scale: 0.35, opacity: 0 }, { translate: `0 ${sy - s.y + 30}px`, scale: 0.6, opacity: 1, offset: 0.12 }, { translate: '0 8px', scale: 1, opacity: 1, offset: 0.85 }, { translate: '0 0', scale: 1, opacity: 1 }], { duration: 1700, easing: 'cubic-bezier(0.2, 0.6, 0.35, 1)' })
+        .then(() => { if (!picked) (c.disabled = false), c.classList.add('sway'); });
+    };
+    const order = caps.map((c, i) => i).sort((a, b) => slots[a].x - slots[b].x || slots[a].y - slots[b].y);
+    const drops = order.map((i, k) => wait(fast ? 0 : 500 + D * shipAt(slots[i].x) + (k % 2 && !land ? 180 : 0)).then(() => { buzz(8); return drop(caps[i], i); }));
+    Promise.all(drops).then(() => anim(title.querySelector('span'), [{ scale: 1 }, { scale: 1.1 }, { scale: 1 }], { duration: 500 }));
+    back.addEventListener('click', async (e) => {
+      const c = e.target.closest('.rs-cap');
+      if (!c || picked || c.disabled) return;
+      picked = true;
+      const i = caps.indexOf(c), p = { tickets: boxes[i], ...RESCUE_ITEMS };
+      caps.forEach((x) => ((x.disabled = true), x.classList.remove('sway')));
+      // Ya es tuyo (si cierras la app a la mitad, no se pierde).
+      save.tickets += p.tickets;
+      save.wild += p.wild;
+      save.undo += p.undo;
+      for (const [k, n] of Object.entries(p.helps)) save.helps[k] = (save.helps[k] || 0) + n;
+      save.rescueAt = Date.now();
+      persist();
+      buzz(15);
+      anim(title, [{ opacity: 1 }, { opacity: 0, translate: '0 -30px' }], { duration: 300 });
+      await anim(c, [{ rotate: '0deg' }, { rotate: '-9deg' }, { rotate: '9deg' }, { rotate: '-7deg' }, { rotate: '7deg' }, { rotate: '0deg' }], { duration: 560 });
+      anim(c.querySelector('.rs-chute'), [{ translate: '0 0', opacity: 1 }, { translate: '0 -160px', rotate: '20deg', opacity: 0 }], { duration: 700, easing: 'ease-in' });
+      anim(c.querySelector('.rs-lid'), [{ translate: '0 0', rotate: '0deg' }, { translate: '-22px -60px', rotate: '-45deg', offset: 0.5 }, { translate: '-34px -10px', rotate: '-90deg', opacity: 0 }], { duration: 560, easing: 'ease-out' });
+      c.classList.add('open');
+      buzz(30);
+      const r = c.querySelector('.rs-pod').getBoundingClientRect(), at = { x: r.left + r.width / 2, y: r.top + r.height / 3 };
+      sparkle(at, 30);
+      if (!fast) confetti(60);
+      // Todos sus premios salen en burbujas para tronarlas; los boletos además vuelan al monedero.
+      floatBubbles(prizeIcons(p), at);
+      wait(fast ? 0 : 500).then(() => flyToWallet('tickets', at, p.tickets));
+      // Las demás pierden el paracaídas y se caen dando vueltas.
+      caps.filter((x) => x !== c).forEach((x, k) => {
+        anim(x.querySelector('.rs-chute'), [{ translate: '0 0', opacity: 1 }, { translate: '0 -90px', opacity: 0 }], { duration: 500, delay: 250 + k * 120 });
+        anim(x, [{ translate: '0 0', rotate: '0deg' }, { translate: '0 -14px', rotate: `${k % 2 ? 8 : -8}deg`, offset: 0.15 }, { translate: `${(k - 1) * 40}px ${H}px`, rotate: `${k % 2 ? 160 : -160}deg` }], { duration: 1300, delay: 350 + k * 120, easing: 'cubic-bezier(0.55, 0, 0.9, 0.5)' });
+      });
+      // La tuya se queda un momento abierta y se va.
+      await wait(fast ? 0 : 1400);
+      anim(c, [{ scale: 1, opacity: 1 }, { scale: 0.6, opacity: 0, translate: '0 30px' }], { duration: 400 });
+      finish();
+    });
+  });
+}
+
 // ---------- Partida ----------
 // resume: retoma save.run · free: modo dev (sin boletos y sin guardar la partida) · anim: transición
 // bet: apuesta (8 nov 2026; la partida guardada recuerda la suya)
@@ -1430,7 +1599,7 @@ function startLevel(g, { resume = false, free = false, anim = 'up', bet = 1, pai
   const met0 = free ? null : meteor()?.id;
   game = new Game(app, level, {
     dev,
-    meteor: !!met0,
+    meteor: met0 ? meteor().K : null,
     resume: run?.state,
     saved,
     bet: mult,
@@ -1471,7 +1640,7 @@ function startLevel(g, { resume = false, free = false, anim = 'up', bet = 1, pai
     // Tras la ventana de victoria: de vuelta al planeta, con el avance animado (o a la galería en dev).
     onDone: async (res) => {
       if (dev.on && gallery.active) return showGallery();
-      if (res.met?.prize?.items) await openMetPrize(res.met.prize.items);
+      if (res.met?.prize?.items) await openMetPrize(res.met.prize.items, res.met.kind);
       const w = worldOf(g);
       const go = () => showMap({ start: w, anim: 'down', after: res.counted ? { g, w, res } : null });
       if (res.chest) return openBossReward(w, res).then(go);
@@ -1635,14 +1804,20 @@ const ORIGINS = [
   { k: 'fiesta', name: 'Festividades de un día', ico: 'flame' },
   { k: 'codigo', name: 'Tesoro escondido · con código', ico: 'cofre' },
   { k: 'meteoro', name: 'Lluvia de meteoritos', ico: 'meteoro' },
+  { k: 'estrellas', name: 'Lluvia de estrellas', ico: 'starFall' },
   { k: 'logro', name: 'Logros', ico: 'trophy' },
+  { k: 'pasaporte', name: 'Pasaporte', ico: 'pasaporte' },
+  { k: 'secretos', name: 'Niveles secretos', ico: 'starSecret' },
 ];
 // De qué evento salió un exclusivo: { g: grupo de ORIGINS, ico, name } (o null si es de la tienda).
 function exFrom(it) {
   if (!it.ev) return null;
   if (it.code) return { g: 'codigo', ico: 'cofre', name: 'Código de regalo' };
   if (it.met) return { g: 'meteoro', ico: 'meteoro', name: 'Lluvia de meteoritos' };
+  if (it.star) return { g: 'estrellas', ico: 'starFall', name: 'Lluvia de estrellas' };
   if (it.logro) return { g: 'logro', ico: 'trophy', name: 'Logros' };
+  if (it.pase) return { g: 'pasaporte', ico: 'pasaporte', name: 'Pasaporte' };
+  if (it.secreto) return { g: 'secretos', ico: 'starSecret', name: 'Niveles secretos' };
   const f = FIESTAS.find((x) => x.key === it.ev);
   if (f) return { g: 'fiesta', ico: f.ico, name: f.name };
   const e = Object.values(EVENTOS).find((x) => x.key === it.ev);
@@ -1681,7 +1856,7 @@ const setPieces = (av) => [{ sec: 'avatar', k: av }, ...setItems().filter((x) =>
 // Los descuentos se suman: el de la lluvia de meteoritos (si cae) en cada pieza y luego el del paquete. full = lo
 // que costaría sin ningún descuento (es lo que va tachado).
 function setDealOf(av, pieces = setPieces(av)) {
-  const met = !!meteor(), cost = (it) => metShopPrice(it.price, met);
+  const met = meteor(), cost = (it) => metShopPrice(it.price, met);
   const rest = pieces.filter((p) => !owns(p.sec, p.k)), full = rest.reduce((n, p) => n + p.it.price, 0);
   return { rest, full, met, pay: Math.round((rest.reduce((n, p) => n + cost(p.it), 0) * (1 - SET_DEAL)) / 5) * 5, lock: rest.map((p) => lockedUntil(p.sec, p.k)).find(Boolean), n: pieces.length };
 }
@@ -1701,7 +1876,7 @@ function openShop(tab = 'avatar') {
     cls: 'shop-modal',
     body: `<div class="shead"><div class="sgroups">${SHOP_GROUPS.map((g) => `<button class="sgroup" data-group="${g.k}">${icon(g.ico)}<span>${g.name}</span></button>`).join('')}</div>
       <div class="stabs"></div>
-      ${meteor() ? `<p class="met-sale">${icon('meteoro')}Lluvia de meteoritos: <b>−${Math.round(MET_OFF.shop * 100)}%</b> en toda la tienda</p>` : ''}</div><div class="sgrid"></div>`,
+      ${meteor() ? `<p class="met-sale">${icon(meteor().K.ico)}${meteor().K.name}: <b>−${Math.round(meteor().K.shop * 100)}%</b> en toda la tienda</p>` : ''}</div><div class="sgrid"></div>`,
     onClose: () => {
       closeShelf();
       // El viajero vive en la escena 3D: al cambiarlo se vuelve a armar el mapa.
@@ -1712,7 +1887,7 @@ function openShop(tab = 'avatar') {
   m.el.querySelector('.mhead').insertAdjacentHTML('afterbegin', `<span class="smoney">${coin()}<b data-shop-coins>${fmt(save.coins)}</b></span>`);
   const grid = m.el.querySelector('.sgrid'), tabs = m.el.querySelector('.stabs');
   // Lluvia de meteoritos: 10% menos en toda la tienda (se ve el precio tachado).
-  const cost = (it) => metShopPrice(it.price, !!meteor());
+  const cost = (it) => metShopPrice(it.price, meteor());
   const card = (sec, it) => {
     const own = owns(sec, it.k), on = inUse(sec, it.k), lock = lockedUntil(sec, it.k);
     const foot = on ? `<span class="s-on">${icon('check')}En uso</span>`
@@ -1878,54 +2053,6 @@ function openShop(tab = 'avatar') {
   });
   show(tab, false);
 }
-// Dev (11 nov 2026, pedido del usuario: «quiero ver sus redacciones y ver si hay que homologar»): todos los textos que
-// presentan algo, juntos y como se ven. Cartas (su ventana al aparecer y su texto de Tu camino), mesas, avisos de
-// desbloqueo y ayudas. Sale de las mismas listas que usa el juego (TIPS, MESA_INTRO, UNLOCK_INFO, MECH_TEXT, HELPS).
-function openTexts() {
-  const HEX = { blue: '#4aa8de', violet: '#8a5cf0', orange: '#ff9c5b', gold: '#e8a91a', green: '#3fb86f', pink: '#ff5f7e', gray: '#9a8fc4', red: '#e8434f' };
-  const road = Object.fromEntries(roadItems().map((x) => [x.id, x]));
-  const win = (title, color, body) => `<div class="tx-win"><h6 style="background:${HEX[color] || color || HEX.blue}">${title}</h6><div class="tx-b">${body}</div></div>`;
-  const where = (label, html) => `<div class="tx-where"><small>${label}</small>${html}</div>`;
-  const item = (pic, name, lvl, blocks) => `<section class="tx-item"><h5>${pic ? `<span class="tx-pic">${pic}</span>` : ''}<b>${name}</b>${lvl ? `<small>nivel ${lvl}</small>` : ''}</h5>${blocks.filter(Boolean).join('')}</section>`;
-  const roadTxt = (id) => road[id] && where('Tu camino', `<p class="tx-p">${road[id].text}</p>`);
-  const unlockBody = (i) => `<p class="lead">${i.lead}</p>${ulList(i.list)}<ul class="evi-rules">${i.rules.map(([ico, html, cls]) => `<li${cls ? ` class="${cls}"` : ''}>${icon(ico)}<span>${html}</span></li>`).join('')}</ul>`;
-  const MESAS = [['nave', 'Nave ladrona'], ['mesa', 'Mesa enrollada'], ['gravedad', 'Gravedad'], ['nebulosa', 'Nebulosa'], ['plegable', 'Mesa plegable'], ['marea', 'Marea'], ['puertas', 'Puertas'], ['banda', 'Banda transportadora'], ['hoyo', 'Agujero negro'], ['rocas', 'Asteroides']];
-  const HELP_BACK = { reloj: 'hreloj', ver2: 'hver', ver3: 'hver', ver4: 'hver', ver5: 'hver', llave: 'hllave', laser: 'hlaser', escudo: 'hescudo' };
-  const TABS = [
-    // Por grupo, como en Cómo jugar. (La ayuda sale solo en la primera carta de su grupo que llegue.)
-    ['Cartas', () => MECH_KINDS.flatMap(([, ms]) => ms).map((m) => item(`<span class="rd-card">${mechCard(m)}</span>`, MECH_NAMES[m], road[m]?.n, [
-      TIPS[m] && where('Ventana al aparecer', win(`Nuevo: ${MECH_NAMES[m].toLowerCase()}`, 'blue', `<div class="tip-card"><span class="tip-pic">${mechCard(m)}</span><p><b>${MECH_NAMES[m]}</b>${TIPS[m]}</p></div>${TIP_HELP[m] ? `<div class="help-tip small"><span class="help-tip-card" style="background-image:${cardBackURL(TIP_HELP[m][1])}"></span><p>${TIP_HELP[m][2]}</p></div>` : ''}`)),
-      roadTxt(m),
-    ])).join('')],
-    ['Mesas', () => MESAS.map(([k, name]) => item(k === 'nave' ? icon('nave') : tableIcon(k), name, road[k]?.n, [
-      MESA_INTRO[k] && where('Ventana al aparecer', win(MESA_INTRO[k].title, MESA_INTRO[k].color, MESA_INTRO[k].body)),
-      roadTxt(k),
-    ])).join('')],
-    ['Avisos', () => [
-      ...Object.keys(UNLOCK_INFO).map((k) => { const i = UNLOCK_INFO[k](); return i && item(icon(i.ico || 'star'), i.title, road[k]?.n, [where('Ventana al desbloquear', win(i.title, i.color, unlockBody(i))), roadTxt(k)]); }),
-      ...[true, false].map((first) => { const i = betInfo(first); return item('', i.title, first ? road.apuesta2?.n : null, [where('Ventana', win(i.title, i.color, unlockBody(i))), first && roadTxt('apuesta2')]); }),
-    ].filter(Boolean).join('')],
-    ['Ayudas', () => [
-      item('', 'Comodín', null, [where('Panel de ayudas', `<div class="help-tip"><span class="help-tip-card" style="background-image:${cardBackURL('comodin')}"></span><p>Vale cualquier número.</p></div>`)]),
-      // Ver cartas 3, 4 y 5 s dicen lo mismo que la de 2 (solo cambian los segundos).
-      item('', 'Mini guía de ayudas', null, [where('Ventana en el nivel 2', win(MESA_INTRO.ayudas.title, MESA_INTRO.ayudas.color, MESA_INTRO.ayudas.body))]),
-      ...Object.entries(HELPS).filter(([k]) => !/^ver[345]$/.test(k)).map(([k, h]) => item('', h.name, null, [
-        where('Panel de ayudas', `<div class="help-tip"><span class="help-tip-card" style="background-image:${cardBackURL(HELP_BACK[k])}"></span><p>${h.text}</p></div>`),
-        (k === 'escudo' || k === 'ver2') && where(k === 'escudo' ? 'Ventana (si ya conocías la nave)' : 'Ventana en un tablero grande', win(MESA_INTRO[k === 'escudo' ? 'escudo' : 'ver'].title, MESA_INTRO[k === 'escudo' ? 'escudo' : 'ver'].color, MESA_INTRO[k === 'escudo' ? 'escudo' : 'ver'].body)),
-      ])),
-    ].join('')],
-  ];
-  const m = openModal({ title: 'Textos del juego', color: 'gray', wide: true, cls: 'fp-pack tx-all',
-    body: `<div class="fp-tabs">${TABS.map(([n], i) => `<button class="fp-tab${i ? '' : ' on'}" data-t="${i}">${n}</button>`).join('')}</div><div class="fp-body tx-body"></div>` });
-  const body = m.el.querySelector('.tx-body');
-  const show = (i) => {
-    body.innerHTML = TABS[i][1]();
-    m.el.querySelectorAll('.fp-tab').forEach((b) => b.classList.toggle('on', +b.dataset.t === i));
-    if (!reduced()) body.querySelectorAll('.tx-item').forEach((el, k) => k < 8 && el.animate([{ opacity: 0, translate: '0 12px' }, { opacity: 1, translate: '0 0' }], { duration: 300, delay: k * 50, easing: 'ease-out', fill: 'backwards' }));
-  };
-  m.el.querySelector('.fp-tabs').addEventListener('click', (e) => { const b = e.target.closest('.fp-tab'); if (b) show(+b.dataset.t); });
-  show(0);
-}
 // Dev (11 nov 2026, pedido del usuario): el paquete completo de las festividades nuevas, una pestaña por grupo. Cada
 // festividad con su fecha, su mesa y sus 7 exclusivos dibujados como en la tienda. Solo para ver: no da nada.
 function openFiestaPack() {
@@ -1965,7 +2092,7 @@ function openSetSheet(av, after = () => {}) {
 }
 function setSheet(host, av, { back, backLabel, changed }) {
   const pieces = setPieces(av);
-  const cost = (it) => metShopPrice(it.price, !!meteor());
+  const cost = (it) => metShopPrice(it.price, meteor());
   const LBL = { avatar: 'Disfraz', ring: 'Marco', title: 'Título', traveler: 'Nave', back: 'Reverso', face: 'Cara', space: 'Espacio', frame: 'Postal' };
   const pic = ({ sec, k }) => sec === 'traveler' ? `<canvas class="trav-prev" data-kind="${k}"></canvas>` : sec === 'title' ? titleHTML(k) : sec === 'ring' ? avatarHTML({ ...save, look: 'char', char: av, ring: k }) : shopPreview(sec, k);
   const state = ({ sec, k, it }) => {
@@ -1989,7 +2116,7 @@ function setSheet(host, av, { back, backLabel, changed }) {
     const d = deal();
     if (!d.rest.length) return useHTML();
     if (d.lock) return `<p class="ss-done lock">${icon('lock')}Toda su colección se abre en el mundo ${d.lock}</p>`;
-    return `${useHTML()}<button class="btn gold wide ss-all press${save.coins < d.pay ? ' short' : ''}">${icon('bag')}<span>Llevarte todo</span><s>${fmt(d.full)}</s>${coin()}<b>${fmt(d.pay)}</b><i class="ss-off">−${Math.round(SET_DEAL * 100)}%</i>${d.met ? `<i class="ss-off met">${icon('meteoro')}−${Math.round(MET_OFF.shop * 100)}%</i>` : ''}</button>`;
+    return `${useHTML()}<button class="btn gold wide ss-all press${save.coins < d.pay ? ' short' : ''}">${icon('bag')}<span>Llevarte todo</span><s>${fmt(d.full)}</s>${coin()}<b>${fmt(d.pay)}</b><i class="ss-off">−${Math.round(SET_DEAL * 100)}%</i>${d.met ? `<i class="ss-off met">${icon(d.met.K.ico)}−${Math.round(d.met.K.shop * 100)}%</i>` : ''}</button>`;
   };
   const a = item('avatar', av), set = setOf(av);
   host.innerHTML = `<div class="ss-sheet">${back ? `<button class="ss-back press">${icon('prev')}<span>${backLabel}</span></button>` : ''}
@@ -2246,6 +2373,18 @@ function openMis() {
   const t = setInterval(() => (c.isConnected ? (c.textContent = clock(msToMidnight())) : clearInterval(t)), 1000);
   if (!reduced()) m.el.querySelectorAll('.mis').forEach((el, i) => el.animate([{ opacity: 0, translate: '-16px 0' }, { opacity: 1, translate: '0 0' }], { duration: 300, delay: 120 + i * 90, easing: 'ease-out', fill: 'backwards' }));
 }
+// Hasta abajo de los logros (12 nov 2026): los sellos del pasaporte y los premios de secretos que ya ganaste (los que
+// faltan no se ven). Cada uno con su sello de color, lo que pidió y lo que dio.
+const passWhat = (p) => `${p.item ? `${GIFT_KIND[p.item[0]]} <b>${esc(item(...p.item).name)}</b> · ` : ''}${coin()}${money(p.coins)}`;
+const passStampHTML = (i) => { const F = PASS_FRAMES[i - 1] || PASS_FRAMES.at(-1); return `<span class="ps-stamp on" style="--pc:${F[3]}">${icon(F[4])}</span>`; };
+function passTrophies() {
+  const s = save.pass?.s || 0, x = save.pass?.x || 0;
+  const rows = (n, f) => Array.from({ length: n }, (_, i) => f(i + 1)).join('');
+  const pase = (i) => `<li class="mis ps got">${passStampHTML(i)}<div><b>Sello ${i} · ${fmt(passGoal(i))} niveles</b><small>${passWhat(passPrize(i))}</small></div><span class="mis-got">${icon('check')}</span></li>`;
+  const sec = (i) => `<li class="mis ps got"><span class="ps-stamp on sec">${icon('starSecret')}</span><div><b>${secretGoal(i)} niveles secretos</b><small>${passWhat(secretPrize(i))}</small></div><span class="mis-got">${icon('check')}</span></li>`;
+  return (s ? `<h3 class="ps-h">${icon('pasaporte')} Pasaporte</h3><ul class="mis-list">${rows(s, pase)}</ul>` : '')
+    + (x ? `<h3 class="ps-h">${icon('starSecret')} Niveles secretos</h3><ul class="mis-list">${rows(x, sec)}</ul>` : '');
+}
 function openLogros() {
   const list = logrosVisible();
   const row = (l) => {
@@ -2266,7 +2405,7 @@ function openLogros() {
     color: 'gold',
     wide: true,
     cls: 'mis-modal lg-modal',
-    body: `<p class="note lg-note">Cada medalla empieza desde cero.</p><ul class="mis-list">${sorted().map(row).join('')}</ul>`,
+    body: `<p class="note lg-note">Cada medalla empieza desde cero.</p><ul class="mis-list">${sorted().map(row).join('')}</ul>${passTrophies()}`,
     onClose: () => refreshLogros(),
   });
 }
@@ -2936,7 +3075,8 @@ const mmss = (ms) => { const s = Math.ceil(ms / 1000); return `${Math.floor(s / 
 // tamaño y espera, para que no caigan parejos.
 const METS = [[78, 4, 1, 0], [52, -6, 0.7, 1.3], [96, 18, 0.85, 2.1], [64, 26, 0.6, 3.4], [88, -2, 1.1, 4.6], [38, 8, 0.75, 5.5], [70, 40, 0.65, 6.8]];
 // Se truenan al tocarlos (cuentan para el premio de meteoros, ver countPop) y no vuelven hasta su siguiente pasada.
-const metSky = () => (meteor() ? `<div class="met-sky" aria-hidden="true">${METS.map(([x, y, s, d]) => `<i style="left:${x}%;top:${y}%;--s:${s};animation-delay:${d}s">${icon('meteoro')}</i>`).join('')}</div>` : '');
+// Lluvia de estrellas: estrellas fugaces en lugar de meteoritos (12 nov 2026: cuentan aparte, con su premio y su logro).
+const metSky = () => { const m = meteor(); return m ? `<div class="met-sky sh-${m.K.kind}" aria-hidden="true">${METS.map(([x, y, s, d]) => `<i style="left:${x}%;top:${y}%;--s:${s};animation-delay:${d}s">${icon(m.K.sky)}</i>`).join('')}</div>` : ''; };
 document.addEventListener('pointerdown', (e) => {
   const m = e.target.closest?.('.met-sky i');
   if (!m || m.classList.contains('popped')) return;
@@ -2946,36 +3086,40 @@ document.addEventListener('pointerdown', (e) => {
   const f = document.createElement('div');
   f.className = 'met-pop';
   f.style.cssText = `left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px`;
-  f.innerHTML = icon('meteoro');
+  f.innerHTML = icon(meteor()?.K.sky || 'meteoro');
   document.body.append(f);
   m.classList.add('popped');
   m.addEventListener('animationiteration', () => m.classList.remove('popped'), { once: true });
   popBalloon(f, ['#ffd85a', '#ff8a3d']);
   sparkle(at, 10);
-  countPop('meteoro', at);
+  countPop(meteor()?.K.kind === 'star' ? 'estrella' : 'meteoro', at);
 }, true);
 // Aviso de cada lluvia: un meteorito cae, truena y se dice lo que da. La primera vez en la vida, con sus reglas.
+// La de estrellas (11 nov 2026) usa la misma ventana con sus números: monedas ×3, hasta 3 premios, más descuento.
 function openMetIntro() {
-  const first = !save.metSeen;
+  const K = meteor()?.K || SHOWERS.met, star3 = K.kind === 'star';
+  const first = star3 ? !save.starSeen : !save.metSeen;
   return new Promise((done) => {
     const m = openModal({
-      title: '¡Lluvia de meteoritos!',
+      title: `¡${K.name}!`,
       color: 'violet',
       wide: true,
-      cls: 'ev-intro met-intro',
-      body: `<div class="evi-hero met-hero"><div class="rays"></div><span class="met-fall">${icon('meteoro', 0, 0, 'big')}</span></div>
+      cls: `ev-intro met-intro sh-${K.kind}`,
+      body: `<div class="evi-hero met-hero"><div class="rays"></div><span class="met-fall">${icon(K.ico, 0, 0, 'big')}</span></div>
         <p class="lead">¡Está cayendo ahora! Te quedan <b class="met-clock">${mmss(meteor()?.left() || 0)}</b> para aprovecharla.</p>
         <ul class="evi-rules">
-          <li>${coin()}<span>Las monedas de cada nivel que ganes valen <b>el doble</b>.</span></li>
-          <li>${star(true)}<span>Gana un nivel con <b>3 estrellas</b> y te cae un <b>premio sorpresa</b> (uno por lluvia).</span></li>
+          <li>${coin()}<span>Las monedas de cada nivel que ganes valen <b>${star3 ? 'el triple' : 'el doble'}</b>.</span></li>
+          <li>${star(true)}<span>${star3 ? 'Cada nivel que ganes con <b>3 estrellas</b> te da un <b>premio sorpresa</b> (hasta 3 por lluvia).' : 'Gana un nivel con <b>3 estrellas</b> y te cae un <b>premio sorpresa</b> (uno por lluvia).'}</span></li>
+          <li>${icon('bag')}<span>Tienda <b>−${Math.round(K.shop * 100)}%</b>; ${star3 ? `comodín <b>−${Math.round(helpOff(K, 'wild') * 100)}%</b>, deshacer y ayudas <b>−${Math.round(helpOff(K, 'undo') * 100)}%</b> y +5 cartas <b>−${Math.round(helpOff(K, 'extra') * 100)}%</b>` : `comodín y deshacer <b>−${Math.round(helpOff(K, 'wild') * 100)}%</b>`}.</span></li>
           ${maxBet(save.next || 0) > 1 ? `<li>${icon('ticket')}<span>¿Apuestas? Los boletos de tu <b>×${betShown() > 1 ? betShown() : maxBet(save.next || 0)}</b> cuestan <b>la mitad</b>.</span></li>` : ''}
-          ${first ? `<li>${icon('meteoro')}<span>Cae <b>sin aviso</b>, unas veces por semana, a cualquier hora. ¡Si la ves, juega!</span></li>` : ''}
+          ${first ? `<li>${icon(K.ico)}<span>${star3 ? 'Cae <b>sin aviso</b>, unas veces por semana y solo <b>15 minutos</b>. ¡Si la ves, juega ya!' : 'Cae <b>sin aviso</b>, unas veces por semana, a cualquier hora. ¡Si la ves, juega!'}</span></li>` : ''}
         </ul>`,
       buttons: [{ label: '¡A jugar!', cls: 'gold wide' }],
       onClose: () => {
         const mt = meteor();
         if (mt) mt.state.intro = true;
-        save.metSeen = true;
+        if (star3) save.starSeen = true;
+        else save.metSeen = true;
         persist();
         done();
       },
@@ -2995,7 +3139,7 @@ function openMetIntro() {
   });
 }
 // El premio de la lluvia fue un exclusivo de meteoro: sale de una caja como los del evento.
-function openMetPrize(items) {
+function openMetPrize(items, kind = 'met') {
   return new Promise((done) => {
     confetti(60);
     const m = openModal({
@@ -3004,7 +3148,7 @@ function openMetPrize(items) {
       closable: false,
       cls: 'gift-prize',
       body: `<div class="gift-box"><div class="gbox"><span class="lid">${boxLid()}</span><span class="body">${boxBody()}</span></div></div>
-        <p class="note">Exclusivo de la lluvia de meteoritos: es tuyo para siempre. Póntelo desde tu perfil.</p>`,
+        <p class="note">Exclusivo de la lluvia de ${kind === 'star' ? 'estrellas' : 'meteoritos'}: es tuyo para siempre. Póntelo desde tu perfil.</p>`,
       buttons: [{ label: 'Continuar', cls: 'green wide', onClick: () => { closeShelf(); done(); } }],
     });
     boxBubbles(m, items.map((it) => giftBubble(it.sec, it.k)));
@@ -3035,9 +3179,11 @@ const FEAT_KIND = {
   bonus: { tag: 'Misiones del día', ico: 'cofre', head: '¡Cumpliste las 3!' },
   logro: { tag: 'Logro', ico: 'trophy' },
   racha: { tag: 'Racha cohete', ico: 'rocket' },
+  pase: { tag: 'Pasaporte', ico: 'pasaporte' },
+  secreto: { tag: 'Niveles secretos', ico: 'starSecret' },
   many: { tag: '¡Y más premios!', ico: 'gift' },
 };
-const FEAT_WORD = { mis: ['misión', 'misiones'], bonus: ['cofre', 'cofres'], logro: ['logro', 'logros'], racha: ['premio de racha', 'premios de racha'] };
+const FEAT_WORD = { mis: ['misión', 'misiones'], bonus: ['cofre', 'cofres'], logro: ['logro', 'logros'], racha: ['premio de racha', 'premios de racha'], pase: ['sello', 'sellos'], secreto: ['premio secreto', 'premios secretos'] };
 const featPrize = (fs) => {
   const p = { coins: 0, wild: 0, undo: 0 };
   fs.forEach((f) => ['coins', 'wild', 'undo'].forEach((k) => (p[k] += f[k] || 0)));
@@ -3046,7 +3192,9 @@ const featPrize = (fs) => {
 function featHTML(fs) {
   const f = fs[0], p = featPrize(fs), t = fs.length > 1 ? 'many' : f.t, K = FEAT_KIND[t];
   const prize = [p.coins && [coin(), p.coins], p.wild && [icon('wild'), p.wild], p.undo && [icon('undo'), p.undo]].filter(Boolean)
-    .map(([ico, n]) => `<span class="ft-chip">${ico}<b class="outl" data-n="${n}">+0</b></span>`).join('');
+    .map(([ico, n]) => `<span class="ft-chip">${ico}<b class="outl" data-n="${n}">+0</b></span>`).join('')
+    // Pasaporte y secretos: el exclusivo que trae, con el dibujo de su sección y su nombre.
+    + (fs.length === 1 && f.item ? `<span class="ft-chip ft-ex">${icon(SHOP_ICO[f.item[0]])}<b class="outl">${esc(item(...f.item).name)}</b></span>` : '');
   // inPic: lo que va encima del dibujo (palomita, medalla, número) · below: lo de abajo del nombre (barra, medallas).
   let pic = icon(K.ico), head = K.head, name = '', inPic = '', below = '';
   if (t === 'many') {
@@ -3069,6 +3217,14 @@ function featHTML(fs) {
     name = l.name;
     below = `<span class="ft-medals">${LOGRO_MEDAL.map((x, i) => `<i class="medal m${i}${i < f.step ? ' on' : ''}${i === f.step ? ' ft-new' : ''}"></i>`).join('')}</span>`;
     inPic = `<i class="ft-medal medal on m${f.step}"></i>`;
+  } else if (t === 'pase') {
+    head = `¡Sello ${f.n} de tu pasaporte!`;
+    name = `${fmt(passGoal(f.n))} niveles ganados`;
+    inPic = `<b class="ft-num outl">${f.n}</b>`;
+  } else if (t === 'secreto') {
+    head = `¡${f.n} niveles secretos ganados!`;
+    name = 'Premio secreto';
+    inPic = `<b class="ft-num outl">${f.n}</b>`;
   } else if (t === 'racha') {
     head = `¡${f.n} estrellas seguidas!`;
     name = 'Premio de racha';
@@ -3080,8 +3236,53 @@ function featHTML(fs) {
     <small class="ft-head">${head}</small><b class="ft-name">${name}</b>${below}
     <div class="ft-prize">${prize}</div></div>`;
 }
+// Pasaporte y secretos (12 nov 2026, el usuario: sin botón ni ventana, con más producción): antes de su tarjeta entra un
+// pasaporte, se abre, cae el sello (el ícono de su marco; en los secretos, la estrella morada), dice lo que ganaste, se
+// cierra y se va volando. Luego sale la tarjeta de siempre con sus premios. Los dos son el mismo Pasaporte galáctico
+// (12 nov 2026): la página izquierda va vacía y en la derecha cae el sello; dice «¡N niveles ganados!» o
+// «¡N niveles secretos!» y lo que ganaste.
+const EX_WORD = { frame: 'Postal exclusiva', title: 'Título exclusivo', space: 'Fondo exclusivo', back: 'Reverso exclusivo', avatar: 'Disfraz exclusivo', ring: 'Marco exclusivo', face: 'Caras exclusivas', traveler: 'Viajero exclusivo' };
+async function passScene(back, f) {
+  if (reduced()) return;
+  const sec = f.t === 'secreto', F = PASS_FRAMES[f.n - 1] || PASS_FRAMES.at(-1);
+  const ico = sec ? 'starSecret' : F[4], pc = sec ? '#8a5cf0' : F[3];
+  const what = f.item ? `${EX_WORD[f.item[0]]}: <b>${esc(item(...f.item).name)}</b>` : `<b>${money(f.coins)}</b> monedas`;
+  const el = h(`<div class="pp-scene${sec ? ' sec' : ''}" style="--pc:${pc}">
+    <div class="pp-book">
+      <div class="pp-page pp-r"><span class="pp-slot"></span><span class="pp-stamp">${icon(ico)}<i class="outl">${f.n}</i></span></div>
+      <div class="pp-cover"><div class="pp-front">${icon('pasaporte')}<b>PASAPORTE</b><small>Galáctico</small></div><div class="pp-page pp-l"></div></div>
+    </div>
+    <p class="pp-say"><b class="outl">${sec ? `¡${fmt(f.n)} niveles secretos!` : `¡${fmt(passGoal(f.n))} niveles ganados!`}</b><span>${what}</span></p>
+  </div>`);
+  back.append(el);
+  const book = el.querySelector('.pp-book'), cover = el.querySelector('.pp-cover'), stamp = el.querySelector('.pp-stamp'), say = el.querySelector('.pp-say');
+  const anim = (node, kf, o) => node.animate(kf, { fill: 'forwards', ...o }).finished.catch(() => {});
+  // Entra cerrado, girando desde abajo.
+  await anim(book, [{ translate: '-25% 90vh', rotate: '-25deg', scale: 0.5 }, { translate: '-25% -14px', rotate: '6deg', scale: 1.05, offset: 0.75 }, { translate: '-25% 0', rotate: '0deg', scale: 1 }], { duration: 750, easing: 'cubic-bezier(0.2, 0.8, 0.3, 1)' });
+  await wait(200);
+  // Se abre: la portada gira sobre el lomo y el libro se centra.
+  anim(book, [{ translate: '-25% 0' }, { translate: '0 0' }], { duration: 650, easing: 'ease-in-out' });
+  await anim(cover, [{ rotate: 'y 0deg' }, { rotate: 'y -180deg' }], { duration: 650, easing: 'ease-in-out' });
+  await wait(250);
+  // Cae el sello con golpe: tiembla el libro, chispas.
+  await anim(stamp, [{ scale: 3.2, rotate: '-40deg', opacity: 0 }, { scale: 0.88, rotate: '-4deg', opacity: 1, offset: 0.75 }, { scale: 1, rotate: '-10deg', opacity: 1 }], { duration: 380, easing: 'cubic-bezier(0.5, 0, 0.75, 0)' });
+  buzz(35);
+  sparkleAt(stamp, 26);
+  book.animate([{ translate: '0 0' }, { translate: '0 6px' }, { translate: '0 -2px' }, { translate: '0 0' }], { duration: 260 });
+  // Lo que ganaste.
+  await anim(say, [{ scale: 0.4, opacity: 0, translate: '0 20px' }, { scale: 1.08, opacity: 1, translate: '0 0', offset: 0.7 }, { scale: 1, opacity: 1, translate: '0 0' }], { duration: 380, easing: 'ease-out' });
+  confetti(60);
+  await wait(1500);
+  // Se cierra y se va volando.
+  anim(say, [{ opacity: 1 }, { opacity: 0, translate: '0 16px' }], { duration: 250 });
+  anim(book, [{ translate: '0 0' }, { translate: '-25% 0' }], { duration: 550, easing: 'ease-in-out' });
+  await anim(cover, [{ rotate: 'y -180deg' }, { rotate: 'y 0deg' }], { duration: 550, easing: 'ease-in-out' });
+  await anim(book, [{ translate: '-25% 0', rotate: '0deg', scale: 1, opacity: 1 }, { translate: '-25% 12px', rotate: '-6deg', scale: 1.05, opacity: 1, offset: 0.25 }, { translate: '60vw -80vh', rotate: '35deg', scale: 0.3, opacity: 0 }], { duration: 650, easing: 'cubic-bezier(0.5, 0, 0.75, 0)' });
+  el.remove();
+}
 async function featCard(back, fs) {
   const p = featPrize(fs), t = fs.length > 1 ? 'many' : fs[0].t;
+  if (t === 'pase' || t === 'secreto') await passScene(back, fs[0]);
   const el = h(featHTML(fs));
   back.append(el);
   // Sin atajo al tocar (10 nov 2026, el usuario lo pidió): solo "reducir movimiento" la hace instantánea.
@@ -3104,6 +3305,14 @@ async function featCard(back, fs) {
   } else {
     // Brota el dibujo de adentro (el círculo ya llegó con la tarjeta).
     await anim(pic.firstElementChild, [{ scale: 0, rotate: '-30deg' }, { scale: 1.25, rotate: '8deg', offset: 0.6 }, { scale: 1, rotate: '0deg' }], { duration: 320, easing: 'ease-out' });
+    // Pasaporte y secretos: el número cae como sello, con confeti.
+    if (t === 'pase' || t === 'secreto') {
+      el.classList.add('num-on');
+      await anim(el.querySelector('.ft-num'), [{ scale: 3, rotate: '-25deg', opacity: 0 }, { scale: 0.9, rotate: '6deg', opacity: 1, offset: 0.7 }, { scale: 1, rotate: '0deg', opacity: 1 }], { duration: 300, easing: 'ease-out', fill: 'backwards' });
+      buzz(25);
+      sparkleAt(pic, 22);
+      if (!fast) confetti(50);
+    }
   }
   if (t === 'mis') {
     await anim(el.querySelector('.mbar i'), [{ width: '45%' }, { width: '100%' }], { duration: 380, easing: 'ease-out', fill: 'forwards' });
@@ -3126,7 +3335,8 @@ async function featCard(back, fs) {
   for (const c of chips) {
     c.classList.add('on');
     const b = c.querySelector('b');
-    if (fast) b.textContent = `+${money(+b.dataset.n)}`;
+    if (b.dataset.n == null) await anim(c, [{ scale: 0, opacity: 0 }, { scale: 1.3, opacity: 1, offset: 0.6 }, { scale: 1, opacity: 1 }], { duration: 260, easing: 'ease-out' });
+    else if (fast) b.textContent = `+${money(+b.dataset.n)}`;
     else {
       countUp(b, +b.dataset.n);
       await anim(c, [{ scale: 0, opacity: 0 }, { scale: 1.3, opacity: 1, offset: 0.6 }, { scale: 1, opacity: 1 }], { duration: 230, easing: 'ease-out' });
@@ -3134,7 +3344,8 @@ async function featCard(back, fs) {
   }
   await pause(450);
   // Fuera de la cola: ahora sí cuentan en el monedero y vuelan a él.
-  save.feats.splice(0, fs.length);
+  // Se quitan esos (no siempre son los primeros: pasaporte y secretos van solos y los demás se juntan).
+  for (const f of fs) save.feats.splice(save.feats.indexOf(f), 1);
   persist();
   const r = el.querySelector('.ft-prize').getBoundingClientRect(), at = { x: r.left + r.width / 2, y: r.top + r.height / 2 };
   const runs = [p.coins ? flyToWallet('coins', at, p.coins) : Promise.resolve()];
@@ -3189,7 +3400,11 @@ function playFeats() {
       let shown = 0;
       while (save.feats?.length && !game && attach()) {
         if (modalOpen()) { await wait(300); continue; }
-        await featCard(back, shown >= FEAT_ONE && save.feats.length > 1 ? save.feats.slice() : save.feats.slice(0, 1));
+        // Pasaporte y secretos siempre solos (llevan su escena); los demás se juntan después de FEAT_ONE.
+        const solo = (f) => f.t === 'pase' || f.t === 'secreto';
+        const rest = save.feats.filter((f) => !solo(f));
+        const pick = solo(save.feats[0]) || shown < FEAT_ONE || rest.length < 2 ? save.feats.slice(0, 1) : rest;
+        await featCard(back, pick);
         shown++;
       }
     } finally {
@@ -3234,9 +3449,14 @@ async function notices() {
     if (!(await calm(gen))) return;
     if (meteor() && !meteor().state.intro) await openMetIntro();
   }
-  for (const k of ['racha', 'mis', 'logros', 'meteoro', 'col', 'apuesta', 'mes', 'col2', 'fiesta', 'col3', 'fiesta2', 'fiesta3', 'fiesta4']) {
+  // Nave de rescate: ya no te alcanza para el siguiente nivel (una vez por semana).
+  if (rescueDue()) {
+    if (!(await calm(gen))) return;
+    if (rescueDue()) await openRescue();
+  }
+  for (const k of ['racha', 'mis', 'logros', 'meteoro', 'col', 'apuesta', 'mes', 'col2', 'fiesta', 'col3', 'estrellas', 'fiesta2', 'fiesta3', 'fiesta4']) {
     // La lluvia: solo si nunca se ha visto una (quien ya la vio caer no necesita la ventana). La apuesta: nivel 101.
-    if (!(k === 'meteoro' ? (save.next || 0) >= MET_FROM && !save.metSeen : k === 'apuesta' ? maxBet(save.next) > 1 : isOn(k)) || save.intro?.[k]) continue;
+    if (!(k === 'meteoro' ? (save.next || 0) >= MET_FROM && !save.metSeen : k === 'estrellas' ? (save.next || 0) >= STAR_FROM && !save.starSeen : k === 'apuesta' ? maxBet(save.next) > 1 : isOn(k)) || save.intro?.[k]) continue;
     if (!(await calm(gen))) return;
     await openUnlock(k);
     if (k === 'apuesta') {
@@ -3343,6 +3563,15 @@ const evList = () => Object.keys(EVENTOS).map(Number).sort((a, b) => a - b).filt
 const MES_LARGO = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 const ulList = (list) => (list?.length ? `<ul class="ul-list">${list.map(([ico, name, sub]) => `<li>${icon(ico)}<span><b>${name}</b>${sub ? `<small>${sub}</small>` : ''}</span></li>`).join('')}</ul>` : '');
 const UNLOCK_INFO = {
+  estrellas: () => ({
+    title: '¡Nueva: Lluvia de estrellas!', ico: 'starFall', color: 'violet', hero: icon('starFall', 0, 0, 'big'),
+    lead: ulLead(STAR_FROM + 1, 'la lluvia de estrellas', 'Más corta que la de meteoritos y da mucho más.'),
+    rules: [
+      ['reloj', '2 o 3 veces por semana, solo <b>15 minutos</b>, a cualquier hora y <b>sin aviso</b>.'],
+      ['gift', 'Mientras cae, <b>el triple de monedas</b>, más descuento y hasta <b>3 premios sorpresa</b>: uno por cada nivel con 3★.'],
+      ['flag', 'Si la ves caer, ¡no la dejes pasar!'],
+    ],
+  }),
   meteoro: () => ({
     title: '¡Nueva: Lluvia de meteoritos!', ico: 'meteoro', color: 'orange', hero: icon('meteoro', 0, 0, 'big'),
     lead: ulLead(MET_FROM + 1, 'la lluvia de meteoritos', 'De vez en cuando caen meteoritos sobre tu mapa y todo da más.'),
@@ -3478,7 +3707,7 @@ function evHeroIcons(main, list = Object.keys(EVENTOS).map(Number).sort((a, b) =
   return [at(-1), at(0), at(1)].map((x, k) => icon(x, 0, 0, k === 1 ? 'main' : '')).join('');
 }
 async function openUnlock(k) {
-  const sel = k === 'meteoro' || k.startsWith('apuesta') ? null : `.side.r [data-a="${{ racha: 'racha', mis: 'mis', logros: 'logros', col: 'col', mes: 'evento', col2: 'col', col3: 'col', fiesta: 'fiesta', fiesta2: 'fiesta', fiesta3: 'fiesta', fiesta4: 'fiesta' }[k]}"]`;
+  const sel = k === 'meteoro' || k === 'estrellas' || k.startsWith('apuesta') ? null : `.side.r [data-a="${{ racha: 'racha', mis: 'mis', logros: 'logros', col: 'col', mes: 'evento', col2: 'col', col3: 'col', fiesta: 'fiesta', fiesta2: 'fiesta', fiesta3: 'fiesta', fiesta4: 'fiesta' }[k]}"]`;
   if (sel) openGroup('r', 'open');
   const btn = sel && document.querySelector(sel);
   revealed.add(k);
@@ -3842,9 +4071,42 @@ function openEvPostcard(x) {
     photo: { kicker: `POSTAL DE · ${K.stamp.toUpperCase()} ${x.year}`, sub: x.e.planets.at(-1), stars: null, secret: false, file: `postal-${x.e.key}-${x.year}` },
   });
 }
+// Sellos del pasaporte y de secretos que ya ganaste (12 nov 2026): van en todas las postales en grande, encima del
+// planeta. Se pueden ocultar (save.pcPass === false) y la foto sale igual que como los dejaste.
+const passSeals = () => [
+  ...Array.from({ length: save.pass?.s || 0 }, (_, i) => { const F = PASS_FRAMES[i] || PASS_FRAMES.at(-1); return { ico: F[4], pc: F[3], n: i + 1 }; }),
+  ...Array.from({ length: save.pass?.x || 0 }, (_, i) => ({ ico: 'starSecret', pc: '#8a5cf0', n: secretGoal(i + 1) })),
+];
+// 12 nov 2026 (el usuario: «más aleatorios, que se vean como sellos»): cada sello cae en su lugar, con su giro, su
+// tamaño y su forma (círculo, óvalo o rectángulo), como estampados a mano en la parte de arriba del planeta. Salen de
+// una semilla con el nombre del planeta: la vista y la foto quedan iguales y cada postal tiene su acomodo.
+// [{ x, y (0-1 de la ventana del planeta), r (grados), s (escala), f: 'c' | 'o' | 'r' }]
+const sealSpots = (n, key) => {
+  const rnd = mulberry32(hash([...String(key)].reduce((a, ch) => Math.imul(a ^ ch.charCodeAt(0), 16777619), 2166136261))), out = [];
+  for (let i = 0; i < n; i++) {
+    // De varios lugares al azar, el más alejado de los que ya están (se reparten sin amontonarse).
+    let best = null, bd = -1;
+    for (let k = 0; k < 24; k++) {
+      const p = { x: 0.1 + rnd() * 0.8, y: 0.11 + rnd() * 0.24 };
+      const d = Math.min(9, ...out.map((q) => Math.hypot(q.x - p.x, q.y - p.y)));
+      if (d > bd) (bd = d), (best = p);
+    }
+    out.push({ ...best, r: Math.round(rnd() * 50 - 25), s: +(0.88 + rnd() * 0.3).toFixed(2), f: 'cor'[Math.floor(rnd() * 3)] });
+  }
+  return out;
+};
+// Cada sello se estampa (cae grande y girado) y queda en su giro y su tamaño.
+const stampSeals = (el, delay, step) => el.querySelectorAll('.pv-seal').forEach((s, i) => {
+  const r = parseFloat(s.style.getPropertyValue('--r')), k = +s.style.getPropertyValue('--s');
+  s.animate([{ scale: 2.8 * k, rotate: `${r + 30}deg`, opacity: 0 }, { scale: 0.9 * k, rotate: `${r - 6}deg`, opacity: 1, offset: 0.7 }, { scale: k, rotate: `${r}deg` }], { duration: 380, delay: delay + i * step, easing: 'cubic-bezier(0.5, 0, 0.75, 0)', fill: 'backwards' });
+});
+const passSealsHTML = (key) => {
+  const L = passSeals(), at = sealSpots(L.length, key);
+  return `<div class="pv-pass">${L.map((x, i) => `<span class="pv-seal f-${at[i].f}" style="--pc:${x.pc};--r:${at[i].r}deg;--s:${at[i].s};left:${at[i].x * 100}%;top:${at[i].y * 100}%">${icon(x.ico)}<i class="outl">${x.n}</i></span>`).join('')}</div>`;
+};
 // pc: { name, hue, tier, wd (para PlanetView), sub, line (estrellas o lo que va debajo), stamp: [grande, chico], seal, photo }
 async function showPostcard(pc) {
-  const frame = equipped('frame');
+  const frame = equipped('frame'), seals = passSeals().length;
   let view = null;
   const m = openModal({
     title: esc(pc.name),
@@ -3852,9 +4114,9 @@ async function showPostcard(pc) {
     wide: true,
     cls: 'pc-modal',
     onClose: () => view?.dispose(),
-    body: `<div class="pc-view tier-${pc.tier} ${frame === 'simple' ? '' : 'framed'}" style="--h:${pc.hue}">
+    body: `<div class="pc-view tier-${pc.tier} ${frame === 'simple' ? '' : 'framed'}${save.pcPass === false ? ' no-pass' : ''}" style="--h:${pc.hue}">
         <div class="postcard pv-deco tier-${pc.tier} fr-${frame}" aria-hidden="true"></div>
-        <div class="pv-3d"></div>
+        <div class="pv-3d">${seals ? passSealsHTML(pc.name) : ''}</div>
         <div class="pv-info">
           <small>${esc(pc.sub)}</small>
           <b>${esc(pc.name)}</b>
@@ -3862,7 +4124,16 @@ async function showPostcard(pc) {
           <div class="stamp"><b>${pc.stamp[0]}</b><small>${esc(pc.stamp[1])}</small></div>${pc.seal}
         </div>
       </div>`,
-    buttons: [{ label: `${icon('album')} Guardar foto`, cls: 'gold wide', keep: true, onClick: (btn) => view && savePostcard(view, pc, btn) }],
+    buttons: [
+      seals && { label: passBtn(), cls: 'ghost wide pv-pass-btn', keep: true, onClick: (btn) => {
+        save.pcPass = save.pcPass === false;
+        persist();
+        m.el.querySelector('.pc-view').classList.toggle('no-pass', save.pcPass === false);
+        btn.innerHTML = passBtn();
+        if (save.pcPass !== false && !reduced()) stampSeals(m.el, 0, 70);
+      } },
+      { label: `${icon('album')} Guardar foto`, cls: 'gold wide', keep: true, onClick: (btn) => view && savePostcard(view, pc, btn) },
+    ].filter(Boolean),
   });
   if (!Galaxy) await loadGalaxy();
   const host = m.el.querySelector('.pv-3d');
@@ -3873,8 +4144,10 @@ async function showPostcard(pc) {
     host.animate([{ scale: 0.4, opacity: 0, rotate: '-20deg' }, { scale: 1.06, opacity: 1, rotate: '3deg', offset: 0.7 }, { scale: 1, rotate: '0deg' }], { duration: 700, easing: 'ease-out' });
     st.animate([{ scale: 2.6, rotate: '-30deg', opacity: 0 }, { scale: 0.92, rotate: '12deg', opacity: 1, offset: 0.7 }, { scale: 1, rotate: '8deg' }], { duration: 420, delay: 650, easing: 'cubic-bezier(0.5, 0, 0.75, 0)', fill: 'backwards' });
     m.el.querySelector('.pc-view .seal-secret')?.animate(SEAL_IN, { duration: 420, delay: 950, easing: 'cubic-bezier(0.5, 0, 0.75, 0)', fill: 'backwards' });
+    stampSeals(m.el, 1150, 90);
   }
 }
+const passBtn = () => `${icon('pasaporte')} ${save.pcPass === false ? 'Poner mis sellos' : 'Quitar mis sellos'}`;
 
 // La foto de la postal: un lienzo con el marco, el planeta tal como lo dejaste girado, nombre, estrellas y sello.
 async function savePostcard(view, pc, btn) {
@@ -3937,6 +4210,24 @@ async function savePostcard(view, pc, btn) {
     starAt(0, -12, 30, true);
     g.fillStyle = '#fff'; g.textAlign = 'center'; g.font = '900 20px "Baloo 2"'; g.fillText('SECRETO', 0, 42);
     g.restore();
+  }
+  // Sellos del pasaporte y de secretos (si no los quitaste): en la orilla de arriba del planeta, de derecha a izquierda.
+  if (save.pcPass !== false) {
+    const list = passSeals(), at = sealSpots(list.length, pc.name);
+    const img = (ico) => new Promise((ok) => { const im = new Image(); im.onload = () => ok(im); im.onerror = () => ok(null); im.src = iconURL(ico, 1).slice(5, -2); });
+    const pics = await Promise.all(list.map((x) => img(x.ico)));
+    list.forEach((x, i) => {
+      const a = at[i], hw = a.f === 'o' ? 62 : a.f === 'r' ? 55 : 50, hh = a.f === 'c' ? 50 : 45;
+      // La forma del sello, p más grande (la orilla punteada va por fuera).
+      const shape = (p) => { g.beginPath(); if (a.f === 'r') g.roundRect(-hw - p, -hh - p, 2 * (hw + p), 2 * (hh + p), 12 + p / 2); else g.ellipse(0, 0, hw + p, hh + p, 0, 0, Math.PI * 2); };
+      g.save(); g.translate(sx + a.x * sw, sy + a.y * sh); g.rotate((a.r * Math.PI) / 180); g.scale(a.s, a.s);
+      shape(0); g.fillStyle = '#fffaf0'; g.fill(); g.lineWidth = 7; g.strokeStyle = x.pc; g.stroke();
+      shape(8); g.lineWidth = 4; g.setLineDash([10, 7]); g.stroke(); g.setLineDash([]);
+      if (pics[i]) g.drawImage(pics[i], -32, -34, 64, 64);
+      g.fillStyle = x.pc; g.strokeStyle = '#2a1f5c'; g.lineWidth = 6; g.textAlign = 'center'; g.font = '34px "Lilita One"';
+      g.strokeText(String(x.n), hw - 20, hh - 2); g.fillText(String(x.n), hw - 20, hh - 2);
+      g.restore();
+    });
   }
   deco();
   g.fillStyle = '#b3a9cf'; g.font = '800 26px "Baloo 2"'; g.textAlign = 'center'; g.fillText('Solitaire', W / 2, H - 56);
@@ -4781,6 +5072,7 @@ function openHelp(tab = 'basico', then) {
         <div class="step"><div class="ill c">${icon('ticket')}</div><p>Un nivel nuevo cuesta <b>boletos</b>. Si lo ganas, te los regresamos; si pierdes o lo dejas, se gastan.</p></div>
         <h3 class="help-h">Para ganar más</h3>
         <div class="step" data-u="meteoro"><div class="ill c">${icon('meteoro')}</div><p><b>Lluvia de meteoritos:</b> cae sin aviso por 30 minutos. Las monedas valen <b>el doble</b> y con 3 estrellas te cae un <b>premio sorpresa</b>.</p></div>
+        <div class="step" data-u="estrellas"><div class="ill c">${icon('starFall')}</div><p><b>Lluvia de estrellas:</b> cae sin aviso por 15 minutos. Las monedas valen <b>el triple</b> y cada nivel con 3 estrellas te da un <b>premio sorpresa</b> (hasta 3).</p></div>
         <div class="step" data-u="apuesta2"><div class="ill c"><i class="go-bet dbet b2">×2</i><i class="go-bet dbet b10">×10</i></div><p><b>Apuesta:</b> al tocar <b>Jugar</b> escoge tu ×N. Si ganas, <b>todo</b> lo que da el nivel se multiplica por ese número.</p></div>
       </div>`
       : t === 'mesas'

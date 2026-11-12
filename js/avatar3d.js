@@ -7,15 +7,16 @@
 import * as THREE from 'three';
 import { INK, KID_SKINS, KID_HAIRS, KID_STYLES } from './art.js';
 import { toonMaker } from './travelers.js';
-import dA from './disfraces/a.js';
-import dB from './disfraces/b.js';
-import dC from './disfraces/c.js';
-import dD from './disfraces/d.js';
-import dE from './disfraces/e.js';
-import dF from './disfraces/f.js';
-import dG from './disfraces/g.js';
-import dH from './disfraces/h.js';
-import dI from './disfraces/i.js';
+import dA from './costumes/a.js';
+import dB from './costumes/b.js';
+import dC from './costumes/c.js';
+import dD from './costumes/d.js';
+import dE from './costumes/e.js';
+import dF from './costumes/f.js';
+import dG from './costumes/g.js';
+import dH from './costumes/h.js';
+import dI from './costumes/i.js';
+import dJ from './costumes/j.js';
 
 const TAU = Math.PI * 2;
 const calm = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -782,11 +783,11 @@ function parse(spec) {
 export const has3D = (spec) => { const k = String(spec).split(':')[0]; return !!(OUTFITS[k] || COSTUMES[k]); };
 export const movesOf = (spec) => parse(spec).dress?.moves || [];
 export const COSTUME_LIST = [['nino', 'Ropa de inicio'], ['gato', 'Gatito'], ['ajolote', 'Ajolote'], ['conejo', 'Conejo'], ['perrito', 'Perrito'], ['zorro', 'Zorro'], ['pinguino', 'Pingüino'], ['panda', 'Panda'], ['tortuga', 'Tortuga'], ['robot', 'Robot'], ['pulpo', 'Pulpo'], ['abeja', 'Abeja'], ['capibara', 'Capibara'], ['astro', 'Astronauta'], ['alien', 'Marciano'], ['dino', 'Dinosaurio'], ['fantasma', 'Fantasmita']];
-// Disfraces en archivos aparte (js/disfraces/*.js, 10 nov 2026) para modelarlos en paralelo. Cada archivo exporta
+// Disfraces en archivos aparte (js/costumes/*.js, 10 nov 2026) para modelarlos en paralelo. Cada archivo exporta
 // default (H) => ({ clave: { name, moves, sleeve, hood?, wig?, build(part, head, torso, k, toon) => [ticks] } }), con H los
 // ayudantes de aquí. hood: gorro (tu pelo no se dibuja) · wig: peluca (el disfraz pone su pelo y el tuyo no se dibuja).
 const H = { THREE, TAU, flat, flatShape, dim, shirt, starGeo, cap, fringe, hoodCap, onCap, belly, neckRing, KID_HAIRS };
-for (const mk of [dA, dB, dC, dD, dE, dF, dG, dH, dI]) for (const [k, c] of Object.entries(mk(H))) { COSTUMES[k] = c; if (!COSTUME_LIST.some((x) => x[0] === k)) COSTUME_LIST.push([k, c.name || k]); }
+for (const mk of [dA, dB, dC, dD, dE, dF, dG, dH, dI, dJ]) for (const [k, c] of Object.entries(mk(H))) { COSTUMES[k] = c; if (!COSTUME_LIST.some((x) => x[0] === k)) COSTUME_LIST.push([k, c.name || k]); }
 
 // Un avatar listo para la escena: { obj, tick(segundos) }. moves: los 3 de su ropa o 'all' (los 10, para dev).
 // Con "reducir movimiento" se queda feliz y quieto.
@@ -886,7 +887,7 @@ function goLive(el, kind, moves) {
   const m = makeAvatar3D(kind, st.toon, moves), s = { canvas, ctx: canvas.getContext('2d'), m, vis: true, phase: Math.random() * 20 };
   st.scene.add(m.obj);
   m.tick(s.phase); shoot(st, m.obj, s.ctx); // ya con imagen desde el primer momento
-  el.querySelector('.av-char')?.replaceWith(canvas);
+  el.querySelector('.av-char, .av-l')?.replaceWith(canvas);
   st.live.push(s); st.io.observe(canvas);
   if (!st.raf) st.raf = requestAnimationFrame(loop);
 }
@@ -906,7 +907,7 @@ function hydrate() {
       if (el.matches(LIVE) && !el.closest('.a3d-still') && !calm()) goLive(el, kind, null);
       else {
         const img = new Image(); img.className = 'av-char av3d-pic'; img.alt = ''; img.src = still(kind);
-        el.querySelector('.av-char')?.replaceWith(img);
+        el.querySelector('.av-char, .av-l')?.replaceWith(img);
       }
     } catch (e) { console.warn('avatar 3D', e); } // sin WebGL se queda el dibujo 2D
   }

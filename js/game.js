@@ -2,7 +2,8 @@ import { save, persist } from './storage.js';
 import { openModal, toast, confetti, updateCoins, money, starsHTML, reduced, buzz, sparkle, wait, spendFromWallet, flyToWallet, balloons, lootBubbles, rachaWarnHTML, betLoseHTML, shownCoins, popPrize } from './ui.js';
 import { worldInfo, packGroups, MECH_NAMES, LEVELS_PER_WORLD, scrollStrip, scrollSpan, scrollCover, SCROLL_VIEW, SCROLL_SHOW, NEB_SLOTS, GRAV_SHOWN, W, H } from './levels.js';
 import * as E from './engine.js';
-import { price, EV_MARKUP, MET_OFF, round5, HELPS, buyable } from './economy.js';
+import { price, EV_MARKUP, round5, HELPS, buyable } from './economy.js';
+import { helpOff } from './meteor.js';
 import { cardBackURL, icon, star, coin, lockIcon, keyIcon, arrowIcon, curtainIcon, suitSVG, avatarHTML } from './art.js';
 import { tableHTML } from './biomes.js';
 import { Coach } from './coach.js';
@@ -123,8 +124,7 @@ export function faceHTML(c, rank = c.rank) {
 // Ayuda en una ventana de presentación (11 nov 2026): su carta y, al lado, para qué sirve, en su propio renglón.
 // small: nota chiquita abajo (11 nov 2026, el usuario: «agrupar las ayudas en pequeño, o una nota»).
 const helpTip = (back, text, small = false) => `<div class="help-tip${small ? ' small' : ''}"><span class="help-tip-card" style="background-image:${cardBackURL(back)}"></span><p>${text}</p></div>`;
-// Ventanas de presentación de las mesas y del escudo (la primera vez que salen). Exportadas para el modo dev
-// («Textos del juego», 11 nov 2026): ahí se leen todas juntas.
+// Ventanas de presentación de las mesas y del escudo (la primera vez que salen).
 // Mesas (11 nov 2026, homologadas a pedido del usuario): a = qué es, b = cómo funciona. La ventana pone cada una en su
 // renglón y Tu camino las dos juntas (MESA_TEXT). Todas azules, como las de las cartas.
 export const MESA_TEXT = {
@@ -145,8 +145,7 @@ const MESA_HELP = { rocas: helpTip('hlaser', '<b>Láser:</b> rompe todas las pie
 // Ventana con el formato de las cartas (11 nov 2026): dibujo a la izquierda y, al lado, su nombre y su texto.
 const tipCard = (pic, name, text, cls = '') => `<div class="tip-card"><span class="tip-pic${cls}">${pic}</span><p><b>${name}</b>${text}</p></div>`;
 const helpPic = (back) => `<span class="help-tip-card" style="background-image:${cardBackURL(back)}"></span>`;
-// Ventanas de presentación de las mesas, del escudo y de ver cartas (la primera vez que salen). Exportadas para el
-// modo dev («Textos del juego»): ahí se leen todas juntas.
+// Ventanas de presentación de las mesas, del escudo y de ver cartas (la primera vez que salen).
 export const MESA_INTRO = {
   // Mismo formato que las cartas: su icono (el de Tu camino; la nave, su nave), su nombre y su texto; la ayuda abajo.
   // body es un getter: el icono viene de dev.js (ART).
@@ -222,7 +221,7 @@ const marks = (c) =>
 
 // opts: onExit, onAbandon(gaveUp), onReplay, rachaRisk() → { n, pend } | null, onWin(stars) → { coins, tickets, prev, gold, wild, chest }, onDone(res), onSave(state)?,
 //       resume (estado guardado), saved (la partida se guarda al salir), tutorial, dev
-//       meteor: empezó durante una lluvia de meteoritos (la ficha de monedas lleva ×2 y su reloj; ver meteor.js)
+//       meteor: la lluvia que caía al empezar (SHOWERS de meteor.js: la ficha de monedas lleva su ×N y su reloj)
 //       event: { ico, table } = nivel del evento del mes (table = la mesa de su temática) (sin estrellas; perder gasta su boleto y no se reintenta)
 export class Game {
   constructor(root, level, opts) {
@@ -574,7 +573,7 @@ export class Game {
       <header class="hud">
         <button class="tb hbtn" data-a="exit" aria-label="Pausa" title="Pausa">${icon('pause')}</button>
         <div class="hud-mid"><div class="combo info"></div></div>
-        <div class="hud-r">${level.doors ? `<div class="pill info key-pill" aria-label="Llaves" title="Llaves: abre la puerta que quieras">${icon('door')}<b>0</b></div>` : ''}${this.opts.bet > 1 ? `<div class="pill info bet-pill b${this.opts.bet}" aria-label="Apuesta ×${this.opts.bet}" title="Apuesta: premios y ayudas ×${this.opts.bet}">×${this.opts.bet}</div>` : ''}${this.opts.racha ? `<div class="pill info racha-pill ${this.opts.racha.hot ? 'hot' : ''}" aria-label="Racha">${this.opts.racha.hot ? `<span class="fire">${icon('flame')}</span>` : ''}${icon(this.opts.racha.ico)}<span>${this.opts.racha.n}</span></div>` : ''}<div class="pill info${this.opts.meteor ? ' met-pill' : ''}">${coin()}<span data-coins>${money(shownCoins())}</span>${this.opts.meteor ? '<i class="x2">×2</i><small class="met-clock"></small>' : ''}</div>${avatarHTML(save, 'hud-av')}</div>
+        <div class="hud-r">${level.doors ? `<div class="pill info key-pill" aria-label="Llaves" title="Llaves: abre la puerta que quieras">${icon('door')}<b>0</b></div>` : ''}${this.opts.bet > 1 ? `<div class="pill info bet-pill b${this.opts.bet}" aria-label="Apuesta ×${this.opts.bet}" title="Apuesta: premios y ayudas ×${this.opts.bet}">×${this.opts.bet}</div>` : ''}${this.opts.racha ? `<div class="pill info racha-pill ${this.opts.racha.hot ? 'hot' : ''}" aria-label="Racha">${this.opts.racha.hot ? `<span class="fire">${icon('flame')}</span>` : ''}${icon(this.opts.racha.ico)}<span>${this.opts.racha.n}</span></div>` : ''}<div class="pill info${this.opts.meteor ? ` met-pill sh-${this.opts.meteor.kind}` : ''}">${coin()}<span data-coins>${money(shownCoins())}</span>${this.opts.meteor ? `<i class="x2">×${this.opts.meteor.x}</i><small class="met-clock"></small>` : ''}</div>${avatarHTML(save, 'hud-av')}</div>
       </header>
       <div class="board-wrap"><div class="board"></div><div class="streak"></div></div>
       <footer class="tray">
@@ -3059,7 +3058,7 @@ export class Game {
     return price(kind, this.level.world * LEVELS_PER_WORLD, Math.max(this.level.world, save.open || 0) * LEVELS_PER_WORLD);
   }
   helpRate(kind) {
-    return this.opts.event ? EV_MARKUP : this.opts.meteor && kind !== 'extra' ? -MET_OFF.help : 0;
+    return this.opts.event ? EV_MARKUP : this.opts.meteor ? -helpOff(this.opts.meteor, kind) : 0;
   }
 
   // kind: 'undo' (3 deshacer) o 'extra' (+5 cartas al mazo, solo atascado). El comodín se compra en el grupo de ayudas.
@@ -3083,7 +3082,7 @@ export class Game {
       cls: 'buy-modal',
       body: `<div class="buy-hero"><div class="rays"></div>${hero}<b class="qty outl">${kind === 'extra' ? '+5' : `×${n}`}</b></div>
         <p class="lead">${text}</p>
-        ${sale ? `<p class="met-sale">${icon('meteoro')}Lluvia de meteoritos: <b>−${Math.round(MET_OFF.help * 100)}%</b></p>` : ''}
+        ${sale ? `<p class="met-sale">${icon(this.opts.meteor.ico)}${this.opts.meteor.name}: <b>−${Math.round(-this.helpRate(kind) * 100)}%</b></p>` : ''}
         ${save.coins < cost ? '<p class="note">No te alcanzan las monedas.</p>' : ''}`,
       onClose: () => (this.modalOpen = false),
       buttons: [

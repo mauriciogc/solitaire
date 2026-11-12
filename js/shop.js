@@ -6,7 +6,9 @@ import { icon } from './art.js';
 import { themeItems, TRAVELER_VARIANTS } from './themes.js';
 import { SETS, setItems, SET_PRICE } from './sets.js';
 import { FIESTAS } from './events.js';
-import { fiestaItems, fiestaTitleIcons } from './fiesta-art.js';
+import { fiestaItems, fiestaTitleIcons } from './festival-art.js';
+import { passItems } from './passport.js';
+import { starItems } from './starshower.js';
 
 // Las secciones van en 3 grupos para que las pestañas quepan en un teléfono.
 export const GROUPS = [
@@ -118,6 +120,7 @@ export const ITEMS = {
     { k: 'loro', name: 'Capitán Pico', text: 'Loro cazatesoros', ev: 'tesoro', code: 1 },
     // Exclusivos de la lluvia de meteoritos (met): muy rara vez, por ganar con 3★ mientras cae (ver meteor.js).
     { k: 'meteorin', name: 'Meteorín', text: 'Piedrita espacial con pelo de fuego', ev: 'meteoro', met: 1 },
+    { k: 'custodio', name: 'Guardián secreto', text: 'Cuida la estrella de los niveles secretos', ev: 'secretos', secreto: 1 },
   ],
   ring: [
     { k: 'sencillo', name: 'Sencillo', price: 0 },
@@ -444,9 +447,15 @@ export const ITEMS = {
   const tm = themeItems();
   for (const sec in tm) ITEMS[sec].push(...tm[sec].filter((it) => !ITEMS[sec].some((x) => x.k === it.k)));
   ITEMS.traveler.push(...TRAVELER_VARIANTS.map(({ k, name, text, price, need }) => ({ k, name, text, price, need })));
-  // Exclusivos de las festividades nuevas (10 nov 2026, fiesta-art.js).
+  // Exclusivos de las festividades nuevas (10 nov 2026, festival-art.js).
   const fi = fiestaItems(FIESTAS);
   for (const sec in fi) ITEMS[sec].push(...fi[sec]);
+  // Exclusivos del pasaporte y de los secretos (11 nov 2026, passport.js): se ganan, no se compran.
+  const pi = passItems();
+  for (const sec in pi) ITEMS[sec].push(...pi[sec]);
+  // Exclusivos de la lluvia de estrellas (12 nov 2026, starshower.js): premio de 3★ mientras cae.
+  const si = starItems();
+  for (const sec in si) ITEMS[sec].push(...si[sec]);
   // Colecciones de personaje (sets.js): cada pieza cuesta según su avatar y se abre en el mismo mundo que él.
   for (const { sec, ...it } of setItems()) {
     const av = ITEMS.avatar.find((x) => x.k === it.set), base = av.price || 300;
@@ -461,7 +470,7 @@ const ONE_NAME = {
   // Exclusivos de eventos.
   cangrejo: 'Cangrejo', topo: 'Topo minero', ardilla: 'Ardilla', osito: 'Osito de gomita', triceratops: 'Triceratops', robodog: 'Perro robot', pulpopintor: 'Pulpo pintor', ranita: 'Ranita rockera', mapache: 'Mapache director/Mapache directora', tamalito: 'Tamalito', taquito: 'Taquito', arbolito: 'Arbolito', pinatita: 'Piñatita', clavelito: 'Clavelito', bigoton: 'Bigotón', atigrado: 'Michi atigrado', dalmata: 'Dálmata', chaneque: 'Chaneque', xologuia: 'Xolo guía', lloronita: 'Lloronita', catrinita: 'Catrín/Catrina', revolucionario: 'Revolucionario/Revolucionaria', audifonos: 'Gamer pro', bichito: 'Bichito', bufoncito: 'Bufoncito', uvita: 'Uvita', xolo: 'Xólotl', reno: 'Reno', reymago: 'Rey Mago/Reina Maga', cupido: 'Cupido', catarina: 'Catarina', foca: 'Foca playera', chihuahua: 'Chihuahua charro', gatobruja: 'Gato brujo/Gata bruja', loro: 'Loro pirata', meteorin: 'Meteorín',
 };
-// Avatares de las festividades nuevas: su nombre ya viene en fiesta-art.js (con «/» si cambia para niña).
+// Avatares de las festividades nuevas: su nombre ya viene en festival-art.js (con «/» si cambia para niña).
 for (const it of ITEMS.avatar) if (FIESTAS.some((f) => f.grp && f.key === it.ev)) ONE_NAME[it.k] = it.name;
 for (const it of ITEMS.avatar) {
   const n = ONE_NAME[it.k];
@@ -511,7 +520,8 @@ export const EX_VALUE = { title: 1000, frame: 1300, space: 1600, ring: 2000, ava
 export const SELL = 0.7;
 export const sellPrice = (sec, it) => round5((it.ev ? EX_VALUE[sec] || 1500 : it.price) * SELL);
 // ¿Se puede vender? Lo que tienes y no es gratis ni de código de regalo.
-export const sellable = (sec, it) => !!it && owns(sec, it.k) && it.price !== 0 && !it.code && !it.logro;
+// Los del pasaporte y los secretos tampoco: no vuelven a salir.
+export const sellable = (sec, it) => !!it && owns(sec, it.k) && it.price !== 0 && !it.code && !it.logro && !it.pase && !it.secreto;
 // Vender: lo quitas de lo tuyo (si lo traías puesto, vuelves al de siempre), te dan las monedas y regresa a su tienda
 // (los exclusivos, a su evento).
 export function sell(sec, k) {
@@ -561,6 +571,9 @@ export function buy(sec, k, cost = item(sec, k)?.price) {
 const TITLE_ICO = { novato: 'star', explorador: 'flag', cazacometas: 'rocket', maestro: 'trophy', viajero: 'planet', bombas: 'bomb', leyenda: 'crown', buscaconchas: 'concha', cazagemas: 'gema', guardabosques: 'bellota', golosito: 'caramelo', paleontologo: 'fosil', inventor: 'tuerca', tamalero: 'tamal', taquero: 'taco', heroeverde: 'tierra', jugueton: 'pinata', consentido: 'clavel', orgullo: 'corbata', amigomichi: 'gatito', mejoramigo: 'hueso', catrin: 'calavera', duende: 'esfera', buscador: 'rosca', flechazo: 'corazon', jardinero: 'tulipan', olas: 'sol', mariachi: 'sombrero', hechicero: 'calabaza', jefefinal: 'control', cerobugs: 'llaves', bromista: 'bufon', propositos: 'reloj', artista: 'gota', estrellarock: 'nota', director: 'claqueta', nahual: 'nahual', guiaalmas: 'xolito', almadelrio: 'velita', elegancia: 'catrina', valiente: 'locomotora', cazatesoros: 'cofre', cazaestrellas: 'meteoro', perfeccionista: 'crown', imparable: 'flame', artificiero: 'bomb', cazafantasmas: 'ghost', cumplidor: 'check', explorador_secreto: 'starSecret', chispa: 'flame', estratega: 'card', cronista: 'reloj', guardiananillo: 'gema', magocartas: 'wild', invencible: 'trophy' };
 for (const s of SETS) TITLE_ICO[s.title[0]] = s.title[2];
 Object.assign(TITLE_ICO, fiestaTitleIcons(FIESTAS));
+TITLE_ICO.cazasecretos = 'starSecret';
+TITLE_ICO.trotamundos = 'pasaporte';
+TITLE_ICO.pidedeseo = 'starFall';
 export const titleName = (k = equipped('title')) => item('title', k).name;
 export const titleIcon = (k) => icon(TITLE_ICO[k] || 'star');
 export const titleHTML = (k = equipped('title'), cls = '', tag = 'span', attrs = '') =>

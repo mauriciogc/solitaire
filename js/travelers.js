@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import { INK } from './art.js';
 import { TRAVELER_VARIANTS } from './themes.js';
 import { setModels } from './set-travelers.js';
-import { fiestaModels } from './fiesta-travelers.js';
+import { fiestaModels } from './festival-travelers.js';
 
 const TAU = Math.PI * 2;
 const calm = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -1258,9 +1258,10 @@ export function makeTraveler(kind, toon = toonMaker()) {
 
 // Vitrinas abiertas: mientras haya una, el mapa 3D de atrás (tapado por la ventana) deja de dibujarse.
 export const shelfOpen = { n: 0 };
-// ¿Está tapado el mapa? Por una vitrina 3D o por una ventana grande (tienda, editor del jugador, álbum).
-// Se revisa en cada cuadro, así nunca se queda pausado aunque la ventana se cierre por otro camino.
-export const mapCovered = () => shelfOpen.n > 0 || !!document.querySelector('#modal-root :is(.shop-modal, .pf-edit, .album-modal)');
+// ¿Está tapado el mapa? Por una vitrina 3D, por una ventana grande (tienda, editor del jugador, álbum) o por lo oscuro
+// de la nave de rescate y los festejos de la portada (12 nov 2026: dibujar las dos cosas a la vez alentaba y hacía
+// parpadear). Se revisa en cada cuadro, así nunca se queda pausado aunque la ventana se cierre por otro camino.
+export const mapCovered = () => shelfOpen.n > 0 || !!document.querySelector('#modal-root :is(.shop-modal, .pf-edit, .album-modal), #app .screen > :is(.rs-back, .feat-back)');
 // Vitrina de la tienda: varios viajeros girando, cada uno en su lienzo 2D, con un solo contexto WebGL.
 export class TravelerShelf {
   constructor(slots) { // slots: [{ canvas, kind }]

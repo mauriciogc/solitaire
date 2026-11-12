@@ -2,7 +2,7 @@
 // el mismo trazo de los planetas. Reemplaza a lowpoly.js con la misma interfaz.
 import { THEMES, themeKey } from './themes.js';
 import { setArt } from './set-art.js';
-import { fiestaArt } from './fiesta-art.js';
+import { fiestaArt } from './festival-art.js';
 export const INK = '#2a1f5c';
 const K = INK;
 let uid = 0;
@@ -301,6 +301,8 @@ const ICONS = {
     + [[16.4, 13.4], [19.4, 13.6]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="1.9" fill="#8a5a2a" stroke="${K}" stroke-width="1.2"/>`).join(''),
   starSecret: () => tshape(starPath(16, 17, 14, 6.6), '#b36bff', '#8a3fe0', `<path d="M10.5 13.5l2.2-3.6" stroke="#ecdcff" stroke-width="2.2" stroke-linecap="round"/>`),
   starOff: () => tshape(starPath(16, 17, 14, 6.6), '#ddd3c0', '#c7baa2'),
+  // Pasaporte galáctico (11 nov 2026): librito azul noche con un planeta dorado con anillo.
+  pasaporte: () => `${tshape('M7 5a2 2 0 0 1 2-2h15a3 3 0 0 1 3 3v20a3 3 0 0 1-3 3H9a2 2 0 0 1-2-2z', '#3a4fc0', '#2a3a9a', '<path d="M10 4v24" stroke="#2a3a9a" stroke-width="1.6"/>', 2.2)}<circle cx="17.5" cy="14" r="5" fill="none" stroke="#ffc83d" stroke-width="2"/><path d="M11 15.5c4 2.6 10 1.4 13-2" fill="none" stroke="#ffc83d" stroke-width="1.8" stroke-linecap="round"/><path d="M13 23h9" stroke="#ffc83d" stroke-width="2" stroke-linecap="round"/>`,
   ticket: () => `<g transform="rotate(-12 16 16)">${tshape('M3 10.5a2 2 0 0 1 2-2h22a2 2 0 0 1 2 2v3a2.6 2.6 0 0 0 0 5.2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-3a2.6 2.6 0 0 0 0-5.2z', '#ff6f8e', '#e0496b', `<path d="M21 9v14" stroke="#fff" stroke-width="1.8" stroke-dasharray="2 2"/><path d="${starPath(11.5, 15.6, 4.4, 2)}" fill="#fff"/>`)}</g>`,
   gold: () => `<g transform="rotate(-12 16 16)">${tshape('M3 10.5a2 2 0 0 1 2-2h22a2 2 0 0 1 2 2v3a2.6 2.6 0 0 0 0 5.2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-3a2.6 2.6 0 0 0 0-5.2z', '#ffc83d', '#ec9a17', `<path d="M21 9v14" stroke="#fff" stroke-width="1.8" stroke-dasharray="2 2"/><path d="${starPath(11.5, 15.6, 4.4, 2)}" fill="#fff"/>`)}</g>`,
   // Boleto de constelación (8 nov 2026): como el dorado, morado y con tres estrellas unidas. Lo da el jefe del último
@@ -359,6 +361,11 @@ const ICONS = {
     + `<g transform="rotate(40 21 9)">${tshape('M18 6h6v5h-6z', '#8f88c0', '#6e66a3', '', 1.8)}</g><path d="M24 6c1.5-2.5 3.5-2.8 5-1.2" stroke="${K}" stroke-width="1.8" fill="none" stroke-linecap="round"/>${tshape(starPath(29, 4.5, 3.6, 1.6), '#ffd85a', '#ffb02e', '', 1.4)}`,
   // Cometa: estrella con cola, de lado (carta cometa).
   // Lluvia de meteoritos: piedra morada con cráteres y su cola de fuego (cae hacia abajo a la izquierda).
+  // Estrella fugaz (11 nov 2026, lluvia de estrellas): estrella dorada abajo con su estela violeta y rosa que baja desde
+  // arriba (12 nov 2026: antes subía). starDot: la misma estrella sin estela (el cielo ya le pone la suya).
+  starFall: () => tshape('M29 3Q20 7 13 15.5l3.6 3.4Q24 11 29 3z', '#c9a6ff', '#a785ff', '<path d="M27 5Q20 9.5 15 15.5" stroke="#ffb3d9" stroke-width="2.2" fill="none" stroke-linecap="round"/>', 1.8)
+    + `<path d="${starPath(11, 21, 9.5, 4.3)}" fill="#ec9a17" stroke="${K}" stroke-width="2.2" stroke-linejoin="round" transform="translate(-0.6 0.4)"/><path d="${starPath(10.6, 20.4, 8, 3.6)}" fill="#ffd23d"/><circle cx="8.4" cy="18.4" r="1.4" fill="#fff8d6"/>`,
+  starDot: () => `<path d="${starPath(16, 16.5, 12.5, 5.7)}" fill="#ec9a17" stroke="${K}" stroke-width="2.4" stroke-linejoin="round"/><path d="${starPath(15.4, 15.6, 10.4, 4.7)}" fill="#ffd23d"/><circle cx="12.6" cy="12.6" r="1.8" fill="#fff8d6"/>`,
   meteoro: () => tshape('M6.5 15.5Q15 6 30 2Q23.5 13 17 25.5z', '#ff9c3d', '#ff6a2e', '<path d="M11 16.5Q18 9.5 26.5 5.5Q21.5 13.5 17 21.5z" fill="#ffd85a"/>', 2)
     + tshape(CIRCLE(12, 21, 7.6), '#a493bd', '#7a6a9e', '<circle cx="9.4" cy="19.6" r="1.9" fill="#7a6a9e"/><circle cx="14.6" cy="24" r="1.3" fill="#7a6a9e"/><circle cx="14.4" cy="17.6" r="1" fill="#7a6a9e"/><path d="M7.4 18.4a5 5 0 0 1 3-3.2" stroke="#e4dcf2" stroke-width="1.6" fill="none" stroke-linecap="round"/>', 2.2),
   comet: () => tshape('M2.5 29.5 14 10.5l9 8.5z', '#8fd8ff', '#5fb6e8', '<path d="M6 27 15.5 14.5l3.5 3.2z" fill="#e4f7ff"/>', 2)
@@ -390,7 +397,7 @@ for (const k in SA.icons) {
   if (ICONS[k]) throw new Error(`Icono repetido: ${k}`);
   ICONS[k] = SA.icons[k];
 }
-// Festividades nuevas (10 nov 2026, fiesta-art.js): sus iconos, reversos, marcos y avatares se mezclan igual.
+// Festividades nuevas (10 nov 2026, festival-art.js): sus iconos, reversos, marcos y avatares se mezclan igual.
 const FA = fiestaArt({ tshape, CIRCLE, starPath, K, ICONS });
 for (const k in FA.icons) {
   if (ICONS[k]) throw new Error(`Icono repetido: ${k}`);
@@ -665,6 +672,13 @@ for (const k in { ...SA.backs, ...FA.backs }) {
   if (BACKS[k]) throw new Error(`Reverso repetido: ${k}`);
   BACKS[k] = SA.backs[k] || FA.backs[k];
 }
+// Reverso secreto (11 nov 2026, premio de 40 secretos): violeta noche con la estrella morada de los secretos grande.
+BACKS.secreto = { a: '#2a1f66', b: '#140a30', dots: '#d6c4ff', art: () => `<g transform="translate(14 34) scale(2.25)">${ICONS.starSecret()}</g>` };
+// Reverso de la lluvia de estrellas (12 nov 2026, su exclusivo): noche violeta con una estrella fugaz grande y
+// estrellitas doradas alrededor.
+BACKS.deseo = { a: '#3a2a99', b: '#1d1550', dots: '#ffe58a', art: () => `<g transform="translate(12 30) scale(2.4)">${ICONS.starFall()}</g>${[[20, 26, 0.45], [70, 100, 0.5], [66, 24, 0.35]].map(([x, y, k]) => `<g transform="translate(${x} ${y}) scale(${k})">${ICONS.starDot()}</g>`).join('')}` };
+// Reverso del pasaporte (12 nov 2026, sello de los 3,500): azul de pasaporte con la libreta grande y dos sellitos.
+BACKS.pasaporte = { a: '#3a4fc0', b: '#1e2a7a', dots: '#ffd85a', art: () => `<g transform="translate(14 34) scale(2.25)">${ICONS.pasaporte()}</g><g transform="translate(58 18) rotate(14 8 8) scale(.55)">${ICONS.planet()}</g><g transform="translate(20 92) rotate(-12 8 8) scale(.55)">${ICONS.rocket()}</g>` };
 // Reversos de las temáticas (themes.js): su color, puntitos claros y su dibujo grande al centro.
 for (const t of THEMES) BACKS[themeKey(t)] ??= { a: t.main, b: t.dark, dots: t.light, art: () => `<g transform="translate(18 38) scale(2)">${(ICONS[t.ico] || ICONS.star)()}</g>` };
 const backCache = {};
@@ -695,565 +709,25 @@ export function cardBackURL(k = deck, frame = '#fff6e6') {
 export const cardBack = () => '';
 
 // ---------- Avatar del jugador ----------
-// Su inicial o un personaje 2D, sobre un círculo del color que elija.
+// Su inicial (o su personaje 3D encima, ver avatar3d.js), sobre un círculo del color que elija.
 export const AVATAR_COLORS = ['#ff9c5b', '#ff5f7e', '#8a5cf0', '#4aa8de', '#2fae6a', '#ffc83d', '#5fc7e8', '#e8758a'];
 export const AVATAR_HUES = AVATAR_COLORS; // nombre viejo
 
-// Piezas de los personajes (lienzo de 100×100, el círculo los recorta).
-const P = (d, a, b, inside = '') => tshape(d, a, b, inside, 4, [-2.2, -3.6]);
 const ELL = (cx, cy, rx, ry) => `M${cx - rx} ${cy}a${rx} ${ry} 0 1 0 ${2 * rx} 0a${rx} ${ry} 0 1 0 ${-2 * rx} 0z`;
-const mirror = (inner) => `${inner}<g transform="matrix(-1 0 0 1 100 0)">${inner}</g>`;
-const eyes = (y = 52, dx = 13, r = 5) => [-dx, dx].map((x) => `<circle cx="${50 + x}" cy="${y}" r="${r}" fill="${K}"/><circle cx="${50 + x - r * 0.35}" cy="${y - r * 0.4}" r="${r * 0.38}" fill="#fff"/>`).join('');
-const smile = (y = 63, w = 7) => `<path d="M${50 - w} ${y}q${w} ${w * 0.85} ${2 * w} 0" fill="none" stroke="${K}" stroke-width="3.4" stroke-linecap="round"/>`;
-const blush = (y = 61, dx = 22) => [-dx, dx].map((x) => `<ellipse cx="${50 + x}" cy="${y}" rx="5.5" ry="3.2" fill="#ff6f8e" opacity=".55"/>`).join('');
-const shoulders = (a, b) => P('M10 104Q12 80 50 78Q88 80 90 104z', a, b);
-// Cara de niño o niña: piel, orejas y facciones (el pelo lo pone cada uno).
-const kid = (shirt, shirtD) => shoulders(shirt, shirtD)
-  + mirror(P(CIRCLE(23, 55, 6), '#ffc596', '#eda06c'))
-  + P(CIRCLE(50, 53, 27), '#ffd3a8', '#f2b07c');
-const kidFace = () => eyes(56, 11, 4.4) + smile(65, 6) + blush(63, 19);
-export const AVATARS = {
-  // 8 nov 2026: personajes nuevos de la tienda, propios (inspirados en ideas, sin copiar a nadie).
-  // Voltio: ratoncito eléctrico de orejas redondas con un rayo azul en la frente y chispitas en los cachetes.
-  voltio: () => shoulders('#ffd23d', '#ecab17')
-    + mirror(P(CIRCLE(24, 30, 13), '#ffd23d', '#ecab17', '<circle cx="24" cy="30" r="7" fill="#ffb02e"/>'))
-    + P(ELL(50, 58, 30, 27), '#ffe066', '#f2bf2a')
-    + P('M53 31 43 46h8l-4 11 12-16h-8l4-10z', '#4aa8de', '#2f86c0', '', 2.6)
-    + eyes(59, 12, 4.6) + `<ellipse cx="50" cy="67" rx="3" ry="2.2" fill="${K}"/>` + smile(71, 4)
-    + mirror(`<path d="M30 66 16 64M30 70 17 72" stroke="${K}" stroke-width="2" stroke-linecap="round"/><path d="M12 54l5-2-2 4 5-2" fill="none" stroke="#4aa8de" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>`),
-  // Tic: viajero del tiempo con sus goggles de reloj en la frente.
-  tic: () => kid('#2fb6a0', '#1f9a7c')
-    + P('M40 82h20l-4 8h-12z', '#ff9c5b', '#e2753a', '', 2.6)
-    + P('M22 50Q18 22 50 20Q82 22 78 50Q72 38 60 36Q54 42 44 37Q34 41 22 50z', '#c98a3a', '#a86a22')
-    + P('M44 23Q50 10 62 12Q56 16 56 24z', '#c98a3a', '#a86a22')
-    + `<path d="M23 38Q50 30 77 38" stroke="${K}" stroke-width="7" fill="none"/><path d="M23 38Q50 30 77 38" stroke="#6a4028" stroke-width="3.6" fill="none"/>`
-    + mirror(P(CIRCLE(38, 35, 9), '#d9a441', '#b8832a', `<circle cx="38" cy="35" r="5.4" fill="#bfe8ff" stroke="${K}" stroke-width="2"/><path d="M38 35v-3.6M38 35h3" stroke="${K}" stroke-width="1.6" stroke-linecap="round"/>`))
-    + kidFace(),
-  // Bruno: guardián del anillo. Capucha verde, pelo de rizos y su anillo dorado colgando del cuello.
-  guardian: () => P('M10 104Q8 40 50 18Q92 40 90 104z', '#3f8a4a', '#2f6a38')
-    + shoulders('#5aa85f', '#3f8a4a')
-    + mirror(P(CIRCLE(24, 56, 5.6), '#ffc596', '#eda06c'))
-    + P(CIRCLE(50, 55, 25), '#ffd3a8', '#f2b07c')
-    + [[29, 42], [33, 33], [41, 28], [50, 26], [59, 28], [67, 33], [71, 42]].map(([x, y]) => P(CIRCLE(x, y, 7), '#7a4a2a', '#5a331b')).join('')
-    + eyes(58, 10, 4.2) + smile(67, 5) + blush(64, 17)
-    + `<path d="M38 81Q50 92 62 81" fill="none" stroke="#d9a441" stroke-width="2" stroke-dasharray="2 2"/><circle cx="50" cy="93" r="5" fill="none" stroke="${K}" stroke-width="5"/><circle cx="50" cy="93" r="5" fill="none" stroke="#ffc83d" stroke-width="2.6"/>`
-    + P('M70 86q6-8 12-4-4 7-12 4z', '#7fd36a', '#56b83a', '', 2.4),
-  // Zafiro: mago de las estrellas con barba y sombrero alto lleno de estrellas.
-  mago: () => shoulders('#4a5ad8', '#2a3a9a')
-    + mirror(P(CIRCLE(26, 54, 5.4), '#f0c49a', '#dca47a'))
-    + P(CIRCLE(50, 54, 22), '#f0c49a', '#dca47a')
-    + P('M29 58Q30 92 50 94Q70 92 71 58Q64 68 50 67Q36 68 29 58z', '#f4f1ff', '#d3cdea', '<path d="M42 74q2 8 4 12M50 72v14M58 74q-2 8-4 12" stroke="#d3cdea" stroke-width="1.8" fill="none"/>')
-    + eyes(52, 9, 4) + blush(58, 16)
-    + P('M24 40 54 0 76 40z', '#4a5ad8', '#2a3a9a', [[44, 26, 4], [58, 16, 3], [62, 32, 3.4]].map(([x, y, r]) => `<path d="${starPath(x, y, r, r * 0.45)}" fill="#ffc83d"/>`).join(''))
-    + P(ELL(50, 40, 30, 6), '#5a6ae8', '#3a4ab8'),
-  // Kage: ninja con su banda roja anudada.
-  ninja: () => shoulders('#2f3550', '#1f2440')
-    + P(CIRCLE(50, 52, 30), '#2f3550', '#1f2440')
-    + P('M26 44Q50 39 74 44V60Q50 65 26 60z', '#ffd3a8', '#f2b07c')
-    + eyes(52, 11, 4.4)
-    + P('M78 35l14-7-3 10 7 6-16-3z', '#e8434f', '#c22c49', '', 3)
-    + P('M20 34Q50 27 80 34v8Q50 35 20 42z', '#e8434f', '#c22c49'),
-  // Sir Galleta: caballero con el casco levantado y su penacho rojo.
-  caballero: () => shoulders('#b9c4e0', '#8f9cc4')
-    + P('M50 20Q44 2 66 4Q56 9 58 20z', '#e8434f', '#c22c49')
-    + P('M22 54Q20 20 50 18Q80 20 78 54V76Q50 86 22 76z', '#d3dbef', '#a9b4d4')
-    + P('M34 46h32v20Q50 76 34 66z', '#ffd3a8', '#f2b07c', blush(62, 11))
-    + eyes(55, 8, 3.8) + smile(63, 4)
-    + P('M27 36Q50 28 73 36v7Q50 35 27 43z', '#a9b4d4', '#8f9cc4', `<path d="M36 38h28" stroke="${K}" stroke-width="2" stroke-dasharray="3 3"/>`),
-  // 9 nov 2026 (market de avatares): inspirados en personajes famosos, sin copiarlos.
-  // Segunda tanda (9 nov 2026): anime, caricaturas y cantantes, inspirados sin copiar.
-  // Pip: niño aventurero con gorro blanco de orejas de oso y camisa azul.
-  pip: () => shoulders('#5fc7e8', '#3aa0c8') + P('M30 80l6 24h6l-4-24z', '#5fbf5a', '#3f9a46', '', 2.4)
-    + mirror(P(CIRCLE(28, 22, 9), '#fffdf7', '#e6e0f0', '<circle cx="28" cy="22" r="4" fill="#ffd6e6"/>'))
-    + P('M22 80V46Q22 18 50 18Q78 18 78 46V80Q72 84 68 80V56Q68 40 50 40Q32 40 32 56V80Q28 84 22 80z', '#fffdf7', '#e6e0f0')
-    + P('M32 56Q32 40 50 40Q68 40 68 56V64Q68 80 50 80Q32 80 32 64z', '#ffd3a8', '#f2b07c')
-    + eyes(60, 9, 4) + smile(69, 6) + blush(66, 14),
-  // Gatobot: gato robot redondo azul con cara blanca, nariz roja, bigotes y su cascabel.
-  gatobot: () => shoulders('#2f9ee0', '#1f7ac0') + P('M30 80h40v6H30z', '#e8434f', '#c22c3c', '', 2.4) + P(CIRCLE(50, 90, 6), '#ffd23d', '#e8a12a', '', 2.4)
-    // Orejas de gato con tornillo y antena: que no se confunda con ningún gato robot conocido.
-    + mirror(P('M22 34 18 8 40 22z', '#2f9ee0', '#1f7ac0', '<path d="M23 28 22 15 33 22z" fill="#ff9cc8"/>')) + `<path d="M50 16V6" stroke="${K}" stroke-width="3"/>` + P(CIRCLE(50, 6, 3.6), '#7fe05a', '#56b83a', '', 2)
-    + P(CIRCLE(50, 48, 32), '#2f9ee0', '#1f7ac0') + P('M24 54Q24 30 50 30Q76 30 76 54Q76 76 50 76Q24 76 24 54z', '#fffdf7', '#e6e0f0')
-    + mirror(P(ELL(42, 40, 7, 9), '#fffdf7', '#e6e0f0', `<circle cx="44" cy="42" r="3" fill="${K}"/>`, 3))
-    + P(CIRCLE(50, 51, 4.6), '#e8434f', '#c22c3c', '', 2.6) + `<path d="M50 56v8M38 66q12 8 24 0" stroke="${K}" stroke-width="2.6" fill="none" stroke-linecap="round"/>`
-    + mirror(`<path d="M34 56 20 53M34 61 20 62M34 66 22 70" stroke="${K}" stroke-width="2" stroke-linecap="round"/>`),
-  // Esponjita: esponja de mar rosa con agujeritos, ojos grandes y dientes de conejo.
-  esponjita: () => shoulders('#5fc7e8', '#3aa0c8')
-    // Rosa coral y redondeada (no amarilla ni cuadrada): esponja de mar propia.
-    + P('M24 22Q50 12 76 22Q84 50 76 78Q50 86 24 78Q16 50 24 22z', '#ff9cb4', '#e87a96', [[30, 30, 3], [68, 28, 4], [28, 66, 4], [70, 66, 3], [46, 74, 2.4], [64, 48, 2.4], [30, 48, 2.6]].map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r}" fill="#d6607e"/>`).join(''))
-    + mirror(`<circle cx="40" cy="42" r="8.4" fill="#fff" stroke="${K}" stroke-width="2.6"/><circle cx="41" cy="43" r="4.4" fill="#5fbf5a"/><circle cx="41" cy="43" r="2.2" fill="${K}"/>`)
-    + `<path d="M34 58q16 12 32 0" fill="#8a2a3a" stroke="${K}" stroke-width="2.6"/><path d="M44 60h5v5h-5zM51 60h5v5h-5z" fill="#fff" stroke="${K}" stroke-width="1.6"/>` + blush(56, 22),
-  // Capitán Sombrero: pirata risueño con sombrero de paja de cinta roja y chaleco rojo.
-  capitan: () => shoulders('#e8434f', '#c22c3c') + P('M42 80h16l-8 14z', '#ffd3a8', '#f2b07c', '', 2.4)
-    + mirror(P(CIRCLE(24, 56, 6), '#ffc596', '#eda06c'))
-    + P(CIRCLE(50, 55, 26), '#ffd3a8', '#f2b07c')
-    + P('M26 50Q24 34 50 34Q76 34 74 50L70 44 66 52 60 42 54 50 48 42 42 50 36 42 30 52z', '#2a2a40', '#1a1a2a')
-    + P(ELL(50, 32, 40, 9), '#f2d38a', '#d9b45a', `<path d="M14 32q36 8 72 0" stroke="#c99a3a" stroke-width="1.4" fill="none"/>`)
-    + P('M32 30Q32 12 50 12Q68 12 68 30z', '#f2d38a', '#d9b45a', `<path d="M32 24h36v6H32z" fill="#e8434f"/>`)
-    + eyes(58, 10, 4.4) + `<path d="M40 66q10 10 20 0" fill="#fff" stroke="${K}" stroke-width="2.6" stroke-linejoin="round"/>` + `<path d="M35 62l3 2" stroke="${K}" stroke-width="2" stroke-linecap="round"/>` + blush(64, 18),
-  // Kiko: guerrero de pelo negro en picos, traje naranja con camiseta azul y muñequeras.
-  kiko: () => shoulders('#ff8a1a', '#d6600a') + P('M40 80l10 12 10-12z', '#2f6fc0', '#1f4f9a', '', 2.4)
-    + [[-1, 0], [1, 0]].map(([sx]) => P(`M50 30L${50 + sx * 40} ${22}L${50 + sx * 30} 36L${50 + sx * 44} 46L${50 + sx * 26} 48z`, '#1a1a2a', '#0a0a1a')).join('')
-    + mirror(P(CIRCLE(24, 56, 6), '#ffc596', '#eda06c'))
-    + P(CIRCLE(50, 55, 26), '#ffd3a8', '#f2b07c')
-    + P('M24 46L30 16 40 32 46 8 54 30 64 10 66 32 78 22 76 46Q66 36 58 40 50 32 42 40 34 36 24 46z', '#1a1a2a', '#0a0a1a')
-    + eyes(58, 10, 4.4) + mirror(`<path d="M35 49l9 2" stroke="${K}" stroke-width="3" stroke-linecap="round"/>`) + smile(68, 6),
-  // Luna Estelar: chica mágica de coletas en bolita, tiara con media luna y moño rojo.
-  luna: () => mirror(P('M22 44Q8 60 14 96Q20 100 26 96Q20 70 28 52z', '#ffd84a', '#f0b82a'))
-    + shoulders('#fffdf7', '#e6e0f0') + P('M28 80Q50 92 72 80L68 96H32z', '#2f6fc0', '#1f4f9a', '', 2.4) + P('M42 84q8-6 16 0-8 8-16 0z', '#e8434f', '#c22c3c', '', 2.4)
-    + mirror(P(CIRCLE(24, 32, 11), '#ffd84a', '#f0b82a'))
-    + mirror(P(CIRCLE(23, 56, 6), '#ffc596', '#eda06c'))
-    + P(CIRCLE(50, 54, 26), '#ffd3a8', '#f2b07c')
-    + P('M24 50Q22 26 50 26Q78 26 76 50Q70 40 62 40L58 46 54 38 46 46 42 38 38 46Q30 40 24 50z', '#ffd84a', '#f0b82a')
-    + P('M44 28l6-4 6 4-6 6z', '#ffd23d', '#e8a12a', `<circle cx="50" cy="29" r="1.8" fill="#e8434f"/>`, 2.2)
-    + eyes(58, 10, 4.4) + smile(67, 5) + blush(64, 17),
-  // Estrella Pop: cantante de pelo largo ondulado, diadema con micrófono y vestido de lentejuelas.
-  estrellapop: () => P('M20 40Q10 80 22 100H78Q90 80 80 40z', '#8a4a2a', '#6a331b')
-    + shoulders('#e86ac8', '#c24aa8') + [30, 42, 58, 70].map((x, i) => `<path d="${starPath(x, 92 - (i % 2) * 4, 3, 1.3)}" fill="#fff6c8"/>`).join('')
-    + mirror(P(CIRCLE(24, 56, 6), '#ffc596', '#eda06c'))
-    + P(CIRCLE(50, 54, 26), '#ffd3a8', '#f2b07c')
-    + P('M24 50Q22 22 50 24Q78 22 76 50Q68 36 56 34Q46 42 34 38Q28 42 24 50z', '#8a4a2a', '#6a331b')
-    + `<path d="M24 56Q22 70 34 70" stroke="${K}" stroke-width="5" fill="none"/><path d="M24 56Q22 70 34 70" stroke="#8a8aa8" stroke-width="2.4" fill="none"/>` + P(CIRCLE(36, 70, 3.6), '#4a4270', '#3a3260', '', 2)
-    + eyes(57, 10, 4.4) + `<path d="M44 65q6 6 12 0" fill="#e8434f" stroke="${K}" stroke-width="2.4"/>` + blush(63, 17)
-    + `<path d="${starPath(70, 30, 6, 2.6)}" fill="#ffd23d" stroke="${K}" stroke-width="2" stroke-linejoin="round"/>`,
-  // Rocky: rockero de chamarra negra, pelo en cresta y lentes oscuros.
-  rocky: () => shoulders('#2a2a40', '#1a1a2a') + mirror(P('M30 80l10 6-6 16z', '#3a3a5a', '#2a2a40', '', 2.4)) + P('M42 80h16l-8 12z', '#e8434f', '#c22c3c', '', 2.4)
-    + mirror(P(CIRCLE(24, 56, 6), '#ffc596', '#eda06c'))
-    + P(CIRCLE(50, 55, 26), '#ffd3a8', '#f2b07c')
-    + P('M28 46Q28 30 50 30Q72 30 72 46Q64 40 50 40Q36 40 28 46z', '#2a2a40', '#1a1a2a')
-    + P('M40 34L44 6 50 20 56 4 60 34z', '#e8434f', '#c22c3c')
-    + `<path d="M32 54h36" stroke="${K}" stroke-width="3"/>` + mirror(P('M33 52h14v6a5 5 0 0 1-5 5h-4a5 5 0 0 1-5-5z', '#2a2a40', '#1a1a2a', '<path d="M36 54l4 4" stroke="#8a8aa8" stroke-width="1.6"/>', 2.4))
-    + `<path d="M42 70q8 4 16-2" fill="none" stroke="${K}" stroke-width="3.2" stroke-linecap="round"/>`,
-  // Mina: idol de pelo lila con fleco, aretes de corazón y su moño.
-  mina: () => P('M22 42Q14 76 24 98H76Q86 76 78 42z', '#c9a6ff', '#a07ae0')
-    + shoulders('#fffdf7', '#e6e0f0') + P('M40 80l10 8 10-8v8H40z', '#ff9cc8', '#e8709a', '', 2.4)
-    + mirror(P(CIRCLE(24, 56, 6), '#ffc596', '#eda06c'))
-    + mirror(`<path d="M24 64c-2-1.4-3-2.6-2.4-3.6.6-.8 1.6-.4 2.4.4.8-.8 1.8-1.2 2.4-.4.6 1-.4 2.2-2.4 3.6z" fill="#ff5f9e" stroke="${K}" stroke-width="1"/>`)
-    + P(CIRCLE(50, 54, 26), '#ffd3a8', '#f2b07c')
-    + P('M24 54Q20 24 50 24Q80 24 76 54Q74 44 70 40L66 48 60 38 54 46 48 38 42 46 36 38 32 46Q28 44 24 54z', '#c9a6ff', '#a07ae0')
-    + P('M64 28q6-8 12-2-6 6-12 2zM64 28q-2-10 6-10-2 8-6 10z', '#ff7ab8', '#e8559a', '', 2)
-    + eyes(59, 10, 4.6) + smile(68, 5) + blush(65, 17),
-  // MC Beat: rapero de sudadera verde agua, gorra amarilla y audífonos grandes.
-  mcbeat: () => shoulders('#2fb6a0', '#1f8a7a') + `<path d="M40 82q10 8 20 0" fill="none" stroke="#fff" stroke-width="2.4"/>`
-    + mirror(P(CIRCLE(24, 56, 6), '#c9885a', '#a86a3a'))
-    + P(CIRCLE(50, 55, 26), '#d9a070', '#b8824a')
-    + P('M26 44Q26 24 50 24Q74 24 74 44z', '#ffd23d', '#e8a12a', `<path d="M50 24v20" stroke="#e8a12a" stroke-width="1.6"/>`)
-    + P('M60 40h24q2 6-4 6H60z', '#ffd23d', '#e8a12a', '', 2.6)
-    + `<path d="M22 54Q22 26 50 26Q78 26 78 54" fill="none" stroke="${K}" stroke-width="7"/><path d="M22 54Q22 26 50 26Q78 26 78 54" fill="none" stroke="#2a2a40" stroke-width="3.6"/>` + mirror(P('M16 48h10v16H16z', '#2a2a40', '#1a1a2a', '<path d="M18 52h6v8h-6z" fill="#2fb6a0"/>', 2.6))
-    + eyes(58, 10, 4.4) + `<path d="M43 67q7 5 14 0" fill="none" stroke="${K}" stroke-width="3" stroke-linecap="round"/>`,
-  // Profe Voltaje: científico de bata blanca, pelo blanco alborotado a los lados, goggles en la frente y cara de "¡eureka!".
-  profe: () => shoulders('#fffdf7', '#e3dcf0') + P('M40 80 50 96 60 80z', '#ff9c5b', '#e2753a', '', 2.6)
-    + mirror(P('M24 40Q8 36 12 50Q4 56 14 62Q10 72 24 68Q22 56 26 46z', '#f4f1ff', '#cfc8e8'))
-    + mirror(P(CIRCLE(24, 55, 6), '#ffc596', '#eda06c'))
-    + P(CIRCLE(50, 53, 26), '#ffd3a8', '#f2b07c')
-    + `<path d="M28 34Q50 26 72 34" stroke="${K}" stroke-width="7" fill="none"/><path d="M28 34Q50 26 72 34" stroke="#8a5cf0" stroke-width="3.6" fill="none"/>`
-    + mirror(P(CIRCLE(40, 32, 7), '#d9dde8', '#a8b0c8', `<circle cx="40" cy="32" r="4" fill="#8fe8ff" stroke="${K}" stroke-width="1.6"/>`))
-    + mirror(`<path d="M34 45l11-2" stroke="${K}" stroke-width="3.6" stroke-linecap="round"/>`)
-    + mirror(`<circle cx="40" cy="53" r="6" fill="#fff" stroke="${K}" stroke-width="2.2"/><circle cx="41" cy="53" r="3" fill="${K}"/>`)
-    + P(ELL(50, 67, 4.4, 5), '#8a2a3a', '#6a1a2a', '', 2.6) + blush(62, 19),
-  // Turbo: chico del futuro con chaleco inflado rojo sobre chamarra de mezclilla y copete castaño.
-  turbo: () => shoulders('#4a78c0', '#3a5fa0') + mirror(P('M14 104Q14 82 36 80L42 104z', '#ff4f5e', '#d6303f', `<path d="M20 90h18M18 97h20" stroke="#ff8a95" stroke-width="2"/>`))
-    + mirror(P(CIRCLE(23, 55, 6), '#ffc596', '#eda06c'))
-    + P(CIRCLE(50, 53, 27), '#ffd3a8', '#f2b07c')
-    + P('M23 48Q20 22 50 20Q80 22 77 48Q72 34 60 32Q50 40 38 33Q28 38 23 48z', '#8a5a2a', '#6a3f1a')
-    + P('M36 32Q44 12 66 18Q60 22 58 30Q48 26 36 32z', '#8a5a2a', '#6a3f1a')
-    + kidFace(),
-  // Papaya: piloto de carreras con casco abierto naranja papaya, visera arriba y su traje con franja azul.
-  papaya: () => shoulders('#ff8a1a', '#d6600a') + `<path d="M28 90h44" stroke="#2f86c0" stroke-width="5"/>`
-    + P('M18 66Q14 18 50 16Q86 18 82 66Q80 76 70 78V60Q70 40 50 40Q30 40 30 60V78Q20 76 18 66z', '#ff8a1a', '#d6600a', `<path d="M20 50Q50 40 80 50" stroke="#2f86c0" stroke-width="4" fill="none"/>`)
-    + P('M24 30Q50 18 76 30L72 36Q50 28 28 36z', '#2a3a6a', '#1a2a4a', `<path d="M34 28q16-5 32 0" stroke="#8fe8ff" stroke-width="2" fill="none" stroke-linecap="round"/>`)
-    + P('M30 44Q50 36 70 44V64Q70 80 50 80Q30 80 30 64z', '#ffd3a8', '#f2b07c')
-    + eyes(56, 10, 4.4) + smile(66, 6) + blush(63, 16),
-  // Cora: arqueóloga con sombrero de explorador, trenza y pañuelo verde.
-  cora: () => P('M70 50Q84 64 76 86Q72 90 68 86Q74 70 64 58z', '#7a4a2a', '#5a331b', `<path d="M70 66l6 4M70 74l6 3" stroke="#5a331b" stroke-width="1.6"/>`)
-    + shoulders('#e8c98a', '#c9a46a') + P('M36 80Q50 92 64 80L60 90Q50 96 40 90z', '#2fae6a', '#1f8a52', '', 2.6)
-    + mirror(P(CIRCLE(23, 56, 6), '#ffc596', '#eda06c'))
-    + P(CIRCLE(50, 54, 26), '#ffd3a8', '#f2b07c')
-    + P('M25 50Q24 34 50 32Q76 34 75 50Q66 42 50 42Q34 42 25 50z', '#7a4a2a', '#5a331b')
-    + P('M8 36Q50 22 92 36Q88 42 50 38Q12 42 8 36z', '#c9a46a', '#a8843a')
-    + P('M30 34Q30 12 50 12Q70 12 70 34Q50 28 30 34z', '#c9a46a', '#a8843a', `<path d="M30 30Q50 24 70 30" stroke="#6a4028" stroke-width="4" fill="none"/>`)
-    + kidFace(),
-  nino: () => kid('#ff9c5b', '#e2753a')
-    + `<path d="M40 82 50 92 60 82" fill="none" stroke="${K}" stroke-width="3" stroke-linejoin="round"/>`
-    + P('M22 52Q18 22 50 21Q82 22 78 52Q74 40 64 37Q58 43 47 38Q36 42 22 52z', '#7a4a2a', '#5a331b')
-    + P('M46 24Q49 11 61 12Q56 17 55 25z', '#7a4a2a', '#5a331b')
-    + kidFace(),
-  nina: () => mirror(P(CIRCLE(24, 25, 11), '#4a2e6b', '#352050'))
-    + mirror(P('M24 50Q18 64 21 80Q28 78 30 66z', '#4a2e6b', '#352050'))
-    + kid('#8a5cf0', '#6a3fd0')
-    + P('M22 54Q18 22 50 21Q82 22 78 54Q72 38 58 34Q54 41 44 36Q32 40 22 54z', '#4a2e6b', '#352050')
-    + P(starPath(70, 30, 7, 3.2), '#ffc83d', '#ec9a17', '', 2.6)
-    + kidFace(),
-  astro: () => shoulders('#f4f1ff', '#d3cdea')
-    + `<path d="M50 18V9" stroke="${K}" stroke-width="3.5"/>` + P(CIRCLE(50, 8, 4.5), '#ff5f7e', '#d63d5f')
-    + mirror(P(CIRCLE(20, 48, 6), '#c9bff0', '#a79ee0'))
-    + P(CIRCLE(50, 48, 31), '#f4f1ff', '#d3cdea')
-    + P('M28 42a12 12 0 0 1 12-12h20a12 12 0 0 1 12 12v5a14 14 0 0 1-14 14H42a14 14 0 0 1-14-14z', '#2f3f8f', '#22306e',
-      `<ellipse cx="42" cy="45" rx="3.6" ry="4.6" fill="#fff"/><ellipse cx="58" cy="45" rx="3.6" ry="4.6" fill="#fff"/><path d="M45 53q5 4 10 0" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/><path d="M33 38q3-5 9-5" stroke="#fff" stroke-width="3" stroke-linecap="round" fill="none" opacity=".6"/>`),
-  ajolote: () => shoulders('#ffb3d1', '#f28ab3')
-    + mirror([[17, 32, -40], [11, 47, -8], [15, 62, 24]].map(([x, y, r]) => `<g transform="rotate(${r} ${x} ${y})">${P(ELL(x, y, 11, 5.5), '#ff6f9e', '#e04f85')}</g>`).join(''))
-    + P(ELL(50, 52, 32, 26), '#ffc2dc', '#f59cc0') + eyes(49, 15, 4.6) + `<path d="M36 60q14 10 28 0" fill="none" stroke="${K}" stroke-width="3.4" stroke-linecap="round"/>` + blush(58, 24),
-  gato: () => shoulders('#ffb066', '#e8853e')
-    + mirror(P('M20 42 24 12 44 30z', '#ffb066', '#e8853e', '<path d="M26 34 28 20 37 29z" fill="#ff9cb4"/>'))
-    + P(ELL(50, 54, 32, 27), '#ffc183', '#f0974f', `<path d="M44 30v7M50 29v8M56 30v7" stroke="#e8853e" stroke-width="3.4" stroke-linecap="round"/>`)
-    + eyes(52, 13, 4.8) + `<path d="M47 60h6l-3 3.5z" fill="#ff7a9a" stroke="${K}" stroke-width="2" stroke-linejoin="round"/><path d="M50 63.5q-3 4-7 1M50 63.5q3 4 7 1" fill="none" stroke="${K}" stroke-width="2.6" stroke-linecap="round"/>`
-    + mirror(`<path d="M30 60 12 57M30 64 13 66" stroke="${K}" stroke-width="2.2" stroke-linecap="round"/>`),
-  zorro: () => shoulders('#ff8a3d', '#e2692a')
-    + mirror(P('M18 44 20 8 44 30z', '#ff8a3d', '#e2692a', '<path d="M24 34 25 18 36 29z" fill="#5a3324"/>'))
-    + P('M16 48Q16 26 50 26Q84 26 84 48Q84 68 50 84Q16 68 16 48z', '#ff9a4f', '#ec7631', '<path d="M16 50Q32 52 50 84Q24 74 16 50zM84 50Q68 52 50 84Q76 74 84 50z" fill="#fff6e6"/>')
-    + eyes(50, 14, 4.6) + `<ellipse cx="50" cy="70" rx="5" ry="3.8" fill="${K}"/>` + smile(74, 4),
-  robot: () => shoulders('#b9c4e0', '#8f9cc4')
-    + `<path d="M50 28V14" stroke="${K}" stroke-width="3.5"/>` + P(CIRCLE(50, 12, 5), '#ffc83d', '#ec9a17')
-    + mirror(P('M10 46h8v18h-8z', '#8f9cc4', '#6f7cab'))
-    + P('M24 28h52a9 9 0 0 1 9 9v34a9 9 0 0 1-9 9H24a9 9 0 0 1-9-9V37a9 9 0 0 1 9-9z', '#c9d2ea', '#9aa7cf',
-      `<path d="M27 37h46a5 5 0 0 1 5 5v22a5 5 0 0 1-5 5H27a5 5 0 0 1-5-5V42a5 5 0 0 1 5-5z" fill="#24305e" stroke="${K}" stroke-width="3"/><rect x="33" y="44" width="10" height="10" rx="3" fill="#5ff0ff"/><rect x="57" y="44" width="10" height="10" rx="3" fill="#5ff0ff"/><path d="M42 60q8 5 16 0" fill="none" stroke="#5ff0ff" stroke-width="3" stroke-linecap="round"/>`),
-  alien: () => shoulders('#7fd85a', '#56b83a')
-    + mirror(`<path d="M40 28 30 10" stroke="${K}" stroke-width="3.5" stroke-linecap="round"/>` + P(CIRCLE(29, 9, 5), '#ff7ab8', '#e0569a'))
-    + P('M50 22C77 22 86 42 82 58 78 74 63 86 50 86 37 86 22 74 18 58 14 42 23 22 50 22z', '#9be86a', '#6cc447')
-    + mirror(`<g transform="rotate(-28 36 54)"><ellipse cx="36" cy="54" rx="9" ry="12.5" fill="${K}"/><ellipse cx="33" cy="49" rx="3" ry="4" fill="#fff"/></g>`)
-    + `<path d="M45 72q5 3 10 0" fill="none" stroke="${K}" stroke-width="3" stroke-linecap="round"/>`,
-  pulpo: () => mirror([18, 32, 46].map((x, i) => P(`M${x - 6} 70h12v${22 - i * 3}a6 6 0 0 1-12 0z`, '#a77bff', '#8257e6')).join(''))
-    + P('M18 66C16 34 32 18 50 18S84 34 82 66Q66 74 50 74T18 66z', '#b993ff', '#9068ee', '<circle cx="34" cy="30" r="4" fill="#d9c4ff"/><circle cx="64" cy="26" r="3" fill="#d9c4ff"/><circle cx="72" cy="40" r="2.4" fill="#d9c4ff"/>')
-    + eyes(50, 13, 5) + smile(60, 6) + blush(58, 23),
-  buho: () => mirror(P('M24 36 21 12 40 27z', '#a8703f', '#835228'))
-    + P(ELL(50, 62, 34, 36), '#b57a4a', '#8d5a32', `<path d="${ELL(50, 86, 19, 17)}" fill="#f2d3a8"/><path d="M42 82l4 3 4-3 4 3 4-3M44 90l3 2 3-2 3 2 3-2" fill="none" stroke="#c99a68" stroke-width="2.2" stroke-linecap="round"/>`)
-    + mirror(P(CIRCLE(37, 50, 12.5), '#fff6e6', '#ecdcc0') + `<circle cx="38" cy="51" r="6.5" fill="${K}"/><circle cx="35.5" cy="48.5" r="2.4" fill="#fff"/>`)
-    + P('M45 60h10l-5 9z', '#ffb02e', '#e8851a', '', 3),
-  dino: () => mirror(P('M8 104Q10 80 50 78Q90 80 92 104z', '#7fd85a', '#56b83a'))
-    + [[36, 30, -20], [50, 24, 0], [64, 30, 20]].map(([x, y, r]) => `<g transform="rotate(${r} ${x} ${y})">${P(`M${x - 7} ${y + 8}L${x} ${y - 8}L${x + 7} ${y + 8}z`, '#ff9c5b', '#e2753a')}</g>`).join('')
-    + P(ELL(50, 56, 31, 27), '#8fe06a', '#62c043', `<circle cx="30" cy="40" r="3" fill="#62c043"/><circle cx="70" cy="38" r="2.4" fill="#62c043"/>`)
-    + P(ELL(50, 69, 17, 10), '#c8f5a8', '#a8e284', `<circle cx="45" cy="66" r="1.8" fill="${K}"/><circle cx="55" cy="66" r="1.8" fill="${K}"/>`)
-    + eyes(51, 14, 5) + `<path d="M43 72q7 5 14 0" fill="none" stroke="${K}" stroke-width="3" stroke-linecap="round"/>` + blush(60, 24),
-  unicornio: () => shoulders('#f4ecff', '#dccff0')
-    + mirror(P('M24 40Q8 62 18 86Q26 74 32 60z', '#ff9cc8', '#e870a8'))
-    + mirror(P('M28 36 30 16 42 30z', '#fff6fb', '#ecd8ec', '<path d="M32 30 33 21 38 28z" fill="#ffb3d1"/>'))
-    + P(ELL(50, 57, 28, 26), '#fff6fb', '#ecd8ec')
-    + P('M30 40Q40 24 60 32Q70 28 72 40Q60 34 50 40Q40 36 30 40z', '#b993ff', '#9068ee')
-    + P('M44 32 50 6 56 32z', '#ffc83d', '#ec9a17', `<path d="M46 26l8-3M47 19l6-2" stroke="#fff3b8" stroke-width="2.4" stroke-linecap="round"/>`)
-    + eyes(57, 11, 4.4) + smile(67, 5) + blush(65, 19),
-  panda: () => shoulders('#3a3a4a', '#26263a')
-    + mirror(P(CIRCLE(26, 32, 10), '#3a3a4a', '#26263a'))
-    + P(ELL(50, 57, 31, 27), '#ffffff', '#e3e0ef')
-    + mirror(`<g transform="rotate(-25 37 55)">${P(ELL(37, 55, 8, 10.5), '#3a3a4a', '#26263a')}</g><circle cx="37" cy="54" r="3.6" fill="#fff"/><circle cx="36" cy="53" r="1.6" fill="${K}"/>`)
-    + `<ellipse cx="50" cy="66" rx="5" ry="3.6" fill="${K}"/>` + smile(71, 4.5) + blush(66, 25),
-  pinguino: () => shoulders('#2f3550', '#1f2440')
-    + P(ELL(50, 54, 32, 30), '#2f3550', '#1f2440')
-    + P('M50 40Q60 30 72 40Q80 56 70 72Q60 82 50 82Q40 82 30 72Q20 56 28 40Q40 30 50 40z', '#ffffff', '#e3e0ef')
-    + eyes(54, 11, 4.4) + P('M43 62h14l-7 8z', '#ffb02e', '#e8851a') + blush(64, 19),
-  conejo: () => shoulders('#f4f1ff', '#d3cdea')
-    + mirror(`<g transform="rotate(-8 36 24)">${P('M30 42Q22 4 35 2Q46 6 42 42z', '#f4f1ff', '#d3cdea', '<path d="M33 36Q30 14 35 9Q40 14 38 36z" fill="#ffb3d1"/>')}</g>`)
-    + P(ELL(50, 60, 28, 25), '#f4f1ff', '#d3cdea')
-    + eyes(58, 11, 4.4) + `<path d="M47 65h6l-3 3z" fill="#ff7a9a" stroke="${K}" stroke-width="2" stroke-linejoin="round"/><path d="M50 68q-3 4-6 1M50 68q3 4 6 1" fill="none" stroke="${K}" stroke-width="2.4" stroke-linecap="round"/>` + blush(66, 19),
-  capibara: () => shoulders('#b8865a', '#94663e')
-    + mirror(P(CIRCLE(25, 33, 6), '#a87650', '#86592f'))
-    + P('M20 44Q20 28 50 28Q80 28 80 44V66Q80 84 50 84Q20 84 20 66z', '#c4946a', '#a87650')
-    + P(ELL(50, 70, 20, 12), '#a87650', '#8a5c38', `<ellipse cx="44" cy="66" rx="2.4" ry="1.6" fill="${K}"/><ellipse cx="56" cy="66" rx="2.4" ry="1.6" fill="${K}"/>`)
-    + `<path d="M31 49q5 3 10 0M59 49q5 3 10 0" fill="none" stroke="${K}" stroke-width="3.4" stroke-linecap="round"/>` + smile(76, 4)
-    + P(CIRCLE(50, 21, 9), '#ff9c3b', '#e2752a', '<path d="M50 12q4-6 9-4-3 5-9 4z" fill="#5fc760" stroke="#2a1f5c" stroke-width="1.6"/>'),
-  perrito: () => shoulders('#ff9c5b', '#e2753a')
-    + P(ELL(50, 56, 28, 26), '#f6d4a0', '#e8b678', `<path d="${ELL(62, 52, 9, 8)}" fill="#d9a066"/>`)
-    + mirror(`<g transform="rotate(14 20 50)">${P('M26 32Q8 36 12 62Q20 68 28 52z', '#8a5a3a', '#6a4028')}</g>`)
-    + eyes(53, 12, 4.6) + `<ellipse cx="50" cy="63" rx="5.5" ry="4" fill="${K}"/>` + P('M46 69h8v5a4 4 0 0 1-8 0z', '#ff7a9a', '#e0507e', '', 2.6) + blush(64, 21),
-  tortuga: () => P('M6 104Q8 70 50 68Q92 70 94 104z', '#8a6a3a', '#6a4c22', `<path d="M30 104 36 84H64L70 104M36 84 50 76 64 84" fill="none" stroke="#c9a06a" stroke-width="3"/>`)
-    + P(ELL(50, 50, 26, 24), '#9be86a', '#6cc447', `<circle cx="36" cy="34" r="3" fill="#6cc447"/><circle cx="64" cy="36" r="2.4" fill="#6cc447"/>`)
-    + eyes(50, 11, 4.6) + smile(60, 6) + blush(58, 18),
-  abeja: () => P('M10 104Q12 80 50 78Q88 80 90 104z', '#ffd23d', '#ecab17', `<path d="M20 92h60M14 102h72" stroke="${K}" stroke-width="7"/>`)
-    + mirror(`<g transform="rotate(-25 20 44)">${P(ELL(20, 44, 13, 8), '#e6f6ff', '#bfe0f5')}</g>`)
-    + mirror(`<path d="M40 32Q34 18 26 14" fill="none" stroke="${K}" stroke-width="3.4" stroke-linecap="round"/>` + P(CIRCLE(25, 13, 4.5), '#3a3a4a', '#26263a'))
-    + P(ELL(50, 56, 28, 26), '#ffd23d', '#ecab17')
-    + eyes(55, 11, 4.6) + smile(65, 6) + blush(63, 19),
-  dragoncito: () => mirror(P('M20 70 2 46 8 70 0 78 22 80z', '#2fae96', '#1f8a76'))
-    + shoulders('#4fd1b5', '#2fae96')
-    + mirror(P('M32 34 24 12 42 28z', '#ffe58a', '#e8b53a'))
-    + P(ELL(50, 56, 29, 26), '#5fdcc0', '#3fbea2', `<path d="${ELL(50, 72, 14, 7)}" fill="#c9f5e8"/>`)
-    + eyes(53, 12, 4.8) + `<circle cx="45" cy="68" r="1.7" fill="${K}"/><circle cx="55" cy="68" r="1.7" fill="${K}"/><path d="M43 74q7 4 14 0" fill="none" stroke="${K}" stroke-width="3" stroke-linecap="round"/><path d="M53 75l2 4 2-4z" fill="#fff" stroke="${K}" stroke-width="1.4"/>` + blush(62, 23),
-  fantasma: () => P('M18 110V54Q18 20 50 20Q82 20 82 54V110z', '#ffffff', '#e3e0ef')
-    + mirror(`<ellipse cx="39" cy="50" rx="5.5" ry="7.5" fill="${K}"/><circle cx="37" cy="47" r="2" fill="#fff"/>`)
-    + `<ellipse cx="50" cy="64" rx="4.5" ry="5.5" fill="${K}"/>` + blush(60, 20)
-    + mirror(P('M18 66Q8 70 10 80Q16 76 20 76z', '#ffffff', '#e3e0ef')),
-  estrella: () => P(starPath(50, 56, 46, 23), '#ffd23d', '#ecab17')
-    + eyes(54, 9, 4.2) + smile(63, 5) + blush(61, 16)
-    + P(starPath(84, 16, 7, 3), '#fff3b8', '#ffd77a', '', 2) + P(starPath(14, 22, 5, 2.2), '#fff3b8', '#ffd77a', '', 2),
-  // Exclusivos de la colección.
-  cangrejo: () => mirror(`<path d="M26 54 18 40" stroke="${K}" stroke-width="7" stroke-linecap="round"/><path d="M26 54 18 40" stroke="#ff6f61" stroke-width="3.4" stroke-linecap="round"/>`
-      + P('M16 42Q4 30 12 16Q19 21 17 28Q25 23 27 32Q27 42 16 42z', '#ff6f61', '#e0524a'))
-    + P(ELL(50, 72, 36, 26), '#ff6f61', '#e0524a', '<path d="M30 64q20 -8 40 0" stroke="#ff9c8f" stroke-width="3" fill="none" stroke-linecap="round"/>')
-    + mirror(`<path d="M40 56V40" stroke="${K}" stroke-width="7" stroke-linecap="round"/><path d="M40 56V40" stroke="#ff6f61" stroke-width="3.4" stroke-linecap="round"/>`
-      + P(CIRCLE(40, 36, 8), '#fff', '#e3d8ff', `<circle cx="41" cy="37" r="4" fill="${K}"/><circle cx="39.6" cy="35.4" r="1.5" fill="#fff"/>`))
-    + smile(76, 7) + blush(74, 20),
-  topo: () => shoulders('#8a6a5a', '#6a4e40')
-    + P(ELL(50, 58, 30, 30), '#9a7a6a', '#7a5a4a')
-    + P(ELL(50, 69, 15, 11), '#f0d2b8', '#dcb898') + eyes(55, 12, 3.6)
-    + P(CIRCLE(50, 64, 5.5), '#ff8fb0', '#e8648a') + smile(73, 5) + blush(66, 21)
-    + P('M18 44Q18 16 50 16Q82 16 82 44z', '#ffc83d', '#ec9a17') + P('M12 42h76v7H12z', '#ffc83d', '#ec9a17')
-    + P(CIRCLE(50, 28, 7.5), '#fff3b8', '#ffd27a', '<path d="M47 25l3-2" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/>'),
-  ardilla: () => P('M66 104Q100 86 92 52Q88 28 70 32Q84 50 74 70Q64 86 66 104z', '#c9692a', '#a8521c', '<path d="M80 44q8 14 0 32" stroke="#e8853e" stroke-width="5" fill="none" stroke-linecap="round"/>')
-    + shoulders('#ffb066', '#e8853e')
-    + mirror(P('M27 36 28 14 42 28z', '#e8853e', '#c9692a', '<path d="M31 30 31 21 37 28z" fill="#ffd2a8"/>'))
-    + P(ELL(50, 52, 27, 25), '#ffb066', '#e8853e')
-    + P(ELL(50, 63, 13, 9), '#fff1d6', '#f0d8b4') + eyes(50, 11, 4.8)
-    + `<path d="M47 59h6l-3 3z" fill="${K}" stroke="${K}" stroke-width="2" stroke-linejoin="round"/>` + smile(64, 5) + blush(60, 20),
-  osito: () => shoulders('#ff6f8e', '#e0496b')
-    + mirror(P(CIRCLE(27, 30, 10), '#ff6f8e', '#e0496b'))
-    + P(ELL(50, 54, 29, 26), '#ff7a95', '#e8566f', '<ellipse cx="38" cy="40" rx="7" ry="4" fill="#fff" opacity=".45" transform="rotate(-25 38 40)"/>')
-    + P(ELL(50, 64, 11, 8), '#ffb0c0', '#ff94a8') + eyes(51, 12, 4.4)
-    + `<ellipse cx="50" cy="61" rx="3.6" ry="2.6" fill="${K}"/>` + smile(66, 5),
-  // Triceratops (Valle de los dinosaurios): cresta naranja con picos y manchas, dos cuernos, pico y cuerno en la nariz.
-  triceratops: () => shoulders('#5fb8d0', '#3f98b4')
-    + [[12, 50], [15, 32], [26, 18], [41, 11], [59, 11], [74, 18], [85, 32], [88, 50]].map(([x, y]) => P(CIRCLE(x, y, 6.5), '#ffa040', '#e8802a')).join('')
-    + P('M10 60Q6 16 50 12Q94 16 90 60Q70 50 50 50Q30 50 10 60z', '#ffa040', '#e8802a', `${[[19, 42], [28, 27], [50, 20], [72, 27], [81, 42]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="4" fill="#ffd23d"/>`).join('')}`)
-    + P(ELL(50, 60, 26, 23), '#6cc8de', '#4aa8c4', '<ellipse cx="36" cy="47" rx="6" ry="3.4" fill="#fff" opacity=".35" transform="rotate(-25 36 47)"/>')
-    + mirror(P('M33 44Q25 30 24 14Q36 27 43 40z', '#fff1d6', '#e8d2a8'))
-    + P('M38 67Q50 61 62 67Q61 79 50 86Q39 79 38 67z', '#8fd6e8', '#6cc0d6', `<circle cx="45.5" cy="70.5" r="1.7" fill="${K}"/><circle cx="54.5" cy="70.5" r="1.7" fill="${K}"/><path d="M45 76.5q5 3 10 0" fill="none" stroke="${K}" stroke-width="2.6" stroke-linecap="round"/>`)
-    + P('M45 66Q50 50 55 66z', '#fff1d6', '#e8d2a8', '', 3)
-    + eyes(54, 13, 4.6) + blush(65, 22),
-  // Perro robot (Taller de robots): cabeza de metal, orejas de antena, ojos de luz y collar con su tuerca.
-  robodog: () => shoulders('#9aa7cf', '#7884b0')
-    + P('M24 82Q50 92 76 82l2 7Q50 100 22 89z', '#ff9c5b', '#e2753a', `<g transform="translate(43.6 85.6) scale(.4)">${ICONS.tuerca()}</g>`)
-    + mirror(`<path d="M28 40 18 18" stroke="${K}" stroke-width="5" stroke-linecap="round"/><path d="M28 40 18 18" stroke="#c9d2ea" stroke-width="2" stroke-linecap="round"/>` + P(CIRCLE(17, 16, 5), '#ff5f7e', '#d63d5f'))
-    + mirror(`<g transform="rotate(14 20 52)">${P('M26 36Q10 38 12 64Q20 70 28 54z', '#7f8ab8', '#5f6a9a')}</g>`)
-    + P('M26 34h48a10 10 0 0 1 10 10v24a14 14 0 0 1-14 14H30a14 14 0 0 1-14-14V44a10 10 0 0 1 10-10z', '#d6dcf0', '#aab4d8', '<path d="M24 42h52" stroke="#aab4d8" stroke-width="2"/><circle cx="22" cy="40" r="1.6" fill="#7f8ab8"/><circle cx="78" cy="40" r="1.6" fill="#7f8ab8"/>')
-    + [-13, 13].map((x) => `<circle cx="${50 + x}" cy="54" r="7" fill="#24305e" stroke="${K}" stroke-width="2.4"/><circle cx="${50 + x}" cy="54" r="4" fill="#5ff0ff"/><circle cx="${50 + x - 1.4}" cy="52.4" r="1.4" fill="#fff"/>`).join('')
-    + P(ELL(50, 69, 12, 8), '#eef1fb', '#c9d2ea', `<ellipse cx="50" cy="66" rx="4.4" ry="3" fill="${K}"/><path d="M44 72q6 4 12 0" fill="none" stroke="${K}" stroke-width="2.4" stroke-linecap="round"/>`)
-    + blush(66, 25),
-  // Tamalito (Candelaria): un tamal con cara, envuelto en su hoja de maíz y con su moño.
-  tamalito: () => P('M12 104C4 72 16 30 50 8c34 22 46 64 38 96z', '#c8d86a', '#a8bc4a', '<path d="M50 14v90M34 30Q24 66 30 104M66 30Q76 66 70 104" stroke="#98ac3e" stroke-width="3" fill="none"/>')
-    + P('M26 80C22 56 32 36 50 26c18 10 28 30 24 54Q50 90 26 80z', '#ffe7a0', '#f2cf72', '<path d="M40 36q10-6 20 0" stroke="#e8434f" stroke-width="5" fill="none" stroke-linecap="round"/>')
-    + eyes(56, 10, 4.4) + smile(66, 5) + blush(64, 17)
-    + `<path d="M14 88Q50 100 86 88" fill="none" stroke="${K}" stroke-width="11" stroke-linecap="round"/><path d="M14 88Q50 100 86 88" fill="none" stroke="#e8c070" stroke-width="5.4" stroke-linecap="round"/>`
-    + P('M50 94 36 84 38 100z', '#e8434f', '#c22c3c', '', 3) + P('M50 94 64 84 62 100z', '#e8434f', '#c22c3c', '', 3) + P(CIRCLE(50, 94, 4.6), '#ff6f7a', '#e8434f', '', 3),
-  // Taquito (Día del Taco): tortilla dorada con cara, y de pelo la lechuga, el jitomate y la cebolla.
-  taquito: () => P('M8 52q4-14 14-8 4-12 14-5 6-12 16-1 8-11 16 1 10-8 16 5 8-3 8 8z', '#6fc25a', '#4fa84a')
-    + [[26, 44], [44, 40], [62, 42], [78, 47]].map(([x, y]) => P(CIRCLE(x, y, 6), '#e8434f', '#c22c3c', '<circle cx="-2" cy="-2" r="1.6" fill="#fff" opacity=".6"/>', 3)).join('')
-    + [[35, 47], [70, 48]].map(([x, y]) => P(CIRCLE(x, y, 4), '#fff6ee', '#e8dfd2', '', 2.6)).join('')
-    + P('M4 52h92a46 44 0 0 1-92 0z', '#ffd27a', '#e8b04a', `<path d="M12 56a38 36 0 0 0 76 0" fill="none" stroke="#f2c060" stroke-width="3"/>${[[24, 80], [70, 84], [80, 66], [20, 64]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="2.2" fill="#c98a3a"/>`).join('')}`)
-    + eyes(66, 13, 4.6) + smile(77, 6) + blush(74, 23),
-  // Arbolito (Día de la Tierra): copa verde esponjada con cara, tronco de camisa y una florecita.
-  arbolito: () => shoulders('#a86a3a', '#83501a')
-    + P('M40 70h20v14H40z', '#a86a3a', '#83501a')
-    + P('M18 54C8 52 8 34 20 32 18 18 34 12 42 20 46 8 64 10 66 22 80 18 90 30 84 42 94 50 88 66 76 64 72 76 56 78 50 72 42 80 26 76 26 66 16 68 12 58 18 54z', '#6fc25a', '#4fa84a', '<path d="M26 30q6-6 14-4M62 22q8 0 12 6" stroke="#8fd46a" stroke-width="4" fill="none" stroke-linecap="round"/>')
-    + eyes(50, 12, 4.6) + smile(60, 6) + blush(58, 21)
-    + [0, 72, 144, 216, 288].map((a) => `<ellipse cx="74" cy="${30 - 4.6}" rx="3" ry="4.6" fill="#ff9cc8" stroke="${K}" stroke-width="1.6" transform="rotate(${a} 74 30)"/>`).join('') + `<circle cx="74" cy="30" r="3" fill="#ffc83d" stroke="${K}" stroke-width="1.6"/>`,
-  // Piñatita (Día del Niño): piñata de estrella con cara y sus picos de colores con flecos.
-  pinatita: () => [-90, -18, 54, 126, 198].map((d, i) => {
-      const a = (d * Math.PI) / 180, b = 0.6, c = ['#ffc83d', '#47c27a', '#4aa8de', '#ff9c5b', '#b36bff'][i], sh = ['#ec9a17', '#2f9e5c', '#2f86c0', '#e2753a', '#8a4ad8'][i];
-      const Q = (r, aa) => `${(50 + Math.cos(aa) * r).toFixed(1)} ${(58 + Math.sin(aa) * r).toFixed(1)}`;
-      return P(`M${Q(23, a - b)}L${Q(48, a)}L${Q(23, a + b)}z`, c, sh) + `<path d="M${Q(48, a)}l${(Math.cos(a + 0.5) * 8).toFixed(1)} ${(Math.sin(a + 0.5) * 8).toFixed(1)}M${Q(48, a)}l${(Math.cos(a - 0.5) * 8).toFixed(1)} ${(Math.sin(a - 0.5) * 8).toFixed(1)}" stroke="#ff5f7e" stroke-width="4" stroke-linecap="round"/>`;
-    }).join('')
-    + P(CIRCLE(50, 58, 25), '#ff7ab8', '#e8559a', '<path d="M25 50h50M25 68h50" stroke="#fff0f6" stroke-width="4"/>')
-    + eyes(56, 10, 4.6) + smile(66, 6) + blush(64, 17),
-  // Clavelito (Día de las Madres): clavel con cara, sus pétalos de holán y dos hojas como hombros.
-  clavelito: () => P('M42 104Q42 86 50 82Q58 86 58 104z', '#4fa84a', '#2f8a42')
-    + P('M50 96Q28 100 14 84Q34 76 50 90z', '#6fc25a', '#4fa84a') + P('M50 96Q72 100 86 84Q66 76 50 90z', '#8fd46a', '#6fc25a')
-    + Array.from({ length: 12 }, (_, i) => { const a = (i * 30 * Math.PI) / 180; return P(CIRCLE(+(50 + Math.cos(a) * 31).toFixed(1), +(46 + Math.sin(a) * 29).toFixed(1), 11), i % 2 ? '#ff5f8f' : '#ff7aa6', '#e0406f'); }).join('')
-    + P(ELL(50, 46, 31, 28), '#ffb3cb', '#ff8fb0', '<path d="M26 34q6-8 14-8" stroke="#ffd6e4" stroke-width="4" fill="none" stroke-linecap="round"/>')
-    + eyes(46, 11, 4.6) + smile(56, 6) + blush(54, 20),
-  // Bigotón (Día del Padre): el tazón azul de papá con su café humeante, gran bigote y franja dorada.
-  bigoton: () => '<path d="M40 24q-4-5 0-10t0-10M60 24q-4-5 0-10t0-10" stroke="#fff" stroke-width="3.4" fill="none" stroke-linecap="round" opacity=".75"/>'
-    + P('M74 44h5a13 13 0 0 1 0 26h-5v-8h5a5 5 0 0 0 0-10h-5z', '#3f8ad8', '#2a6fb8')
-    + P('M26 34h48v50a12 12 0 0 1-12 12H38a12 12 0 0 1-12-12z', '#4aa8de', '#2f86c0', '<path d="M26 86h48" stroke="#ffc83d" stroke-width="5"/><path d="M33 44v30" stroke="#9fd8ff" stroke-width="4" stroke-linecap="round" opacity=".7"/>')
-    + P(ELL(50, 34, 24, 6), '#8a5a3a', '#6e4026')
-    + eyes(52, 11, 4.6) + blush(62, 18)
-    + `<g transform="translate(28.2 47) scale(1.36)">${ICONS.bigote()}</g>`,
-  // Michi atigrado (Día del Gato): gatito gris con rayas, ojos verdes, collar rojo y su cascabel.
-  atigrado: () => shoulders('#a9b0c8', '#868ea8')
-    + mirror(P('M20 42 24 12 44 30z', '#a9b0c8', '#868ea8', '<path d="M26 34 28 20 37 29z" fill="#ff9cb4"/>'))
-    + P(ELL(50, 54, 32, 27), '#b9c0d6', '#9aa2ba', `<path d="M44 29v8M50 28v9M56 29v8M19 50h7M18 58h7M81 50h-7M82 58h-7" stroke="#6e7690" stroke-width="3.4" stroke-linecap="round"/>`)
-    + [-13, 13].map((x) => `<ellipse cx="${50 + x}" cy="52" rx="5.4" ry="6" fill="#7fd36a" stroke="${K}" stroke-width="2.4"/><ellipse cx="${50 + x}" cy="52.6" rx="1.8" ry="4.4" fill="${K}"/><circle cx="${48.4 + x}" cy="49.6" r="1.6" fill="#fff"/>`).join('')
-    + `<path d="M47 61h6l-3 3.5z" fill="#ff7a9a" stroke="${K}" stroke-width="2" stroke-linejoin="round"/><path d="M50 64.5q-3 4-7 1M50 64.5q3 4 7 1" fill="none" stroke="${K}" stroke-width="2.6" stroke-linecap="round"/>`
-    + mirror(`<path d="M30 61 12 58M30 65 13 67" stroke="${K}" stroke-width="2.2" stroke-linecap="round"/>`)
-    + P('M28 79Q50 88 72 79l1 7Q50 95 27 86z', '#e8434f', '#c22c3c')
-    + P(CIRCLE(50, 92, 6), '#ffc83d', '#ec9a17', `<path d="M45 92h10" stroke="${K}" stroke-width="1.6"/><circle cx="50" cy="94.6" r="1.4" fill="${K}"/>`),
-  // Manchitas (Día del Perro): dálmata blanco con manchas negras, orejas caídas, lengua de fuera y su collar con placa.
-  dalmata: () => shoulders('#fff8f0', '#e6dccb') + `<circle cx="28" cy="92" r="5" fill="${K}"/><circle cx="72" cy="96" r="4" fill="${K}"/>`
-    + P(ELL(50, 54, 30, 27), '#fff8f0', '#e6dccb', `<circle cx="66" cy="40" r="6" fill="${K}"/><circle cx="34" cy="70" r="4" fill="${K}"/><circle cx="72" cy="66" r="3" fill="${K}"/><circle cx="40" cy="34" r="3" fill="${K}"/>`)
-    + mirror(`<g transform="rotate(10 22 46)">${P('M28 30Q8 32 12 64Q20 70 28 52z', '#3a3550', '#2a2540')}</g>`)
-    + eyes(53, 12, 4.6) + `<ellipse cx="50" cy="63" rx="6" ry="4.4" fill="${K}"/>` + P('M45 68h10v8a5 5 0 0 1-10 0z', '#ff7a9a', '#e0507e', '<path d="M50 69v6" stroke="#e0507e" stroke-width="1.6"/>', 2.6) + blush(64, 21)
-    + P('M28 80Q50 89 72 80l1 6Q50 95 27 86z', '#e8434f', '#c22c3c')
-    + P('M44 88h12v6a6 6 0 0 1-12 0z', '#ffc83d', '#ec9a17', `<path d="M47 92h6" stroke="#ec9a17" stroke-width="1.6" stroke-linecap="round"/>`),
-  // Gamer pro (Día del Gamer): con sus audífonos rosas, micrófono y un corazón de píxeles en la playera.
-  audifonos: () => shoulders('#5a4f8a', '#3f3570') + `<g transform="translate(41 84) scale(.56)">${ICONS.pixcora()}</g>`
-    + mirror(P(CIRCLE(23, 55, 6), '#ffc596', '#eda06c'))
-    + P(CIRCLE(50, 53, 27), '#ffd3a8', '#f2b07c')
-    + P('M23 50Q19 23 50 22Q81 23 77 50Q71 37 58 35Q52 42 44 36Q33 40 23 50z', '#2a2540', '#1a1530')
-    + `<path d="M21 52Q19 15 50 15Q81 15 79 52" fill="none" stroke="${K}" stroke-width="10" stroke-linecap="round"/><path d="M21 52Q19 15 50 15Q81 15 79 52" fill="none" stroke="#ff5f7e" stroke-width="5" stroke-linecap="round"/>`
-    + `<path d="M22 62Q24 74 38 72" fill="none" stroke="${K}" stroke-width="5.4" stroke-linecap="round"/><path d="M22 62Q24 74 38 72" fill="none" stroke="#9aa2ba" stroke-width="2.4" stroke-linecap="round"/>`
-    + mirror(P(ELL(21, 55, 7, 10), '#ff5f7e', '#d63d5f', `<ellipse cx="20" cy="55" rx="3" ry="5" fill="#5fd1f0"/>`))
-    + P(CIRCLE(39, 72, 3.6), '#4a4560', '#36324a')
-    + kidFace(),
-  // Bichito (Día del Programador): el bug más simpático, verde con sus lentes redondos y antenas.
-  bichito: () => mirror(`<path d="M24 58 12 52M23 70 10 72M28 82 18 92" stroke="${K}" stroke-width="4" stroke-linecap="round"/>`)
-    + mirror(`<path d="M44 28Q38 12 28 12" fill="none" stroke="${K}" stroke-width="3.6" stroke-linecap="round"/>` + P(CIRCLE(27, 12, 5), '#ffc83d', '#ec9a17'))
-    + P(ELL(50, 66, 28, 28), '#5ad68c', '#2f9e5c', `<path d="M50 40v56" stroke="${K}" stroke-width="3"/><circle cx="36" cy="70" r="5" fill="#2f9e5c"/><circle cx="64" cy="76" r="6" fill="#2f9e5c"/><circle cx="62" cy="58" r="3.6" fill="#2f9e5c"/><circle cx="38" cy="86" r="3.4" fill="#2f9e5c"/>`)
-    + P(ELL(50, 40, 22, 17), '#4a4560', '#36324a')
-    + [-9, 9].map((x) => `<circle cx="${50 + x}" cy="40" r="6.6" fill="#fff"/><circle cx="${50 + x}" cy="41" r="3.4" fill="${K}"/><circle cx="${48.8 + x}" cy="39.4" r="1.3" fill="#fff"/>`).join('')
-    + `<circle cx="41" cy="40" r="8" fill="none" stroke="#ffc83d" stroke-width="2.6"/><circle cx="59" cy="40" r="8" fill="none" stroke="#ffc83d" stroke-width="2.6"/><path d="M49 39h2" stroke="#ffc83d" stroke-width="2.6"/>`
-    + `<path d="M45 50q5 4 10 0" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/>`,
-  // Bufoncito (Día de los Inocentes): con su gorro de tres puntas, cascabeles y su cuello de olanes.
-  bufoncito: () => shoulders('#8a5cf0', '#6c3fd4')
-    + P('M18 80h64l-5 11-5.4-8-5.4 8-5.4-8-5.4 8-5.4-8-5.4 8-5.4-8-5.4 8-5.4-8-5.4 8z', '#fff6ee', '#e3d8ff')
-    + mirror(P(CIRCLE(23, 57, 6), '#ffc596', '#eda06c'))
-    + P(CIRCLE(50, 55, 26), '#ffd3a8', '#f2b07c')
-    + P('M26 44Q14 32 13 14Q28 18 40 34z', '#e8434f', '#c22c3c') + P('M74 44Q86 32 87 14Q72 18 60 34z', '#e8434f', '#c22c3c')
-    + P('M34 38Q40 16 50 6Q60 16 66 38z', '#ffc83d', '#ec9a17')
-    + P('M22 46Q50 30 78 46l-2 9Q50 40 24 55z', '#8a5cf0', '#6c3fd4', `<path d="M30 48l4 4 4-5 4 4 4-5 4 4 4-5 4 4 4-5 4 4" fill="none" stroke="#c9b4ff" stroke-width="2"/>`)
-    + [[13, 14], [87, 14], [50, 7]].map(([x, y]) => P(CIRCLE(x, y, 5.4), '#ffe27a', '#ec9a17')).join('')
-    + eyes(59, 11, 4.4) + `<path d="M41 68q9 9 18 0" fill="#c22c3c" stroke="${K}" stroke-width="3" stroke-linejoin="round"/>` + blush(66, 19),
-  // Uvita (Año Nuevo): una de las doce uvas, con su hojita y gorrito de fiesta.
-  uvita: () => shoulders('#ffc83d', '#ec9a17') + `<circle cx="30" cy="94" r="2.6" fill="#ff5f7e"/><circle cx="50" cy="90" r="2.6" fill="#5fd1f0"/><circle cx="70" cy="95" r="2.6" fill="#7fd36a"/>`
-    + P(CIRCLE(50, 56, 29), '#b06ce0', '#7b3fb8', `<ellipse cx="36" cy="42" rx="7" ry="4" fill="#f0dcff" opacity=".7" transform="rotate(-35 36 42)"/>`)
-    + P('M56 30Q68 18 80 24Q72 36 56 30z', '#7fc46a', '#5fae5a', `<path d="M58 29q10-2 18-4" stroke="#4a8a3a" stroke-width="1.6" fill="none"/>`)
-    + `<g transform="rotate(-14 44 20)">${P('M44 4 56 30H32z', '#ff5fa8', '#e0408a', `<path d="M38 18h12M35 25h18" stroke="#ffe27a" stroke-width="3"/>`)}${P(CIRCLE(44, 4, 4.6), '#ffe27a', '#ec9a17')}</g>`
-    + eyes(56, 11, 4.6) + smile(66, 6) + blush(64, 20),
-  // Pincelín (Taller de arte): pulpo pintor con boina roja, salpicado de pintura, con su pincel en un tentáculo.
-  pulpopintor: () => mirror(`<path d="M30 76Q18 86 22 100M40 80q-4 12 0 22" fill="none" stroke="${K}" stroke-width="10" stroke-linecap="round"/><path d="M30 76Q18 86 22 100M40 80q-4 12 0 22" fill="none" stroke="#ff8fb8" stroke-width="6" stroke-linecap="round"/>`)
-    + `<path d="M74 78Q90 72 88 58" fill="none" stroke="${K}" stroke-width="10" stroke-linecap="round"/><path d="M74 78Q90 72 88 58" fill="none" stroke="#ff8fb8" stroke-width="6" stroke-linecap="round"/><path d="M88 60 96 30" stroke="${K}" stroke-width="5.4" stroke-linecap="round"/><path d="M88 60 96 30" stroke="#c98a3a" stroke-width="2.6" stroke-linecap="round"/><path d="M94 34l4-10 3 2-3 10z" fill="#4aa8de" stroke="${K}" stroke-width="2"/>`
-    + P(ELL(50, 54, 30, 28), '#ff8fb8', '#e86a9a', `<circle cx="66" cy="70" r="4" fill="#4aa8de"/><circle cx="32" cy="38" r="3" fill="#ffc83d"/><circle cx="70" cy="44" r="2.4" fill="#7fd36a"/><circle cx="36" cy="72" r="2.6" fill="#e86a9a"/>`)
-    + eyes(56, 11, 5) + smile(68, 6) + blush(64, 20)
-    + P('M24 34Q26 16 50 15Q74 16 78 32Q50 40 24 34z', '#e8434f', '#c22c3c') + P(CIRCLE(52, 14, 4), '#e8434f', '#c22c3c'),
-  // Ranita (Banda musical): rana verde de ojos saltones, sonrisa grande y su guitarra.
-  ranita: () => shoulders('#5fae5a', '#3f8a3a')
-    + P(ELL(50, 62, 33, 24), '#7fd36a', '#5fae5a', '<ellipse cx="50" cy="76" rx="18" ry="6" fill="#c8f0a8"/>')
-    + mirror(P(CIRCLE(33, 40, 12), '#7fd36a', '#5fae5a', `<circle cx="33" cy="40" r="7.6" fill="#fff"/><circle cx="34" cy="41" r="4.4" fill="${K}"/><circle cx="32.4" cy="39" r="1.6" fill="#fff"/>`))
-    + `<path d="M30 64q20 16 40 0" fill="#e8434f" stroke="${K}" stroke-width="3" stroke-linejoin="round"/>` + blush(62, 24)
-    + `<g transform="rotate(-30 66 90)">${P(ELL(64, 92, 13, 10), '#ff9c3d', '#e2753a', `<circle cx="64" cy="92" r="4" fill="${K}"/>`)}${P('M74 89h22v6H74z', '#8a5a3a', '#6e4026')}<path d="M76 92h18" stroke="#fff6e6" stroke-width="1"/></g>`,
-  // Mapache director (Estudio de cine): con su antifaz, boina negra, chaqueta roja y el megáfono.
-  mapache: () => shoulders('#e8434f', '#c22c3c') + `<path d="M40 80 50 90 60 80" fill="#fff6ee" stroke="${K}" stroke-width="2.4" stroke-linejoin="round"/>`
-    + mirror(P('M26 46 22 22 40 34z', '#a9b0c8', '#868ea8', '<path d="M27 40 25 28 34 35z" fill="#4a4560"/>'))
-    + P(ELL(50, 58, 28, 23), '#a9b0c8', '#868ea8', '<path d="M50 62q-10 16-20 6M50 62q10 16 20 6" fill="#fff6ee"/>')
-    + `<path d="M22 54Q30 44 44 52Q50 56 56 52Q70 44 78 54Q70 64 58 60Q50 56 42 60Q30 64 22 54z" fill="#3a3550"/>` + eyes(54, 11, 4.4)
-    + `<ellipse cx="50" cy="66" rx="4.4" ry="3.2" fill="${K}"/><path d="M50 69v3M46 74q4 3 8 0" fill="none" stroke="${K}" stroke-width="2" stroke-linecap="round"/>`
-    + P('M28 36Q30 22 50 21Q70 22 74 34Q50 42 28 36z', '#2a2540', '#1a1530') + P(CIRCLE(50, 21, 3.4), '#2a2540', '#1a1530')
-    + `<g transform="rotate(-20 82 86)">${P('M70 82h8l14-8v26l-14-8h-8z', '#ffc83d', '#ec9a17')}</g>`,
-  // Chaneque (Nahual y Chaneques): duende travieso de la selva con orejotas y su gorro de hoja.
-  chaneque: () => shoulders('#3f9a4a', '#2f7a3a') + mirror(P('M26 52 4 40 22 66z', '#9ad46a', '#6fae4a', '<path d="M22 54 10 46 21 61z" fill="#c8f0a8"/>'))
-    + P(CIRCLE(50, 58, 26), '#9ad46a', '#6fae4a', '<circle cx="36" cy="66" r="1.4" fill="#4a8a3a"/><circle cx="40" cy="70" r="1.4" fill="#4a8a3a"/><circle cx="64" cy="66" r="1.4" fill="#4a8a3a"/><circle cx="60" cy="70" r="1.4" fill="#4a8a3a"/>')
-    + P('M20 44C26 16 74 16 80 44 66 34 34 34 20 44z', '#3f9a4a', '#2f7a3a', '<path d="M50 22v16M36 28l6 8M64 28l-6 8" stroke="#7fd36a" stroke-width="2.4"/>') + P('M48 20q4-10 12-10-2 8-10 12z', '#7fd36a', '#5fae5a')
-    + eyes(56, 10, 4.8) + `<path d="M38 68q12 12 24 0" fill="#fff6e6" stroke="${K}" stroke-width="3" stroke-linejoin="round"/><path d="M44 70v4M50 71v5M56 70v4" stroke="${K}" stroke-width="1.6"/>`,
-  // Xolo guía (Día del Xoloitzcuintle): xolo gris con su copete, collar de cempasúchil y su farolito.
-  xologuia: () => shoulders('#ff9c1a', '#e0700a') + mirror(P('M30 46 22 8 46 32z', '#4a4560', '#36324a', '<path d="M30 38 26 16 40 31z" fill="#ff9cb0"/>'))
-    + P(ELL(50, 58, 25, 23), '#4a4560', '#36324a', '<path d="M44 37q6-8 12 0" fill="none" stroke="#7a7290" stroke-width="3"/>')
-    + [-10, 10].map((x) => `<circle cx="${50 + x}" cy="56" r="5" fill="#fff6e6"/><circle cx="${50.6 + x}" cy="56.6" r="3" fill="${K}"/><circle cx="${49.4 + x}" cy="55" r="1" fill="#fff"/>`).join('')
-    + `<ellipse cx="50" cy="66" rx="5" ry="3.4" fill="#1a1530"/>` + P('M46 70h8v6a4 4 0 0 1-8 0z', '#ff7a9a', '#e0507e', '', 2.6)
-    + [26, 36, 46, 56, 66, 76].map((x, i) => marigold(x, 82 + Math.abs(i - 2.5) * -1.6 + 3, 5.4)).join('')
-    + `<g transform="translate(64 64) scale(.9)">${ICONS.farolito()}</g>`,
-  // Lloronita (La Llorona): con su rebozo azul, su cabello largo y la velita que alumbra el río.
-  lloronita: () => P('M14 104Q8 70 20 42 30 18 50 16 70 18 80 42 92 70 86 104z', '#4a6ad8', '#3a52b0', '<path d="M18 92q32-10 64 0" stroke="#7f9cf0" stroke-width="2.4" fill="none"/><path d="M20 98q30-8 60 0" stroke="#fff" stroke-width="1.6" fill="none" stroke-dasharray="4 4"/>')
-    + P('M28 48Q28 90 38 96H62Q72 90 72 48 50 30 28 48z', '#2a2540', '#1a1530')
-    + P(ELL(50, 58, 18, 22), '#f0e6ff', '#d8c8f0')
-    + `<path d="M40 56q4 4 8 0M52 56q4 4 8 0" fill="none" stroke="${K}" stroke-width="2.6" stroke-linecap="round"/><path d="M42 62q-2 5 0 7 2-2 0-7z" fill="#8fd8ff" stroke="${K}" stroke-width="1.2"/><path d="M46 70q4 2.4 8 0" fill="none" stroke="${K}" stroke-width="2.4" stroke-linecap="round"/>` + blush(64, 12)
-    + `<g transform="translate(60 72) scale(.9)">${ICONS.velita()}</g>`,
-  // Catrinita (La Catrina): calaverita elegante con su sombrero de flores, pluma y cuello de encaje.
-  catrinita: () => shoulders('#8a5cf0', '#6c3fd4') + P('M26 82Q50 96 74 82l2 8Q50 104 24 90z', '#fff6ee', '#e3d8ff', `${[30, 38, 46, 54, 62, 70].map((x) => `<circle cx="${x}" cy="${88 + (x === 30 || x === 70 ? -2 : 0)}" r="2" fill="#e3d8ff"/>`).join('')}`)
-    + P(CIRCLE(50, 60, 22), '#fff6ee', '#e3d6ee', `${[-9, 9].map((x) => `<circle cx="${50 + x}" cy="58" r="6.4" fill="${K}"/><circle cx="${50 + x}" cy="58" r="3.6" fill="#ff5fa8"/><circle cx="${50 + x}" cy="58" r="1.4" fill="#ffc83d"/>`).join('')}<path d="M47.6 66h4.8L50 69.6z" fill="${K}"/><path d="M40 74h20M43 72v4M47 72v4M51 72v4M55 72v4" stroke="${K}" stroke-width="1.6"/><circle cx="50" cy="44" r="2.4" fill="#ff5fa8"/>`)
-    + P('M4 38Q50 22 96 38 50 48 4 38z', '#6c3fd4', '#4a2a9a') + P('M30 34q0-22 20-22t20 22q-20 6-40 0z', '#8a5cf0', '#6c3fd4')
-    + [[34, 26, '#ff5fa8'], [46, 20, '#ffc83d'], [58, 22, '#ff7a3a'], [66, 30, '#ff5fa8']].map(([x, y, c]) => P(CIRCLE(x, y, 6), c, '#0002', `<circle cx="${x}" cy="${y}" r="2" fill="#fff6c8"/>`)).join('')
-    + `<path d="M68 22Q86 2 96 8 86 14 72 28z" fill="#ff9cc8" stroke="${K}" stroke-width="3" stroke-linejoin="round"/>`,
-  // Revolucionario (Día de la Revolución): niño con sombrero de palma, bigotote y paliacate rojo; sin armas.
-  revolucionario: () => shoulders('#fff6ee', '#e3d8ff') + P('M34 80 50 96 66 80 58 78 50 86 42 78z', '#e8434f', '#c22c3c', '<circle cx="46" cy="84" r="1.2" fill="#fff"/><circle cx="54" cy="84" r="1.2" fill="#fff"/>')
-    + mirror(P(CIRCLE(24, 58, 5.4), '#e8a878', '#cf8a5a'))
-    + P(CIRCLE(50, 58, 25), '#f0b888', '#dca06a')
-    + eyes(55, 10, 4.2) + blush(64, 18)
-    + `<path d="M50 64Q42 60 32 70Q42 70 50 67Q58 70 68 70Q58 60 50 64z" fill="#3a2418" stroke="${K}" stroke-width="2" stroke-linejoin="round"/>`
-    + P(ELL(50, 40, 44, 9), '#f2d38a', '#d9b060', '<path d="M10 41a40 6 0 0 0 80 0" fill="none" stroke="#c9a050" stroke-width="2"/>')
-    + P('M34 40c0-16 7-26 16-26s16 10 16 26q-16 4-32 0z', '#f2d38a', '#d9b060', '<path d="M34 34q16 4 32 0" stroke="#e8434f" stroke-width="4" fill="none"/>'),
-  // Exclusivo del evento: Día de Muertos.
-  xolo: () => mirror(P('M26 46 16 10 42 30z', '#4a4560', '#36324a', '<path d="M25 37 21 18 35 30z" fill="#ff9cb0"/>'))
-    + shoulders('#4a4560', '#36324a')
-    + [22, 36, 50, 64, 78].map((x, i) => marigold(x, 86 + (i % 2 ? 2 : 0), 7.5)).join('')
-    + P(ELL(50, 56, 27, 25), '#5a5472', '#47425c')
-    + P('M41 34q3-11 9-3q5-9 9 3q-9-3-18 0z', '#efeaf7', '#cfc8e2')
-    + P(ELL(50, 67, 13, 9), '#6e6888', '#5a5472') + eyes(53, 12, 4.6)
-    + `<ellipse cx="50" cy="62" rx="4.6" ry="3.4" fill="${K}"/>` + smile(70, 5) + blush(66, 20)
-    + marigold(70, 33, 8),
-  // Exclusivo del evento: Navidad. Reno con suéter verde y bufanda de rayas.
-  reno: () => mirror(`<path d="M37 36Q31 22 25 9M29.5 22 17 18M33 29 22 31" fill="none" stroke="${K}" stroke-width="8.6" stroke-linecap="round"/><path d="M37 36Q31 22 25 9M29.5 22 17 18M33 29 22 31" fill="none" stroke="#e8c08a" stroke-width="4" stroke-linecap="round"/>`)
-    + mirror(P(ELL(23, 47, 9, 5), '#a8693a', '#8a5228', '<ellipse cx="23" cy="47" rx="5" ry="2.2" fill="#ffc8a0"/>'))
-    + shoulders('#4fae4a', '#3a8a3a')
-    + P(ELL(50, 56, 25, 24), '#a8693a', '#8a5228', '<ellipse cx="39" cy="42" rx="6" ry="3.4" fill="#fff" opacity=".35" transform="rotate(-25 39 42)"/>')
-    + P('M24 80Q50 90 76 80l3 9Q50 100 21 89z', '#e8434f', '#c22c3c', '<path d="M33 83v12M44 86v12M56 86v12M67 83v12" stroke="#fff" stroke-width="4"/>')
-    + P(ELL(50, 68, 14, 9.5), '#ecc79e', '#d4a676') + eyes(52, 11, 4.6)
-    + P(CIRCLE(50, 63, 5.6), '#ff4a5a', '#d62a3c', '<circle cx="48.3" cy="61.3" r="1.7" fill="#fff"/>') + smile(71, 5) + blush(64, 19),
-  // Exclusivo del evento: Día de Reyes. Rey Mago: barba blanca, capa con cuello de armiño y su corona alta con joyas.
-  reymago: () => shoulders('#8a5cf0', '#6c3fd4')
-    + P('M24 84Q50 98 76 84l3 10Q50 108 21 94z', '#fff6ee', '#e3d8ff', `${[30, 42, 54, 66].map((x, i) => `<path d="M${x} ${90 + (i % 2) * 2}v4" stroke="${K}" stroke-width="2.4" stroke-linecap="round"/>`).join('')}`)
-    + mirror(P(CIRCLE(25, 52, 5.6), '#e8b48a', '#d4966a'))
-    + P(CIRCLE(50, 50, 24), '#f0c49a', '#dca47a')
-    + P('M27 54Q28 86 50 88Q72 86 73 54Q66 64 50 63Q34 64 27 54z', '#f4f1ff', '#d3cdea', '<path d="M40 70q2 8 4 12M50 68v14M60 70q-2 8-4 12" stroke="#d3cdea" stroke-width="1.8" fill="none"/>')
-    + P('M50 60Q42 56 36 62Q44 66 50 63Q56 66 64 62Q58 56 50 60z', '#f4f1ff', '#d3cdea')
-    + eyes(48, 10, 4.2) + blush(54, 17)
-    + P('M28 36 25 6l9 10 8-13 8 13 8-13 8 13 9-10-3 30z', '#ffc83d', '#ec9a17', '<circle cx="34" cy="16" r="2.4" fill="#e8434f"/><circle cx="50" cy="12" r="2.6" fill="#3fa0e0"/><circle cx="66" cy="16" r="2.4" fill="#5fae5a"/>')
-    + P('M26 30h48v8H26z', '#ffc83d', '#ec9a17', '<circle cx="50" cy="34" r="2.8" fill="#e8434f"/><circle cx="36" cy="34" r="2" fill="#3fa0e0"/><circle cx="64" cy="34" r="2" fill="#3fa0e0"/>'),
-  // Exclusivo del evento: Amor y Amistad. Cupido: querubín cachetón de rizos dorados, alas grandes y su arco con flecha de corazón.
-  cupido: () => mirror(P('M28 74Q2 70 4 42Q14 54 22 52Q12 40 20 30Q32 48 36 70z', '#fff6ee', '#e3d6ee', '<path d="M10 48q6 6 14 6M16 36q6 8 14 14" stroke="#cfc0e0" stroke-width="1.8" fill="none"/>'))
-    + shoulders('#fff6ee', '#e3d6ee') + P('M28 82Q50 92 74 80l2 6Q50 100 26 88z', '#ff7ab8', '#e8559a')
-    + P(CIRCLE(50, 54, 28), '#ffdcc4', '#f4bc9e')
-    + [[30, 32, 8], [41, 26, 8.4], [53, 24, 8.4], [65, 28, 8], [73, 38, 6.4], [26, 42, 6]].map(([x, y, r]) => P(CIRCLE(x, y, r), '#ffc83d', '#ec9a17', `<path d="M${x - r * 0.4} ${y}a${r * 0.4} ${r * 0.4} 0 1 1 ${r * 0.5} ${r * 0.3}" fill="none" stroke="#e89a17" stroke-width="1.6"/>`)).join('')
-    + eyes(56, 11, 4.8) + `<ellipse cx="50" cy="68" rx="3.6" ry="3" fill="#c22c5c"/>` + `<ellipse cx="29" cy="64" rx="7" ry="4.4" fill="#ff6f8e" opacity=".6"/><ellipse cx="71" cy="64" rx="7" ry="4.4" fill="#ff6f8e" opacity=".6"/>`
-    + `<path d="M70 66Q94 80 74 100" fill="none" stroke="${K}" stroke-width="5.4" stroke-linecap="round"/><path d="M70 66Q94 80 74 100" fill="none" stroke="#c98a3a" stroke-width="2.6" stroke-linecap="round"/><path d="M70 66L74 100" stroke="${K}" stroke-width="1.2"/>`
-    + `<path d="M58 96 92 70" stroke="${K}" stroke-width="2.4"/>` + `<g transform="translate(84 60) rotate(50) scale(.5)">${ICONS.corazon()}</g>`,
-  // Exclusivo del evento: Primavera. Catarina: carita oscura, caparazón rojo con puntos y antenas.
-  catarina: () => mirror(`<path d="M42 33Q37 19 30 14" fill="none" stroke="${K}" stroke-width="3.4" stroke-linecap="round"/><circle cx="30" cy="14" r="4.4" fill="#3a3550" stroke="${K}" stroke-width="2.4"/>`)
-    + shoulders('#ff4f5a', '#d63040') + `${[[28, 94], [72, 94], [42, 100], [58, 100]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="3.6" fill="${K}"/>`).join('')}`
-    + P(ELL(50, 58, 26, 24), '#3a3550', '#2a2540')
-    + P('M23 54Q23 28 50 28Q77 28 77 54Q66 45 50 45Q34 45 23 54z', '#ff4f5a', '#d63040', `<path d="M50 29v16" stroke="${K}" stroke-width="2.4"/>${[[36, 38], [64, 38], [42, 32], [58, 32]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="3.4" fill="${K}"/>`).join('')}<ellipse cx="34" cy="34" rx="4" ry="2.2" fill="#fff" opacity=".45" transform="rotate(-30 34 34)"/>`)
-    + [-11, 11].map((x) => `<circle cx="${50 + x}" cy="60" r="6.6" fill="#fff" stroke="${K}" stroke-width="2"/><circle cx="${50 + x + 1}" cy="61" r="3.6" fill="${K}"/><circle cx="${50 + x}" cy="59.4" r="1.3" fill="#fff"/>`).join('')
-    + `<path d="M44 70q6 5 12 0" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"/>` + blush(68, 20),
-  // Exclusivo del evento: Verano. Foca gris con lentes de sol, bigotes y su flotador rojo y blanco.
-  foca: () => P('M8 104Q8 82 30 80H70Q92 82 92 104z', '#e8434f', '#c22c3c', `${[24, 50, 76].map((x) => `<path d="M${x - 7} 80h14v24h-14z" fill="#fff6ee"/>`).join('')}`)
-    + P(ELL(50, 56, 31, 28), '#a9bdd8', '#8aa1c2', '<ellipse cx="37" cy="40" rx="6" ry="3.4" fill="#fff" opacity=".4" transform="rotate(-25 37 40)"/>')
-    + mirror(P(ELL(44.5, 70, 7.5, 6), '#e8f0ff', '#cfdcf2') + `<circle cx="42" cy="70" r="1" fill="#8aa1c2"/><circle cx="45" cy="72.5" r="1" fill="#8aa1c2"/><path d="M38 69 25 66M38 72 24 74" stroke="${K}" stroke-width="1.6" stroke-linecap="round"/>`)
-    + `<ellipse cx="50" cy="64.5" rx="5.4" ry="3.8" fill="${K}"/><ellipse cx="48.6" cy="63.4" rx="1.6" ry=".9" fill="#fff" opacity=".7"/><path d="M47.4 77q2.6 2.4 5.2 0" fill="none" stroke="${K}" stroke-width="2.4" stroke-linecap="round"/>`
-    + mirror(`<path d="M27 47h18a2 2 0 0 1 2 2v2a9 9 0 0 1-9 9h-2a11 11 0 0 1-11-11 2 2 0 0 1 2-2z" fill="${K}"/><path d="M31 50l5 5" stroke="#7fe0ff" stroke-width="2.2" stroke-linecap="round"/>`)
-    + `<path d="M45 50h10" stroke="${K}" stroke-width="3"/>` + blush(62, 26),
-  // Exclusivo del evento: Fiestas Patrias. Chihuahua con orejotas, sombrero de charro y sarape.
-  chihuahua: () => P('M10 104Q12 80 50 78Q88 80 90 104z', '#e8438f', '#c22c70', `${[['#ffc83d', 86], ['#2f9e5c', 92], ['#1fa6c9', 98]].map(([c, y]) => `<path d="M8 ${y}h84" stroke="${c}" stroke-width="3.6"/>`).join('')}`)
-    + mirror(P('M34 52Q16 34 4 40Q6 60 30 66z', '#e8b878', '#cf9a5a', '<path d="M30 55Q18 42 10 44Q12 56 27 61z" fill="#f2c9a8"/>'))
-    + P('M27 60Q27 44 50 44Q73 44 73 60Q73 76 58 82Q50 85 42 82Q27 76 27 60z', '#e8b878', '#cf9a5a', '<path d="M50 46q-6 8-4 18h8q2-10-4-18z" fill="#f6dcb0"/>')
-    + P(ELL(50, 74, 8.4, 6), '#f6dcb0', '#e8c48e')
-    + `<path d="M46.4 70.4h7.2L50 74.6z" fill="${K}" stroke="${K}" stroke-width="1.6" stroke-linejoin="round"/><path d="M50 74.6v2M47 78q3 2 6 0" fill="none" stroke="${K}" stroke-width="2" stroke-linecap="round"/>`
-    + [-12, 12].map((x) => `<circle cx="${50 + x}" cy="61" r="7.2" fill="${K}"/><circle cx="${47.6 + x}" cy="58.4" r="2.6" fill="#fff"/><circle cx="${52.6 + x}" cy="63.6" r="1.2" fill="#fff"/>`).join('') + blush(70, 21)
-    + P(ELL(50, 40, 40, 8.5), '#f2d38a', '#d9b060', `<path d="M12 41a38 6.6 0 0 0 76 0" fill="none" stroke="#e8434f" stroke-width="2.4"/>`)
-    + P('M36 40c0-14 6-24 14-24s14 10 14 24q-14 4-28 0z', '#f2d38a', '#d9b060', `<path d="M36 33q14 4 28 0" stroke="#e8434f" stroke-width="4" fill="none"/><path d="M37 29q13 3.6 26 0" stroke="#2f9e5c" stroke-width="2" fill="none"/>`),
-  // Exclusivo del evento: Halloween. Gato negro con sombrero de bruja, ojos verdes y capa morada.
-  gatobruja: () => P('M10 104Q12 80 50 78Q88 80 90 104z', '#8a5cf0', '#6c3fd4', '<path d="M34 80 50 92 66 80" fill="#ff8a1a" stroke="#2a1f5c" stroke-width="2.4" stroke-linejoin="round"/>')
-    + mirror(P('M31 56 20 32 44 46z', '#3a3550', '#2a2540', '<path d="M29 50 23 37 37 46z" fill="#ff9cb0"/>'))
-    + P(ELL(50, 63, 24, 21), '#3a3550', '#2a2540')
-    + mirror(`<ellipse cx="40" cy="62" rx="6.4" ry="7" fill="#c9f24a" stroke="${K}" stroke-width="2"/><ellipse cx="40" cy="62" rx="1.8" ry="5.4" fill="${K}"/><circle cx="38.4" cy="59.4" r="1.4" fill="#fff"/><path d="M38 72 22 70M38 75 23 78" stroke="#c9c0e8" stroke-width="1.6" stroke-linecap="round"/>`)
-    + `<path d="M47.4 70h5.2L50 73z" fill="#ff9cb0" stroke="${K}" stroke-width="1.4" stroke-linejoin="round"/><path d="M50 73q-2 3-4.4 1.6M50 73q2 3 4.4 1.6" fill="none" stroke="#c9c0e8" stroke-width="1.8" stroke-linecap="round"/>`
-    + P(ELL(50, 44, 31, 6.4), '#6c3fd4', '#5a2fbf')
-    + P('M34 44Q44 30 52 6Q56 4 57 8Q60 30 66 44z', '#6c3fd4', '#5a2fbf', '<path d="M35 40q15 4.4 30 0" stroke="#ff8a1a" stroke-width="4.4" fill="none"/><rect x="46" y="36.6" width="8" height="6.4" rx="1" fill="#ffc83d" stroke="#2a1f5c" stroke-width="1.6"/>'),
-  // Exclusivo de la lluvia de meteoritos: Meteorín, piedrita espacial con cráteres y pelo de fuego.
-  meteorin: () => P('M20 56Q10 32 26 12Q29 28 37 31Q35 13 50 2Q57 21 63 29Q67 16 78 10Q90 32 80 56z', '#ff8a3d', '#ff5f2e', '<path d="M31 50Q27 34 33 23Q37 35 44 37Q43 24 50 13Q55 27 59 35Q63 26 69 22Q74 37 69 50z" fill="#ffd85a"/>')
-    + P(ELL(50, 64, 34, 32), '#a493bd', '#7f6ea0', '<circle cx="28" cy="56" r="5.4" fill="#8a79a8"/><circle cx="72" cy="80" r="4.2" fill="#8a79a8"/><circle cx="70" cy="47" r="3" fill="#8a79a8"/><circle cx="34" cy="84" r="2.6" fill="#8a79a8"/><path d="M24 48a26 26 0 0 1 12-12" stroke="#e4dcf2" stroke-width="3" fill="none" stroke-linecap="round"/>')
-    + eyes(62, 13, 5.2) + blush(72, 22)
-    + `<path d="M42 75q8 7 16 0" fill="none" stroke="${K}" stroke-width="3.4" stroke-linecap="round"/>`,
-  // Exclusivo de los códigos: Tesoro escondido. Loro pirata con paliacate rojo, pico ganchudo y su doblón.
-  loro: () => P('M10 104Q12 80 50 78Q88 80 90 104z', '#3fbf5a', '#2f9e48', '<path d="M38 82q12 10 24 0" fill="none" stroke="#ffd23d" stroke-width="6" stroke-linecap="round"/>')
-    + mirror(P('M24 58Q12 66 14 84Q24 78 28 68z', '#2fae4a', '#22903a'))
-    + P(ELL(50, 56, 27, 27), '#4fd16a', '#36b350')
-    + mirror(P(ELL(38, 54, 9.4, 10), '#fff', '#e6eef0')) + eyes(54, 12, 4.2)
-    + P('M38 62Q50 55 62 62Q63 72 53 81Q54 73 47 70Q40 68 38 62z', '#ffc83d', '#ec9a17', '<path d="M43 61q7-3 14 0" stroke="#fff3b8" stroke-width="2" fill="none" stroke-linecap="round"/>')
-    + P('M44 70Q49 73 53 72Q51 78 46 76z', '#5a3a2a', '#3f2618') + blush(64, 21)
-    + P('M22 46Q24 25 50 25Q76 25 78 46Q64 37 50 37Q36 37 22 46z', '#e8434f', '#c22c3c', [[34, 33], [50, 30], [66, 33], [42, 40], [58, 40]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="2.2" fill="#fff"/>`).join(''))
-    + P('M75 37 90 30 86 44z', '#e8434f', '#c22c3c') + P('M76 41 89 50 74 50z', '#e8434f', '#c22c3c')
-    + `<g transform="translate(64 80) scale(.62)">${ICONS.doblon()}</g>`,
-  sirena: () => P('M20 50Q12 82 20 104H80Q88 82 80 50Q78 24 50 22Q22 24 20 50z', '#ff6f61', '#e0524a')
-    + kid('#5fd1c5', '#2fae9e')
-    + mirror(P('M34 96Q38 84 46 88Q44 98 34 96z', '#ff9cc8', '#e870a8'))
-    + P('M22 54Q18 22 50 21Q82 22 78 54Q72 36 54 32Q44 40 32 38Q26 44 22 54z', '#ff6f61', '#e0524a')
-    + P(starPath(30, 34, 8, 3.6), '#ffc83d', '#ec9a17', '', 2.4)
-    + kidFace(),
-  vampiro: () => mirror(P('M8 104 10 70 40 84z', '#c22c49', '#9e1f37'))
-    + P('M10 104Q12 80 50 78Q88 80 90 104z', '#2a2440', '#1a1530', `<path d="M42 80 50 92 58 80" fill="#fff" stroke="${K}" stroke-width="2.4"/>`)
-    + mirror(P(CIRCLE(23, 55, 6), '#ded4f5', '#c4b8e8'))
-    + P(CIRCLE(50, 53, 27), '#efe8ff', '#d3cdea')
-    + P('M22 50Q18 22 50 21Q82 22 78 50Q72 36 60 34L50 46 40 34Q28 36 22 50z', '#2a2440', '#1a1530')
-    + eyes(56, 11, 4.4) + `<path d="M44 65q6 5 12 0" fill="none" stroke="${K}" stroke-width="3" stroke-linecap="round"/><path d="M45.5 66.5l1.6 4 1.6-3.2M51.3 67.3l1.6 3.2 1.6-4" fill="#fff" stroke="${K}" stroke-width="1.4" stroke-linejoin="round"/>` + blush(63, 19),
-};
+// 12 nov 2026 (el usuario): ya no hay dibujos 2D de los personajes. Todos son el busto 3D (avatar3d.js) y, mientras
+// carga (o si el teléfono no tiene WebGL), se ve la inicial de tu nombre. Aquí solo quedan las claves que existen
+// (las de las festividades se suman de festival-art.js).
+export const AVATARS = Object.fromEntries([
+  'voltio', 'tic', 'guardian', 'mago', 'ninja', 'caballero', 'pip', 'gatobot', 'esponjita', 'capitan', 'kiko', 'luna',
+  'estrellapop', 'rocky', 'mina', 'mcbeat', 'profe', 'turbo', 'papaya', 'cora', 'nino', 'nina', 'astro', 'ajolote',
+  'gato', 'zorro', 'robot', 'alien', 'pulpo', 'buho', 'dino', 'unicornio', 'panda', 'pinguino', 'conejo', 'capibara',
+  'perrito', 'tortuga', 'abeja', 'dragoncito', 'fantasma', 'estrella', 'cangrejo', 'topo', 'ardilla', 'osito', 'triceratops', 'robodog',
+  'tamalito', 'taquito', 'arbolito', 'pinatita', 'clavelito', 'bigoton', 'atigrado', 'dalmata', 'audifonos', 'bichito', 'bufoncito', 'uvita',
+  'pulpopintor', 'ranita', 'mapache', 'chaneque', 'xologuia', 'lloronita', 'catrinita', 'revolucionario', 'xolo', 'reno', 'reymago', 'cupido',
+  'catarina', 'foca', 'chihuahua', 'gatobruja', 'custodio', 'meteorin', 'loro', 'sirena', 'vampiro',
+].map((k) => [k, 1]));
 const initial = (p) => ((p.name || '?').trim().charAt(0).toUpperCase() || '?').replace(/[&<>"']/g, '');
 const avColor = (p) => AVATAR_COLORS[(p.avatar || 0) % AVATAR_COLORS.length];
-// Dibujo del personaje (sin el círculo de color: lo pone quien lo usa).
-export const charSVG = (k, cls = '') => `<svg class="av-char ${cls}" viewBox="0 0 100 100" aria-hidden="true">${(AVATARS[k] || AVATARS.nino)()}</svg>`;
 
 // ---------- Marcos del avatar (tienda) ----------
 // Aro dibujado encima del círculo: lienzo de 140×140 con el avatar en el centro (radio 50).
@@ -1440,13 +914,26 @@ export const RINGS = {
     + Array.from({ length: 6 }, (_, i) => { const [x, y] = at(i * 60 - 60, 55); return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3" fill="#5fbf5a" stroke="${K}" stroke-width="1.6"/>`; }).join(''),
   arcoiris: () => `<circle cx="70" cy="70" r="56" fill="none" stroke="${K}" stroke-width="13"/><g class="r-spin">${['#ff5f7e', '#ff9c5b', '#ffc83d', '#6fd36a', '#4aa8de', '#8a5cf0'].map((c, i) => `<circle cx="70" cy="70" r="56" fill="none" stroke="${c}" stroke-width="8" pathLength="6" stroke-dasharray="1 5" stroke-dashoffset="${-i}"/>`).join('')}</g>`,
 };
+// Marcos del pasaporte y de los secretos (12 nov 2026, premios de sello 11 y de 300 secretos).
+// Ruta de sellos: banda azul con los 6 sellos del pasaporte (cada uno en su estampa punteada) que flotan en su lugar.
+RINGS.sellos = () => band(55, '#4aa8de', 7) + `<circle cx="70" cy="70" r="55" fill="none" stroke="#e6f2ff" stroke-width="2" stroke-dasharray="3 6" stroke-linecap="round"/>`
+  + [['planet', '#4aa8de'], ['rocket', '#2fae6a'], ['comet', '#ff8a3d'], ['starSecret', '#8a5cf0'], ['crown', '#e89a17'], ['pasaporte', '#4aa8de']].map(([ico, c], i) => {
+    const [x, y] = at(i * 60 - 90, 56), k = 0.5;
+    return `<g class="r-bob" style="animation-delay:${(i * 0.3).toFixed(1)}s"><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="14.5" fill="none" stroke="${c}" stroke-width="1.4" stroke-dasharray="2.5 2"/><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="12" fill="#fffaf0" stroke="${c}" stroke-width="2.6"/><g transform="translate(${(x - 16 * k).toFixed(1)} ${(y - 16 * k).toFixed(1)}) rotate(${i % 2 ? 10 : -10} ${16 * k} ${16 * k}) scale(${k})">${ICONS[ico]()}</g></g>`;
+  }).join('');
+// Estrellas fugaces (lluvia de estrellas): banda violeta y 6 estrellas fugaces que titilan, como si cayeran alrededor.
+RINGS.fugaces = () => band(55, '#3a2a99', 7) + `<circle cx="70" cy="70" r="55" fill="none" stroke="#ffb3d9" stroke-width="2" stroke-dasharray="2 8" stroke-linecap="round"/>`
+  + Array.from({ length: 6 }, (_, i) => { const d = i * 60 - 60, [x, y] = at(d, 56), k = i % 2 ? 0.5 : 0.66; return `<g class="r-tw" style="animation-delay:${(i * 0.35).toFixed(2)}s"><g transform="translate(${(x - 16 * k).toFixed(1)} ${(y - 16 * k).toFixed(1)}) scale(${k})">${ICONS.starFall()}</g></g>`; }).join('');
+// Constelación secreta: banda violeta noche con estrellas moradas que titilan y puntitos de luz entre ellas.
+RINGS.secreto = () => band(55, '#3a1f7a', 8) + `<circle cx="70" cy="70" r="55" fill="none" stroke="#d6c4ff" stroke-width="2" stroke-dasharray="1 7" stroke-linecap="round"/>`
+  + Array.from({ length: 8 }, (_, i) => { const [x, y] = at(i * 45 - 90, 55), k = i % 2 ? 0.44 : 0.62; return `<g class="r-tw" style="animation-delay:${(i * 0.3).toFixed(1)}s"><g transform="translate(${(x - 16 * k).toFixed(1)} ${(y - 16 * k).toFixed(1)}) scale(${k})">${ICONS.starSecret()}</g></g>`; }).join('');
 for (const k in { ...SA.rings, ...FA.rings }) {
   if (RINGS[k]) throw new Error(`Marco repetido: ${k}`);
   RINGS[k] = SA.rings[k] || FA.rings[k];
 }
-for (const k in FA.avatars) {
+for (const k of FA.avatars) {
   if (AVATARS[k]) throw new Error(`Avatar repetido: ${k}`);
-  AVATARS[k] = FA.avatars[k];
+  AVATARS[k] = 1;
 }
 const ringOf = (p) => (RINGS[p.ring] ? p.ring : RINGS[p.equip?.ring] ? p.equip.ring : 'sencillo');
 export const ringSVG = (k) => (k !== 'sencillo' && RINGS[k] ? `<svg class="av-ring" viewBox="0 0 140 140" aria-hidden="true">${RINGS[k]()}</svg>` : '');
@@ -1464,7 +951,7 @@ export const kidCode = (p) => { const k = kidOf(p); return `${k.base}.${k.skin}.
 export function avatarHTML(p, cls = '') {
   const char = p.look === 'char' && AVATARS[p.char], ring = ringOf(p);
   // data-a3d: avatar3d.js lo cambia por el busto 3D (tu personaje con ese disfraz) si el disfraz ya tiene modelo.
-  return `<span class="avatar ${char ? 'char' : ''} ring-${ring} ${cls}" style="--av:${avColor(p)}"${char ? ` data-a3d="${p.char}:${kidCode(p)}"` : ''}>${char ? charSVG(p.char) : `<span class="av-l">${initial(p)}</span>`}${ringSVG(ring)}</span>`;
+  return `<span class="avatar ${char ? 'char' : ''} ring-${ring} ${cls}" style="--av:${avColor(p)}"${char ? ` data-a3d="${p.char}:${kidCode(p)}"` : ''}><span class="av-l">${initial(p)}</span>${ringSVG(ring)}</span>`;
 }
 
 // placeIcon(lugar): ahora es el planetita del mundo (ver biomes.js para los colores).
@@ -1482,6 +969,18 @@ export const chestBody = (cls = '') => big(
 export const chestLid = (cls = '') => big(
   tshape('M8 31v-7a11 11 0 0 1 11-11h26a11 11 0 0 1 11 11v7z', '#d58a4a', '#a8652f', '<path d="M12 18q20-6 40 0" stroke="#e8a66a" stroke-width="3" fill="none"/>', 3)
   + tshape('M15 14.5h7V31h-7zM42 14.5h7V31h-7z', '#ffc83d', '#ec9a17', '', 2.4), cls);
+// Nave de rescate (11 nov 2026): cápsula con paracaídas, en 3 piezas encimadas (mismo viewBox) para animarlas aparte:
+// el paracaídas (con sus cuerdas) se va volando, la tapa salta y el cuerpo se queda. c = [color, sombra].
+export const capChute = (c, cls = '') => big(
+  `<path d="M11 25 27 41M53 25 37 41M24 25l6 16M40 25l-6 16" stroke="${K}" stroke-width="1.6" stroke-linecap="round"/>`
+  + tshape('M8 26C8 12 19 4 32 4s24 8 24 22c-2.6-2.4-5.4-2.4-8 0-2.6-2.4-5.4-2.4-8 0-2.6-2.4-5.4-2.4-8 0-2.6-2.4-5.4-2.4-8 0-2.6-2.4-5.4-2.4-8 0-2.6-2.4-5.4-2.4-8 0z', '#fff6e6', '#e3d6f2',
+    `<path d="M24 26C22 16 25 8 32 4M40 26c2-10-1-18-8-22" stroke="${c[0]}" stroke-width="5" fill="none"/>`, 2.6), cls);
+export const capBody = (c, cls = '') => big(
+  tshape('M17 46h30v6a8 8 0 0 1-8 8H25a8 8 0 0 1-8-8z', c[0], c[1], `<path d="M21 54h22" stroke="${c[1]}" stroke-width="2" stroke-linecap="round"/>`, 2.6), cls);
+export const capLid = (c, cls = '') => big(
+  tshape('M17 46v-2a15 13 0 0 1 30 0v2z', c[0], c[1], '', 2.6)
+  + tshape('M27 39a5 5 0 0 1 10 0v1H27z', '#9be7ff', '#5fc7e8', '<path d="M29 37.5l2-1.5" stroke="#fff" stroke-width="1.4" stroke-linecap="round"/>', 2)
+  + tshape('M15 45h34v3H15z', '#ffc83d', '#ec9a17', '', 2), cls);
 export const boxBody = (cls = '') => big(
   tshape('M10 30h44v24a3 3 0 0 1-3 3H13a3 3 0 0 1-3-3z', '#8a5cf0', '#6c3fd4', '<path d="M14 36h36" stroke="#a785ff" stroke-width="3"/>', 3)
   + tshape('M28 30h8v27h-8z', '#ffc83d', '#ec9a17', '', 2.4), cls);

@@ -1,8 +1,8 @@
 // Festividades nuevas (10 nov 2026, pedido del usuario): fiestas de México (nivel 389: Bandera, Equinoccio y Posadas) y
 // de América (nivel 461). Aquí sus dibujos (iconos, marcos del avatar, reversos y avatares 2D), con el mismo trazo que
 // art.js y set-art.js, y sus datos: colores del fondo del espacio, la postal y el título, y lo que va a la tienda
-// (fiestaCSS y fiestaItems, como setCSS en sets.js). Las naves van en fiesta-travelers.js y los disfraces 3D en
-// js/disfraces/i.js, con la misma clave. Lo que se juega (fechas, planetas, premios) está en FIESTAS de events.js.
+// (fiestaCSS y fiestaItems, como setCSS en sets.js). Las naves van en festival-travelers.js y los disfraces 3D en
+// js/costumes/i.js, con la misma clave. Lo que se juega (fechas, planetas, premios) está en FIESTAS de events.js.
 
 // ---------- Datos ----------
 // sky: [noche, medio, abajo, brillo 1, brillo 2] · motif: las 2 figuras sueltas del espacio · frame: [fondo, banda,
@@ -217,42 +217,7 @@ export function fiestaArt({ tshape: T, CIRCLE: C, starPath, K, ICONS }) {
     anioviejo: back('#e6dcff', '#6c3fd4', 'monigote', 'bengala', dots('#d6c8ff')),
   };
 
-  // ---------- Avatares 2D (lienzo de 100×100, el círculo los recorta; mismas piezas que art.js) ----------
-  const P = (d, a, b, inside = '') => T(d, a, b, inside, 4, [-2.2, -3.6]);
-  const mirror = (inner) => `${inner}<g transform="matrix(-1 0 0 1 100 0)">${inner}</g>`;
-  const eyes = (y = 52, dx = 13, r = 5) => [-dx, dx].map((x) => `<circle cx="${50 + x}" cy="${y}" r="${r}" fill="${K}"/><circle cx="${50 + x - r * 0.35}" cy="${y - r * 0.4}" r="${r * 0.38}" fill="#fff"/>`).join('');
-  const smile = (y = 63, w = 7) => `<path d="M${50 - w} ${y}q${w} ${w * 0.85} ${2 * w} 0" fill="none" stroke="${K}" stroke-width="3.4" stroke-linecap="round"/>`;
-  const blush = (y = 61, dx = 22) => [-dx, dx].map((x) => `<ellipse cx="${50 + x}" cy="${y}" rx="5.5" ry="3.2" fill="#ff6f8e" opacity=".55"/>`).join('');
-  const shoulders = (a, b) => P('M10 104Q12 80 50 78Q88 80 90 104z', a, b);
-  const face = (y = 55) => mirror(P(C(23, y + 2, 6), '#ffc596', '#eda06c')) + P(C(50, y, 26), '#ffd3a8', '#f2b07c');
-  const kidFace = (y = 58) => eyes(y, 11, 4.4) + smile(y + 9, 6) + blush(y + 7, 19);
-  // Un icono grande como cuerpo, con carita encima (para los personajes-cosa: piñata, alfajor, pupusa…).
-  const big = (ico, k = 2.8, x = 50, y = 54) => `<g transform="translate(${x - 16 * k} ${y - 16 * k}) scale(${k})">${ICONS[ico]()}</g>`;
-  const avatars = {
-    abanderado: () => shoulders('#fffdf7', '#e6e0d6') + `<path d="M22 84 70 104" stroke="${K}" stroke-width="13"/><path d="M22 84 70 104" stroke="#2f9e5c" stroke-width="9"/><path d="M22 84 70 104" stroke="#fffdf7" stroke-width="3"/>`
-      + face() + P('M24 46Q26 24 50 22Q74 24 76 46Q66 34 50 34Q34 34 24 46z', '#3a2a1a', '#2a1a10') + P('M28 34h44l2 8H26z', '#2f6a3a', '#1f4a2a', `<path d="M30 38h40" stroke="#ffc83d" stroke-width="2"/>`)
-      + kidFace() + big('escarapela', 0.7, 80, 90),
-    serpientita: () => big('serpiente', 3.1, 50, 54) + `<circle cx="38" cy="50" r="2" fill="#fff"/><circle cx="62" cy="50" r="2" fill="#fff"/>` + blush(62, 22),
-    pinatin: () => big('pinatestrella', 3, 50, 54) + eyes(54, 9, 4) + smile(63, 5) + blush(61, 14),
-    ekekito: () => shoulders('#e8434f', '#c22c3c') + [[24, 88, 'miniatura'], [76, 88, 'billetito']].map(([x, y, i]) => big(i, 0.7, x, y)).join('')
-      + face(56) + P('M24 48Q26 22 50 20Q74 22 76 48Q62 40 50 40Q38 40 24 48z', '#4aa8de', '#2f86c0', `<path d="M28 38h44M30 32h40" stroke="#ffc83d" stroke-width="3"/><path d="M34 26l4 4 4-4 4 4 4-4 4 4 4-4 4 4" stroke="#e8434f" stroke-width="2" fill="none"/>`)
-      + mirror(P('M24 46l-6 20 8-2z', '#4aa8de', '#2f86c0')) + P(C(50, 18, 5), '#ff5f7e', '#d63d5f') + kidFace(59) + `<path d="M40 70q10 8 20 0" fill="#3a2a1a"/>`,
-    moaisito: () => big('moai', 3.2, 50, 52) + `<circle cx="38.6" cy="51" r="2" fill="#fff"/><circle cx="62.4" cy="51" r="2" fill="#fff"/>` + blush(64, 18),
-    carnavalito: () => shoulders('#ffc83d', '#ec9a17') + [['#ff5f7e', -30], ['#5fd1f0', 0], ['#7fd36a', 30]].map(([c, a]) => `<g transform="rotate(${a} 50 40)">${P('M50 2c6 8 6 20 0 28-6-8-6-20 0-28z', c, '#0002')}</g>`).join('')
-      + face() + P('M24 52c0-6 8-8 14-6l12 4 12-4c6-2 14 0 14 6 0 8-8 12-14 10l-12-4-12 4c-6 2-14-2-14-10z', '#8a5cf0', '#6c3fd4', `<ellipse cx="37" cy="54" rx="6" ry="4" fill="#ffd3a8"/><ellipse cx="63" cy="54" rx="6" ry="4" fill="#ffd3a8"/>`)
-      + eyes(54, 13, 3.6) + smile(68, 6) + blush(66, 21),
-    boyerito: () => shoulders('#fffdf7', '#e6e0d6') + P('M36 80l14 14 14-14z', '#e8434f', '#c22c3c') + face(58)
-      + P('M10 44Q50 30 90 44Q80 50 50 46Q20 50 10 44z', '#f2d58a', '#d8b860') + P('M30 42Q32 18 50 18Q68 18 70 42Q50 38 30 42z', '#f2d58a', '#d8b860', `<path d="M31 38Q50 33 69 38" stroke="#e8434f" stroke-width="3" fill="none"/>`)
-      + kidFace(60),
-    chinita: () => shoulders('#fffdf7', '#e6e0d6') + P('M18 84Q50 74 82 84l-4 10Q50 86 22 94z', '#ff7ab8', '#e0559a', `<path d="M24 88q26-8 52 0" stroke="#ffc83d" stroke-width="2" fill="none" stroke-dasharray="3 3"/>`)
-      + P('M22 70Q14 40 30 26Q50 14 70 26Q86 40 78 70Q72 46 50 44Q28 46 22 70z', '#2a1a10', '#1a0a00') + face(56)
-      + [[30, 28, '#ff5f7e'], [44, 22, '#ffc83d'], [58, 22, '#b36bff'], [72, 28, '#5fd1f0']].map(([x, y, c]) => P(C(x, y, 7), c, '#0002', `<circle cx="${x}" cy="${y}" r="2.4" fill="#fff6c8"/>`)).join('')
-      + kidFace(58),
-    volantinito: () => big('volantin', 3, 50, 50) + eyes(50, 9, 4) + smile(59, 5) + blush(57, 14),
-    alfajorcito: () => big('alfajor', 3, 50, 54) + eyes(49, 11, 4) + smile(58, 5) + blush(56, 18),
-    pupusita: () => big('pupusa', 3, 50, 52) + eyes(50, 12, 4.4) + smile(60, 6) + blush(58, 20),
-    farolin: () => `<circle cx="50" cy="52" r="40" fill="#ffd84a" opacity=".25"/>` + big('farolpapel', 3, 50, 50) + eyes(52, 9, 4) + smile(61, 5) + blush(59, 15),
-    monigotito: () => big('monigote', 3.1, 50, 48),
-  };
+  // Disfraces de las festividades: solo las claves (12 nov 2026, ya no hay dibujo 2D; son 3D en costumes/i.js).
+  const avatars = ['abanderado', 'serpientita', 'pinatin', 'ekekito', 'moaisito', 'carnavalito', 'boyerito', 'chinita', 'volantinito', 'alfajorcito', 'pupusita', 'farolin', 'monigotito'];
   return { icons, rings, backs, avatars };
 }

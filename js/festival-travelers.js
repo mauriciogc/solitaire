@@ -1,4 +1,4 @@
-// Naves 3D de las festividades nuevas (10 nov 2026; datos en fiesta-art.js y FIESTAS de events.js). Mismo estilo que
+// Naves 3D de las festividades nuevas (10 nov 2026; datos en festival-art.js y FIESTAS de events.js). Mismo estilo que
 // travelers.js: material toon con contorno de tinta, ~1 de alto, centradas en el origen. Cada una: { obj, tick(t) }.
 import * as THREE from 'three';
 

@@ -8,6 +8,7 @@
 import { save, persist } from './storage.js';
 import { MECH_INTRO, LEVELS_PER_WORLD } from './levels.js';
 import { maxBet } from './economy.js';
+import { passClaim } from './passport.js';
 import { mulberry32, hash } from './rng.js';
 
 export const MIS_FROM = 40; // nivel en que se abren (save.next); igual que UNLOCK en events.js
@@ -175,6 +176,8 @@ export const LOGROS = [
   { id: 'bubbles', k: 'burbuja', name: 'Revientaburbujas', ico: 'gift', steps: [200, 1000, 3000, 6000, 12000], text: (n) => `Truena ${fmtN(n)} burbujas` },
   { id: 'balloons', k: 'globo', name: 'Globero', ico: 'globo', steps: [50, 250, 800, 1600, 3000], text: (n) => `Truena ${fmtN(n)} globos` },
   { id: 'meteors', k: 'meteoro', name: 'Cazameteoros', ico: 'meteoro', steps: [25, 100, 300, 700, 1500], text: (n) => `Truena ${fmtN(n)} meteoros en el cielo` },
+  // 12 nov 2026 (el usuario): las estrellas fugaces de la lluvia de estrellas, desde que cae (STAR_FROM en meteor.js).
+  { id: 'shootingstars', k: 'estrella', from: 250, name: 'Pide deseos', ico: 'starFall', steps: [25, 100, 300, 700, 1500], text: (n) => `Truena ${fmtN(n)} estrellas fugaces en el cielo` },
   { id: 'missions', k: 'missions', name: 'Cumplidor', ico: 'check', steps: [30, 150, 365, 700, 1200], text: (n) => `Completa ${fmtN(n)} misiones del día`, title: 'cumplidor' },
   { id: 'events', k: 'event', name: 'Fiestero', ico: 'calavera', steps: [15, 75, 200, 400, 750], text: (n) => `Gana ${n} niveles de eventos` },
   // 10 nov 2026 (pedido del usuario): uno por cada apuesta (×2, ×3, ×5, ×10), niveles ganados apostando eso. Cada uno
@@ -217,7 +220,7 @@ export const logroProg = (l) => stat(l) - base(l);
 export const logroNeed = (l) => base(l) + l.steps[Math.min(logroGot(l), LOGRO_TOP - 1)];
 // Escalón alcanzado: el siguiente, si ya juntó su meta.
 export const logroAt = (l) => { const got = logroGot(l); return got < LOGRO_TOP && logroProg(l) >= l.steps[got] ? got + 1 : got; };
-export const logrosVisible = () => LOGROS.filter((l) => (!l.mech || (save.open || 0) >= MECH_INTRO[l.mech]) && (!l.bet || maxBet(save.next || 0) >= l.bet));
+export const logrosVisible = () => LOGROS.filter((l) => (!l.mech || (save.open || 0) >= MECH_INTRO[l.mech]) && (!l.bet || maxBet(save.next || 0) >= l.bet) && (!l.from || (save.next || 0) >= l.from));
 export const logrosReady = () => isLogrosOn() && logrosVisible().some((l) => logroAt(l) > logroGot(l));
 export function logroClaim(id) {
   const l = LOGROS.find((x) => x.id === id);
@@ -288,6 +291,8 @@ export function autoClaim() {
       while (logroAt(l) > logroGot(l)) q.push({ t: 'logro', id: l.id, step: logroGot(l), ...logroClaim(l.id) });
     }
   }
+  // Sellos del pasaporte y premios de secretos (11 nov 2026, passport.js).
+  passClaim(q);
   if (q.length === n0) return false;
   persist();
   if (typeof dispatchEvent === 'function') dispatchEvent(new Event('feats'));
