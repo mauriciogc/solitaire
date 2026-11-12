@@ -7,7 +7,7 @@
 // ---------- Datos ----------
 // sky: [noche, medio, abajo, brillo 1, brillo 2] · motif: las 2 figuras sueltas del espacio · frame: [fondo, banda,
 // figura de la orilla, esquina 1, esquina 2] · tc: título [arriba, abajo, tinta, orilla] · nombres de cada pieza.
-export const FIESTA_LOOK = {
+export const FESTIVAL_LOOK = {
   bandera: { ico: 'banderita', deco: 'escarapela', sky: ['#0a2a1a', '#14402a', '#1f5a3a', '#e8434f', '#5ad68c'], frame: ['#f2fff4', '#2f9e5c'], tc: ['#5ad68c', '#2f9e5c', '#1a5a3a', '#e8434f'],
     names: { space: 'Cielo tricolor', frame: 'Banderines', ring: 'Banderines tricolor', back: 'Tricolor', avatar: ['Abanderado/Abanderada', 'Con su banda tricolor'], title: 'De la escolta', traveler: ['Tambor de la escolta', 'Suena al volar'] } },
   equinoccio: { ico: 'piramide', deco: 'serpiente', sky: ['#1a1206', '#3a2a10', '#6a4a1a', '#ffc83d', '#5ad68c'], frame: ['#fff3d6', '#c98a3a'], tc: ['#ffe58a', '#ffc83d', '#8a5a0a', '#3f9a46'],
@@ -37,10 +37,10 @@ export const FIESTA_LOOK = {
 };
 
 // Lo que va a la tienda de cada festividad (claves de FIESTAS[].ex): { avatar: [...], ring: [...], … } como ITEMS.
-export function fiestaItems(FIESTAS) {
+export function festivalItems(FESTIVALS) {
   const out = { avatar: [], ring: [], title: [], back: [], traveler: [], space: [], frame: [] };
-  for (const f of FIESTAS) {
-    const L = FIESTA_LOOK[f.key];
+  for (const f of FESTIVALS) {
+    const L = FESTIVAL_LOOK[f.key];
     if (!L) continue;
     for (const g of f.ex) for (const [sec, k] of Object.entries(g)) {
       const n = L.names[sec], [name, text] = Array.isArray(n) ? n : [n];
@@ -50,15 +50,15 @@ export function fiestaItems(FIESTAS) {
   return out;
 }
 // Icono de cada título nuevo (TITLE_ICO de shop.js).
-export const fiestaTitleIcons = (FIESTAS) => Object.fromEntries(FIESTAS.filter((f) => FIESTA_LOOK[f.key]).map((f) => [f.ex.find((g) => g.title).title, FIESTA_LOOK[f.key].ico]));
+export const festivalTitleIcons = (FESTIVALS) => Object.fromEntries(FESTIVALS.filter((f) => FESTIVAL_LOOK[f.key]).map((f) => [f.ex.find((g) => g.title).title, FESTIVAL_LOOK[f.key].ico]));
 
 const svgURL = (s) => `url("data:image/svg+xml,${encodeURIComponent(s)}")`;
 // CSS de fondos del espacio, postales y títulos (se agrega al arrancar, como setCSS).
-export function fiestaCSS(FIESTAS, inner) {
+export function festivalCSS(FESTIVALS, inner) {
   const css = [];
   const one = (ico) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">${inner(ico)}</svg>`;
-  for (const f of FIESTAS) {
-    const L = FIESTA_LOOK[f.key];
+  for (const f of FESTIVALS) {
+    const L = FESTIVAL_LOOK[f.key];
     if (!L) continue;
     const ex = Object.assign({}, ...f.ex);
     const [n, m, lo, g1, g2] = L.sky;
@@ -79,7 +79,7 @@ export function fiestaCSS(FIESTAS, inner) {
 }
 
 // ---------- Dibujos ----------
-export function fiestaArt({ tshape: T, CIRCLE: C, starPath, K, ICONS }) {
+export function festivalArt({ tshape: T, CIRCLE: C, starPath, K, ICONS }) {
   const E = (cx, cy, rx, ry) => `M${cx - rx} ${cy}a${rx} ${ry} 0 1 0 ${2 * rx} 0a${rx} ${ry} 0 1 0 ${-2 * rx} 0z`;
   const L = (d, c, w = 2.4) => `<path d="${d}" fill="none" stroke="${K}" stroke-width="${w + 2.6}" stroke-linecap="round" stroke-linejoin="round"/><path d="${d}" fill="none" stroke="${c}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"/>`;
   const dot = (x, y, r = 1.2, c = K) => `<circle cx="${x}" cy="${y}" r="${r}" fill="${c}"/>`;

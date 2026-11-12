@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import { INK } from './art.js';
 import { TRAVELER_VARIANTS } from './themes.js';
 import { setModels } from './set-travelers.js';
-import { fiestaModels } from './festival-travelers.js';
+import { festivalModels } from './festival-travelers.js';
 
 const TAU = Math.PI * 2;
 const calm = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -1304,7 +1304,7 @@ const MODELS = {
   },
 };
 // Naves de las colecciones de personaje (set-travelers.js).
-for (const [k, m] of Object.entries({ ...setModels(INK), ...fiestaModels() })) {
+for (const [k, m] of Object.entries({ ...setModels(INK), ...festivalModels() })) {
   if (MODELS[k]) throw new Error(`Nave repetida: ${k}`);
   MODELS[k] = m;
 }

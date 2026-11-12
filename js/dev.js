@@ -1,16 +1,16 @@
 // Modo dev: probar niveles rápido sin jugarlos a mano.
 // Se prende y apaga con los botones de pruebas de Ajustes (8 toques seguidos al título). Queda guardado en el navegador.
 import { save, prefs, persist, backupOnce, restoreBackup, setDev, backupInfo } from './storage.js';
-import { missions, misDone, LOGROS, LOGRO_TOP, logroGot, logroNeed, logrosVisible } from './missions.js';
-import { rachaWin, rachaLose, racha, nextGoal, col, daysToNextCol, ev, daysToNextEvent, evEnter, evWin, EVENT_PER_PLANET, EVENT_LEVELS, fiesta, fiEnter, fiWin, nextFiesta, daysToNextFiesta, daysToFiesta, fiShape, isOn, UNLOCK } from './events.js';
-import { TIERS, generateLevel, hardHelp, fiestaPick, fiestaLevel, eventLevel, eventGroup, EVENT_WORLDS, packGroups, worldInfo, specials, specialGroup, SPECIAL_ID, TOTAL_LEVELS, LEVELS_PER_WORLD, MECH_NAMES, MECHANICS, MECH_INTRO, SCROLL_FROM, EXTRA, extraDebut, mareaFirst, hoyoFirst, puertasFirst, bandaFirst, rocasFirst } from './levels.js';
+import { missions, missionDone, ACHIEVEMENTS, ACHIEVEMENT_TOP, achievementGot, achievementNeed, achievementsVisible } from './missions.js';
+import { streakWin, streakLose, dailyStreak, nextGoal, col, daysToNextCol, ev, daysToNextEvent, evEnter, evWin, EVENT_PER_PLANET, EVENT_LEVELS, festival, festEnter, festWin, nextFestival, daysToNextFestival, daysToFestival, festShape, isOn, UNLOCK } from './events.js';
+import { TIERS, generateLevel, hardHelp, festivalPick, festivalLevel, eventLevel, eventGroup, EVENT_WORLDS, packGroups, worldInfo, specials, specialGroup, SPECIAL_ID, TOTAL_LEVELS, LEVELS_PER_WORLD, MECH_NAMES, MECHANICS, MECH_INTRO, SCROLL_FROM, EXTRA, extraDebut, tideFirst, holeFirst, doorsFirst, bandaFirst, rocksFirst } from './levels.js';
 import { playCasual, solve, initState } from './engine.js';
 import { openModal, toast, updateCoins, popGoal } from './ui.js';
 import { mulberry32 } from './rng.js';
 import { icon, miniPlanet } from './art.js';
 import { tableHTML, BIOMES, biomeKey } from './biomes.js';
 import { peek } from './galaxy.js';
-import { EVENTOS, COLECCIONES, FIESTAS, fiestaDays } from './events.js';
+import { EVENTS, COLLECTIONS, FESTIVALS, festivalDays } from './events.js';
 import { ITEMS, SECTIONS, owns, lockedUntil } from './shop.js';
 import { PASS_MAX, SECRET_MAX, secretGoal, passGoal, passPrize, secretPrize, passCount, secretCount } from './passport.js';
 import { meteor, nextShowers, metItems, MET_FROM, STAR_FROM, metPrizes } from './meteor.js';
@@ -134,8 +134,8 @@ export function attachDevBar(game, { go, toGallery }) {
 
 function showInfo(L) {
   const t0 = performance.now();
-  let sol = null, w = 0;
-  for (; w <= 3 && !sol; w++) sol = solve(L, initState(L), w ? 60000 : 250000, w);
+  let solution = null, w = 0;
+  for (; w <= 3 && !solution; w++) solution = solve(L, initState(L), w ? 60000 : 250000, w);
   w--;
   const ms = Math.round(performance.now() - t0);
   const free = L.cards.filter((c) => !c.coveredBy.length).length;
@@ -150,7 +150,7 @@ function showInfo(L) {
     ['Carta regalo', L.meta.pack ? `+${L.meta.pack} cartas al mazo` : 'no'],
     ...(L.tier ? [['Nivel duro', `${TIERS[L.tier].name} (bot meta ${TIERS[L.tier].aim}%) · 3★ si te quedan ${L.stars[1]} en el mazo, 2★ con ${L.stars[0]}`]] : []),
     ['Bot casual gana', ((p) => `${p}% · ${rateTag(L, p)}`)(casualRate(L))],
-    ['Solucionador', sol ? `resuelve en ${sol.length} pasos${w ? ` con ${w} comodín${w > 1 ? 'es' : ''}` : ''} (${ms} ms)` : `no encontró (${ms} ms)`],
+    ['Solucionador', solution ? `resuelve en ${solution.length} pasos${w ? ` con ${w} comodín${w > 1 ? 'es' : ''}` : ''} (${ms} ms)` : `no encontró (${ms} ms)`],
   ];
   openModal({
     title: 'Info del nivel',
@@ -182,7 +182,7 @@ const TABLE_ICONS = {
 export const tableIcon = (t) => TABLE_ICONS[t] || '';
 const SCROLL_NAMES = { mesa: 'mesa enrollada', gravedad: 'gravedad', nebulosa: 'nebulosa', plegable: 'mesa plegable' };
 // Mesas que van sobre un tablero normal (no son tira): se filtran por su bandera del nivel.
-const OVERLAY_TABLES = [['marea', 'Marea', mareaFirst() + 1, (L) => !!L.tide], ['hoyo', 'Agujero negro', hoyoFirst() + 1, (L) => !!L.hole], ['puertas', 'Puertas', puertasFirst() + 1, (L) => !!L.doors], ['banda', 'Banda transportadora', bandaFirst() + 1, (L) => !!L.belt], ['rocas', 'Asteroides', rocasFirst() + 1, (L) => !!L.rocks]];
+const OVERLAY_TABLES = [['marea', 'Marea', tideFirst() + 1, (L) => !!L.tide], ['hoyo', 'Agujero negro', holeFirst() + 1, (L) => !!L.hole], ['puertas', 'Puertas', doorsFirst() + 1, (L) => !!L.doors], ['banda', 'Banda transportadora', bandaFirst() + 1, (L) => !!L.belt], ['rocas', 'Asteroides', rocksFirst() + 1, (L) => !!L.rocks]];
 const PIECES = [['steps', 3], ['cross', 3], ['crown', 8], ['rosette', 13], ['sandwich', 16], ['tiltFan', 21]];
 // Nombres en español de formas y piezas (galería e Info).
 const TPL_NAMES = { pyramid: 'Pirámide', peaks: 'Picos', clusters: 'Grupitos', star: 'Estrella', layers: 'Capas', wall: 'Muro', towers: 'Torres', butterfly: 'Mariposa', diamond: 'Diamante', spiral: 'Espiral', mesa: 'Mesa enrollada', heart: 'Corazón', gravedad: 'Gravedad', scatter: 'Dispersas', nebulosa: 'Nebulosa', plegable: 'Mesa plegable', invPyramid: 'Pirámide invertida', hourglass: 'Reloj de arena' };
@@ -218,19 +218,19 @@ function preview(L, W = 150, H = 104) {
     .join('');
 }
 
-const MES_C = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+const MONTHS_C = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
 // Grupos de mundos del evento y las festividades (sus niveles cambian según las cartas que ya conoce el jugador).
 const GRP_NAMES = EVENT_WORLDS.map((w, i) => (i ? `Mundos ${w + 1}${EVENT_WORLDS[i + 1] ? `-${EVENT_WORLDS[i + 1]}` : ' en adelante'}` : `Mundos 1-${EVENT_WORLDS[1]}`));
 
 export function galleryScreen({ onPlay, onPlayLevel, onBack }) {
   const st = gallery;
   const now = new Date().getFullYear();
-  const evs = Object.entries(EVENTOS).filter(([, e]) => e.ready).map(([m, e]) => [+m, e]).sort((a, b) => a[0] - b[0]);
+  const evs = Object.entries(EVENTS).filter(([, e]) => e.ready).map(([m, e]) => [+m, e]).sort((a, b) => a[0] - b[0]);
   st.year ??= now;
   st.grp ??= eventGroup(save.open || 0);
   st.month ??= (evs.find(([m]) => m >= new Date().getMonth()) || evs[0])[0];
-  const fiDays = () => fiestaDays(st.year, true);
-  st.fi ??= fiDays()[0]?.f.key || 'reserva';
+  const festDays = () => festivalDays(st.year, true);
+  st.fi ??= festDays()[0]?.f.key || 'reserva';
   const el = document.createElement('div');
   el.className = 'screen gallery';
   const SRCS = [['camino', 'Camino'], ['mes', 'Del mes'], ['dia', 'De un día']];
@@ -241,9 +241,9 @@ export function galleryScreen({ onPlay, onPlayLevel, onBack }) {
   // Qué festividad usa cada especial en el año elegido (todos los grupos de mundos).
   const usesOf = () => {
     const out = {};
-    for (const { f, day } of fiDays()) {
-      const { N, L } = fiShape(f);
-      for (const w of EVENT_WORLDS) for (let k = 0; k < L; k++) (out[fiestaPick(day, k, w, N)] ??= new Map()).set(f.key, f);
+    for (const { f, day } of festDays()) {
+      const { N, L } = festShape(f);
+      for (const w of EVENT_WORLDS) for (let k = 0; k < L; k++) (out[festivalPick(day, k, w, N)] ??= new Map()).set(f.key, f);
     }
     return out;
   };
@@ -253,13 +253,13 @@ export function galleryScreen({ onPlay, onPlayLevel, onBack }) {
   const paged = () => st.src === 'camino' || (st.src === 'dia' && st.fi === 'reserva');
   function eventSet() {
     if (st.src === 'mes') {
-      const e = EVENTOS[st.month];
+      const e = EVENTS[st.month];
       return { look: { ico: e.ico, table: e.key }, planets: e.planets, levels: [...Array(EVENT_LEVELS).keys()].map((k) => eventLevel(st.year * 12 + st.month, k, EVENT_WORLDS[st.grp])) };
     }
-    const x = fiDays().find((o) => o.f.key === st.fi);
+    const x = festDays().find((o) => o.f.key === st.fi);
     if (!x) return { look: {}, planets: [], levels: [] };
-    const { N, L } = fiShape(x.f);
-    return { look: { ico: x.f.ico, table: x.f.key }, planets: x.f.planets || [], levels: [...Array(L).keys()].map((k) => fiestaLevel(x.day, k, EVENT_WORLDS[st.grp], N)), day: x.day };
+    const { N, L } = festShape(x.f);
+    return { look: { ico: x.f.ico, table: x.f.key }, planets: x.f.planets || [], levels: [...Array(L).keys()].map((k) => festivalLevel(x.day, k, EVENT_WORLDS[st.grp], N)), day: x.day };
   }
   // Niveles duros por escalón (L.tier; ver TIERS).
   const hv = (L) => L.tier || 0;
@@ -278,9 +278,9 @@ export function galleryScreen({ onPlay, onPlayLevel, onBack }) {
     }[st.src];
     const years = [...Array(6).keys()].map((i) => now - 1 + i);
     const source = st.src === 'mes'
-      ? pick('month', 'Evento', evs.map(([m, e]) => opt(m, `${e.name} · ${MES_C[m]}`, st.month)).join('')) + pick('year', 'Año', years.map((y) => opt(y, y, st.year)).join('')) + pick('grp', 'Jugador en', GRP_NAMES.map((n, i) => opt(i, n, st.grp)).join(''))
+      ? pick('month', 'Evento', evs.map(([m, e]) => opt(m, `${e.name} · ${MONTHS_C[m]}`, st.month)).join('')) + pick('year', 'Año', years.map((y) => opt(y, y, st.year)).join('')) + pick('grp', 'Jugador en', GRP_NAMES.map((n, i) => opt(i, n, st.grp)).join(''))
       : st.src === 'dia'
-        ? pick('fi', 'Festividad', fiDays().map(({ f, day }) => { const d = new Date(day * 864e5); return opt(f.key, `${f.name} · ${d.getUTCDate()} ${MES_C[d.getUTCMonth()]}`, st.fi); }).join('') + opt('reserva', 'Reserva: los 1,000 especiales', st.fi)) + pick('year', 'Año', years.map((y) => opt(y, y, st.year)).join('')) + (st.fi === 'reserva' ? '' : pick('grp', 'Jugador en', GRP_NAMES.map((n, i) => opt(i, n, st.grp)).join('')))
+        ? pick('fi', 'Festividad', festDays().map(({ f, day }) => { const d = new Date(day * 864e5); return opt(f.key, `${f.name} · ${d.getUTCDate()} ${MONTHS_C[d.getUTCMonth()]}`, st.fi); }).join('') + opt('reserva', 'Reserva: los 1,000 especiales', st.fi)) + pick('year', 'Año', years.map((y) => opt(y, y, st.year)).join('')) + (st.fi === 'reserva' ? '' : pick('grp', 'Jugador en', GRP_NAMES.map((n, i) => opt(i, n, st.grp)).join('')))
         : '';
     // Escalones de los niveles duros (ver TIERS): camino 2-4, evento 1-3, especiales 1-4.
     const tiers = st.src === 'camino' ? [2, 3, 4] : st.src === 'mes' ? [1, 2, 3] : [1, 2, 3, 4];
@@ -334,12 +334,12 @@ export function galleryScreen({ onPlay, onPlayLevel, onBack }) {
     const pager = el.querySelector('.g-pager');
     let items = [], html = '';
     if (paged()) {
-      const reserva = st.src === 'dia';
-      const end = reserva ? 1000 : TOTAL_LEVELS;
+      const specialPool = st.src === 'dia';
+      const end = specialPool ? 1000 : TOTAL_LEVELS;
       let g = st.start;
       while (items.length < PAGE && g < end) {
-        const id = reserva ? SPECIAL_ID + g : g;
-        if (reserva || !st.boss || id % LEVELS_PER_WORLD === LEVELS_PER_WORLD - 1) {
+        const id = specialPool ? SPECIAL_ID + g : g;
+        if (specialPool || !st.boss || id % LEVELS_PER_WORLD === LEVELS_PER_WORLD - 1) {
           const L = generateLevel(id);
           if (ok(L)) items.push({ L, key: L.g });
         }
@@ -348,7 +348,7 @@ export function galleryScreen({ onPlay, onPlayLevel, onBack }) {
       }
       st.end = g;
       pager.hidden = false;
-      el.querySelector('.g-range').textContent = reserva ? `Especiales ${st.start + 1} – ${g}` : `Niveles ${st.start + 1} – ${g}`;
+      el.querySelector('.g-range').textContent = specialPool ? `Especiales ${st.start + 1} – ${g}` : `Niveles ${st.start + 1} – ${g}`;
       el.querySelector('[data-g="prev"]').disabled = st.start <= 0;
       el.querySelector('[data-g="next"]').disabled = g >= end;
       html = items.map(({ L }) => tile(L)).join('');
@@ -452,7 +452,7 @@ export function galleryScreen({ onPlay, onPlayLevel, onBack }) {
     if (k === 'year') {
       st.year = +v;
       useBy = usesOf();
-      if (st.fi !== 'reserva' && !fiDays().some((o) => o.f.key === st.fi)) st.fi = fiDays()[0]?.f.key || 'reserva';
+      if (st.fi !== 'reserva' && !festDays().some((o) => o.f.key === st.fi)) st.fi = festDays()[0]?.f.key || 'reserva';
     }
     st.start = 0;
     render();
@@ -540,22 +540,22 @@ function goToLevel(g, betBefore) {
 const pickOne = (a) => a[Math.floor(Math.random() * a.length)];
 function devMisOne() {
   if (!isOn('mis')) return `misiones (nivel ${UNLOCK.mis + 1})`;
-  const x = pickOne(missions().list.filter((m) => !misDone(m)));
+  const x = pickOne(missions().list.filter((m) => !missionDone(m)));
   if (x) x.n = x.goal;
   return '';
 }
-function devLogroOne() {
+function devAchievementOne() {
   if (!isOn('logros')) return `logros (nivel ${UNLOCK.logros + 1})`;
-  const l = pickOne(logrosVisible().filter((x) => logroGot(x) < LOGRO_TOP));
+  const l = pickOne(achievementsVisible().filter((x) => achievementGot(x) < ACHIEVEMENT_TOP));
   if (!l) return '';
   const st = (save.stats ||= {}), k = l.best ? `${l.k}Best` : l.k;
-  st[k] = Math.max(st[k] || 0, logroNeed(l));
+  st[k] = Math.max(st[k] || 0, achievementNeed(l));
   return '';
 }
-function devRachaNext() {
+function devStreakNext() {
   if (!isOn('racha')) return `racha (nivel ${UNLOCK.racha + 1})`;
   const g = nextGoal();
-  while (racha().n < g.n) rachaWin(Math.min(3, g.n - racha().n));
+  while (dailyStreak().n < g.n) streakWin(Math.min(3, g.n - dailyStreak().n));
   return '';
 }
 const devDo = (fns, onRefresh) => {
@@ -564,16 +564,16 @@ const devDo = (fns, onRefresh) => {
   if (no.length) toast(`Aún no se abren: ${no.join(', ')}`);
   onRefresh();
 };
-export function openDevMenu({ onGallery, onPlanets, onFiestas, onGoLevel, onRefresh, onRescue, card }) {
+export function openDevMenu({ onGallery, onPlanets, onFestivals, onGoLevel, onRefresh, onRescue, card }) {
   const w = Math.min(Math.floor(save.next / LEVELS_PER_WORLD), save.open);
   const r = Math.floor(w / REGION);
   const evNow = ev(), colNow = col();
   const evSet = (patch) => { Object.assign(ev().state, { run: null, tk: 1, at: 0, ...patch }); persist(); onRefresh(); };
   // fiNext: la siguiente fiesta que no es la de hoy ni la de mañana (para brincar al día antes de ella).
   const metNow = meteor(), metOn = metNow?.K.kind === 'met', starOn = metNow?.K.kind === 'star';
-  const DIAS = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
-  const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
-  const when = (x) => { const d = new Date(x.at); return `${DIAS[d.getDay()]} ${d.getDate()} ${MESES[d.getMonth()]} · ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`; };
+  const DAYS_SHORT = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
+  const MONTHS_SHORT = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+  const when = (x) => { const d = new Date(x.at); return `${DAYS_SHORT[d.getDay()]} ${d.getDate()} ${MONTHS_SHORT[d.getMonth()]} · ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`; };
   // Cuánto falta para una lluvia (con el reloj del modo dev, si se movió de día).
   const until = (x) => {
     const ms = x.at - (Date.now() + (save.devDay || 0) * 864e5);
@@ -581,9 +581,9 @@ export function openDevMenu({ onGallery, onPlanets, onFiestas, onGoLevel, onRefr
     const m = Math.ceil(ms / 6e4), d = Math.floor(m / 1440), h = Math.floor((m % 1440) / 60);
     return `en ${d ? `${d} d ` : ''}${d || h ? `${h} h ` : ''}${m % 60} min`;
   };
-  const fiNow = fiesta(), fiNext = nextFiesta(fiNow?.soon ? fiNow.inDays : 0), fiOn = fiNow && !fiNow.soon;
-  const { N: FN, L: FL } = fiShape(fiNow);
-  const fiSet = (patch) => { Object.assign(fiesta().state, { run: null, ...patch }); persist(); onRefresh(); };
+  const festNow = festival(), festNext = nextFestival(festNow?.soon ? festNow.inDays : 0), festOn = festNow && !festNow.soon;
+  const { N: FN, L: FL } = festShape(festNow);
+  const festSet = (patch) => { Object.assign(festival().state, { run: null, ...patch }); persist(); onRefresh(); };
   // Deja la cuenta a 1 del premio: el siguiente globo (jefe) o burbuja (cofre) que truene lo da.
   const popTxt = (k) => { const p = save.pops?.[k] || { n: 0, lvl: 0 }; return `${k}s ${p.n} de ${popGoal(k, p.lvl)}`; };
   const popNear = (k) => { const p = ((save.pops ||= {})[k] ||= { n: 0, lvl: 0 }); p.n = popGoal(k, p.lvl) - 1; persist(); onRefresh(); };
@@ -601,11 +601,11 @@ export function openDevMenu({ onGallery, onPlanets, onFiestas, onGoLevel, onRefr
     onRefresh();
   };
   // Recuento: cuántos eventos hay de cada tipo (y cuáles) y cuántas cosas hay en la tienda según de dónde salen.
-  const MES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
-  const evs = Object.entries(EVENTOS).filter(([, e]) => e.ready).sort((a, b) => a[0] - b[0]);
-  const fis = FIESTAS.filter((f) => f.ready), y = new Date().getFullYear();
-  const origin = (it) => (!it.ev ? 'tienda' : it.code ? 'codigo' : it.met ? 'meteoro' : it.star ? 'estrellas' : it.logro ? 'logro' : it.pase ? 'pasaporte' : it.secreto ? 'secretos' : FIESTAS.some((f) => f.key === it.ev) ? 'fiesta' : Object.values(EVENTOS).some((e) => e.key === it.ev) ? 'mes' : 'col');
-  const ORI = [['tienda', 'De la tienda', 'bag'], ['col', 'Colecciones', 'concha'], ['mes', 'Evento del mes', 'planet'], ['fiesta', 'Festividades', 'flame'], ['codigo', 'Códigos de regalo', 'cofre'], ['meteoro', 'Lluvia de meteoritos', 'meteoro'], ['estrellas', 'Lluvia de estrellas', 'starFall'], ['logro', 'Logros', 'trophy'], ['pasaporte', 'Pasaporte', 'pasaporte'], ['secretos', 'Niveles secretos', 'starSecret']];
+  const MONTHS_ABBR = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+  const evs = Object.entries(EVENTS).filter(([, e]) => e.ready).sort((a, b) => a[0] - b[0]);
+  const fis = FESTIVALS.filter((f) => f.ready), y = new Date().getFullYear();
+  const origin = (it) => (!it.ev ? 'tienda' : it.code ? 'codigo' : it.met ? 'meteoro' : it.star ? 'estrellas' : it.logro ? 'logro' : it.pase ? 'pasaporte' : it.secreto ? 'secretos' : FESTIVALS.some((f) => f.key === it.ev) ? 'fiesta' : Object.values(EVENTS).some((e) => e.key === it.ev) ? 'mes' : 'col');
+  const ORIGINS_DEV = [['tienda', 'De la tienda', 'bag'], ['col', 'Colecciones', 'concha'], ['mes', 'Evento del mes', 'planet'], ['fiesta', 'Festividades', 'flame'], ['codigo', 'Códigos de regalo', 'cofre'], ['meteoro', 'Lluvia de meteoritos', 'meteoro'], ['estrellas', 'Lluvia de estrellas', 'starFall'], ['logro', 'Logros', 'trophy'], ['pasaporte', 'Pasaporte', 'pasaporte'], ['secretos', 'Niveles secretos', 'starSecret']];
   const cnt = (sec, o) => ITEMS[sec].filter((it) => origin(it) === o).length;
   const mine = (sec, o) => ITEMS[sec].filter((it) => origin(it) === o && owns(sec, it.k)).length;
   const sum = (f) => SECTIONS.reduce((n, { k }) => n + f(k), 0);
@@ -617,9 +617,9 @@ export function openDevMenu({ onGallery, onPlanets, onFiestas, onGoLevel, onRefr
   const won = save.next || 0;
   const opens = (lvl) => (won >= lvl ? '' : `<span class="d-no" title="faltan ${lvl - won} niveles">${lvl - won}</span>`);
   // Los eventos de cada tipo (van dentro de su renglón, como acordeón): del mes por mes, colecciones, de un día por fecha.
-  const fiDay = (f) => f.date(y);
-  const colsOf = (plus) => COLECCIONES.filter((c) => (c.plus || 0) === plus).map((c) => [c.token, c.name, '']);
-  const fisOf = (local, grp) => fis.filter((f) => !!f.local === local && (f.grp || 0) === (grp || 0)).sort((a, b) => fiDay(a) - fiDay(b)).map((f) => [f.ico, f.name, `${fiDay(f).getDate()} ${MES[fiDay(f).getMonth()]}${f.days > 1 ? ` · ${f.days} días` : ''}`, `f:${f.key}`]);
+  const festDay = (f) => f.date(y);
+  const colsOf = (plus) => COLLECTIONS.filter((c) => (c.plus || 0) === plus).map((c) => [c.token, c.name, '']);
+  const fisOf = (local, grp) => fis.filter((f) => !!f.local === local && (f.grp || 0) === (grp || 0)).sort((a, b) => festDay(a) - festDay(b)).map((f) => [f.ico, f.name, `${festDay(f).getDate()} ${MONTHS_ABBR[festDay(f).getMonth()]}${f.days > 1 ? ` · ${f.days} días` : ''}`, `f:${f.key}`]);
   // Todo lo que sale en el camino, en el orden en que aparece (nivel = el primero donde lo ves; los eventos se abren al ganar el anterior).
   const UN = [
     ['Racha cohete', UNLOCK.racha, 'rocket'],
@@ -629,7 +629,7 @@ export function openDevMenu({ onGallery, onPlanets, onFiestas, onGoLevel, onRefr
     ['Lluvia de meteoritos', MET_FROM, 'meteoro', nextShowers(6).map((x) => ['meteoro', when(x), until(x), '']), '2 o 3 veces por semana, 30 minutos a cualquier hora, sin aviso. Es igual en todos los teléfonos.'],
     ['Lluvia de estrellas', STAR_FROM, 'starFall', nextShowers(6, true).map((x) => ['starFall', when(x), until(x), '']), '2 o 3 veces por semana, 15 minutos sin aviso, en días sin lluvia de meteoritos: monedas ×3 y hasta 3 premios (con sus 5 exclusivos). Igual en todos los teléfonos.'],
     ['Colecciones', UNLOCK.col, 'concha', colsOf(0), 'Se turnan: 2 semanas al mes (la del 1.er y la del 3.er lunes)'],
-    ['Eventos del mes', UNLOCK.mes, 'planet', evs.map(([m, e]) => [e.ico, e.name, MES[m], `m:${m}`])],
+    ['Eventos del mes', UNLOCK.mes, 'planet', evs.map(([m, e]) => [e.ico, e.name, MONTHS_ABBR[m], `m:${m}`])],
     ['Colecciones nuevas y 3.ª semana', UNLOCK.col2, 'fosil', colsOf(true), 'Se suman a las de antes y se turnan: 3 semanas al mes'],
     ['Festividades de un día', UNLOCK.fiesta, 'pinata', fisOf(false)],
     ['Colecciones de Arte, Música y Cine', UNLOCK.col3, 'nota', colsOf(2), 'Se suman a las de antes y se turnan: todas las semanas'],
@@ -662,9 +662,9 @@ export function openDevMenu({ onGallery, onPlanets, onFiestas, onGoLevel, onRefr
     <table class="dtable"><tr><th>Sello</th><th>Niveles</th><th>Monedas</th><th>Exclusivo</th><th></th></tr>${Array.from({ length: PASS_MAX }, (_, i) => ppRow(i + 1, passGoal(i + 1), passPrize(i + 1), i < (save.pass?.s || 0))).join('')}</table>
     <p class="dline"><b>Secretos</b>: ${secretCount()} ganados · ${save.pass?.x || 0} de ${SECRET_MAX} premios</p>
     <table class="dtable"><tr><th>Premio</th><th>Secretos</th><th>Monedas</th><th>Exclusivo</th><th></th></tr>${Array.from({ length: SECRET_MAX }, (_, i) => ppRow(i + 1, secretGoal(i + 1), secretPrize(i + 1), i < (save.pass?.x || 0))).join('')}</table>`;
-  const recuento = `<p class="dline ${clashes.length ? 'd-no' : 'd-yes'}">${clashes.length ? `<b>Choque:</b> en el nivel ${clashes.join(', ')} se abren dos cosas a la vez (en rojo).` : 'Sin choques: cada ventana de desbloqueo sale en su propio nivel.'}</p><table class="dtable dorder"><tr><th></th><th></th><th>Qué</th><th>Nivel</th><th>Mundo</th><th>Tú</th></tr>${rows.map(line).join('')}</table>
+  const countHTML = `<p class="dline ${clashes.length ? 'd-no' : 'd-yes'}">${clashes.length ? `<b>Choque:</b> en el nivel ${clashes.join(', ')} se abren dos cosas a la vez (en rojo).` : 'Sin choques: cada ventana de desbloqueo sale en su propio nivel.'}</p><table class="dtable dorder"><tr><th></th><th></th><th>Qué</th><th>Nivel</th><th>Mundo</th><th>Tú</th></tr>${rows.map(line).join('')}</table>
     <p class="dline"><b>Tienda: tienes ${sum((k) => ITEMS[k].filter((it) => owns(k, it.k)).length)} de ${Object.values(ITEMS).flat().length}</b> (tuyas / que hay)</p>
-    <table class="dtable dshop"><tr><th>De dónde sale</th><th>Tienes</th><th>Faltan</th><th>Hay</th></tr>${ORI.map(([o, name, ico]) => { const n = sum((k) => cnt(k, o)), y = sum((k) => mine(k, o)); return !n ? '' : `<tr class="dshop-g dacc" data-acc="s${o}"><td class="dname">${icon(ico)}${name}<span class="dchev">${icon('chev')}</span></td>${nums(y, n)}</tr>${SECTIONS.filter(({ k }) => cnt(k, o)).map(({ k, name: sn }) => `<tr class="dsub" data-of="s${o}" hidden><td class="dname">${icon(SEC_ICO[k])}${sn}</td>${nums(mine(k, o), cnt(k, o))}</tr>`).join('')}`; }).join('')}<tr class="dtot"><td><b>Total</b></td>${nums(sum((k) => ITEMS[k].filter((it) => owns(k, it.k)).length), Object.values(ITEMS).flat().length)}</tr></table>
+    <table class="dtable dshop"><tr><th>De dónde sale</th><th>Tienes</th><th>Faltan</th><th>Hay</th></tr>${ORIGINS_DEV.map(([o, name, ico]) => { const n = sum((k) => cnt(k, o)), y = sum((k) => mine(k, o)); return !n ? '' : `<tr class="dshop-g dacc" data-acc="s${o}"><td class="dname">${icon(ico)}${name}<span class="dchev">${icon('chev')}</span></td>${nums(y, n)}</tr>${SECTIONS.filter(({ k }) => cnt(k, o)).map(({ k, name: sn }) => `<tr class="dsub" data-of="s${o}" hidden><td class="dname">${icon(SEC_ICO[k])}${sn}</td>${nums(mine(k, o), cnt(k, o))}</tr>`).join('')}`; }).join('')}<tr class="dtot"><td><b>Total</b></td>${nums(sum((k) => ITEMS[k].filter((it) => owns(k, it.k)).length), Object.values(ITEMS).flat().length)}</tr></table>
     ${passTable}
     <p class="dline">De la tienda, ${shopLocked} siguen con candado por mundo; lo último se abre en el mundo ${lastNeed + 1} (nivel ${lastNeed * LEVELS_PER_WORLD + 1}).</p>`;
   // Secciones con título; cada botón dice en corto lo que hace (la explicación larga va en su title).
@@ -744,22 +744,22 @@ export function openDevMenu({ onGallery, onPlanets, onFiestas, onGoLevel, onRefr
     // Misiones del día, logros y racha (10 nov 2026): un solo grupo con su parte cada uno, de su color (como sus
     // tarjetas de festejo), y arriba "Premios mezclados" para ver los festejos juntos.
     { t: 'Misiones, logros y racha', items: [
-      { l: 'Premios mezclados', cls: 'gold', title: 'Siguiente premio de racha, una misión y un logro: para ver sus festejos juntos', fn: () => devDo([devRachaNext, devMisOne, devLogroOne], onRefresh) },
+      { l: 'Premios mezclados', cls: 'gold', title: 'Siguiente premio de racha, una misión y un logro: para ver sus festejos juntos', fn: () => devDo([devStreakNext, devMisOne, devAchievementOne], onRefresh) },
     ], parts: [
-      { k: 'racha', h: 'Racha cohete', ico: 'rocket', sub: `va en ${racha().n}`, items: [
-        { l: 'Siguiente premio', fn: () => devDo([devRachaNext], onRefresh) },
-        { l: '+1 victoria (3★)', fn: () => (rachaWin(3), onRefresh()) },
-        { l: 'Perderla', fn: () => (rachaLose(), onRefresh()) },
+      { k: 'racha', h: 'Racha cohete', ico: 'rocket', sub: `va en ${dailyStreak().n}`, items: [
+        { l: 'Siguiente premio', fn: () => devDo([devStreakNext], onRefresh) },
+        { l: '+1 victoria (3★)', fn: () => (streakWin(3), onRefresh()) },
+        { l: 'Perderla', fn: () => (streakLose(), onRefresh()) },
         { l: 'Pasar al otro día', fn: () => ((save.devDay = (save.devDay || 0) + 1), persist(), onRefresh()) },
       ] },
-      { k: 'mis', h: 'Misiones del día', ico: 'misiones', sub: `${missions().list.filter(misDone).length}/3 cumplidas`, items: [
+      { k: 'mis', h: 'Misiones del día', ico: 'misiones', sub: `${missions().list.filter(missionDone).length}/3 cumplidas`, items: [
         { l: 'Cumplir una', title: 'Una de las de hoy que falte, al azar', fn: () => devDo([devMisOne], onRefresh) },
         { l: 'Cumplir las 3', fn: () => { for (const x of missions().list) x.n = x.goal; persist(); onRefresh(); } },
         { l: 'Otras misiones', title: 'Escoge 3 nuevas (como si fuera otro día, sin mover la fecha)', fn: () => { save.misSeed = (save.misSeed || 0) + 1; save.mis = null; missions(); onRefresh(); } },
       ] },
-      { k: 'logro', h: 'Logros', ico: 'trophy', sub: `${LOGROS.reduce((n, l) => n + logroGot(l), 0)} medallas`, items: [
-        { l: 'Completar uno', title: 'Uno al azar llega a su siguiente medalla y al cerrar se cobra su premio', fn: () => devDo([devLogroOne], onRefresh) },
-        { l: 'Subir todos un escalón', fn: () => { const st = (save.stats ||= {}); for (const l of LOGROS) { const k = l.best ? `${l.k}Best` : l.k; st[k] = Math.max(st[k] || 0, l.steps.find((n) => n > (st[k] || 0)) || st[k]); } persist(); onRefresh(); } },
+      { k: 'logro', h: 'Logros', ico: 'trophy', sub: `${ACHIEVEMENTS.reduce((n, l) => n + achievementGot(l), 0)} medallas`, items: [
+        { l: 'Completar uno', title: 'Uno al azar llega a su siguiente medalla y al cerrar se cobra su premio', fn: () => devDo([devAchievementOne], onRefresh) },
+        { l: 'Subir todos un escalón', fn: () => { const st = (save.stats ||= {}); for (const l of ACHIEVEMENTS) { const k = l.best ? `${l.k}Best` : l.k; st[k] = Math.max(st[k] || 0, l.steps.find((n) => n > (st[k] || 0)) || st[k]); } persist(); onRefresh(); } },
       ] },
       // Pasaporte y secretos (11 nov 2026): sumar lo que falta para el siguiente sello o premio (se festeja al volver al
       // mapa) y darte sus exclusivos sin cobrarlos. Van al final del grupo (Premios mezclados no los incluye).
@@ -782,20 +782,20 @@ export function openDevMenu({ onGallery, onPlanets, onFiestas, onGoLevel, onRefr
         evNow && { l: 'Siguiente planeta', fn: () => evSet({ k: Math.min(EVENT_LEVELS - 1, (Math.floor(evNow.state.k / EVENT_PER_PLANET) + 1) * EVENT_PER_PLANET) }) },
         evNow && { l: 'Ganar todo hasta el último jefe', title: 'Gana los niveles que faltan (con sus premios) y te deja en el jefe del último planeta', fn: () => (ev().state.tk = 1, ev().state.run = null, winTo(ev, evEnter, evWin, EVENT_LEVELS - 1)) },
       ] },
-      { k: 'dia', h: 'Festividad del día', ico: 'calavera', sub: `${fiNow ? `${fiNow.name} · ${fiNow.soon ? (fiNow.inDays > 1 ? `en ${fiNow.inDays} días` : 'mañana') : `nivel ${Math.min(fiNow.state.k + 1, FL)} de ${FL}`}` : fiNext ? `próxima: ${fiNext.name} en ${fiNext.days} días` : 'ninguna lista'}${isOn('fiesta') ? '' : ` · se abre en el nivel ${UNLOCK.fiesta}`}`, items: [
-        fiNext && fiNext.days > 3 && { l: `3 días antes de: ${fiNext.name}`, title: 'Mueve el reloj a 3 días de la siguiente fiesta: su botón sale gris con la cuenta regresiva', fn: () => toDay(fiNext.days - 3) },
-        fiNow?.soon && { l: 'Empezarla', title: 'Mueve el reloj al día de la fiesta', fn: () => toDay(fiNow.inDays) },
-        fiOn && { l: 'Ir al jefe del planeta', fn: () => fiSet({ k: Math.min(FL - 1, Math.floor(fiNow.state.k / FN) * FN + FN - 1) }) },
-        fiOn && { l: 'Siguiente planeta', fn: () => fiSet({ k: Math.min(FL - 1, (Math.floor(fiNow.state.k / FN) + 1) * FN) }) },
-        fiOn && { l: 'Ganar todo hasta el último jefe', title: 'Gana los niveles que faltan (con sus premios) y te deja en el jefe del último planeta', fn: () => ((fiesta().state.run = null), winTo(fiesta, fiEnter, fiWin, FL - 1)) },
-        fiOn && { l: 'Empezar de cero', fn: () => ((save.fi = null), persist(), onRefresh()) },
-        { l: 'Ver el paquete de festividades', cls: 'gold', title: 'Leyendas, fiestas de México y de América: cada una con su mesa y sus 7 exclusivos (solo para ver, no te da nada)', fn: onFiestas },
+      { k: 'dia', h: 'Festividad del día', ico: 'calavera', sub: `${festNow ? `${festNow.name} · ${festNow.soon ? (festNow.inDays > 1 ? `en ${festNow.inDays} días` : 'mañana') : `nivel ${Math.min(festNow.state.k + 1, FL)} de ${FL}`}` : festNext ? `próxima: ${festNext.name} en ${festNext.days} días` : 'ninguna lista'}${isOn('fiesta') ? '' : ` · se abre en el nivel ${UNLOCK.fiesta}`}`, items: [
+        festNext && festNext.days > 3 && { l: `3 días antes de: ${festNext.name}`, title: 'Mueve el reloj a 3 días de la siguiente fiesta: su botón sale gris con la cuenta regresiva', fn: () => toDay(festNext.days - 3) },
+        festNow?.soon && { l: 'Empezarla', title: 'Mueve el reloj al día de la fiesta', fn: () => toDay(festNow.inDays) },
+        festOn && { l: 'Ir al jefe del planeta', fn: () => festSet({ k: Math.min(FL - 1, Math.floor(festNow.state.k / FN) * FN + FN - 1) }) },
+        festOn && { l: 'Siguiente planeta', fn: () => festSet({ k: Math.min(FL - 1, (Math.floor(festNow.state.k / FN) + 1) * FN) }) },
+        festOn && { l: 'Ganar todo hasta el último jefe', title: 'Gana los niveles que faltan (con sus premios) y te deja en el jefe del último planeta', fn: () => ((festival().state.run = null), winTo(festival, festEnter, festWin, FL - 1)) },
+        festOn && { l: 'Empezar de cero', fn: () => ((save.fi = null), persist(), onRefresh()) },
+        { l: 'Ver el paquete de festividades', cls: 'gold', title: 'Leyendas, fiestas de México y de América: cada una con su mesa y sus 7 exclusivos (solo para ver, no te da nada)', fn: onFestivals },
         { l: 'Ver el aviso de Festividades', title: 'La ventana que sale al desbloquearlas (nivel 120), con 3 iconos', fn: () => (save.intro && delete save.intro.fiesta, persist(), onRefresh()) },
         { l: 'Ver el aviso de Leyendas', title: `La ventana que sale al llegar al nivel ${UNLOCK.fiesta2}, con las festividades nuevas`, fn: () => (save.intro && delete save.intro.fiesta2, persist(), onRefresh()) },
         { l: 'Ver el aviso de Fiestas de México', title: `La ventana que sale al llegar al nivel ${UNLOCK.fiesta3 + 1}`, fn: () => (save.intro && delete save.intro.fiesta3, persist(), onRefresh()) },
         { l: 'Ver el aviso de Fiestas de América', title: `La ventana que sale al llegar al nivel ${UNLOCK.fiesta4 + 1}`, fn: () => (save.intro && delete save.intro.fiesta4, persist(), onRefresh()) },
       ] },
-      { k: 'col', h: 'Colección', ico: colNow?.token || COLECCIONES[0].token, sub: colNow ? `${colNow.name} · ${colNow.state.n} fichas` : 'no hay esta semana', items: [
+      { k: 'col', h: 'Colección', ico: colNow?.token || COLLECTIONS[0].token, sub: colNow ? `${colNow.name} · ${colNow.state.n} fichas` : 'no hay esta semana', items: [
         { l: colNow ? 'Siguiente colección' : 'Ir a la próxima', fn: () => ((save.devDay = (save.devDay || 0) + daysToNextCol()), persist(), onRefresh()) },
         colNow && { l: '+500 fichas', fn: () => ((col().state.n += 500), persist(), onRefresh()) },
         colNow && { l: 'Ver su bienvenida', fn: () => ((col().state.intro = false), persist(), onRefresh()) },
@@ -851,7 +851,7 @@ export function openDevMenu({ onGallery, onPlanets, onFiestas, onGoLevel, onRefr
     wide: true,
     // Dos pestañas: los botones primero (lo que más se usa) y el recuento aparte.
     body: `<div class="dtabs"><button class="dtab on" data-tab="btns">Pruebas</button><button class="dtab" data-tab="count">Recuento</button></div>
-      <div class="dpane" data-pane="count" hidden><section class="dsec">${recuento}</section></div>
+      <div class="dpane" data-pane="count" hidden><section class="dsec">${countHTML}</section></div>
       <div class="dpane" data-pane="btns"><p class="note">Todo lo que hagas aquí es de prueba: al salir del modo dev vuelve tu partida.${(() => { const b = backupInfo(); return b ? `<br>Tu partida guardada: <b>nivel ${b.next + 1}</b>, mundo ${b.open + 1}, ${b.coins.toLocaleString('es-MX')} monedas.` : '<br><b>No hay copia de tu partida</b>: sal y vuelve a entrar al modo dev.'; })()}</p>
       ${S.map(secHTML).join('')}</div>`,
     buttons: [
@@ -873,7 +873,7 @@ export function openDevMenu({ onGallery, onPlanets, onFiestas, onGoLevel, onRefr
   m.el.querySelectorAll('[data-go]').forEach((b) => b.addEventListener('click', () => {
     const [t, k] = b.dataset.go.split(':');
     m.close();
-    toDay(t === 'm' ? daysToMonth(+k) : daysToFiesta(k));
+    toDay(t === 'm' ? daysToMonth(+k) : daysToFestival(k));
   }));
   m.el.querySelectorAll('.dsec [data-i]').forEach((b) => b.addEventListener('click', () => { m.close(); all[+b.dataset.i].fn(); }));
 }

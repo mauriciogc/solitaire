@@ -375,7 +375,7 @@ const enc = (s) => `url('data:image/svg+xml,${encodeURIComponent(s)}')`;
 // El fondo (primer rectángulo del tamaño del cuadro) va una vez abajo y el tinte (último, con opacidad) una vez
 // arriba, para que las copias no los tapen ni se queden sin oscurecer.
 // Mantel de las festividades nuevas (10 nov 2026): su color con sus dos figuras regadas, suaves.
-const mantelIcoTile = (bg, a, b, dark) => () => {
+const clothIconTile = (bg, a, b, dark) => () => {
   let s = `<rect width="120" height="120" fill="${bg}"/>`;
   [[8, 8, a, -12], [66, 34, b, 18], [26, 70, b, -20], [80, 86, a, 10]].forEach(([x, y, n, r]) => (s += `<g opacity=".4" transform="translate(${x} ${y}) rotate(${r} 14 14) scale(.9)">${iconInner(n)}</g>`));
   s += `<rect width="120" height="120" fill="${dark}" opacity=".5"/>`;
@@ -440,7 +440,7 @@ function cloudTile() {
   return tileOut(W, H, s);
 }
 // Mantel de ofrenda (evento de Día de Muertos): morado oscuro con bordado de florecitas y pétalos de cempasúchil sueltos.
-function mantelTile() {
+function clothTile() {
   const W = 360, H = 360, r = rng(11);
   let s = `<rect width="${W}" height="${H}" fill="#3e1650"/>`;
   for (let y = 0; y < H; y += 60) s += `<path d="M0 ${y + 30}h${W}" stroke="#4d1d62" stroke-width="18"/>`;
@@ -452,7 +452,7 @@ function mantelTile() {
   return tileOut(W, H, s);
 }
 // Mantel de Navidad: rojo tejido, con filas de pinitos y copos (como suéter navideño).
-function mantelNavidadTile() {
+function clothChristmasTile() {
   const W = 360, H = 240;
   let s = `<rect width="${W}" height="${H}" fill="#a51f30"/>`;
   for (const y of [18, 222]) s += `<path d="M0 ${y}h${W}" stroke="#fff3d6" stroke-width="6" stroke-dasharray="8 8" opacity=".5"/>`;
@@ -464,7 +464,7 @@ function mantelNavidadTile() {
   return tileOut(W, H, s);
 }
 // Mantel de Día de Reyes: terciopelo morado con estrellitas doradas y una greca dorada.
-function mantelReyesTile() {
+function clothKingsTile() {
   const W = 300, H = 300;
   let s = `<rect width="${W}" height="${H}" fill="#3a1a6a"/>`;
   for (let y = 0; y < H; y += 50) s += `<path d="M0 ${y + 25}h${W}" stroke="#42207a" stroke-width="14"/>`;
@@ -473,7 +473,7 @@ function mantelReyesTile() {
   return tileOut(W, H, s);
 }
 // Mantel de Amor y Amistad: rosa con corazoncitos de encaje blanco y una orilla de puntitos.
-function mantelAmorTile() {
+function clothLoveTile() {
   const W = 240, H = 240, hrt = (x, y, k) => `M${x} ${y + 7 * k}C${x - 11 * k} ${y} ${x - 7 * k} ${y - 8 * k} ${x} ${y - 3 * k}C${x + 7 * k} ${y - 8 * k} ${x + 11 * k} ${y} ${x} ${y + 7 * k}z`;
   let s = `<rect width="${W}" height="${H}" fill="#e8559a"/>`;
   for (let y = 0; y < H; y += 60) for (let x = (y / 60) % 2 ? 30 : 0; x < W; x += 60) s += `<path d="${hrt(x + 15, y + 15, 1.1)}" fill="none" stroke="#fff0f6" stroke-width="2.4" opacity=".5"/><circle cx="${x + 15}" cy="${y + 15}" r="2" fill="#fff0f6" opacity=".5"/>`;
@@ -481,7 +481,7 @@ function mantelAmorTile() {
   return tileOut(W, H, s);
 }
 // Mantel de Primavera: cuadros de picnic verde y blanco, con florecitas.
-function mantelPrimaveraTile() {
+function clothSpringTile() {
   const W = 240, H = 240;
   let s = `<rect width="${W}" height="${H}" fill="#e9f7dc"/>`;
   for (let x = 0; x < W; x += 40) s += `<rect x="${x}" y="0" width="20" height="${H}" fill="#7cc04f" opacity=".45"/>`;
@@ -490,7 +490,7 @@ function mantelPrimaveraTile() {
   return tileOut(W, H, s);
 }
 // Mantel de Verano: toalla de playa a rayas turquesa, blanco, amarillo y coral.
-function mantelVeranoTile() {
+function clothSummerTile() {
   const W = 240, H = 240, cols = ['#1f9fc8', '#fff6e6', '#ffc83d', '#fff6e6', '#ff7a6a', '#fff6e6'];
   let s = '';
   for (let i = 0; i < 6; i++) s += `<rect x="${i * 40}" width="40" height="${H}" fill="${cols[i]}" opacity="${i % 2 ? 0.9 : 1}"/>`;
@@ -499,7 +499,7 @@ function mantelVeranoTile() {
   return tileOut(W, H, s);
 }
 // Mantel de Fiestas Patrias: sarape de rayas de colores con líneas finas y una franja de rombos.
-function mantelPatriasTile() {
+function clothIndependenceTile() {
   const W = 120, H = 240, bands = [['#e8438f', 34], ['#ff9c1a', 16], ['#ffc83d', 10], ['#2f9e5c', 30], ['#fff6e6', 6], ['#1fa6c9', 22], ['#7b2fbf', 14], ['#e8434f', 40], ['#ffc83d', 8], ['#2f9e5c', 18], ['#fff6e6', 6], ['#ff9c1a', 46]];
   let s = '', y = 0;
   for (const [c, h] of bands) (s += `<rect y="${y}" width="${W}" height="${h}" fill="${c}"/><rect y="${y + h - 1.5}" width="${W}" height="1.5" fill="#2a1f5c" opacity=".35"/>`), (y += h);
@@ -508,7 +508,7 @@ function mantelPatriasTile() {
   return tileOut(W, H, s);
 }
 // Mantel de Halloween: morado oscuro con telarañas en las esquinas y estrellitas naranjas.
-function mantelHalloweenTile() {
+function clothHalloweenTile() {
   const W = 240, H = 240;
   let s = `<rect width="${W}" height="${H}" fill="#2a1640"/>`;
   const web = (x, y, a0) => {
@@ -522,18 +522,18 @@ function mantelHalloweenTile() {
   return tileOut(W, H, s);
 }
 // Mantel de la Candelaria: servilleta crema bordada con florecitas rojas, verdes y amarillas en hileras.
-function mantelCandelariaTile() {
+function clothCandlemasTile() {
   const W = 120, H = 120;
   let s = `<rect width="${W}" height="${H}" fill="#f4e6c8"/>`;
   for (const y of [0, 60]) s += `<path d="M0 ${y + 2}h${W}M0 ${y + 58}h${W}" stroke="#e8434f" stroke-width="2" stroke-dasharray="4 3" opacity=".6"/>`;
-  const flor = (x, y, c) => `${[0, 72, 144, 216, 288].map((a) => `<ellipse cx="${x}" cy="${y - 5}" rx="2.6" ry="4.4" fill="${c}" transform="rotate(${a} ${x} ${y})"/>`).join('')}<circle cx="${x}" cy="${y}" r="2.4" fill="#ffc83d"/>`;
-  [[30, 30, '#e8434f'], [90, 30, '#2f9e5c'], [60, 90, '#e8434f'], [0, 90, '#ff9c1a'], [120, 90, '#ff9c1a']].forEach(([x, y, c]) => (s += flor(x, y, c)));
+  const flower = (x, y, c) => `${[0, 72, 144, 216, 288].map((a) => `<ellipse cx="${x}" cy="${y - 5}" rx="2.6" ry="4.4" fill="${c}" transform="rotate(${a} ${x} ${y})"/>`).join('')}<circle cx="${x}" cy="${y}" r="2.4" fill="#ffc83d"/>`;
+  [[30, 30, '#e8434f'], [90, 30, '#2f9e5c'], [60, 90, '#e8434f'], [0, 90, '#ff9c1a'], [120, 90, '#ff9c1a']].forEach(([x, y, c]) => (s += flower(x, y, c)));
   s += `<path d="M30 42v10M90 42v10M60 102v10" stroke="#2f9e5c" stroke-width="2"/>`;
   s += `<rect width="${W}" height="${H}" fill="#2a1408" opacity=".38"/>`;
   return tileOut(W, H, s);
 }
 // Mantel del Día del Taco: hule de cuadros rojos y blancos, como en la taquería.
-function mantelTacoTile() {
+function clothTacoTile() {
   const W = 80, H = 80;
   let s = `<rect width="${W}" height="${H}" fill="#fff6ee"/>`;
   s += `<rect width="${W}" height="40" fill="#e8434f" opacity=".55"/><rect width="40" height="${H}" fill="#e8434f" opacity=".55"/>`;
@@ -542,17 +542,17 @@ function mantelTacoTile() {
   return tileOut(W, H, s);
 }
 // Mantel del Día de la Tierra: pasto con florecitas y tréboles.
-function mantelTierraTile() {
+function clothEarthTile() {
   const W = 120, H = 120;
   let s = `<rect width="${W}" height="${H}" fill="#5fae4a"/>`;
   for (const [x, y] of [[10, 14], [40, 30], [76, 12], [100, 44], [22, 60], [60, 70], [94, 90], [30, 100], [70, 108], [8, 84]]) s += `<path d="M${x} ${y}l-3 -9M${x} ${y}l1 -10M${x} ${y}l4 -8" stroke="#4a9a3a" stroke-width="2" stroke-linecap="round"/>`;
-  const flor = (x, y, c) => `${[0, 72, 144, 216, 288].map((a) => `<ellipse cx="${x}" cy="${y - 4}" rx="2.4" ry="3.8" fill="${c}" transform="rotate(${a} ${x} ${y})"/>`).join('')}<circle cx="${x}" cy="${y}" r="2" fill="#ffc83d"/>`;
-  [[30, 40, '#fff6ee'], [90, 70, '#ff9cc8'], [56, 20, '#fff6ee'], [14, 104, '#ff9cc8'], [104, 112, '#fff6ee']].forEach(([x, y, c]) => (s += flor(x, y, c)));
+  const flower = (x, y, c) => `${[0, 72, 144, 216, 288].map((a) => `<ellipse cx="${x}" cy="${y - 4}" rx="2.4" ry="3.8" fill="${c}" transform="rotate(${a} ${x} ${y})"/>`).join('')}<circle cx="${x}" cy="${y}" r="2" fill="#ffc83d"/>`;
+  [[30, 40, '#fff6ee'], [90, 70, '#ff9cc8'], [56, 20, '#fff6ee'], [14, 104, '#ff9cc8'], [104, 112, '#fff6ee']].forEach(([x, y, c]) => (s += flower(x, y, c)));
   s += `<rect width="${W}" height="${H}" fill="#06200a" opacity=".42"/>`;
   return tileOut(W, H, s);
 }
 // Mantel del Día del Niño: azul clarito de fiesta con confeti de colores y serpentinas.
-function mantelNinoTile() {
+function clothChildTile() {
   const W = 120, H = 120, C = ['#ff5f7e', '#ffc83d', '#47c27a', '#b36bff', '#ff9c5b', '#4aa8de'];
   let s = `<rect width="${W}" height="${H}" fill="#9fdcf5"/>`;
   [[12, 18, 20], [44, 8, -30], [80, 22, 45], [104, 6, 10], [24, 50, -15], [62, 44, 60], [96, 58, -40], [10, 86, 30], [48, 80, -60], [84, 92, 15], [30, 110, 50], [70, 112, -20], [110, 100, 70]].forEach(([x, y, a], i) => (s += `<rect x="${x - 3}" y="${y - 1.6}" width="6" height="3.2" rx="1" fill="${C[i % C.length]}" transform="rotate(${a} ${x} ${y})"/>`));
@@ -561,7 +561,7 @@ function mantelNinoTile() {
   return tileOut(W, H, s);
 }
 // Mantel del Día del Padre: cuadros azules de día de campo.
-function mantelPadreTile() {
+function clothFatherTile() {
   const W = 120, H = 120;
   let s = `<rect width="${W}" height="${H}" fill="#e6f2fb"/>`;
   [10, 50, 90].forEach((v) => (s += `<rect x="${v}" width="20" height="${H}" fill="#4a8fd0" opacity=".55"/><rect y="${v}" width="${W}" height="20" fill="#4a8fd0" opacity=".55"/>`));
@@ -570,7 +570,7 @@ function mantelPadreTile() {
   return tileOut(W, H, s);
 }
 // Mantel del Día del Gato: cojín lila con huellitas.
-function mantelGatoTile() {
+function clothCatTile() {
   const W = 120, H = 120;
   let s = `<rect width="${W}" height="${H}" fill="#d8c6f5"/>`;
   const paw = (x, y, a) => `<g transform="translate(${x} ${y}) rotate(${a})" fill="#a98ae0"><ellipse cy="3" rx="5" ry="4.2"/>${[[-5.4, -3.4], [-1.8, -6.2], [1.8, -6.2], [5.4, -3.4]].map(([a2, b]) => `<circle cx="${a2}" cy="${b}" r="1.9"/>`).join('')}</g>`;
@@ -579,7 +579,7 @@ function mantelGatoTile() {
   return tileOut(W, H, s);
 }
 // Mantel del Día del Perro: cobija naranja a rayas con huesitos.
-function mantelPerroTile() {
+function clothDogTile() {
   const W = 120, H = 120;
   let s = `<rect width="${W}" height="${H}" fill="#f6c890"/>`;
   [0, 60].forEach((y) => (s += `<rect y="${y + 22}" width="${W}" height="16" fill="#e8853e" opacity=".6"/><rect y="${y + 26}" width="${W}" height="3" fill="#fff6e6" opacity=".7"/>`));
@@ -589,7 +589,7 @@ function mantelPerroTile() {
   return tileOut(W, H, s);
 }
 // Mantel del Día del Gamer: tapete morado de cuadritos con corazones de píxeles.
-function mantelGamerTile() {
+function clothGamerTile() {
   const W = 120, H = 120;
   let s = `<rect width="${W}" height="${H}" fill="#3a2f7a"/>`;
   for (let i = 0; i < 10; i++) s += `<path d="M${i * 12} 0V${H}M0 ${i * 12}H${W}" stroke="#5a4fb0" stroke-width="1" opacity=".6"/>`;
@@ -599,7 +599,7 @@ function mantelGamerTile() {
   return tileOut(W, H, s);
 }
 // Mantel del Día del Programador: tablero verde de circuito con ceros y unos.
-function mantelProgramadorTile() {
+function clothCoderTile() {
   const W = 120, H = 120;
   let s = `<rect width="${W}" height="${H}" fill="#1f5a3a"/>`;
   s += `<path d="M0 30H40L52 42H120M0 90H30L42 78H80L92 90H120M60 0V20L70 30M30 120V100" fill="none" stroke="#5ad68c" stroke-width="2" opacity=".5"/>`;
@@ -609,7 +609,7 @@ function mantelProgramadorTile() {
   return tileOut(W, H, s);
 }
 // Mantel del Día de los Inocentes: rombos de arlequín rojos y dorados.
-function mantelInocentesTile() {
+function clothFoolsTile() {
   const W = 120, H = 120;
   let s = `<rect width="${W}" height="${H}" fill="#c22c3c"/>`;
   for (let j = 0; j < 4; j++) for (let i = 0; i < 4; i++) if ((i + j) % 2 === 0) s += `<path d="M${i * 30 + 15} ${j * 30}l15 15-15 15-15-15z" fill="#ffc83d" opacity=".75"/>`;
@@ -618,7 +618,7 @@ function mantelInocentesTile() {
   return tileOut(W, H, s);
 }
 // Mantel de Año Nuevo: terciopelo morado con confeti dorado y serpentinas.
-function mantelAnioNuevoTile() {
+function clothNewYearTile() {
   const W = 120, H = 120;
   let s = `<rect width="${W}" height="${H}" fill="#4a2a8a"/>`;
   s += `<path d="M0 40q15-12 30 0t30 0 30 0 30 0M0 100q15-12 30 0t30 0 30 0 30 0" fill="none" stroke="#ff7ab8" stroke-width="2.4" opacity=".55"/>`;
@@ -627,7 +627,7 @@ function mantelAnioNuevoTile() {
   return tileOut(W, H, s);
 }
 // Manteles de las festividades de leyendas mexicanas.
-function mantelNahualTile() {
+function clothNahualTile() {
   const W = 120, H = 120;
   let s = `<rect width="${W}" height="${H}" fill="#2f6a3a"/>`;
   [[20, 24, 30], [80, 70, -20], [30, 90, 60], [96, 18, 110]].forEach(([x, y, a]) => (s += `<path d="M${x} ${y}q14-16 30-4-14 16-30 4z" fill="#3f8a4a" transform="rotate(${a} ${x} ${y})"/>`));
@@ -635,14 +635,14 @@ function mantelNahualTile() {
   s += `<rect width="${W}" height="${H}" fill="#041208" opacity=".55"/>`;
   return tileOut(W, H, s);
 }
-function mantelXoloTile() {
+function clothXoloTile() {
   const W = 120, H = 120;
   let s = `<rect width="${W}" height="${H}" fill="#5a3a8a"/>`;
   [[20, 20], [50, 34], [80, 48], [110, 62], [30, 80], [60, 94], [90, 108]].forEach(([x, y], i) => (s += `<g transform="translate(${x} ${y}) rotate(${i * 25})" fill="#ffb13d"><ellipse cy="2.4" rx="4" ry="3.4"/>${[[-4.4, -2.8], [-1.5, -5], [1.5, -5], [4.4, -2.8]].map(([a2, b]) => `<circle cx="${a2}" cy="${b}" r="1.5"/>`).join('')}</g>`));
   s += `<rect width="${W}" height="${H}" fill="#14061e" opacity=".55"/>`;
   return tileOut(W, H, s);
 }
-function mantelLloronaTile() {
+function clothLloronaTile() {
   const W = 120, H = 120;
   let s = `<rect width="${W}" height="${H}" fill="#2a3a8a"/>`;
   for (let y = 10; y < H; y += 30) s += `<path d="M0 ${y}q15-8 30 0t30 0 30 0 30 0" fill="none" stroke="#4a6ad8" stroke-width="3"/>`;
@@ -650,7 +650,7 @@ function mantelLloronaTile() {
   s += `<rect width="${W}" height="${H}" fill="#060a24" opacity=".55"/>`;
   return tileOut(W, H, s);
 }
-function mantelCatrinaTile() {
+function clothCatrinaTile() {
   const W = 120, H = 120;
   let s = `<rect width="${W}" height="${H}" fill="#8a3a8a"/>`;
   [[30, 30, '#ff5fa8'], [90, 90, '#ffc83d'], [90, 30, '#ff7a3a'], [30, 90, '#ff9cc8']].forEach(([x, y, c]) => (s += `<g transform="translate(${x} ${y})">${Array.from({ length: 8 }, (_, j) => `<ellipse cy="-7" rx="3.4" ry="7" fill="${c}" transform="rotate(${j * 45})"/>`).join('')}<circle r="3.4" fill="#fff6c8"/></g>`));
@@ -658,7 +658,7 @@ function mantelCatrinaTile() {
   s += `<rect width="${W}" height="${H}" fill="#1a041a" opacity=".55"/>`;
   return tileOut(W, H, s);
 }
-function mantelRevolucionTile() {
+function clothRevolutionTile() {
   const W = 120, H = 120;
   let s = `<rect width="${W}" height="${H}" fill="#c98a4a"/>`;
   [0, 40, 80].forEach((y) => (s += `<rect y="${y}" width="${W}" height="14" fill="#e8434f" opacity=".55"/><rect y="${y + 16}" width="${W}" height="4" fill="#2f9e5c" opacity=".55"/><rect y="${y + 22}" width="${W}" height="3" fill="#fff6e6" opacity=".5"/>`));
@@ -666,12 +666,12 @@ function mantelRevolucionTile() {
   return tileOut(W, H, s);
 }
 // Mantel del Día de las Madres: rosa clarito con florecitas y su orilla de encaje.
-function mantelMadresTile() {
+function clothMothersTile() {
   const W = 120, H = 120;
   let s = `<rect width="${W}" height="${H}" fill="#ffc2d6"/>`;
   s += `<path d="M0 60h120M60 0v120" stroke="#fff0f6" stroke-width="2" stroke-dasharray="3 5"/>`;
-  const flor = (x, y, c) => `${[0, 72, 144, 216, 288].map((a) => `<ellipse cx="${x}" cy="${y - 4}" rx="2.6" ry="4" fill="${c}" transform="rotate(${a} ${x} ${y})"/>`).join('')}<circle cx="${x}" cy="${y}" r="2.1" fill="#ffc83d"/>`;
-  [[30, 30, '#ff5f8f'], [90, 90, '#ff5f8f'], [90, 30, '#fff6ee'], [30, 90, '#fff6ee']].forEach(([x, y, c]) => (s += flor(x, y, c)));
+  const flower = (x, y, c) => `${[0, 72, 144, 216, 288].map((a) => `<ellipse cx="${x}" cy="${y - 4}" rx="2.6" ry="4" fill="${c}" transform="rotate(${a} ${x} ${y})"/>`).join('')}<circle cx="${x}" cy="${y}" r="2.1" fill="#ffc83d"/>`;
+  [[30, 30, '#ff5f8f'], [90, 90, '#ff5f8f'], [90, 30, '#fff6ee'], [30, 90, '#fff6ee']].forEach(([x, y, c]) => (s += flower(x, y, c)));
   [[60, 60], [0, 0], [120, 0], [0, 120], [120, 120]].forEach(([x, y]) => (s += `<circle cx="${x}" cy="${y}" r="6" fill="none" stroke="#fff0f6" stroke-width="1.6"/><circle cx="${x}" cy="${y}" r="2" fill="#fff0f6"/>`));
   s += `<rect width="${W}" height="${H}" fill="#2a0618" opacity=".5"/>`;
   return tileOut(W, H, s);
@@ -1017,31 +1017,31 @@ const call = (p) => (Array.isArray(p) ? P[p[0]](p[1]) : P[p]());
 
 // Mesas de los eventos del mes: mantel, tinte y objetos [arriba-izq, arriba-der, abajo-izq, abajo-der].
 const EVENT_TABLES = {
-  muertos: { tile: mantelTile, tint: '#1a0614', props: ['marigolds', 'sugarskull', 'candle', 'pan'] },
-  primavera: { tile: mantelPrimaveraTile, tint: '#0a1a08', props: ['tulips', 'butterflies', ['mug', ['#47c27a', '#2f9e5c', '#a8e8b8']], 'flowers'] },
-  amor: { tile: mantelAmorTile, tint: '#1a0410', props: ['roses', 'letter', ['mug', ['#ff7ab8', '#e8559a', '#ffc2dc']], 'chocobox'] },
-  reyes: { tile: mantelReyesTile, tint: '#0e0620', props: ['rosca', 'crown', ['mug', ['#8a5cf0', '#6c3fd4', '#b9a6ff']], 'goldstars'] },
-  navidad: { tile: mantelNavidadTile, tint: '#1a0408', props: ['ornaments', 'candycanes', ['mug', ['#e8434f', '#c22c3c', '#ff8a94']], 'cookies'] },
-  verano: { tile: mantelVeranoTile, tint: '#04202e', props: ['beachball', 'sunglasses', ['mug', ['#38c2dd', '#1f8fc8', '#8fe8ff']], 'watermelons'] },
-  patrias: { tile: mantelPatriasTile, tint: '#140814', props: ['charro', 'chiles', ['mug', ['#e8434f', '#c22c3c', '#ff9aa2']], 'maracas'] },
-  candelaria: { tile: mantelCandelariaTile, tint: '#1a0e04', props: ['tamalesPlate', 'elotes', ['mug', ['#d9783f', '#b85a28', '#f0a070']], 'jarro'] },
-  taco: { tile: mantelTacoTile, tint: '#1a0604', props: ['tacosPlate', 'limones', ['mug', ['#ff9c5b', '#e2753a', '#ffc794']], 'molcajete'] },
-  tierra: { tile: mantelTierraTile, tint: '#04140a', props: ['maceta', 'flowers', ['mug', ['#47c27a', '#2f9e5c', '#a8e8b8']], 'tierraMarble'] },
-  nino: { tile: mantelNinoTile, tint: '#0a0a24', props: ['pinataProp', 'globos', ['mug', ['#ff7ab8', '#e8559a', '#ffc2dc']], 'goldstars'] },
-  madres: { tile: mantelMadresTile, tint: '#1a0410', props: ['ramo', 'regalitos', ['mug', ['#ff7aa6', '#e0406f', '#ffc2d6']], 'letter'] },
-  padre: { tile: mantelPadreTile, tint: '#060e24', props: ['corbataProp', 'tools', ['mug', ['#4aa8de', '#2f86c0', '#bfe2ff']], 'letter'] },
-  gato: { tile: mantelGatoTile, tint: '#0e0820', props: ['gatitoProp', 'estambres', ['mug', ['#b48cff', '#8a5cf0', '#e2d4ff']], 'pescadito'] },
-  perro: { tile: mantelPerroTile, tint: '#140a04', props: ['cachorroProp', 'huesos', ['mug', ['#ff9c5b', '#e2753a', '#ffe0c4']], 'tennis'] },
-  gamer: { tile: mantelGamerTile, tint: '#0a0620', props: ['controlProp', 'pixcoras', ['mug', ['#ff5f7e', '#d63d5f', '#ffc2d0']], 'cartucho'] },
-  programador: { tile: mantelProgramadorTile, tint: '#04140a', props: ['laptopProp', 'llavesProp', ['mug', ['#5ad68c', '#2f9e5c', '#c8f5d8']], 'patohule'] },
-  inocentes: { tile: mantelInocentesTile, tint: '#14040a', props: ['bufonProp', 'palomitas', ['mug', ['#e8434f', '#c22c3c', '#ffb0b6']], 'cascabelesProp'] },
-  anionuevo: { tile: mantelAnioNuevoTile, tint: '#0a0420', props: ['relojProp', 'uvasProp', ['mug', ['#ffc83d', '#e89a17', '#fff0c0']], 'goldstars'] },
-  nahual: { tile: mantelNahualTile, tint: '#041208', props: [['bigIco', 'nahual'], ['pairIco', 'chaneque'], ['mug', ['#5fae5a', '#3f8a3a', '#c8f0a8']], ['pairIco', 'brote']] },
-  xolo: { tile: mantelXoloTile, tint: '#14061e', props: [['bigIco', 'xolito'], ['pairIco', 'farolito'], ['mug', ['#ff9c1a', '#e0700a', '#ffd27a']], ['pairIco', 'hueso']] },
-  llorona: { tile: mantelLloronaTile, tint: '#060a24', props: [['bigIco', 'llorona'], ['pairIco', 'velita'], ['mug', ['#4a6ad8', '#3a52b0', '#d6e2ff']], 'goldstars'] },
-  catrina: { tile: mantelCatrinaTile, tint: '#1a041a', props: [['bigIco', 'catrina'], ['pairIco', 'pluma'], ['mug', ['#ff5fa8', '#e0408a', '#ffc2dc']], ['pairIco', 'calavera']] },
-  revolucion: { tile: mantelRevolucionTile, tint: '#1a0a04', props: [['bigIco', 'locomotora'], ['pairIco', 'herradura'], ['mug', ['#e8434f', '#c22c3c', '#ffb0b6']], ['pairIco', 'sombrero']] },
-  halloween: { tile: mantelHalloweenTile, tint: '#0e0618', props: ['pumpkin', 'bats', ['mug', ['#6fd36a', '#3fae4a', '#b8f0a0']], 'cauldron'] },
+  muertos: { tile: clothTile, tint: '#1a0614', props: ['marigolds', 'sugarskull', 'candle', 'pan'] },
+  primavera: { tile: clothSpringTile, tint: '#0a1a08', props: ['tulips', 'butterflies', ['mug', ['#47c27a', '#2f9e5c', '#a8e8b8']], 'flowers'] },
+  amor: { tile: clothLoveTile, tint: '#1a0410', props: ['roses', 'letter', ['mug', ['#ff7ab8', '#e8559a', '#ffc2dc']], 'chocobox'] },
+  reyes: { tile: clothKingsTile, tint: '#0e0620', props: ['rosca', 'crown', ['mug', ['#8a5cf0', '#6c3fd4', '#b9a6ff']], 'goldstars'] },
+  navidad: { tile: clothChristmasTile, tint: '#1a0408', props: ['ornaments', 'candycanes', ['mug', ['#e8434f', '#c22c3c', '#ff8a94']], 'cookies'] },
+  verano: { tile: clothSummerTile, tint: '#04202e', props: ['beachball', 'sunglasses', ['mug', ['#38c2dd', '#1f8fc8', '#8fe8ff']], 'watermelons'] },
+  patrias: { tile: clothIndependenceTile, tint: '#140814', props: ['charro', 'chiles', ['mug', ['#e8434f', '#c22c3c', '#ff9aa2']], 'maracas'] },
+  candelaria: { tile: clothCandlemasTile, tint: '#1a0e04', props: ['tamalesPlate', 'elotes', ['mug', ['#d9783f', '#b85a28', '#f0a070']], 'jarro'] },
+  taco: { tile: clothTacoTile, tint: '#1a0604', props: ['tacosPlate', 'limones', ['mug', ['#ff9c5b', '#e2753a', '#ffc794']], 'molcajete'] },
+  tierra: { tile: clothEarthTile, tint: '#04140a', props: ['maceta', 'flowers', ['mug', ['#47c27a', '#2f9e5c', '#a8e8b8']], 'tierraMarble'] },
+  nino: { tile: clothChildTile, tint: '#0a0a24', props: ['pinataProp', 'globos', ['mug', ['#ff7ab8', '#e8559a', '#ffc2dc']], 'goldstars'] },
+  madres: { tile: clothMothersTile, tint: '#1a0410', props: ['ramo', 'regalitos', ['mug', ['#ff7aa6', '#e0406f', '#ffc2d6']], 'letter'] },
+  padre: { tile: clothFatherTile, tint: '#060e24', props: ['corbataProp', 'tools', ['mug', ['#4aa8de', '#2f86c0', '#bfe2ff']], 'letter'] },
+  gato: { tile: clothCatTile, tint: '#0e0820', props: ['gatitoProp', 'estambres', ['mug', ['#b48cff', '#8a5cf0', '#e2d4ff']], 'pescadito'] },
+  perro: { tile: clothDogTile, tint: '#140a04', props: ['cachorroProp', 'huesos', ['mug', ['#ff9c5b', '#e2753a', '#ffe0c4']], 'tennis'] },
+  gamer: { tile: clothGamerTile, tint: '#0a0620', props: ['controlProp', 'pixcoras', ['mug', ['#ff5f7e', '#d63d5f', '#ffc2d0']], 'cartucho'] },
+  programador: { tile: clothCoderTile, tint: '#04140a', props: ['laptopProp', 'llavesProp', ['mug', ['#5ad68c', '#2f9e5c', '#c8f5d8']], 'patohule'] },
+  inocentes: { tile: clothFoolsTile, tint: '#14040a', props: ['bufonProp', 'palomitas', ['mug', ['#e8434f', '#c22c3c', '#ffb0b6']], 'cascabelesProp'] },
+  anionuevo: { tile: clothNewYearTile, tint: '#0a0420', props: ['relojProp', 'uvasProp', ['mug', ['#ffc83d', '#e89a17', '#fff0c0']], 'goldstars'] },
+  nahual: { tile: clothNahualTile, tint: '#041208', props: [['bigIco', 'nahual'], ['pairIco', 'chaneque'], ['mug', ['#5fae5a', '#3f8a3a', '#c8f0a8']], ['pairIco', 'brote']] },
+  xolo: { tile: clothXoloTile, tint: '#14061e', props: [['bigIco', 'xolito'], ['pairIco', 'farolito'], ['mug', ['#ff9c1a', '#e0700a', '#ffd27a']], ['pairIco', 'hueso']] },
+  llorona: { tile: clothLloronaTile, tint: '#060a24', props: [['bigIco', 'llorona'], ['pairIco', 'velita'], ['mug', ['#4a6ad8', '#3a52b0', '#d6e2ff']], 'goldstars'] },
+  catrina: { tile: clothCatrinaTile, tint: '#1a041a', props: [['bigIco', 'catrina'], ['pairIco', 'pluma'], ['mug', ['#ff5fa8', '#e0408a', '#ffc2dc']], ['pairIco', 'calavera']] },
+  revolucion: { tile: clothRevolutionTile, tint: '#1a0a04', props: [['bigIco', 'locomotora'], ['pairIco', 'herradura'], ['mug', ['#e8434f', '#c22c3c', '#ffb0b6']], ['pairIco', 'sombrero']] },
+  halloween: { tile: clothHalloweenTile, tint: '#0e0618', props: ['pumpkin', 'bats', ['mug', ['#6fd36a', '#3fae4a', '#b8f0a0']], 'cauldron'] },
   // Festividades nuevas (10 nov 2026): mantel de su color con sus dos figuras y, en la mesa, su icono grande, un par de
   // adornos, su taza y otro par.
   ...Object.fromEntries([
@@ -1058,7 +1058,7 @@ const EVENT_TABLES = {
     ['pupusa', '#3f9a46', 'pupusa', 'curtido', '#041408', ['#c96a3a', '#a8502a', '#f0b08a']],
     ['velitas', '#2a2a5a', 'farolpapel', 'vela', '#04041a', ['#ffc83d', '#e89a17', '#fff0c0']],
     ['anioviejo', '#4a2a8a', 'monigote', 'bengala', '#0a0420', ['#ffc83d', '#e89a17', '#fff0c0']],
-  ].map(([k, bg, a, b, tint, mug]) => [k, { tile: mantelIcoTile(bg, a, b, tint), tint, props: [['bigIco', a], ['pairIco', b], ['mug', mug], ['pairIco', a]] }])),
+  ].map(([k, bg, a, b, tint, mug]) => [k, { tile: clothIconTile(bg, a, b, tint), tint, props: [['bigIco', a], ['pairIco', b], ['mug', mug], ['pairIco', a]] }])),
 };
 // HTML del fondo de la mesa para el mundo w (o la del evento del mes: theme = su clave).
 export function tableHTML(w, theme) {

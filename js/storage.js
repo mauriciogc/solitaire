@@ -28,7 +28,7 @@ const fresh = (name, avatar = 0) => ({
   secretSeen: {}, // mundos cuyo nivel secreto ya se mostró (la revelación se anima una sola vez)
   pops: {}, // globos y burbujas truenados: tipo -> { n: cuenta desde el último premio, lvl: premios dados } (ver countPop en ui.js)
   evAlbum: {}, // eventos del mes ganados completos (id = año·12 + mes -> 1): su postal en el álbum, con el año
-  fiAlbum: {}, // festividades ganadas completas ('clave-año' -> 1): su postal en el álbum (pestaña Especiales)
+  festAlbum: {}, // festividades ganadas completas ('clave-año' -> 1): su postal en el álbum (pestaña Especiales)
   look: 'letter', // avatar: 'letter' = su inicial · 'char' = un personaje (char)
   char: 'nino', // Nico y Lila son gratis
   kid: null, // tu personaje 3D (10 nov 2026): { base: 'nino'|'nina', skin, hair, style } (listas en art.js); char es la ropa o el disfraz

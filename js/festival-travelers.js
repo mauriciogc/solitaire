@@ -22,7 +22,7 @@ function sparks(g, colors, n = 6, size = 0.035) {
   });
 }
 
-export function fiestaModels() {
+export function festivalModels() {
   return {
     // Día de la Bandera (11 nov 2026, pedido del usuario: usar la bandera así puede ser problema): tambor de la escolta
     // que vuela (cuerpo verde, parches blancos y aros rojos) con sus dos baquetas que tocan. Sin bandera ni escudo.

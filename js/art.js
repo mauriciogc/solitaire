@@ -2,7 +2,7 @@
 // el mismo trazo de los planetas. Reemplaza a lowpoly.js con la misma interfaz.
 import { THEMES, themeKey } from './themes.js';
 import { setArt } from './set-art.js';
-import { fiestaArt } from './festival-art.js';
+import { festivalArt } from './festival-art.js';
 export const INK = '#2a1f5c';
 const K = INK;
 let uid = 0;
@@ -398,7 +398,7 @@ for (const k in SA.icons) {
   ICONS[k] = SA.icons[k];
 }
 // Festividades nuevas (10 nov 2026, festival-art.js): sus iconos, reversos, marcos y avatares se mezclan igual.
-const FA = fiestaArt({ tshape, CIRCLE, starPath, K, ICONS });
+const FA = festivalArt({ tshape, CIRCLE, starPath, K, ICONS });
 for (const k in FA.icons) {
   if (ICONS[k]) throw new Error(`Icono repetido: ${k}`);
   ICONS[k] = FA.icons[k];

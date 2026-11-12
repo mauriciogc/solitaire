@@ -364,7 +364,7 @@ export function betLoseHTML(m, paid, when = 'si abandonas') {
   return `<p class="bet-lose"><i class="go-bet b${m}">×${m}</i><span>Apostaste <b>×${m}</b>: ${when} pierdes ${what} y el premio ×${m}.</span></p>`;
 }
 // Aviso de que se pierde la racha (abandonar, rendirse, reintentar): el cohete con el número tiembla.
-export const rachaWarnHTML = (n, pend, when) =>
+export const streakWarnHTML = (n, pend, when) =>
   `<div class="racha-warn"><span class="rw-ico">${icon('rocket')}<b class="outl">${n}</b></span><p><b>¡Pierdes tu racha de ${n} estrellas!</b> ${when}, vuelve a 0${pend ? ' y se pierden los premios sin reclamar' : ''}.</p></div>`;
 
 // Globos y burbujas truenados (save.pops). Se acumulan entre niveles. A los 100 globos regala 1 comodín y la cuenta

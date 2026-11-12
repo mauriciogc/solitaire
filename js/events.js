@@ -5,7 +5,7 @@
 // los reclamados son tuyos; los que no, se pierden si la racha se reinicia o si pasa la medianoche.
 import { save, persist } from './storage.js';
 import { constUp } from './economy.js';
-import { EVENT_LEVELS, EVENT_PER_PLANET, EVENT_PLANETS, FIESTA_LEVELS, FIESTA_PER_PLANET, FIESTA_PLANETS } from './levels.js';
+import { EVENT_LEVELS, EVENT_PER_PLANET, EVENT_PLANETS, FESTIVAL_LEVELS, FESTIVAL_PER_PLANET, FESTIVAL_PLANETS } from './levels.js';
 
 // Los eventos se abren poco a poco, según los niveles ganados (save.next): primero la racha, luego la colección
 // y al final el evento del mes (el más difícil: pide comodines). Cada uno se presenta una vez (save.intro).
@@ -23,7 +23,7 @@ export const isOn = (k) => (save.next || 0) >= UNLOCK[k];
 // En estrellas (7 nov 2026: llegaba a 30 victorias sin problema porque contaba cualquiera): cada victoria suma sus
 // estrellas. Primera fila: 15/30/60/90/150/240 (= 5, 10, 20, 30, 50 y 80 niveles con 3★). Luego una fila sin fin
 // cada 150 (150, 300, 450…): se turnan comodín y deshacer, con monedas que suben poco a poco.
-export const RACHA_GOALS = [
+export const STREAK_GOALS = [
   { n: 15, coins: 20 },
   { n: 30, coins: 30 },
   { n: 60, coins: 40, undo: 1 },
@@ -31,24 +31,24 @@ export const RACHA_GOALS = [
   { n: 150, coins: 60 },
   { n: 240, coins: 80, wild: 1 },
 ];
-export const RACHA_STEP = 150;
+export const STREAK_STEP = 150;
 // Premio i (índice global): los primeros son la fila de arriba; del 6 en adelante, la fila de 50 en 50.
-export function rachaGoal(i) {
-  if (i < RACHA_GOALS.length) return RACHA_GOALS[i];
-  const j = i - RACHA_GOALS.length;
-  return { n: RACHA_STEP * (j + 1), coins: 100 + 20 * j, ...(j % 2 ? { undo: 1 } : { wild: 1 }) };
+export function streakGoal(i) {
+  if (i < STREAK_GOALS.length) return STREAK_GOALS[i];
+  const j = i - STREAK_GOALS.length;
+  return { n: STREAK_STEP * (j + 1), coins: 100 + 20 * j, ...(j % 2 ? { undo: 1 } : { wild: 1 }) };
 }
 // Índice del primer premio que todavía no alcanza esa racha.
-export const goalIndex = (n) => (n < RACHA_GOALS[RACHA_GOALS.length - 1].n ? RACHA_GOALS.findIndex((g) => g.n > n) : RACHA_GOALS.length + Math.floor(n / RACHA_STEP));
+export const goalIndex = (n) => (n < STREAK_GOALS[STREAK_GOALS.length - 1].n ? STREAK_GOALS.findIndex((g) => g.n > n) : STREAK_GOALS.length + Math.floor(n / STREAK_STEP));
 // Nombre, icono y color de la ventana.
-const RACHA_THEME = { key: 'cohete', name: 'Racha cohete', ico: 'rocket', color: 'pink' };
+const STREAK_THEME = { key: 'cohete', name: 'Racha cohete', ico: 'rocket', color: 'pink' };
 
 // Día local (cambia a medianoche). save.devDay solo lo mueve el modo dev ("otro día").
 const today = () => {
   const d = new Date();
   return Math.floor((d.getTime() - d.getTimezoneOffset() * 6e4) / 864e5) + (save.devDay || 0);
 };
-export function racha() {
+export function dailyStreak() {
   const day = today();
   if (save.racha?.day !== day) {
     // Lo que no se reclamó ayer se pierde (como el regalo diario): se avisa al llegar al mapa.
@@ -57,21 +57,21 @@ export function racha() {
   }
   return save.racha;
 }
-export const rachaTheme = () => RACHA_THEME;
-export const rachaReady = () => racha().pend.length > 0;
+export const streakTheme = () => STREAK_THEME;
+export const streakReady = () => dailyStreak().pend.length > 0;
 // Siguiente premio por ganar: tras un reinicio se salta los que ya alcanzó ese día.
 export const nextIndex = (r) => {
   let i = goalIndex(r.n);
   while (r.got.includes(i)) i++;
   return i;
 };
-export const nextGoal = () => rachaGoal(nextIndex(racha()));
+export const nextGoal = () => streakGoal(nextIndex(dailyStreak()));
 // "En llamas": le falta muy poco para el siguiente premio (1 victoria; 2 si el tramo es largo).
-export function rachaHot() {
-  const r = racha(), i = nextIndex(r);
-  const from = i ? rachaGoal(i - 1).n : 0, left = rachaGoal(i).n - r.n;
+export function streakHot() {
+  const r = dailyStreak(), i = nextIndex(r);
+  const from = i ? streakGoal(i - 1).n : 0, left = streakGoal(i).n - r.n;
   // En la fila sin fin arde solo en las últimas 2 victorias perfectas (6 estrellas).
-  return left <= (i >= RACHA_GOALS.length ? 6 : Math.max(3, Math.ceil((rachaGoal(i).n - from) * 0.2)));
+  return left <= (i >= STREAK_GOALS.length ? 6 : Math.max(3, Math.ceil((streakGoal(i).n - from) * 0.2)));
 }
 export const msToMidnight = () => {
   const d = new Date();
@@ -82,14 +82,14 @@ export const msToMidnight = () => {
 // Ganó un nivel nuevo: suma sus estrellas y cobra los premios que alcanzó.
 // 10 nov 2026 (pedido del usuario): se cobran solos, como misiones y logros. Se suman al momento y esperan en save.feats
 // para festejarlos en la portada (playFeats en main.js). r.pend se queda vacío (guardados viejos: rachaClaim).
-export function rachaWin(stars = 1) {
+export function streakWin(stars = 1) {
   if (!isOn('racha')) return null;
-  const r = racha();
+  const r = dailyStreak();
   r.n += stars;
   let any = false;
   for (let i = 0; i < goalIndex(r.n); i++) {
     if (r.got.includes(i)) continue;
-    const g = rachaGoal(i);
+    const g = streakGoal(i);
     r.got.push(i);
     save.coins += g.coins;
     save.wild += g.wild || 0;
@@ -104,9 +104,9 @@ export function rachaWin(stars = 1) {
 // Perdió o abandonó un nivel nuevo (o se rindió en uno repetido): vuelve a 0 y los premios sin reclamar se pierden
 // (se avisa al volver al mapa). Los que ya alcanzó ese día no se reinician: no se vuelven a ganar (si llegó al 3.º,
 // para otro premio tiene que pasar del 3.º).
-export function rachaLose() {
+export function streakLose() {
   if (!isOn('racha')) return;
-  const r = racha();
+  const r = dailyStreak();
   if (!r.n) return;
   r.lost = r.n;
   r.n = 0;
@@ -115,11 +115,11 @@ export function rachaLose() {
   persist();
 }
 // Guardados de antes (cuando se reclamaban a mano): lo pendiente se cobra solo y va a la cola del festejo.
-export function rachaPendToFeats() {
-  const r = racha();
+export function streakPendToFeats() {
+  const r = dailyStreak();
   if (!r.pend?.length) return false;
   for (const i of r.pend) {
-    const g = rachaGoal(i);
+    const g = streakGoal(i);
     save.coins += g.coins;
     save.wild += g.wild || 0;
     save.undo += g.undo || 0;
@@ -130,10 +130,10 @@ export function rachaPendToFeats() {
   return true;
 }
 // Junta los premios pendientes y los quita de la lista.
-export function rachaClaim() {
-  const r = racha(), p = { coins: 0, wild: 0, undo: 0 };
+export function streakClaim() {
+  const r = dailyStreak(), p = { coins: 0, wild: 0, undo: 0 };
   for (const i of r.pend) {
-    const g = rachaGoal(i);
+    const g = streakGoal(i);
     p.coins += g.coins;
     p.wild += g.wild || 0;
     p.undo += g.undo || 0;
@@ -150,7 +150,7 @@ export function rachaClaim() {
 // Las fichas se cambian en su tienda temporal; al terminar la semana, las que sobren se pierden.
 // Lo exclusivo de cada temática (7 cosméticos) es tuyo para siempre. No alcanza para todo en una semana:
 // la temática vuelve cada 2 meses y ahí se completa.
-export const COLECCIONES = [
+export const COLLECTIONS = [
   { key: 'mar', name: 'Tesoros del mar', token: 'concha', tokens: 'conchas', color: 'blue',
     ex: { back: 'arrecife', title: 'buscaconchas', avatar: 'cangrejo', ring: 'burbujas', traveler: 'tortuga', frame: 'mar', space: 'marino' } },
   { key: 'gemas', name: 'Cueva de gemas', token: 'gema', tokens: 'gemas', color: 'violet',
@@ -183,9 +183,9 @@ const mondayOf = (day) => day - ((day + 3) % 7); // el día 0 (1 ene 1970) fue j
 // Sin plus: 2 semanas al mes y las 4 de siempre (cada una vuelve cada 2 meses).
 // Con plus: 3 semanas al mes y las 6 (también cada 2 meses).
 // Desde el nivel 150: todas las semanas, y las 9 se van turnando una tras otra.
-const BASE_COL = COLECCIONES.filter((c) => !c.plus);
-const PLUS_COL = COLECCIONES.filter((c) => !c.plus || (c.plus === true && c.ready));
-const ALL_COL = COLECCIONES.filter((c) => !c.plus || c.ready);
+const BASE_COL = COLLECTIONS.filter((c) => !c.plus);
+const PLUS_COL = COLLECTIONS.filter((c) => !c.plus || (c.plus === true && c.ready));
+const ALL_COL = COLLECTIONS.filter((c) => !c.plus || c.ready);
 const weekInfo = (monday, plus = isOn('col2'), all = isOn('col3')) => {
   if (all) return { on: true, theme: ALL_COL[Math.floor(monday / 7) % ALL_COL.length] };
   const d = new Date(monday * DAY), dom = d.getUTCDate(), m = d.getUTCFullYear() * 12 + d.getUTCMonth();
@@ -199,7 +199,7 @@ export function col() {
   if (!isOn('col')) return null;
   const monday = mondayOf(today()), w = weekInfo(monday);
   if (save.col?.id === monday) {
-    const theme = COLECCIONES.find((c) => c.key === save.col.key) || weekInfo(monday, false, false).theme;
+    const theme = COLLECTIONS.find((c) => c.key === save.col.key) || weekInfo(monday, false, false).theme;
     return { ...theme, state: save.col, monday };
   }
   if (!w.on) return null;
@@ -208,7 +208,7 @@ export function col() {
   return { ...w.theme, state: save.col, monday };
 }
 // Las temáticas nuevas que se suman en el nivel 100 (tier 1) o en el 150 (tier 2), para su aviso.
-export const plusCols = (tier = 1) => COLECCIONES.filter((c) => c.ready && (tier === 2 ? c.plus === 2 : c.plus === true));
+export const plusCols = (tier = 1) => COLLECTIONS.filter((c) => c.ready && (tier === 2 ? c.plus === 2 : c.plus === true));
 // Cuánto falta para que termine (domingo a medianoche).
 export const colLeft = () => {
   const c = col();
@@ -273,7 +273,7 @@ export function colBuy(o) {
 // No se compra. Al acabar el mes, el avance se pierde; los premios son tuyos para siempre.
 // El 5.º nivel de cada planeta da su exclusivo; si ya lo tienes (de otro año), da ayudas o monedas.
 // ready: la temática ya tiene sus dibujos (se hacen por tandas; un mes sin dibujos no tiene evento).
-export const EVENTOS = {
+export const EVENTS = {
   10: {
     key: 'muertos', name: 'Día de Muertos', color: 'orange', ico: 'calavera', deco: 'cempasuchil', tk: 'tkMuertos', ready: true,
     planets: ['Campo de Cempasúchil', 'Cerro del Papel Picado', 'Valle de las Velas', 'Isla de los Alebrijes', 'Mictlán'],
@@ -324,14 +324,14 @@ export const EV_TICKET_WAIT = 2 * DAY;
 // Boletos que se pagan (7 nov 2026): el primero del evento del mes 1,000 y los siguientes (si no quieres esperar las
 // 48 h) 500; la festividad 800 una vez. Si ya tienes todos los exclusivos de ese evento, 30% menos.
 // La festividad se puede comprar antes (los días en que su botón sale con candado) con FI_PRE de descuento.
-export const EV_FIRST = 1000, EV_AGAIN = 500, FI_ENTRY = 800, ALL_EX_OFF = 0.3, FI_PRE = 0.2;
+export const EV_FIRST = 1000, EV_AGAIN = 500, FEST_ENTRY = 800, ALL_EX_OFF = 0.3, FEST_PRE = 0.2;
 const allEx = (e) => e.ex.every((x) => Object.entries(x).every(([sec, it]) => save.owned[`${sec}:${it}`]));
 const tkPrice = (e, base) => Math.round((base * (allEx(e) ? 1 - ALL_EX_OFF : 1)) / 5) * 5;
 
 // Fecha del teléfono (el modo dev la mueve con save.devDay).
 const now = () => new Date(Date.now() + (save.devDay || 0) * DAY);
 const eventOf = (d) => {
-  const e = EVENTOS[d.getMonth()];
+  const e = EVENTS[d.getMonth()];
   return e?.ready ? { ...e, month: d.getMonth(), id: d.getFullYear() * 12 + d.getMonth() } : null;
 };
 // El evento activo (o null). Al cambiar de mes se empieza de cero.
@@ -370,7 +370,7 @@ export function evSoon() {
   return e ? { ...e, soon: true, inDays: Math.ceil(ms / DAY) } : null;
 }
 // Preventa del mes que viene: la entrada (su primer boleto) con FI_PRE menos. pre = false: el precio de siempre.
-export const evPrePrice = (e, pre = true) => tkPrice(e, EV_FIRST * (pre ? 1 - FI_PRE : 1));
+export const evPrePrice = (e, pre = true) => tkPrice(e, EV_FIRST * (pre ? 1 - FEST_PRE : 1));
 export const evPreOwned = (e) => !!e && save.evPre === e.id;
 export function evPreBuy() {
   const n = evSoon();
@@ -499,7 +499,7 @@ function evRecord() {
 export function evAlbum() {
   evRecord(); // eventos ganados antes de que existiera el álbum
   return Object.keys(save.evAlbum)
-    .map((id) => ({ id: +id, year: Math.floor(id / 12), e: EVENTOS[id % 12] }))
+    .map((id) => ({ id: +id, year: Math.floor(id / 12), e: EVENTS[id % 12] }))
     .filter((x) => x.e?.ready)
     .sort((a, b) => b.id - a.id);
 }
@@ -531,7 +531,7 @@ const easter = (y) => {
 };
 // El primer lunes después del día d del mes m (Guelaguetza: el lunes después del 16 de julio).
 const mondayAfter = (y, m, d) => { const x = new Date(y, m, d + 1); return new Date(y, m, d + 1 + ((8 - x.getDay()) % 7)); };
-export const FIESTAS = [
+export const FESTIVALS = [
   { key: 'anionuevo', name: 'Año Nuevo', date: (y) => new Date(y, 0, 1), ready: true,
     ico: 'reloj', deco: 'uvas', color: 'gold',
     planets: ['Valle de las Uvas', 'Cielo de Cohetes', 'Planeta Medianoche'],
@@ -607,7 +607,7 @@ export const FIESTAS = [
 // ---------- Festividades nuevas (10 nov 2026, pedido del usuario) ----------
 // grp 3: fiestas mexicanas (nivel 389). grp 4: fiestas de América (nivel 461). zone: dónde se celebra (lo dice la
 // entrada: «Celebrando en …»). Las de varios días van como el Nahual (4 planetas de 4).
-FIESTAS.push(
+FESTIVALS.push(
   { key: 'bandera', name: 'Día de la Bandera', date: (y) => new Date(y, 1, 24), grp: 3, ready: true, zone: 'México',
     ico: 'banderita', deco: 'escarapela', color: 'green',
     planets: ['Plaza de las Banderas', 'Valle Tricolor', 'Planeta Abanderado'],
@@ -662,16 +662,16 @@ FIESTAS.push(
     ex: [{ space: 'aniviejo', frame: 'monigotes' }, { ring: 'chispasviejo', back: 'anioviejo' }, { avatar: 'monigotito', title: 'despedida', traveler: 'monigotevuela' }] },
 );
 // Subidas 50% el 6 nov 2026 (antes 20-50 y 300/200/400), como las del evento del mes.
-export const FI_COINS = [30, 45, 60, 75];
-export const FI_REPEAT = [{ coins: 450, undo: 2 }, { wild: 1, coins: 300 }, { wild: 2, coins: 600 }];
+export const FEST_COINS = [30, 45, 60, 75];
+export const FEST_REPEAT = [{ coins: 450, undo: 2 }, { wild: 1, coins: 300 }, { wild: 2, coins: 600 }];
 // Planetas (P), niveles por planeta (N) y niveles en total (L) de una festividad.
-export const fiShape = (f) => { const P = f?.p || FIESTA_PLANETS, N = f?.n || FIESTA_PER_PLANET; return { P, N, L: P * N }; };
+export const festShape = (f) => { const P = f?.p || FESTIVAL_PLANETS, N = f?.n || FESTIVAL_PER_PLANET; return { P, N, L: P * N }; };
 const dayOf = (d) => Math.floor((d.getTime() - d.getTimezoneOffset() * 6e4) / DAY);
 // Las fiestas listas de un año, con su día (local) ya recorrido si chocan: [{ f, day }].
 // all: también las de leyendas aunque aún no se abran (para el modo dev).
-export function fiestaDays(y, all = false) {
+export function festivalDays(y, all = false) {
   const out = [];
-  for (const f of FIESTAS.filter((x) => x.ready && (all || ((!x.local || isOn('fiesta2')) && (!x.grp || isOn(`fiesta${x.grp}`))))).map((x) => ({ f: x, day: dayOf(x.date(y)) })).sort((a, b) => a.day - b.day)) {
+  for (const f of FESTIVALS.filter((x) => x.ready && (all || ((!x.local || isOn('fiesta2')) && (!x.grp || isOn(`fiesta${x.grp}`))))).map((x) => ({ f: x, day: dayOf(x.date(y)) })).sort((a, b) => a.day - b.day)) {
     // 10 nov 2026: con las de varios días se mira que no se encimen (antes solo el día de inicio). La que empieza
     // después se recorre hasta que quede libre (p. ej. el Carnaval de 2031 cae del 22 al 25 de feb: la Bandera pasa al 26).
     const len = (x) => x.f.days || 1;
@@ -681,106 +681,106 @@ export function fiestaDays(y, all = false) {
   return out;
 }
 // Días antes de la fiesta en que ya se ve su botón (gris, con candado y la cuenta regresiva).
-export const FIESTA_SOON = 3;
+export const FESTIVAL_SOON = 3;
 // La fiesta de hoy o la que viene en los próximos FIESTA_SOON días (null si ninguna). soon = todavía no empieza; inDays = días que faltan.
-function fiestaNow() {
-  const day = today(), y = new Date((day + FIESTA_SOON) * DAY).getUTCFullYear();
-  const all = [...fiestaDays(y - 1), ...fiestaDays(y)];
+function festivalNow() {
+  const day = today(), y = new Date((day + FESTIVAL_SOON) * DAY).getUTCFullYear();
+  const all = [...festivalDays(y - 1), ...festivalDays(y)];
   // Las de varios días (days) siguen abiertas hasta su último día; endIn = días que le quedan después de hoy.
-  const hoy = all.find((x) => day >= x.day && day < x.day + (x.f.days || 1));
-  if (hoy) return { ...hoy, soon: false, inDays: 0, endIn: hoy.day + (hoy.f.days || 1) - 1 - day };
-  const next = all.filter((x) => x.day > day && x.day <= day + FIESTA_SOON).sort((a, b) => a.day - b.day)[0];
+  const todayFest = all.find((x) => day >= x.day && day < x.day + (x.f.days || 1));
+  if (todayFest) return { ...todayFest, soon: false, inDays: 0, endIn: todayFest.day + (todayFest.f.days || 1) - 1 - day };
+  const next = all.filter((x) => x.day > day && x.day <= day + FESTIVAL_SOON).sort((a, b) => a.day - b.day)[0];
   return next ? { ...next, soon: true, inDays: next.day - day } : null;
 }
 // La festividad activa (o la que viene, con soon). Su avance vive en save.fi y se empieza de cero en cada edición.
-export function fiesta() {
+export function festival() {
   if (!isOn('fiesta')) return null;
-  const x = fiestaNow();
+  const x = festivalNow();
   if (!x) return null;
   const id = `${x.f.key}-${x.day}`, base = { ...x.f, id, day: x.day, year: new Date(x.day * DAY).getUTCFullYear(), soon: x.soon, inDays: x.inDays };
   if (x.soon) return base;
   if (save.fi?.id !== id) {
-    fiRecord(); // la de antes, si se ganó completa, se queda en el álbum
+    festRecord(); // la de antes, si se ganó completa, se queda en el álbum
     // Si la compró antes (preventa), ya entra pagada.
-    save.fi = { id, k: 0, world: save.open || 0, paid: save.fiPre === id, run: null, tries: {} };
+    save.fi = { id, k: 0, world: save.open || 0, paid: save.festPre === id, run: null, tries: {} };
     persist();
   }
-  return { ...base, state: save.fi, done: save.fi.k >= fiShape(x.f).L };
+  return { ...base, state: save.fi, done: save.fi.k >= festShape(x.f).L };
 }
 // Cuánto falta para que empiece (si todavía no) o para que termine (hoy).
-export const fiestaLeft = () => { const x = fiestaNow(); return msToMidnight() + (x?.soon ? Math.max(0, x.inDays - 1) : x?.endIn || 0) * DAY; };
+export const festivalLeft = () => { const x = festivalNow(); return msToMidnight() + (x?.soon ? Math.max(0, x.inDays - 1) : x?.endIn || 0) * DAY; };
 // Festividades pegadas (9 nov 2026): mientras dura una, la siguiente que cae en los próximos FIESTA_SOON días ya sale
 // en su propio botón (gris, con candado y su preventa). null si no hay o si hoy no hay fiesta (entonces la que viene
 // ya es fiesta()).
-export function fiestaSoon() {
+export function festivalSoon() {
   if (!isOn('fiesta')) return null;
-  const x = fiestaNow();
+  const x = festivalNow();
   if (!x || x.soon) return null;
-  const day = today(), y = new Date((day + FIESTA_SOON) * DAY).getUTCFullYear();
-  const next = [...fiestaDays(y - 1), ...fiestaDays(y)].filter((o) => o.day > x.day + (x.f.days || 1) - 1 && o.day <= day + FIESTA_SOON).sort((a, b) => a.day - b.day)[0];
+  const day = today(), y = new Date((day + FESTIVAL_SOON) * DAY).getUTCFullYear();
+  const next = [...festivalDays(y - 1), ...festivalDays(y)].filter((o) => o.day > x.day + (x.f.days || 1) - 1 && o.day <= day + FESTIVAL_SOON).sort((a, b) => a.day - b.day)[0];
   if (!next) return null;
   return { ...next.f, id: `${next.f.key}-${next.day}`, day: next.day, year: new Date(next.day * DAY).getUTCFullYear(), soon: true, inDays: next.day - day };
 }
 // Lo que falta para que empiece una festividad que todavía no llega.
 export const soonLeft = (f) => msToMidnight() + Math.max(0, f.inDays - 1) * DAY;
 // Días para la siguiente fiesta (modo dev: saltar al día de antes).
-export function daysToNextFiesta() {
+export function daysToNextFestival() {
   const day = today(), y = new Date(day * DAY).getUTCFullYear();
-  const next = [...fiestaDays(y), ...fiestaDays(y + 1)].find((x) => x.day > day);
+  const next = [...festivalDays(y), ...festivalDays(y + 1)].find((x) => x.day > day);
   return next ? next.day - day : 0;
 }
 // Modo dev: cuántos días mover el reloj para caer en el día en que empieza esa festividad (la de este año).
-export function daysToFiesta(key) {
-  const day = today(), y = new Date(day * DAY).getUTCFullYear(), f = FIESTAS.find((x) => x.key === key);
-  const at = fiestaDays(y).find((x) => x.f === f)?.day ?? dayOf(f.date(y));
+export function daysToFestival(key) {
+  const day = today(), y = new Date(day * DAY).getUTCFullYear(), f = FESTIVALS.find((x) => x.key === key);
+  const at = festivalDays(y).find((x) => x.f === f)?.day ?? dayOf(f.date(y));
   return at - day;
 }
 // La siguiente festividad lista (para decir cuándo llega): { name, ico, days } o null.
 // skip: días que se saltan (modo dev: con 1, si mañana hay fiesta, da la que sigue).
-export function nextFiesta(skip = 0) {
+export function nextFestival(skip = 0) {
   const day = today(), y = new Date(day * DAY).getUTCFullYear();
-  const next = [...fiestaDays(y), ...fiestaDays(y + 1)].find((x) => x.day > day + skip);
+  const next = [...festivalDays(y), ...festivalDays(y + 1)].find((x) => x.day > day + skip);
   return next ? { ...next.f, days: next.day - day } : null;
 }
-export function fiPrize(f, k, stars = 3) {
-  const { P, N } = fiShape(f), p = Math.floor(k / N);
-  if (k % N !== N - 1) return { coins: FI_COINS[p], items: [] };
+export function festPrize(f, k, stars = 3) {
+  const { P, N } = festShape(f), p = Math.floor(k / N);
+  if (k % N !== N - 1) return { coins: FEST_COINS[p], items: [] };
   // Repetida: el último planeta da el premio grande; los de en medio, el del 2.º.
-  return lastPrize(f.ex[p], FI_REPEAT[p === P - 1 ? 2 : Math.min(p, 1)], FI_COINS[p] * 3, stars);
+  return lastPrize(f.ex[p], FEST_REPEAT[p === P - 1 ? 2 : Math.min(p, 1)], FEST_COINS[p] * 3, stars);
 }
 // Entrar al nivel que sigue (sin boleto): cada intento cambia las cartas.
 // Entrada a la festividad: se paga una vez (FI_ENTRY) y luego se juega todo el día.
 // Antes de que empiece (soon) cuesta FI_PRE menos; comprada así queda en save.fiPre.
-export const fiPrice = (f) => tkPrice(f, f.soon ? FI_ENTRY * (1 - FI_PRE) : FI_ENTRY);
-export const fiPre = (f) => f?.soon && save.fiPre === f.id;
-export function fiPaid(f) {
+export const festPrice = (f) => tkPrice(f, f.soon ? FEST_ENTRY * (1 - FEST_PRE) : FEST_ENTRY);
+export const festPre = (f) => f?.soon && save.festPre === f.id;
+export function festPaid(f) {
   // Festividades empezadas antes de la entrada pagada: ya entraron gratis.
   if (f.state.paid == null) f.state.paid = true;
   return f.state.paid;
 }
-export function fiBuy(f = fiesta()) {
-  if (!f || (f.soon ? fiPre(f) : fiPaid(f))) return false;
-  const p = fiPrice(f);
+export function festBuy(f = festival()) {
+  if (!f || (f.soon ? festPre(f) : festPaid(f))) return false;
+  const p = festPrice(f);
   if (save.coins < p) return false;
   save.coins -= p;
-  if (f.soon) save.fiPre = f.id;
+  if (f.soon) save.festPre = f.id;
   else f.state.paid = true;
   persist();
   return p;
 }
-export function fiEnter() {
-  const f = fiesta();
-  if (!f || f.soon || f.done || !fiPaid(f)) return false;
+export function festEnter() {
+  const f = festival();
+  if (!f || f.soon || f.done || !festPaid(f)) return false;
   if (f.state.run) return true;
   f.state.run = { k: f.state.k, v: f.state.tries[f.state.k] || 0, state: null };
   f.state.tries[f.state.k] = f.state.run.v + 1;
   persist();
   return true;
 }
-export function fiWin(stars = 3) {
-  const f = fiesta();
+export function festWin(stars = 3) {
+  const f = festival();
   if (!f?.state?.run) return null;
-  const k = f.state.run.k, prize = fiPrize(f, k, stars);
+  const k = f.state.run.k, prize = festPrize(f, k, stars);
   f.state.run = null;
   f.state.k = k + 1;
   save.coins += prize.coins || 0;
@@ -790,41 +790,41 @@ export function fiWin(stars = 3) {
   for (const it of prize.items) {
     save.owned[`${it.sec}:${it.k}`] = 1;
   }
-  fiRecord();
+  festRecord();
   persist();
-  const { N, L } = fiShape(f);
+  const { N, L } = festShape(f);
   return { ...prize, k, planet: Math.floor(k / N), last: k === L - 1 };
 }
 // Álbum: ganar todos los niveles de una festividad deja su postal para siempre, con el año en el sello
 // (save.fiAlbum: 'clave-año' → 1).
-function fiRecord() {
+function festRecord() {
   const s = save.fi;
   if (!s?.id) return;
   const [key, day] = s.id.split('-');
-  if (s.k < fiShape(FIESTAS.find((f) => f.key === key)).L) return;
-  save.fiAlbum[`${key}-${new Date(day * DAY).getUTCFullYear()}`] = 1;
+  if (s.k < festShape(FESTIVALS.find((f) => f.key === key)).L) return;
+  save.festAlbum[`${key}-${new Date(day * DAY).getUTCFullYear()}`] = 1;
 }
 // Las postales de festividades, de la más nueva a la más vieja: [{ id, year, e }].
-export function fiAlbum() {
-  fiRecord(); // festividades ganadas antes de que existiera su postal
+export function festAlbum() {
+  festRecord(); // festividades ganadas antes de que existiera su postal
   // Las ganadas antes de que hubiera álbum: si tiene el avatar del último jefe, la terminó (año de su última fecha).
   const day = today(), y = new Date(day * DAY).getUTCFullYear();
-  for (const f of FIESTAS) {
-    if (!f.ready || !save.owned[`avatar:${f.ex.find((x) => x.avatar).avatar}`] || Object.keys(save.fiAlbum).some((id) => id.startsWith(`${f.key}-`))) continue;
-    const last = [...fiestaDays(y - 1), ...fiestaDays(y)].filter((x) => x.f === f && x.day <= day).pop();
-    if (last) save.fiAlbum[`${f.key}-${new Date(last.day * DAY).getUTCFullYear()}`] = 1;
+  for (const f of FESTIVALS) {
+    if (!f.ready || !save.owned[`avatar:${f.ex.find((x) => x.avatar).avatar}`] || Object.keys(save.festAlbum).some((id) => id.startsWith(`${f.key}-`))) continue;
+    const last = [...festivalDays(y - 1), ...festivalDays(y)].filter((x) => x.f === f && x.day <= day).pop();
+    if (last) save.festAlbum[`${f.key}-${new Date(last.day * DAY).getUTCFullYear()}`] = 1;
   }
-  const order = (x) => x.year * 100 + FIESTAS.indexOf(x.e);
-  return Object.keys(save.fiAlbum)
-    .map((id) => { const [key, year] = id.split('-'); return { id, year: +year, e: FIESTAS.find((f) => f.key === key) }; })
+  const order = (x) => x.year * 100 + FESTIVALS.indexOf(x.e);
+  return Object.keys(save.festAlbum)
+    .map((id) => { const [key, year] = id.split('-'); return { id, year: +year, e: FESTIVALS.find((f) => f.key === key) }; })
     .filter((x) => x.e?.ready)
     .sort((a, b) => order(b) - order(a));
 }
 // Perdió, abandonó o pidió reintentar: solo se cierra la partida (se puede volver a entrar cuando quiera).
-export function fiLose() {
-  const f = fiesta();
+export function festLose() {
+  const f = festival();
   if (!f?.state?.run) return;
   f.state.run = null;
   persist();
 }
-export { FIESTA_PLANETS, FIESTA_PER_PLANET, FIESTA_LEVELS };
+export { FESTIVAL_PLANETS, FESTIVAL_PER_PLANET, FESTIVAL_LEVELS };

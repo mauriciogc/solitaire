@@ -196,13 +196,13 @@ const starGeo = (R, r) => {
 const cap = (part, head, c, r = 0.285) => head.add(part(new THREE.SphereGeometry(r, 28, 12, 0, TAU, 0, Math.PI * 0.5), c, { rx: -0.42, y: 0.01, ol: 0.035 }));
 // Fleco: mechones redondos sobre la frente.
 const fringe = (part, head, c, list, s = [1.2, 0.55, 0.7]) => list.forEach(([x, y, z, rz]) => head.add(part(new THREE.SphereGeometry(0.09, 12, 8), c, { x, y, z, rz, ol: 0.08, s })));
-const FRINGE_NINO = [[-0.12, 0.14, 0.2, 0.3], [0.0, 0.17, 0.22, 0], [0.12, 0.14, 0.2, -0.3]];
-const FRINGE_NINA = [[-0.13, 0.15, 0.19, 0.5], [-0.03, 0.17, 0.22, 0.25], [0.09, 0.16, 0.21, -0.1]];
+const FRINGE_BOY = [[-0.12, 0.14, 0.2, 0.3], [0.0, 0.17, 0.22, 0], [0.12, 0.14, 0.2, -0.3]];
+const FRINGE_GIRL = [[-0.13, 0.15, 0.19, 0.5], [-0.03, 0.17, 0.22, 0.25], [0.09, 0.16, 0.21, -0.1]];
 // Peinados: [niño: remolino, despeinado, rizos] · [niña: chongos, coletas, suelto con diadema]. Devuelven sus ticks.
 const HAIR_STYLES = {
   nino: [
     (part, head, c) => { // Remolino: el mechón parado de Nico.
-      cap(part, head, c); fringe(part, head, c, FRINGE_NINO);
+      cap(part, head, c); fringe(part, head, c, FRINGE_BOY);
       const tuft = part(new THREE.ConeGeometry(0.05, 0.17, 10), c, { x: 0.04, y: 0.31, z: 0.02, rz: -0.55, ol: 0.12 });
       head.add(tuft);
       return [(f, t) => (tuft.rotation.z = -0.55 + Math.sin(t * 4) * 0.1 + (f.laugh ? Math.sin(t * 12) * 0.15 : 0))];
@@ -228,7 +228,7 @@ const HAIR_STYLES = {
   ],
   nina: [
     (part, head, c) => { // Chongos con mechones a los lados (como Lila).
-      cap(part, head, c); fringe(part, head, c, FRINGE_NINA, [1.25, 0.55, 0.7]);
+      cap(part, head, c); fringe(part, head, c, FRINGE_GIRL, [1.25, 0.55, 0.7]);
       const buns = [-1, 1].map((sx) => { const b = part(new THREE.SphereGeometry(0.1, 14, 10), c, { x: sx * 0.2, y: 0.22, z: -0.04, ol: 0.08 }); head.add(b); return b; });
       const locks = [-1, 1].map((sx) => { const l = part(new THREE.CapsuleGeometry(0.05, 0.16, 4, 10), c, { x: sx * 0.235, y: -0.09, z: 0.06, rz: sx * 0.15, ol: 0.1 }); head.add(l); return l; });
       return [(f, t) => {
@@ -237,7 +237,7 @@ const HAIR_STYLES = {
       }];
     },
     (part, head, c) => { // Coletas: dos colas a los lados con ligas rosas, que se mecen.
-      cap(part, head, c); fringe(part, head, c, FRINGE_NINA, [1.25, 0.55, 0.7]);
+      cap(part, head, c); fringe(part, head, c, FRINGE_GIRL, [1.25, 0.55, 0.7]);
       const tails = [-1, 1].map((sx) => {
         const g = new THREE.Group(); g.position.set(sx * 0.25, 0.1, -0.06);
         g.add(part(new THREE.SphereGeometry(0.035, 10, 8), '#ff7ab8', { ol: 0.18 }));
@@ -247,7 +247,7 @@ const HAIR_STYLES = {
       return [(f, t) => tails.forEach((g, i) => (g.rotation.z = (i ? 1 : -1) * (Math.sin(t * 2.4 + i) * 0.12 + (f.laugh ? Math.sin(t * 12) * 0.15 : 0))))];
     },
     (part, head, c) => { // Suelto con diadema: pelo largo detrás de la cabeza hasta los hombros.
-      cap(part, head, c); fringe(part, head, c, FRINGE_NINA, [1.25, 0.55, 0.7]);
+      cap(part, head, c); fringe(part, head, c, FRINGE_GIRL, [1.25, 0.55, 0.7]);
       const back = part(new THREE.SphereGeometry(0.3, 20, 14), c, { y: -0.13, z: -0.07, s: [1.08, 1.12, 0.75], ol: 0.04 });
       head.add(back);
       const locks = [-1, 1].map((sx) => { const l = part(new THREE.CapsuleGeometry(0.055, 0.2, 4, 10), c, { x: sx * 0.235, y: -0.12, z: 0.06, rz: sx * 0.1, ol: 0.1 }); head.add(l); return l; });

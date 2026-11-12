@@ -1,5 +1,5 @@
 import { save, persist } from './storage.js';
-import { openModal, toast, confetti, updateCoins, money, starsHTML, reduced, buzz, sparkle, wait, spendFromWallet, flyToWallet, balloons, lootBubbles, rachaWarnHTML, betLoseHTML, shownCoins, popPrize } from './ui.js';
+import { openModal, toast, confetti, updateCoins, money, starsHTML, reduced, buzz, sparkle, wait, spendFromWallet, flyToWallet, balloons, lootBubbles, streakWarnHTML, betLoseHTML, shownCoins, popPrize } from './ui.js';
 import { worldInfo, packGroups, MECH_NAMES, LEVELS_PER_WORLD, scrollStrip, scrollSpan, scrollCover, SCROLL_VIEW, SCROLL_SHOW, NEB_SLOTS, GRAV_SHOWN, W, H } from './levels.js';
 import * as E from './engine.js';
 import { price, EV_MARKUP, round5, HELPS, buyable } from './economy.js';
@@ -7,7 +7,7 @@ import { helpOff } from './meteor.js';
 import { cardBackURL, icon, star, coin, lockIcon, keyIcon, arrowIcon, curtainIcon, suitSVG, avatarHTML } from './art.js';
 import { tableHTML } from './biomes.js';
 import { Coach } from './coach.js';
-import { track, misDef } from './missions.js';
+import { track, missionDef } from './missions.js';
 
 const SUITS = ['s', 'h', 'd', 'c'];
 export const RANKS = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
@@ -127,7 +127,7 @@ const helpTip = (back, text, small = false) => `<div class="help-tip${small ? ' 
 // Ventanas de presentación de las mesas y del escudo (la primera vez que salen).
 // Mesas (11 nov 2026, homologadas a pedido del usuario): a = qué es, b = cómo funciona. La ventana pone cada una en su
 // renglón y Tu camino las dos juntas (MESA_TEXT). Todas azules, como las de las cartas.
-export const MESA_TEXT = {
+export const TABLE_TEXT = {
   mesa: ['Esta mesa llega <b>enrollada</b>.', 'Limpia las primeras cartas y la mesa avanza: salen más del rollo.'],
   gravedad: ['Las cartas van en <b>columnas</b>.', 'Solo juegas la de <b>abajo</b>; al quitarla, la columna cae.'],
   nebulosa: ['Solo ves <b>3 grupos</b> de cartas.', 'Vacía <b>cualquiera</b> y de la nebulosa sale otro.'],
@@ -140,16 +140,16 @@ export const MESA_TEXT = {
   nave: ['Por aquí pasa una <b>nave ladrona</b>.', 'Cada pocos robos se lleva una carta de tu <b>mazo</b>. Con racha de 4 te regresa la última.'],
   rocas: ['Por aquí pasa un <b>cinturón de asteroides</b>.', 'Cada <b>4 robos</b> caen piedras que tapan cartas <b>3 turnos</b>.'],
 };
-const MESA_NAME = { nave: 'Nave ladrona', mesa: 'Mesa enrollada', gravedad: 'Gravedad', nebulosa: 'Nebulosa', plegable: 'Mesa plegable', marea: 'Marea', puertas: 'Puertas', banda: 'Banda transportadora', hoyo: 'Agujero negro', rocas: 'Asteroides' };
-const MESA_HELP = { rocas: helpTip('hlaser', '<b>Láser:</b> rompe todas las piedras.', true), nave: helpTip('hescudo', '<b>Escudo:</b> la nave ya no te roba en todo el nivel.', true) };
+const TABLE_NAME = { nave: 'Nave ladrona', mesa: 'Mesa enrollada', gravedad: 'Gravedad', nebulosa: 'Nebulosa', plegable: 'Mesa plegable', marea: 'Marea', puertas: 'Puertas', banda: 'Banda transportadora', hoyo: 'Agujero negro', rocas: 'Asteroides' };
+const TABLE_HELP = { rocas: helpTip('hlaser', '<b>Láser:</b> rompe todas las piedras.', true), nave: helpTip('hescudo', '<b>Escudo:</b> la nave ya no te roba en todo el nivel.', true) };
 // Ventana con el formato de las cartas (11 nov 2026): dibujo a la izquierda y, al lado, su nombre y su texto.
 const tipCard = (pic, name, text, cls = '') => `<div class="tip-card"><span class="tip-pic${cls}">${pic}</span><p><b>${name}</b>${text}</p></div>`;
 const helpPic = (back) => `<span class="help-tip-card" style="background-image:${cardBackURL(back)}"></span>`;
 // Ventanas de presentación de las mesas, del escudo y de ver cartas (la primera vez que salen).
-export const MESA_INTRO = {
+export const TABLE_INTRO = {
   // Mismo formato que las cartas: su icono (el de Tu camino; la nave, su nave), su nombre y su texto; la ayuda abajo.
   // body es un getter: el icono viene de dev.js (ART).
-  ...Object.fromEntries(Object.entries(MESA_TEXT).map(([k, [a, b]]) => [k, { title: `Nuevo: ${MESA_NAME[k].toLowerCase()}`, color: 'blue', get body() { return tipCard(k === 'nave' ? icon('nave') : ART.tableIcon(k), MESA_NAME[k], `${a} ${b}`, ' tip-ico') + (MESA_HELP[k] || ''); } }])),
+  ...Object.fromEntries(Object.entries(TABLE_TEXT).map(([k, [a, b]]) => [k, { title: `Nuevo: ${TABLE_NAME[k].toLowerCase()}`, color: 'blue', get body() { return tipCard(k === 'nave' ? icon('nave') : ART.tableIcon(k), TABLE_NAME[k], `${a} ${b}`, ' tip-ico') + (TABLE_HELP[k] || ''); } }])),
   // Mini guía de ayudas (11 nov 2026, pedido del usuario): una vez, en el nivel 2. Qué son, cuáles hay y dónde están.
   ayudas: { title: 'Nuevo: ayudas', color: 'blue', get body() { return `${tipCard(icon('ayudas'), 'Ayudas', 'Cartas que te sacan de apuros. Están en el <b>botón dorado</b> de abajo: toca una para usarla y abajo de cada una compras <b>+1</b>.', ' tip-ico')}<div class="help-list">${[['comodin', '<b>Comodín:</b> vale cualquier número.'], ['hreloj', '<b>Reloj de arena:</b> congela 3 turnos todo lo que cuenta.'], ['hver', '<b>Ver cartas:</b> voltea las cartas tapadas unos segundos.'], ['hllave', '<b>Llave maestra:</b> abre todos los candados y cortinas.']].map(([b, t]) => helpTip(b, t, true)).join('')}</div><p class="note">Solo salen las que sirven en cada nivel.</p>`; } },
   // Ver cartas: una vez, en un tablero grande.
@@ -307,7 +307,7 @@ export class Game {
       persist();
       this.modalOpen = true;
       return openModal({
-        ...MESA_INTRO.mesa,
+        ...TABLE_INTRO.mesa,
         closable: false,
         onClose: () => {
           this.modalOpen = false;
@@ -322,7 +322,7 @@ export class Game {
       persist();
       this.modalOpen = true;
       return openModal({
-        ...MESA_INTRO.gravedad,
+        ...TABLE_INTRO.gravedad,
         closable: false,
         onClose: () => {
           this.modalOpen = false;
@@ -337,7 +337,7 @@ export class Game {
       persist();
       this.modalOpen = true;
       return openModal({
-        ...MESA_INTRO.plegable,
+        ...TABLE_INTRO.plegable,
         closable: false,
         onClose: () => {
           this.modalOpen = false;
@@ -352,7 +352,7 @@ export class Game {
       persist();
       this.modalOpen = true;
       return openModal({
-        ...MESA_INTRO.marea,
+        ...TABLE_INTRO.marea,
         closable: false,
         onClose: () => {
           this.modalOpen = false;
@@ -366,7 +366,7 @@ export class Game {
       persist();
       this.modalOpen = true;
       return openModal({
-        ...MESA_INTRO.banda,
+        ...TABLE_INTRO.banda,
         closable: false,
         onClose: () => {
           this.modalOpen = false;
@@ -381,7 +381,7 @@ export class Game {
       persist();
       this.modalOpen = true;
       return openModal({
-        ...MESA_INTRO.puertas,
+        ...TABLE_INTRO.puertas,
         closable: false,
         onClose: () => {
           this.modalOpen = false;
@@ -396,7 +396,7 @@ export class Game {
       persist();
       this.modalOpen = true;
       return openModal({
-        ...MESA_INTRO.hoyo,
+        ...TABLE_INTRO.hoyo,
         closable: false,
         onClose: () => {
           this.modalOpen = false;
@@ -411,7 +411,7 @@ export class Game {
       persist();
       this.modalOpen = true;
       return openModal({
-        ...MESA_INTRO.rocas,
+        ...TABLE_INTRO.rocas,
         closable: false,
         onClose: () => {
           this.modalOpen = false;
@@ -425,7 +425,7 @@ export class Game {
       persist();
       this.modalOpen = true;
       return openModal({
-        ...MESA_INTRO.nebulosa,
+        ...TABLE_INTRO.nebulosa,
         closable: false,
         onClose: () => {
           this.modalOpen = false;
@@ -441,7 +441,7 @@ export class Game {
       persist();
       this.modalOpen = true;
       return openModal({
-        ...MESA_INTRO.ayudas,
+        ...TABLE_INTRO.ayudas,
         closable: false,
         onClose: () => {
           this.modalOpen = false;
@@ -458,7 +458,7 @@ export class Game {
       persist();
       this.modalOpen = true;
       return openModal({
-        ...MESA_INTRO.nave,
+        ...TABLE_INTRO.nave,
         closable: false,
         onClose: () => {
           this.modalOpen = false;
@@ -476,7 +476,7 @@ export class Game {
       persist();
       this.modalOpen = true;
       return openModal({
-        ...MESA_INTRO.escudo,
+        ...TABLE_INTRO.escudo,
         closable: false,
         onClose: () => {
           this.modalOpen = false;
@@ -490,7 +490,7 @@ export class Game {
       persist();
       this.modalOpen = true;
       return openModal({
-        ...MESA_INTRO.ver,
+        ...TABLE_INTRO.ver,
         closable: false,
         onClose: () => {
           this.modalOpen = false;
@@ -3065,7 +3065,7 @@ export class Game {
   offerBuy(kind) {
     const cost = kind === 'extra' ? this.extraCost() : this.priceOf(kind);
     const n = { undo: 3, extra: 5 }[kind];
-    const sale = this.helpRate(kind) < 0;
+    const onSale = this.helpRate(kind) < 0;
     this.modalOpen = true;
     // Lo que se compra se ve en grande, flotando con rayos detrás.
     const hero = {
@@ -3082,12 +3082,12 @@ export class Game {
       cls: 'buy-modal',
       body: `<div class="buy-hero"><div class="rays"></div>${hero}<b class="qty outl">${kind === 'extra' ? '+5' : `×${n}`}</b></div>
         <p class="lead">${text}</p>
-        ${sale ? `<p class="met-sale">${icon(this.opts.meteor.ico)}${this.opts.meteor.name}: <b>−${Math.round(-this.helpRate(kind) * 100)}%</b></p>` : ''}
+        ${onSale ? `<p class="met-sale">${icon(this.opts.meteor.ico)}${this.opts.meteor.name}: <b>−${Math.round(-this.helpRate(kind) * 100)}%</b></p>` : ''}
         ${save.coins < cost ? '<p class="note">No te alcanzan las monedas.</p>' : ''}`,
       onClose: () => (this.modalOpen = false),
       buttons: [
         {
-          label: `Comprar ${coin()} ${sale ? `<s>${this.basePrice(kind)}</s> ` : ''}${cost}`,
+          label: `Comprar ${coin()} ${onSale ? `<s>${this.basePrice(kind)}</s> ` : ''}${cost}`,
           cls: 'green grow',
           disabled: save.coins < cost,
           onClick: () => {
@@ -3267,7 +3267,7 @@ export class Game {
       color: 'pink',
       // El cuadro grande es el botón de comprar +5: dice el precio y se toca para gastar (gris si no alcanza).
       body: `<button class="offer buy press"${short ? ' disabled' : ''}><div class="fan">${fan}</div><div><b>Comprar +5 cartas</b><span>Quedan ${left} carta${left === 1 ? '' : 's'} en el tablero. ${this.opts.event ? 'Te pueden salvar el nivel.' : 'Con +5 siempre te llevas al menos 1 estrella.'}</span>
-          <em class="cost${short ? ' short' : ''}">${coin()} ${cost || 'gratis'}${short ? ' · te faltan monedas' : ''}</em></div></button>${this.opts.event || this.opts.free ? '' : betLoseHTML(this.opts.bet, this.opts.betPaid, 'si te rindes')}${this.rachaWarn(true)}`,
+          <em class="cost${short ? ' short' : ''}">${coin()} ${cost || 'gratis'}${short ? ' · te faltan monedas' : ''}</em></div></button>${this.opts.event || this.opts.free ? '' : betLoseHTML(this.opts.bet, this.opts.betPaid, 'si te rindes')}${this.streakWarn(true)}`,
       onClose: () => (this.modalOpen = false),
       buttons: [
         { label: 'Rendirse', cls: 'pink grow', onClick: () => (this.trackEnd(false), this.opts.onAbandon(true)) },
@@ -3283,11 +3283,11 @@ export class Game {
 
 
   // Rendirse o abandonar (nivel nuevo o repetido) reinicia la racha: se avisa solo si hay algo que perder.
-  rachaWarn(end) {
+  streakWarn(end) {
     const r = this.opts.rachaRisk?.();
     if (!r) return '';
     const when = !end ? 'Si abandonas' : 'Si te rindes';
-    return rachaWarnHTML(r.n, r.pend, when);
+    return streakWarnHTML(r.n, r.pend, when);
   }
 
   // Misiones y logros (missions.js): lo que se hizo en el nivel, al terminarlo (no en la galería del modo dev).
@@ -3315,7 +3315,7 @@ export class Game {
         ...(this.opts.bet > 1 && { [`bet${this.opts.bet}`]: 1 }) }),
     };
     const done = track(stats);
-    done.forEach((x, i) => setTimeout(() => toast(`${icon('check')} ¡Misión cumplida! ${misDef(x.id).text(x.goal)}`), 900 + i * 1600));
+    done.forEach((x, i) => setTimeout(() => toast(`${icon('check')} ¡Misión cumplida! ${missionDef(x.id).text(x.goal)}`), 900 + i * 1600));
   }
 
   win() {
@@ -3401,7 +3401,7 @@ export class Game {
         title: '¿Abandonar el nivel?',
         color: 'pink',
         onClose: free,
-        body: `<p class="lead">${this.opts.event ? (this.opts.event.tk ? 'Se gasta tu boleto del evento: el siguiente llega en 48 horas.' : 'Pierdes este intento; puedes volver a jugarlo.') : this.opts.free ? 'Se pierde este intento.' : 'Pierdes los boletos y lo que gastaste en este intento.'}</p>${this.opts.event || this.opts.free ? '' : betLoseHTML(this.opts.bet, this.opts.betPaid)}${this.rachaWarn()}`,
+        body: `<p class="lead">${this.opts.event ? (this.opts.event.tk ? 'Se gasta tu boleto del evento: el siguiente llega en 48 horas.' : 'Pierdes este intento; puedes volver a jugarlo.') : this.opts.free ? 'Se pierde este intento.' : 'Pierdes los boletos y lo que gastaste en este intento.'}</p>${this.opts.event || this.opts.free ? '' : betLoseHTML(this.opts.bet, this.opts.betPaid)}${this.streakWarn()}`,
         buttons: [{ label: 'Seguir jugando', cls: 'ghost' }, { label: 'Abandonar', cls: 'pink', onClick: () => (this.trackEnd(false), this.opts.onAbandon(true)) }],
       });
     return [
@@ -3423,7 +3423,7 @@ export class Game {
       color: 'gray',
       onClose: free,
       body: (this.opts.saved ? (this.opts.canExit === false ? '<p class="note">Este nivel no se puede dejar a medias: termínalo o abandónalo. Si cierras el juego, tienes 30 minutos para volver.</p>' : '<p class="note">Tu partida se guarda: al volver sigues donde te quedaste.</p>') : this.level.secret && this.opts.rachaRisk?.()?.isNew ? '<p class="note">Si sales del nivel secreto, se pierde este intento.</p>' : '<p class="note">Estás repitiendo un nivel: si sales, se pierde este intento.</p>')
-        + (this.opts.saved ? '' : this.rachaWarn()),
+        + (this.opts.saved ? '' : this.streakWarn()),
       buttons: this.pauseButtons(),
       cls: 'pause',
     });

@@ -1,10 +1,10 @@
 import { save, prefs, persist, resetProfile, deleteProfile, renameProfile, exportCode, readCode, loadProfile, setDev } from './storage.js';
-import { UNLOCK, EVENTOS, FIESTAS, COLECCIONES, evSoon, isOn, nextEvent, daysToNextCol, plusCols, RACHA_GOALS, RACHA_STEP, rachaGoal, nextIndex, racha, rachaTheme, rachaReady, rachaHot, rachaWin, rachaLose, rachaPendToFeats, msToMidnight, col, colLeft, colWin, colOffers, colBuy, ev, evLeft, evTicketLeft, evTicketPrice, evBuyTicket, evPrize, evEnter, evWin, evLose, evAlbum, fiAlbum, EVENT_PLANETS, EVENT_PER_PLANET, EVENT_LEVELS, fiesta, fiestaLeft, fiestaSoon, soonLeft, evPrePrice, evPreOwned, evPreBuy, nextFiesta, fiEnter, fiWin, fiLose, fiShape, fiPrice, fiPaid, fiBuy, fiPre, FI_PRE, FI_ENTRY, EV_FIRST } from './events.js';
-import { WORLD_COUNT, LEVELS_PER_WORLD, TOTAL_LEVELS, worldInfo, generateLevel, variantLevel, MECH_INTRO, MECH_NAMES, MECHANICS, EXTRA, extraDebut, SCROLL_FROM, mareaFirst, hoyoFirst, puertasFirst, bandaFirst, rocasFirst, secretId, isSecret, eventLevel, fiestaLevel } from './levels.js';
-import { Game, faceHTML, backHTML, TIPS, MESA_TEXT, MECH_KINDS, ART } from './game.js';
+import { UNLOCK, EVENTS, FESTIVALS, COLLECTIONS, evSoon, isOn, nextEvent, daysToNextCol, plusCols, STREAK_GOALS, STREAK_STEP, streakGoal, nextIndex, dailyStreak, streakTheme, streakReady, streakHot, streakWin, streakLose, streakPendToFeats, msToMidnight, col, colLeft, colWin, colOffers, colBuy, ev, evLeft, evTicketLeft, evTicketPrice, evBuyTicket, evPrize, evEnter, evWin, evLose, evAlbum, festAlbum, EVENT_PLANETS, EVENT_PER_PLANET, EVENT_LEVELS, festival, festivalLeft, festivalSoon, soonLeft, evPrePrice, evPreOwned, evPreBuy, nextFestival, festEnter, festWin, festLose, festShape, festPrice, festPaid, festBuy, festPre, FEST_PRE, FEST_ENTRY, EV_FIRST } from './events.js';
+import { WORLD_COUNT, LEVELS_PER_WORLD, TOTAL_LEVELS, worldInfo, generateLevel, variantLevel, MECH_INTRO, MECH_NAMES, MECHANICS, EXTRA, extraDebut, SCROLL_FROM, tideFirst, holeFirst, doorsFirst, bandaFirst, rocksFirst, secretId, isSecret, eventLevel, festivalLevel } from './levels.js';
+import { Game, faceHTML, backHTML, TIPS, TABLE_TEXT, MECH_KINDS, ART } from './game.js';
 import { maxBet, betFee, betSteps, BET_STEPS, HELPS, DAILY_PATH, dailyState, starsNeeded, TICKET_PRICE, ticketCost, ticketRefund, coinsFor, bossChest, rollChest, CONST_PRIZE, openCost, boosted, secretCoins, rollSecret, openSurprise, MET_OFF, metShopPrice } from './economy.js';
-import { missions, misDef, misDone, misAllDone, autoClaim, LOGROS, LOGRO_PRIZES, LOGRO_MEDAL, LOGRO_TOP, logroGot, logroProg, logrosVisible } from './missions.js';
-import { pauseOffscreen, openModal, toast, updateCoins, money, esc, reduced, wait, flyToWallet, spendFromWallet, sparkle, confetti, starsHTML, warp, buzz, balloons, lootBubbles, floatBubbles, rachaWarnHTML, popPrize, popBalloon, countPop, HEADS, betLoseHTML, shownCoins } from './ui.js';
+import { missions, missionDef, missionDone, missionsAllDone, autoClaim, ACHIEVEMENTS, ACHIEVEMENT_PRIZES, ACHIEVEMENT_MEDAL, ACHIEVEMENT_TOP, achievementGot, achievementProgress, achievementsVisible } from './missions.js';
+import { pauseOffscreen, openModal, toast, updateCoins, money, esc, reduced, wait, flyToWallet, spendFromWallet, sparkle, confetti, starsHTML, warp, buzz, balloons, lootBubbles, floatBubbles, streakWarnHTML, popPrize, popBalloon, countPop, HEADS, betLoseHTML, shownCoins } from './ui.js';
 import { icon, iconURL, iconInner, star, coin, miniPlanet, avatarHTML, AVATAR_COLORS, kidOf, KID_SKINS, KID_HAIRS, KID_STYLES, cardBackURL, setDeck, lockIcon, curtainIcon, chestBody, chestLid, boxBody, boxLid, capChute, capBody, capLid } from './art.js';
 import { GROUPS, SECTIONS, ITEMS, shopItems, groupOf, owns, equipped, equip, buy, item, lockedUntil, titleHTML, titleIcon, sell, sellable, sellPrice } from './shop.js';
 import { BIOMES, biomeKey, EVENT_BIOMES, tableHTML } from './biomes.js';
@@ -13,12 +13,12 @@ import { meteor, metWin, metCoins, helpOff, MET_FROM, STAR_FROM, SHOWERS } from 
 import { dev, gallery, attachDevBar, galleryScreen, openDevMenu, planetGal, planetsScreen, casualRate, rateTag, tableIcon } from './dev.js';
 import { themeCSS } from './themes.js';
 import { setCSS, SETS, setOf, setItems, SET_DEAL } from './sets.js';
-import { fiestaCSS } from './festival-art.js';
+import { festivalCSS } from './festival-art.js';
 import { mulberry32, hash } from './rng.js';
 import { starCSS } from './starshower.js';
 import { PASS_MAX, secretGoal, PASS_FRAMES, passGoal, passPrize, secretPrize, passCount, secretCount, passCSS } from './passport.js';
 // Caras, fondos y marcos de las temáticas de la tienda (themes.js): su CSS se arma de su paleta.
-document.head.append(Object.assign(document.createElement('style'), { textContent: themeCSS(iconURL) + setCSS(iconURL, iconInner) + fiestaCSS(FIESTAS, iconInner) + passCSS(iconInner) + starCSS(iconInner) + `.go.met.sh-star::before { background-image: ${iconURL('starFall', 1)}; }` }));
+document.head.append(Object.assign(document.createElement('style'), { textContent: themeCSS(iconURL) + setCSS(iconURL, iconInner) + festivalCSS(FESTIVALS, iconInner) + passCSS(iconInner) + starCSS(iconInner) + `.go.met.sh-star::before { background-image: ${iconURL('starFall', 1)}; }` }));
 
 document.documentElement.classList.toggle('dev-on', !!prefs.dev);
 // Reversos de los premios de racha (carta regalo violeta y comodín dorado), para todo el documento:
@@ -496,8 +496,8 @@ async function celebrateWin(galaxy, a, cta, paint, slide) {
   }
   if (a.res.racha) openGroup('r', 'open', true);
   refreshMis();
-  refreshLogros();
-  if (a.res.racha) bumpRacha();
+  refreshAchievements();
+  if (a.res.racha) bumpStreak();
   if (a.res.col && col()) bumpCol(a.res.col.n);
   if (worldData(a.w).secret.fresh) await revealSecret(galaxy, a.w);
   galaxy.busy = false;
@@ -925,12 +925,12 @@ setInterval(() => {
 // revealed: ya entró volando aunque su ventana siga abierta (si el botón se vuelve a pintar, no se esconde).
 const revealed = new Set();
 const fresh = (k) => (save.intro?.[k] || revealed.has(k) ? '' : 'fresh');
-const rachaBtn = (prev = null) => {
+const streakBtn = (prev = null) => {
   if (!isOn('racha')) return '';
-  const r = racha(), t = rachaTheme(), old = prev != null;
-  const ready = !old && rachaReady(), hot = !old && !ready && rachaHot();
+  const r = dailyStreak(), t = streakTheme(), old = prev != null;
+  const ready = !old && streakReady(), hot = !old && !ready && streakHot();
   // 10 nov 2026: el anillo de misiones y logros, lleno con lo que lleva hacia el siguiente premio.
-  const i = nextIndex(r), from = i ? rachaGoal(i - 1).n : 0, p = ready ? 1 : Math.max(0, Math.min(1, ((old ? prev : r.n) - from) / (rachaGoal(i).n - from)));
+  const i = nextIndex(r), from = i ? streakGoal(i - 1).n : 0, p = ready ? 1 : Math.max(0, Math.min(1, ((old ? prev : r.n) - from) / (streakGoal(i).n - from)));
   return `<button class="iconbtn tb press prog racha-btn ${fresh('racha')} ${ready ? 'ready' : ''} ${hot ? 'hot' : ''}" data-a="racha" style="--p:${p.toFixed(3)}" aria-label="${t.name}" title="${t.name}">${hot ? `<span class="fire">${icon('flame')}</span>` : ''}${icon(t.ico)}<small class="rn">${old ? prev : r.n}</small>${ready ? '<span class="dot"></span>' : ''}</button>`;
 };
 // Colección: la ficha de su temática, arriba cuánto le queda y abajo cuántas lleva (como la racha; con 0 no sale);
@@ -945,17 +945,17 @@ const colBtn = () => {
 // Misiones del día y logros (10 nov 2026): ya no se reclaman (se cobran solos), así que el botón no lleva punto rojo:
 // un anillo alrededor se llena con lo que llevas (--p, 0 a 1). Misiones: lo de las 3 juntas y un puntito por misión
 // cumplida; todas y el cofre: palomita. Logros: lo que le falta al más cercano a su siguiente medalla y cuántas llevas.
-const misPips = (s) => `<small class="rn pips">${s.list.map((x) => `<i class="${misDone(x) ? 'on' : ''}"></i>`).join('')}</small>`;
-const misBtn = () => {
+const missionPips = (s) => `<small class="rn pips">${s.list.map((x) => `<i class="${missionDone(x) ? 'on' : ''}"></i>`).join('')}</small>`;
+const missionsBtn = () => {
   if (!isOn('mis')) return '';
-  const s = missions(ev()?.state?.paid), all = misAllDone();
+  const s = missions(ev()?.state?.paid), all = missionsAllDone();
   const p = s.list.reduce((n, x) => n + Math.min(1, x.n / x.goal), 0) / (s.list.length || 1);
-  return `<button class="iconbtn tb press prog mis-btn ${fresh('mis')} ${all ? 'all-done' : ''}" data-a="mis" style="--p:${p.toFixed(3)}" aria-label="Misiones del día" title="Misiones del día">${icon('misiones')}${all ? `<span class="fi-lock">${icon('check')}</span>` : misPips(s)}</button>`;
+  return `<button class="iconbtn tb press prog mis-btn ${fresh('mis')} ${all ? 'all-done' : ''}" data-a="mis" style="--p:${p.toFixed(3)}" aria-label="Misiones del día" title="Misiones del día">${icon('misiones')}${all ? `<span class="fi-lock">${icon('check')}</span>` : missionPips(s)}</button>`;
 };
-const logrosBtn = () => {
+const achievementsBtn = () => {
   if (!isOn('logros')) return '';
-  const ls = logrosVisible(), open = ls.filter((l) => logroGot(l) < LOGRO_TOP);
-  const p = Math.max(0, ...open.map((l) => Math.min(1, logroProg(l) / l.steps[logroGot(l)]))), medals = ls.reduce((n, l) => n + logroGot(l), 0);
+  const ls = achievementsVisible(), open = ls.filter((l) => achievementGot(l) < ACHIEVEMENT_TOP);
+  const p = Math.max(0, ...open.map((l) => Math.min(1, achievementProgress(l) / l.steps[achievementGot(l)]))), medals = ls.reduce((n, l) => n + achievementGot(l), 0);
   return `<button class="iconbtn tb press prog logros-btn ${fresh('logros')}" data-a="logros" style="--p:${open.length ? p.toFixed(3) : 1}" aria-label="Logros" title="Logros">${icon('trophy')}${medals ? `<small class="rn">${medals}</small>` : ''}</button>`;
 };
 // 8 nov 2026: con más de 3 botones, cada lado se agrupa en un botón dorado con lo más urgente (listo > arde > nuevo) y
@@ -974,14 +974,14 @@ const grouped = (k, label, html) => {
 };
 const eventButtons = (res) => {
   // Siempre en este orden (8 nov 2026, pedido del usuario): mes, día, colección, racha, misiones, logros.
-  const all = evBtn() + fiBtn() + colBtn() + rachaBtn(res?.racha ? res.racha - 1 : null) + misBtn() + logrosBtn();
+  const all = evBtn() + festBtn() + colBtn() + streakBtn(res?.racha ? res.racha - 1 : null) + missionsBtn() + achievementsBtn();
   return grouped('r', 'Eventos', all);
 };
 // Tu camino (8 nov 2026) va en el menú después del álbum, con su puntito cuando hay algo nuevo que ver.
 const sideButtons = () => grouped('l', 'Menú', `${ibtn('gift', 'Regalo diario', 'daily', !dailyState(save.daily).claimed)}${ticketBtn()}${ibtn('bag', 'Tienda', 'shop', shopNew())}${ibtn('album', 'Álbum de postales', 'album')}${roadBtn()}${ibtn('gear', 'Ajustes', 'settings')}`);
 function sideAction(a) {
   if (a === 'grp-r' || a === 'grp-l') return openGroup(a.slice(4)), true;
-  const act = { me: () => !document.querySelector('.touring') && openProfile(), camino: openRoad, shop: () => openShop(), daily: openDaily, dticket: openDailyTicket, racha: openRacha, mis: openMis, logros: openLogros, col: openCol, evento: openEvento, 'evento-next': openEventoNext, fiesta: () => openFiesta(), 'fiesta-next': () => openFiesta(fiestaSoon(), 'fiesta-next'), album: openAlbum, settings: openSettings, dev: () => openDevMenu({ onGallery: () => showGallery(save.next), onPlanets: showPlanets, onFiestas: openFiestaPack, onGoLevel: openGoLevel, onRefresh: boot, onRescue: () => (document.getElementById('modal-root').replaceChildren(), openRescue()), card: mechCard }) }[a];
+  const act = { me: () => !document.querySelector('.touring') && openProfile(), camino: openRoad, shop: () => openShop(), daily: openDaily, dticket: openDailyTicket, racha: openStreak, mis: openMis, logros: openAchievements, col: openCol, evento: openEvent, 'evento-next': openEventNext, fiesta: () => openFestival(), 'fiesta-next': () => openFestival(festivalSoon(), 'fiesta-next'), album: openAlbum, settings: openSettings, dev: () => openDevMenu({ onGallery: () => showGallery(save.next), onPlanets: showPlanets, onFestivals: openFestivalPack, onGoLevel: openGoLevel, onRefresh: boot, onRescue: () => (document.getElementById('modal-root').replaceChildren(), openRescue()), card: mechCard }) }[a];
   // Usar un botón cierra su cajón (menos durante el recorrido, que los va enseñando).
   if (act && !document.querySelector('.side-touring')) closeGroups();
   act?.();
@@ -1049,7 +1049,7 @@ ART.mechCard = (m) => mechCard(m);
 ART.tableIcon = tableIcon;
 // Misiones y logros de una carta especial (8 nov 2026): llevan la carta misma de ejemplo (la de la ayuda), no un ícono.
 // Carta especial: su carta de ejemplo · Apostador: la etiqueta ×N de la apuesta (la de Jugar).
-const misIco = (m) => (m.mech ? `<span class="mis-card">${mechCard(m.mech)}</span>` : m.bet ? `<span class="mis-bet"><i class="go-bet dbet b${m.bet}">×${m.bet}</i></span>` : icon(m.ico));
+const missionIcon = (m) => (m.mech ? `<span class="mis-card">${mechCard(m.mech)}</span>` : m.bet ? `<span class="mis-bet"><i class="go-bet dbet b${m.bet}">×${m.bet}</i></span>` : icon(m.ico));
 
 // ---------- Tu camino (8 nov 2026) ----------
 // Todo lo que se abre jugando (eventos, cartas especiales y mesas) en el orden en que sale. Lo que ya alcanzaste se ve
@@ -1063,7 +1063,7 @@ const ROAD_TABLES = [
   ['plegable', 'Mesa plegable', 'Llega doblada. Limpia el panel de en medio y se desdobla.'],
 ];
 function roadItems() {
-  const t = rachaTheme();
+  const t = streakTheme();
   const evs = [
     ['racha', UNLOCK.racha, t.name, t.ico, 'Gana niveles seguidos, junta estrellas y llévate premios cada día.'],
     ['mis', UNLOCK.mis, 'Misiones del día', 'misiones', 'Cada día 3 misiones con monedas, y un cofre si cumples las 3.'],
@@ -1085,21 +1085,21 @@ function roadItems() {
   const cards = MECHANICS.filter((m) => TIPS[m]).map((m) => ({ id: m, n: (EXTRA.includes(m) ? extraDebut(m) : MECH_INTRO[m] * LEVELS_PER_WORLD) + 1, k: 'card', name: MECH_NAMES[m], pic: `<span class="rd-card">${mechCard(m)}</span>`, text: MECH_TEXT[m] }));
   const tables = [
     ...ROAD_TABLES.map(([id, name, text]) => ({ id, n: SCROLL_FROM[id] + 1, name, text })),
-    { id: 'marea', n: mareaFirst() + 1, name: 'Marea', text: 'Cada robo sube el agua y cada carta que juegas la baja.' },
-    { id: 'puertas', n: puertasFirst() + 1, name: 'Puertas', text: 'Juega una carta llave y escoge qué puerta abrir: sus cartas salen al tablero.' },
+    { id: 'marea', n: tideFirst() + 1, name: 'Marea', text: 'Cada robo sube el agua y cada carta que juegas la baja.' },
+    { id: 'puertas', n: doorsFirst() + 1, name: 'Puertas', text: 'Juega una carta llave y escoge qué puerta abrir: sus cartas salen al tablero.' },
     { id: 'banda', n: bandaFirst() + 1, name: 'Banda transportadora', text: 'Sus cartas dan vueltas: solo ves 4 a la vez y avanza con cada jugada o robo.' },
-    { id: 'hoyo', n: hoyoFirst() + 1, name: 'Agujero negro', text: 'Cada 4 jugadas o robos se traga todas sus cartas y las escupe con los números revueltos.' },
+    { id: 'hoyo', n: holeFirst() + 1, name: 'Agujero negro', text: 'Cada 4 jugadas o robos se traga todas sus cartas y las escupe con los números revueltos.' },
     { id: 'nave', n: MECH_INTRO.ship * LEVELS_PER_WORLD + 1, name: 'Nave ladrona', text: '' },
-    { id: 'rocas', n: rocasFirst() + 1, name: 'Asteroides', text: '' },
-  ].map((x) => ({ ...x, k: 'mesa', pic: x.id === 'nave' ? icon('nave') : tableIcon(x.id), text: MESA_TEXT[x.id] ? MESA_TEXT[x.id].join(' ') : x.text }));
+    { id: 'rocas', n: rocksFirst() + 1, name: 'Asteroides', text: '' },
+  ].map((x) => ({ ...x, k: 'mesa', pic: x.id === 'nave' ? icon('nave') : tableIcon(x.id), text: TABLE_TEXT[x.id] ? TABLE_TEXT[x.id].join(' ') : x.text }));
   // Pasaporte y secretos (12 nov 2026): los sellos y premios ganados, en el nivel en que ibas; el siguiente sello, en el
   // nivel en que llegaría ganando un nivel nuevo por nivel (se mueve si ganas eventos o secretos).
   const P = save.pass || {}, PA = P.at || { s: [], x: [] }, ns = (P.s || 0) + 1;
   const stampTxt = (i) => `Ganaste ${fmt(passGoal(i))} niveles distintos (camino, secretos, eventos y festividades): ${passWhat(passPrize(i))}.`;
-  const pase = (i, n) => ({ id: `pase${i}`, n, k: 'ev', name: `Sello ${i} del pasaporte`, pic: icon('pasaporte'), text: stampTxt(i) });
+  const stampStop = (i, n) => ({ id: `pase${i}`, n, k: 'ev', name: `Sello ${i} del pasaporte`, pic: icon('pasaporte'), text: stampTxt(i) });
   const pass = [
-    ...Array.from({ length: P.s || 0 }, (_, i) => pase(i + 1, PA.s[i] || roadAt())),
-    ...(ns <= PASS_MAX ? [pase(ns, Math.min(TOTAL_LEVELS, roadAt() + passGoal(ns) - passCount()))] : []),
+    ...Array.from({ length: P.s || 0 }, (_, i) => stampStop(i + 1, PA.s[i] || roadAt())),
+    ...(ns <= PASS_MAX ? [stampStop(ns, Math.min(TOTAL_LEVELS, roadAt() + passGoal(ns) - passCount()))] : []),
     ...Array.from({ length: P.x || 0 }, (_, i) => ({ id: `secreto${i + 1}`, n: PA.x[i] || roadAt(), k: 'ev', name: `${secretGoal(i + 1)} niveles secretos`, pic: icon('starSecret'), text: `Ganaste ${secretGoal(i + 1)} niveles secretos: ${passWhat(secretPrize(i + 1))}.` })),
   ];
   const order = Object.keys(ROAD_KINDS);
@@ -1124,14 +1124,14 @@ function openRoad() {
   const left = (x) => x.n - at;
   // Rediseño (8 nov 2026): sin tarjeta por parada. El dibujo va sobre la línea; al lado, el nombre y su nivel.
   // Lo alcanzado lleva palomita en el dibujo; lo que falta, "?" y cuántos niveles faltan. Tocar despliega qué es.
-  const faltan = (x) => (left(x) === 1 ? 'falta 1' : `faltan ${fmtLvl(left(x))}`);
+  const leftLabel = (x) => (left(x) === 1 ? 'falta 1' : `faltan ${fmtLvl(left(x))}`);
   const row = (x, i) => {
     const on = i < got;
     const more = on ? `<span class="rd-more"><span><em class="rd-kind">${ROAD_KINDS[x.k]}</em> ${x.text}</span></span>` : '';
     return `<li class="rd k-${x.k}${on ? ' got' : ' lock'}${x === next ? ' next' : ''}${on && i >= seen ? ' fresh' : ''}" data-k="${x.k}" style="--d:${i % 6}">
       <button class="rd-box"${on ? ' aria-expanded="false"' : ''}>
         <span class="rd-pic">${on ? x.pic : '<b class="rd-q">?</b>'}</span>
-        <span class="rd-txt"><b>${on ? x.name : '? ? ? ? ?'}${on && i >= seen ? ' <i class="rd-new">¡Nuevo!</i>' : ''}</b><small>Nivel ${fmtLvl(x.n)}${on ? '' : ` · ${faltan(x)}`}</small>${more}</span>
+        <span class="rd-txt"><b>${on ? x.name : '? ? ? ? ?'}${on && i >= seen ? ' <i class="rd-new">¡Nuevo!</i>' : ''}</b><small>Nivel ${fmtLvl(x.n)}${on ? '' : ` · ${leftLabel(x)}`}</small>${more}</span>
       </button></li>`;
   };
   const me = `<li class="rd-me"><span class="rd-av">${avatarHTML(save)}</span><p class="rd-me-txt"><b>Vas en el nivel ${fmtLvl(at)}</b><small>${next ? `Lo siguiente: en ${left(next) === 1 ? '1 nivel' : `${fmtLvl(left(next))} niveles`}` : '¡Ya descubriste todo!'}</small></p></li>`;
@@ -1300,10 +1300,10 @@ function spendTickets(cost, sel = '[data-tickets]', ico = 'ticket', before = sav
 const runCounts = (g) => !save.stars[g] && !isSecret(g) && g <= save.next;
 // ¿Abandonar la partida a medias reinicia la racha? Nivel nuevo, o repetido/secreto que se cerró a medias.
 const runLoses = (run) => (run.replay ? !!run.racha : runCounts(run.g));
-const runRacha = (run) => {
-  const r = racha();
+const runStreak = (run) => {
+  const r = dailyStreak();
   if (!runLoses(run) || !isOn('racha') || !r.n) return '';
-  return rachaWarnHTML(r.n, r.pend.length, 'Si lo abandonas');
+  return streakWarnHTML(r.n, r.pend.length, 'Si lo abandonas');
 };
 // chosen: ya escogió la apuesta en su ventana (si no, un nivel nuevo con apuesta abre la ventana primero).
 function enterLevel(g, chosen = false) {
@@ -1315,13 +1315,13 @@ function enterLevel(g, chosen = false) {
     return openModal({
       title: 'Nivel a medias',
       color: 'orange',
-      body: `<p class="lead"><b>${levelName(run.g)}</b> sigue en juego. Termínalo, o abandónalo${run.replay ? '' : ' y pierdes su boleto'}.</p>${betLoseHTML(run.bet, run.paid)}${runRacha(run)}`,
+      body: `<p class="lead"><b>${levelName(run.g)}</b> sigue en juego. Termínalo, o abandónalo${run.replay ? '' : ' y pierdes su boleto'}.</p>${betLoseHTML(run.bet, run.paid)}${runStreak(run)}`,
       buttons: [
         {
           label: 'Abandonar y jugar este',
           cls: 'ghost',
           onClick: () => {
-            if (runLoses(run)) rachaLose(); // abandonar un nivel nuevo (o un repetido a medias) reinicia la racha
+            if (runLoses(run)) streakLose(); // abandonar un nivel nuevo (o un repetido a medias) reinicia la racha
             save.run = null;
             persist();
             enterLevel(g);
@@ -1609,7 +1609,7 @@ function startLevel(g, { resume = false, free = false, anim = 'up', bet = 1, pai
     free: !!save.stars[g] || isSecret(g) || free || dev.infinite, // intento que no costó boleto
     noTrack: free, // la galería del modo dev no cuenta para misiones ni logros
     tutorial: g === 0 && !save.tutorial,
-    racha: counts && isOn('racha') ? { n: racha().n, ico: rachaTheme().ico, hot: rachaHot() } : null,
+    racha: counts && isOn('racha') ? { n: dailyStreak().n, ico: streakTheme().ico, hot: streakHot() } : null,
     onSave: saved
       ? (state) => {
           save.run = { g, v, state, sig, at: Date.now(), ...(mult > 1 && { bet: mult, paid: betPaid }) };
@@ -1628,10 +1628,10 @@ function startLevel(g, { resume = false, free = false, anim = 'up', bet = 1, pai
           },
     onExit: back,
     // Si la racha está abierta y va en algo, las ventanas de rendirse/abandonar lo dicen.
-    rachaRisk: () => ((counts || replay) && isOn('racha') && racha().n ? { n: racha().n, pend: racha().pend.length, isNew: counts } : null),
+    rachaRisk: () => ((counts || replay) && isOn('racha') && dailyStreak().n ? { n: dailyStreak().n, pend: dailyStreak().pend.length, isNew: counts } : null),
     // gaveUp: se rindió o abandonó (no solo salió de un nivel repetido sin jugar).
     onAbandon: (gaveUp) => {
-      if ((counts && gaveUp !== false) || (replay && gaveUp)) rachaLose();
+      if ((counts && gaveUp !== false) || (replay && gaveUp)) streakLose();
       clearRun();
       back();
     },
@@ -1659,16 +1659,16 @@ function startLevel(g, { resume = false, free = false, anim = 'up', bet = 1, pai
         const coins = metCoins(boosted(secretCoins(coinsFor(boss, stars, prev)), save.coins, boss), met);
         const bonus = stars >= 3 && prev < 3 ? rollSecret() : {};
         const wild = bonus.wild || 0, undo = bonus.undo || 0;
-        const fichas = colWin(stars, prev);
+        const tokenCount = colWin(stars, prev);
         save.secret[w] = Math.max(prev, stars);
         save.coins += coins;
         save.wild += wild;
         save.undo += undo;
-        const racha = counts && isOn('racha') ? rachaWin(stars) : null;
+        const dailyStreak = counts && isOn('racha') ? streakWin(stars) : null;
         persist();
         updateCoins();
         // Primera vez con 3 estrellas: la postal del mundo gana el sello secreto (se celebra al continuar).
-        return { coins, tickets: 0, prev, wild: wild + (met?.prize?.wild || 0), undo: undo + (met?.prize?.undo || 0), met, counted: true, first: !prev, racha, replay: !free, seal: stars >= 3 && prev < 3, col: fichas ? { n: fichas, ico: col().token } : null };
+        return { coins, tickets: 0, prev, wild: wild + (met?.prize?.wild || 0), undo: undo + (met?.prize?.undo || 0), met, counted: true, first: !prev, racha: dailyStreak, replay: !free, seal: stars >= 3 && prev < 3, col: tokenCount ? { n: tokenCount, ico: col().token } : null };
       }
       // En modo dev se puede saltar a cualquier nivel: solo cuenta si ya estaba desbloqueado.
       if (g > save.next) return { coins: 0, tickets: 0, prev: 0, replay: !free };
@@ -1683,13 +1683,13 @@ function startLevel(g, { resume = false, free = false, anim = 'up', bet = 1, pai
       // El del último mundo de cada constelación da el boleto de constelación (abre la siguiente; 8 nov 2026).
       const bossTk = !prev && level.boss && w + 1 < WORLD_COUNT ? 1 : 0;
       const gold = w % 10 === 9 ? 0 : bossTk, cgold = w % 10 === 9 ? bossTk : 0;
-      const fichas = colWin(stars, prev, mult);
+      const tokenCount = colWin(stars, prev, mult);
       save.stars[g] = Math.max(prev, stars);
       save.coins += coins;
       save.tickets += tickets;
       save.gold += gold;
       save.cgold = (save.cgold || 0) + cgold;
-      const rachaOn = isOn('racha'); // la racha cuenta desde el nivel siguiente al que la abre
+      const streakOn = isOn('racha'); // la racha cuenta desde el nivel siguiente al que la abre
       if (g >= save.next) save.next = g + 1;
       if (g === 0) save.tutorial = true;
       // Cofre del jefe (primera vez): según el % de estrellas del mundo. Se guarda ya, aunque salgas antes de verlo.
@@ -1711,11 +1711,11 @@ function startLevel(g, { resume = false, free = false, anim = 'up', bet = 1, pai
       const mw = (met?.prize?.wild || 0) * mult, mu = (met?.prize?.undo || 0) * mult;
       save.wild += mw - (met?.prize?.wild || 0);
       save.undo += mu - (met?.prize?.undo || 0);
-      const racha = counts && !prev && rachaOn ? rachaWin(stars) : null;
+      const dailyStreak = counts && !prev && streakOn ? streakWin(stars) : null;
       persist();
       updateCoins();
       // Repetir desde la victoria salta el festejo del mapa: no se ofrece si toca abrir el mundo siguiente.
-      return { bet: mult, coins, tickets, prev, gold, cgold, chest, wild: mw, undo: mu, met, worldStars: worldStars(w), counted: true, first: !prev, racha, replay: !free && !chest, col: fichas ? { n: fichas, ico: col().token } : null };
+      return { bet: mult, coins, tickets, prev, gold, cgold, chest, wild: mw, undo: mu, met, worldStars: worldStars(w), counted: true, first: !prev, racha: dailyStreak, replay: !free && !chest, col: tokenCount ? { n: tokenCount, ico: col().token } : null };
     },
   });
   // El tablero sube y la pantalla anterior se queda atrás.
@@ -1818,11 +1818,11 @@ function exFrom(it) {
   if (it.logro) return { g: 'logro', ico: 'trophy', name: 'Logros' };
   if (it.pase) return { g: 'pasaporte', ico: 'pasaporte', name: 'Pasaporte' };
   if (it.secreto) return { g: 'secretos', ico: 'starSecret', name: 'Niveles secretos' };
-  const f = FIESTAS.find((x) => x.key === it.ev);
+  const f = FESTIVALS.find((x) => x.key === it.ev);
   if (f) return { g: 'fiesta', ico: f.ico, name: f.name };
-  const e = Object.values(EVENTOS).find((x) => x.key === it.ev);
+  const e = Object.values(EVENTS).find((x) => x.key === it.ev);
   if (e) return { g: 'mes', ico: e.ico, name: e.name };
-  const c = COLECCIONES.find((x) => x.key === it.ev);
+  const c = COLLECTIONS.find((x) => x.key === it.ev);
   return c ? { g: 'col', ico: c.token, name: c.name } : null;
 }
 const inUse = (sec, k) => (sec === 'avatar' ? save.look === 'char' && save.char === k : equipped(sec) === k);
@@ -1896,9 +1896,9 @@ function openShop(tab = 'avatar') {
       : `<span class="s-price ${save.coins < cost(it) ? 'short' : ''}">${coin()}${cost(it) < it.price ? `<s>${fmt(it.price)}</s>` : ''}${fmt(cost(it))}</span>`;
     const ex = exFrom(it);
     // Lo tuyo se puede vender (70%): una etiqueta abajo a la derecha.
-    const sale = sellable(sec, it) ? `<span class="s-sell" data-sell role="button" aria-label="Vender" title="Vender">${icon('tag')}</span>` : '';
+    const onSale = sellable(sec, it) ? `<span class="s-sell" data-sell role="button" aria-label="Vender" title="Vender">${icon('tag')}</span>` : '';
     const isNew = !own && !it.ev && it.need && it.need <= save.open && it.need > seenBefore;
-    return `<button class="sitem ${on ? 'on' : ''} ${own ? 'own' : ''} ${lock ? 'locked' : ''}" data-k="${it.k}" data-sec="${sec}">${isNew ? '<i class="s-new">¡Nuevo!</i>' : ''}${ex ? `<i class="s-ev" title="${ex.name}">${icon(ex.ico)}</i>` : ''}<div class="s-art">${shopPreview(sec, it.k)}</div>${sec === 'title' ? '' : `<b>${it.name}</b>`}${it.text ? `<small>${it.text}</small>` : ''}${foot}${sale}</button>`;
+    return `<button class="sitem ${on ? 'on' : ''} ${own ? 'own' : ''} ${lock ? 'locked' : ''}" data-k="${it.k}" data-sec="${sec}">${isNew ? '<i class="s-new">¡Nuevo!</i>' : ''}${ex ? `<i class="s-ev" title="${ex.name}">${icon(ex.ico)}</i>` : ''}<div class="s-art">${shopPreview(sec, it.k)}</div>${sec === 'title' ? '' : `<b>${it.name}</b>`}${it.text ? `<small>${it.text}</small>` : ''}${foot}${onSale}</button>`;
   };
   // Confirmar antes de vender (o de comprar un recuerdo): son monedas grandes.
   // look: clase extra de la ventana (un marco la viste con su estilo, como la ficha de su paquete).
@@ -2055,11 +2055,11 @@ function openShop(tab = 'avatar') {
 }
 // Dev (11 nov 2026, pedido del usuario): el paquete completo de las festividades nuevas, una pestaña por grupo. Cada
 // festividad con su fecha, su mesa y sus 7 exclusivos dibujados como en la tienda. Solo para ver: no da nada.
-function openFiestaPack() {
+function openFestivalPack() {
   const TABS = [['Leyendas', (f) => f.local], ['Fiestas de México', (f) => f.grp === 3], ['Fiestas de América', (f) => f.grp === 4]];
   const LBL = { avatar: 'Disfraz', ring: 'Marco', title: 'Título', traveler: 'Nave', back: 'Reverso', space: 'Espacio', frame: 'Postal' };
-  const MES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
-  const y = new Date().getFullYear(), when = (f) => { const d = f.date(y); return `${d.getDate()} ${MES[d.getMonth()]}${f.days > 1 ? ` · ${f.days} días` : ''}`; };
+  const MONTHS_ABBR = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+  const y = new Date().getFullYear(), when = (f) => { const d = f.date(y); return `${d.getDate()} ${MONTHS_ABBR[d.getMonth()]}${f.days > 1 ? ` · ${f.days} días` : ''}`; };
   const cell = (lbl, ico, pic, name, cls = '') => `<li class="ss-cell"><em class="c-ex">${icon(ico)}${lbl}</em><span class="ss-pic ${cls}">${pic}</span><b>${esc(name)}</b></li>`;
   const fest = (f) => {
     const ex = Object.assign({}, ...f.ex), name = (sec) => item(sec, ex[sec])?.name || ex[sec];
@@ -2067,9 +2067,9 @@ function openFiestaPack() {
     return `<section class="fp-fest"><h5>${icon(f.ico)}<b>${esc(f.name)}</b><small>${when(f)}${f.zone ? ` · ${esc(f.zone)}` : ''}</small></h5>
       <ul class="ss-list">${cell('Mesa', 'card', `<span class="fp-mesa">${tableHTML(0, f.key)}</span>`, 'Su mesa', 'ssk-mesa')}${Object.keys(LBL).filter((sec) => ex[sec]).map((sec) => cell(LBL[sec], SHOP_ICO[sec], pic(sec), name(sec), `ssk-${sec}`)).join('')}</ul></section>`;
   };
-  const pane = (i) => FIESTAS.filter((f) => TABS[i][1](f) && f.ready).sort((a, b) => a.date(y) - b.date(y)).map(fest).join('');
+  const pane = (i) => FESTIVALS.filter((f) => TABS[i][1](f) && f.ready).sort((a, b) => a.date(y) - b.date(y)).map(fest).join('');
   const m = openModal({ title: 'Festividades nuevas', color: 'orange', wide: true, cls: 'fp-pack', onClose: closeShelf,
-    body: `<div class="fp-tabs">${TABS.map(([n, of], i) => `<button class="fp-tab${i ? '' : ' on'}" data-t="${i}">${n} <small>${FIESTAS.filter((f) => of(f) && f.ready).length}</small></button>`).join('')}</div><div class="fp-body"></div>` });
+    body: `<div class="fp-tabs">${TABS.map(([n, of], i) => `<button class="fp-tab${i ? '' : ' on'}" data-t="${i}">${n} <small>${FESTIVALS.filter((f) => of(f) && f.ready).length}</small></button>`).join('')}</div><div class="fp-body"></div>` });
   const body = m.el.querySelector('.fp-body');
   const show = (i) => {
     body.innerHTML = pane(i);
@@ -2282,26 +2282,26 @@ function helpTip(m, text) {
 // La barra se llena entre premio y premio.
 // 10 nov 2026: los premios se cobran solos al alcanzarlos (rachaWin) y se festejan en la portada: la ventana ya solo es
 // vista, sin Reclamar ni nada que tocar (los puntos van planos, no parecen botones).
-function openRacha() {
-  rachaPendToFeats();
-  const r = racha(), t = rachaTheme(), miss = r.miss || [], N = RACHA_GOALS.length;
+function openStreak() {
+  streakPendToFeats();
+  const r = dailyStreak(), t = streakTheme(), miss = r.miss || [], N = STREAK_GOALS.length;
   const stateOf = (i) => (miss.includes(i) ? 'miss' : r.got.includes(i) ? 'got' : 'next');
   const prize = (x) => `<div class="rps"><span class="rp">${coin()}<b>${x.coins}</b></span>${x.wild ? `<span class="rp">${icon('wild')}<b>×${x.wild}</b></span>` : ''}${x.undo ? `<span class="rp">${icon('undo')}<b>×${x.undo}</b></span>` : ''}</div>`;
   // Entre más lejos en la fila, más grande y más vistoso el punto (el último lleva rayos).
   // Los alcanzados llevan palomita; los que se perdieron (guardados de antes), tache.
   const node = (i) => {
-    const x = rachaGoal(i), st = stateOf(i), tier = i < N ? i : (i - N) % N;
+    const x = streakGoal(i), st = stateOf(i), tier = i < N ? i : (i - N) % N;
     return `<div class="rg t${tier} ${st}" data-i="${i}">${tier === N - 1 ? '<span class="rays"></span>' : ''}<i>${st === 'got' ? icon('check') : st === 'miss' ? icon('close') : `<b>${x.n}</b>`}</i>${prize(x)}</div>`;
   };
   const row = (from, idx, start) => {
-    const pts = [from, ...idx.map((i) => rachaGoal(i).n)], k = pts.findIndex((v) => v > r.n);
+    const pts = [from, ...idx.map((i) => streakGoal(i).n)], k = pts.findIndex((v) => v > r.n);
     const fill = k < 0 ? 1 : k === 0 ? 0 : (k - 1 + (r.n - pts[k - 1]) / (pts[k] - pts[k - 1])) / (pts.length - 1);
     return `<div class="rpath" style="--fill:${fill};--cols:${pts.length}"><div class="rbar"><i></i></div><div class="rg start"><i>${start}</i><div class="rps"></div></div>${idx.map(node).join('')}</div>`;
   };
   const rowOf = (i) => (i < N ? 0 : 1 + Math.floor((i - N) / N));
   const k = rowOf(nextIndex(r)), first = k ? N + (k - 1) * N : 0;
   const idx = Array.from({ length: N }, (_, j) => first + j);
-  const path = row(k ? rachaGoal(first - 1).n : 0, idx, k ? `<b>${rachaGoal(first - 1).n}</b>` : icon(t.ico));
+  const path = row(k ? streakGoal(first - 1).n : 0, idx, k ? `<b>${streakGoal(first - 1).n}</b>` : icon(t.ico));
   const m = openModal({
     title: t.name,
     ico: t.ico,
@@ -2318,9 +2318,9 @@ function openRacha() {
 }
 
 // Al volver de ganar: el número sube con un +1 que sale del botón.
-function bumpRacha() {
-  refreshRacha();
-  bumpBtn('racha', '+1', rachaReady());
+function bumpStreak() {
+  refreshStreak();
+  bumpBtn('racha', '+1', streakReady());
 }
 // ---------- Misiones del día y logros (7 nov 2026; ver missions.js) ----------
 // Se repintan en su lugar (sin cambiar el botón) para que el anillo se llene poco a poco.
@@ -2332,14 +2332,14 @@ const swapBtn = (a, html) => document.querySelectorAll(`[data-a="${a}"]`).forEac
   b.innerHTML = n.innerHTML;
 });
 // 10 nov 2026: se repinta en su lugar (como misiones y logros) para que su anillo se llene poco a poco.
-const refreshRacha = () => swapBtn('racha', rachaBtn());
-const refreshMis = () => swapBtn('mis', misBtn());
-const refreshLogros = () => swapBtn('logros', logrosBtn());
+const refreshStreak = () => swapBtn('racha', streakBtn());
+const refreshMis = () => swapBtn('mis', missionsBtn());
+const refreshAchievements = () => swapBtn('logros', achievementsBtn());
 const barHTML = (n, goal) => `<span class="mbar"><i style="width:${Math.min(100, (n / goal) * 100)}%"></i><b>${money(Math.min(n, goal))}/${money(goal)}</b></span>`;
 function openMis() {
   const s = missions(ev()?.state?.paid);
   // Ya hizo todas (y abrió el cofre): solo festejo y cuándo llegan las de mañana, sin botón de jugar.
-  if (misAllDone()) {
+  if (missionsAllDone()) {
     const m = openModal({
       title: 'Misiones del día',
       color: 'green',
@@ -2354,12 +2354,12 @@ function openMis() {
   }
   // 10 nov 2026: se cobran solas al cumplirlas (autoClaim): la ventana solo enseña cómo vas.
   const row = (x) => {
-    const m = misDef(x.id), done = misDone(x);
+    const m = missionDef(x.id), done = missionDone(x);
     const end = done ? `<span class="mis-got">${icon('check')}</span>` : `<span class="mis-prize">${coin()}${money(x.coins)}</span>`;
-    return `<li class="mis ${done ? 'got' : ''}">${misIco(m)}<div><b>${m.text(x.goal)}</b>${barHTML(x.n, x.goal)}</div>${end}</li>`;
+    return `<li class="mis ${done ? 'got' : ''}">${missionIcon(m)}<div><b>${m.text(x.goal)}</b>${barHTML(x.n, x.goal)}</div>${end}</li>`;
   };
   // El cofre de las 3 (lo que trae es sorpresa); a la derecha, un puntito por misión cumplida.
-  const bonus = () => `<li class="mis bonus ${s.bonus ? 'got' : ''}">${icon('cofre')}<div><b>Cofre del día</b><small>${s.bonus ? 'Ya lo abriste' : 'Sorpresa al cumplir las 3'}</small></div>${s.bonus ? `<span class="mis-got">${icon('check')}</span>` : `<span class="mis-pips">${s.list.map((x) => `<i class="${misDone(x) ? 'on' : ''}"></i>`).join('')}</span>`}</li>`;
+  const bonus = () => `<li class="mis bonus ${s.bonus ? 'got' : ''}">${icon('cofre')}<div><b>Cofre del día</b><small>${s.bonus ? 'Ya lo abriste' : 'Sorpresa al cumplir las 3'}</small></div>${s.bonus ? `<span class="mis-got">${icon('check')}</span>` : `<span class="mis-pips">${s.list.map((x) => `<i class="${missionDone(x) ? 'on' : ''}"></i>`).join('')}</span>`}</li>`;
   const m = openModal({
     title: 'Misiones del día',
     color: 'green',
@@ -2380,25 +2380,25 @@ const passStampHTML = (i) => { const F = PASS_FRAMES[i - 1] || PASS_FRAMES.at(-1
 function passTrophies() {
   const s = save.pass?.s || 0, x = save.pass?.x || 0;
   const rows = (n, f) => Array.from({ length: n }, (_, i) => f(i + 1)).join('');
-  const pase = (i) => `<li class="mis ps got">${passStampHTML(i)}<div><b>Sello ${i} · ${fmt(passGoal(i))} niveles</b><small>${passWhat(passPrize(i))}</small></div><span class="mis-got">${icon('check')}</span></li>`;
+  const stampStop = (i) => `<li class="mis ps got">${passStampHTML(i)}<div><b>Sello ${i} · ${fmt(passGoal(i))} niveles</b><small>${passWhat(passPrize(i))}</small></div><span class="mis-got">${icon('check')}</span></li>`;
   const sec = (i) => `<li class="mis ps got"><span class="ps-stamp on sec">${icon('starSecret')}</span><div><b>${secretGoal(i)} niveles secretos</b><small>${passWhat(secretPrize(i))}</small></div><span class="mis-got">${icon('check')}</span></li>`;
-  return (s ? `<h3 class="ps-h">${icon('pasaporte')} Pasaporte</h3><ul class="mis-list">${rows(s, pase)}</ul>` : '')
+  return (s ? `<h3 class="ps-h">${icon('pasaporte')} Pasaporte</h3><ul class="mis-list">${rows(s, stampStop)}</ul>` : '')
     + (x ? `<h3 class="ps-h">${icon('starSecret')} Niveles secretos</h3><ul class="mis-list">${rows(x, sec)}</ul>` : '');
 }
-function openLogros() {
-  const list = logrosVisible();
+function openAchievements() {
+  const list = achievementsVisible();
   const row = (l) => {
-    const T = LOGRO_TOP, got = logroGot(l), next = l.steps[Math.min(got, T - 1)], v = logroProg(l), done = got >= T;
-    const medals = LOGRO_MEDAL.map((x, i) => `<i class="medal m${i} ${i < got ? 'on' : ''}" title="${x}"></i>`).join('');
+    const T = ACHIEVEMENT_TOP, got = achievementGot(l), next = l.steps[Math.min(got, T - 1)], v = achievementProgress(l), done = got >= T;
+    const medals = ACHIEVEMENT_MEDAL.map((x, i) => `<i class="medal m${i} ${i < got ? 'on' : ''}" title="${x}"></i>`).join('');
     // Premio del escalón que sigue: monedas y, en platino y diamante, comodines y deshacer.
-    const pz = LOGRO_PRIZES[Math.min(got, T - 1)];
+    const pz = ACHIEVEMENT_PRIZES[Math.min(got, T - 1)];
     const prize = `${coin()}${money(pz.coins)}${pz.wild ? ` ${icon('wild')}×${pz.wild}` : ''}${pz.undo ? ` ${icon('undo')}×${pz.undo}` : ''}`;
     const end = done ? `<span class="mis-got">${icon('check')}</span>` : `<span class="mis-prize">${prize}</span>`;
-    return `<li class="mis lg ${done ? 'got' : ''}">${misIco(l)}<div><b>${l.name} <span class="medals">${medals}</span></b><small>${done ? '¡Diamante!' : `${LOGRO_MEDAL[got]}: ${l.text(next)}`}${l.title && got < 3 ? ` · el oro da el título <b>${item('title', l.title).name}</b>` : ''}</small>${done ? '' : barHTML(v, next)}</div>${end}</li>`;
+    return `<li class="mis lg ${done ? 'got' : ''}">${missionIcon(l)}<div><b>${l.name} <span class="medals">${medals}</span></b><small>${done ? '¡Diamante!' : `${ACHIEVEMENT_MEDAL[got]}: ${l.text(next)}`}${l.title && got < 3 ? ` · el oro da el título <b>${item('title', l.title).name}</b>` : ''}</small>${done ? '' : barHTML(v, next)}</div>${end}</li>`;
   };
   // Primero lo que va más avanzado (10 nov 2026: se cobran solos, ya no hay nada que reclamar).
-  const step = (l) => l.steps[Math.min(logroGot(l), LOGRO_TOP - 1)];
-  const sorted = () => [...list].sort((a, b) => (logroGot(a) >= LOGRO_TOP) - (logroGot(b) >= LOGRO_TOP) || logroProg(b) / step(b) - logroProg(a) / step(a));
+  const step = (l) => l.steps[Math.min(achievementGot(l), ACHIEVEMENT_TOP - 1)];
+  const sorted = () => [...list].sort((a, b) => (achievementGot(a) >= ACHIEVEMENT_TOP) - (achievementGot(b) >= ACHIEVEMENT_TOP) || achievementProgress(b) / step(b) - achievementProgress(a) / step(a));
   const m = openModal({
     title: 'Logros',
     ico: 'trophy',
@@ -2406,7 +2406,7 @@ function openLogros() {
     wide: true,
     cls: 'mis-modal lg-modal',
     body: `<p class="note lg-note">Cada medalla empieza desde cero.</p><ul class="mis-list">${sorted().map(row).join('')}</ul>${passTrophies()}`,
-    onClose: () => refreshLogros(),
+    onClose: () => refreshAchievements(),
   });
 }
 // Cajón de un lado ('l' menú, 'r' eventos): 'toggle' / 'open' / 'close'. auto: se cierra solo a los 5 s.
@@ -2558,10 +2558,10 @@ const EVK = {
   mes: { get: () => ev(), enter: evEnter, win: evWin, lose: evLose, P: EVENT_PLANETS, N: EVENT_PER_PLANET, L: EVENT_LEVELS, W: EV_W, nodes: EV_NODES, tk: true,
     level: (e, k) => eventLevel(e.id, k, e.state.world), left: () => evLeft() },
   // P, N y L dependen de la festividad (el Nahual trae 4 planetas de 4).
-  fiesta: { get: () => { const f = fiesta(); return f && !f.soon ? f : null; }, enter: fiEnter, win: fiWin, lose: fiLose, W: 950, tk: false,
-    get P() { return fiShape(fiesta()).P; }, get N() { return fiShape(fiesta()).N; }, get L() { return fiShape(fiesta()).L; },
+  fiesta: { get: () => { const f = festival(); return f && !f.soon ? f : null; }, enter: festEnter, win: festWin, lose: festLose, W: 950, tk: false,
+    get P() { return festShape(festival()).P; }, get N() { return festShape(festival()).N; }, get L() { return festShape(festival()).L; },
     get nodes() { return this.N === 4 ? [0, 3, 6, 9] : [0, 4, 9]; },
-    level: (e, k) => fiestaLevel(e.day, k, e.state.world, fiShape(e).N), left: () => fiestaLeft() },
+    level: (e, k) => festivalLevel(e.day, k, e.state.world, festShape(e).N), left: () => festivalLeft() },
 };
 let EVS = EVK.mes;
 const kindOf = (e) => (e.date ? 'fiesta' : 'mes');
@@ -2596,13 +2596,13 @@ const evNowBtn = () => {
   return `<button class="iconbtn tb press ev-btn ${fresh('mes')} ${ready ? 'ready' : 'waiting'}" data-a="evento" aria-label="${e.name}" title="${e.name}">${icon(e.ico)}<small class="tl">${shortLeft(evLeft())}</small>${ready ? '<span class="dot"></span>' : ''}</button>`;
 };
 // Evento del mes: si ya empezó, a su pantalla; si empieza mañana, de qué va y la cuenta regresiva.
-function openEvento() {
+function openEvent() {
   // Entrar al mundo del evento ya es haber pagado: si no, primero la entrada (openEntry).
   if (ev() && !ev().done) return ev().state.paid ? warp(() => showEvent({ kind: 'mes' })) : openEntry('mes');
-  openEventoNext();
+  openEventNext();
 }
 // El mes que viene (desde 3 días antes): de qué va, la cuenta regresiva y su entrada en preventa con descuento.
-function openEventoNext() {
+function openEventNext() {
   const n = evSoon();
   if (!n) return;
   seeSoon(n, 'evento-next');
@@ -2611,7 +2611,7 @@ function openEventoNext() {
     title: n.inDays > 1 ? `¡En ${n.inDays} días empieza ${n.name}!` : `¡Mañana empieza ${n.name}!`,
     color: n.color,
     cls: 'entry-modal',
-    body: `${passHTML(n, { ico: n.ico, state: pre ? 'owned' : 'soon', label: 'Empieza en', sub: `<span class="ep-clock" data-pclock>${clock(evLeft())}</span>`, off: pre ? '' : `−${Math.round(FI_PRE * 100)}%` })}
+    body: `${passHTML(n, { ico: n.ico, state: pre ? 'owned' : 'soon', label: 'Empieza en', sub: `<span class="ep-clock" data-pclock>${clock(evLeft())}</span>`, off: pre ? '' : `−${Math.round(FEST_PRE * 100)}%` })}
       <p class="lead">Todo el mes: <b>${EVENT_PLANETS} planetas</b>, ${EVENT_LEVELS} niveles y premios <b>exclusivos</b>. ${pre ? 'Ya tienes tu entrada: ese día entras directo.' : 'Compra tu entrada desde hoy y paga menos.'}</p>`,
     buttons: pre ? [] : [{
       label: short ? `Te faltan ${coin()} ${money(p - save.coins)}` : `Comprar · ${coin()} <s>${money(full)}</s> ${money(p)}`,
@@ -2636,39 +2636,39 @@ function openEventoNext() {
 // candado y la cuenta regresiva ("en 2 d", "en 19 h"); el día de la fiesta, a color con "¡Hoy!" y lo que le queda.
 // 9 nov 2026: festividades pegadas (p. ej. La Llorona y La Catrina): mientras dura una, la que sigue ya sale a su lado
 // (fiNextBtn, data-a="fiesta-next") con su preventa.
-const fiSoonHTML = (f, a) => `<button class="iconbtn tb press fi-btn soon ${fiPre(f) ? 'pre' : ''} ${fresh('fiesta')}${soonTag(f)}" data-a="${a}" aria-label="${f.name}: ${f.inDays > 1 ? `en ${f.inDays} días` : 'mañana'}" title="${f.name}">${icon(f.ico)}<span class="fi-lock">${icon(fiPre(f) ? 'check' : 'lock')}</span><small class="tl">en ${shortLeft(soonLeft(f))}</small>${soonDot(f)}</button>`;
-const fiBtn = () => fiNowBtn() + fiNextBtn();
-const fiNextBtn = () => { const f = fiestaSoon(); return f ? fiSoonHTML(f, 'fiesta-next') : ''; };
-const fiNowBtn = () => {
-  const f = fiesta();
+const festSoonHTML = (f, a) => `<button class="iconbtn tb press fi-btn soon ${festPre(f) ? 'pre' : ''} ${fresh('fiesta')}${soonTag(f)}" data-a="${a}" aria-label="${f.name}: ${f.inDays > 1 ? `en ${f.inDays} días` : 'mañana'}" title="${f.name}">${icon(f.ico)}<span class="fi-lock">${icon(festPre(f) ? 'check' : 'lock')}</span><small class="tl">en ${shortLeft(soonLeft(f))}</small>${soonDot(f)}</button>`;
+const festBtn = () => festNowBtn() + festNextBtn();
+const festNextBtn = () => { const f = festivalSoon(); return f ? festSoonHTML(f, 'fiesta-next') : ''; };
+const festNowBtn = () => {
+  const f = festival();
   if (!f || f.done) return '';
   return f.soon
-    ? fiSoonHTML(f, 'fiesta')
-    : `<button class="iconbtn tb press fi-btn ready ${fresh('fiesta')}" data-a="fiesta" aria-label="${f.name}" title="${f.name}">${icon(f.ico)}<small class="tl">${shortLeft(fiestaLeft())}</small><em class="fi-hoy outl">¡Hoy!</em><span class="dot"></span></button>`;
+    ? festSoonHTML(f, 'fiesta')
+    : `<button class="iconbtn tb press fi-btn ready ${fresh('fiesta')}" data-a="fiesta" aria-label="${f.name}" title="${f.name}">${icon(f.ico)}<small class="tl">${shortLeft(festivalLeft())}</small><em class="fi-hoy outl">¡Hoy!</em><span class="dot"></span></button>`;
 };
 // Antes de que empiece: de qué va y la cuenta regresiva (nunca se dice que los niveles piden ayudas). El día de la fiesta, el botón lleva a ella.
-function openFiesta(f = fiesta(), a = 'fiesta') {
+function openFestival(f = festival(), a = 'fiesta') {
   if (!f) return;
-  if (!f.soon) return fiPaid(f) ? warp(() => showEvent({ kind: 'fiesta' })) : openEntry('fiesta');
+  if (!f.soon) return festPaid(f) ? warp(() => showEvent({ kind: 'fiesta' })) : openEntry('fiesta');
   // Preventa (7 nov 2026): comprada antes cuesta FI_PRE menos; el día de la fiesta ya entras sin pagar.
   // 8 nov 2026: el mismo pase que la entrada del mes, con la cinta del descuento; ya comprada, el pase lleva el sello
   // "¡Lista!" y no hay botones (ni "Ahora no" ni "Entrada comprada").
-  const pre = fiPre(f);
+  const pre = festPre(f);
   seeSoon(f, a);
   EVS = EVK.fiesta;
   const m = openModal({
     title: f.inDays > 1 ? `¡En ${f.inDays} días es ${f.name}!` : `¡Mañana es ${f.name}!`,
     color: f.color,
     cls: 'entry-modal',
-    body: `${passHTML(f, { ico: f.ico, state: pre ? 'owned' : 'soon', label: 'Empieza en', sub: `<span class="ep-clock" data-pclock>${clock(soonLeft(f))}</span>`, off: pre ? '' : `−${Math.round(FI_PRE * 100)}%` })}
+    body: `${passHTML(f, { ico: f.ico, state: pre ? 'owned' : 'soon', label: 'Empieza en', sub: `<span class="ep-clock" data-pclock>${clock(soonLeft(f))}</span>`, off: pre ? '' : `−${Math.round(FEST_PRE * 100)}%` })}
       <p class="lead">${pre ? 'Ya tienes tu entrada. Ese día entras directo.' : 'Compra tu entrada desde hoy y paga menos.'}</p>`,
     buttons: pre ? [] : [buyTicketBtn(f, () => m, 'fiesta', () => (toast(`${icon('check')} ¡Entrada lista para ${f.name}!`), current?.()), 'Comprar')],
   });
-  passClock(m, () => (fiesta()?.soon || fiestaSoon() ? soonLeft(f) : 0), () => current?.());
+  passClock(m, () => (festival()?.soon || festivalSoon() ? soonLeft(f) : 0), () => current?.());
 }
 // Los tiempos de los botones avanzan solos (y el del mes vuelve a moverse cuando llega el boleto).
 setInterval(() => {
-  for (const [a, f] of [['fiesta', fiNowBtn], ['fiesta-next', fiNextBtn], ['evento', evNowBtn], ['evento-next', evNextBtn]]) {
+  for (const [a, f] of [['fiesta', festNowBtn], ['fiesta-next', festNextBtn], ['evento', evNowBtn], ['evento-next', evNextBtn]]) {
     const b = document.querySelector(`[data-a="${a}"]`);
     if (b && !b.classList.contains('fresh')) b.outerHTML = f();
   }
@@ -2705,7 +2705,7 @@ function evCTA(e) {
   if (e.done) return '';
   if (s.run) return goBtn('Continuar', `Nivel ${s.k + 1}`, 'ev-play');
   // Entrada sin pagar (no debería pasar: se paga antes de entrar al mundo): Jugar abre la entrada.
-  if (EVS.tk ? !s.tk && !s.paid : !fiPaid(e)) return goBtn('Jugar', `Nivel ${s.k + 1}`, 'ev-buy');
+  if (EVS.tk ? !s.tk && !s.paid : !festPaid(e)) return goBtn('Jugar', `Nivel ${s.k + 1}`, 'ev-buy');
   if (s.tk || !EVS.tk) return goBtn('Jugar', `Nivel ${s.k + 1}`, 'ev-play');
   return `<button class="go wait" data-a="ev-wait">${icon(e.tk)}<span class="t"><b class="outl">Boleto en</b><small data-evclock>${clock(evTicketLeft())}</small></span></button>`;
 }
@@ -2859,7 +2859,7 @@ function openEvIntro(e, go = false) {
         ${rule('flag', `Tienes <b>${evDays()}</b> para llegar al último planeta. ¡Entra cada día y no dejes pasar tu boleto!`)}
       </ul>`}`,
     // Botón del mes: con los colores y la flor de la temática (sin el triángulo de Jugar).
-    buttons: [{ label: `${icon(e.deco)}<span>¡A jugar!</span>${icon(e.deco)}`, cls: `wide ev-go ev-go-${e.key}`, onClick: () => go && (kind === 'mes' ? openEvento() : openFiesta()) }],
+    buttons: [{ label: `${icon(e.deco)}<span>¡A jugar!</span>${icon(e.deco)}`, cls: `wide ev-go ev-go-${e.key}`, onClick: () => go && (kind === 'mes' ? openEvent() : openFestival()) }],
     // Se da por vista al cerrarla (si se gira el teléfono con la ventana abierta, vuelve a salir).
     onClose: () => {
       e.state.intro = true;
@@ -2874,7 +2874,7 @@ function openEvIntro(e, go = false) {
 }
 // Evento terminado: el show (confeti, rayos, el ícono del evento) y Finalizar, que regresa al mapa.
 function openEvDone(e) {
-  const pcHere = !e.state ? null : e.date ? fiAlbum().find((x) => x.id === `${e.key}-${e.year}`) : evAlbum().find((x) => x.id === e.state.id); // la postal del álbum, con el año
+  const pcHere = !e.state ? null : e.date ? festAlbum().find((x) => x.id === `${e.key}-${e.year}`) : evAlbum().find((x) => x.id === e.state.id); // la postal del álbum, con el año
   confetti(120);
   buzz(30);
   const m = openModal({
@@ -2902,7 +2902,7 @@ function evPlay() {
   const e = EVS.get();
   if (!e || e.done) return;
   if (e.state.run) return startEvent();
-  if (!EVS.tk) return fiPaid(e) ? EVS.enter() && startEvent() : openEntry('fiesta', true);
+  if (!EVS.tk) return festPaid(e) ? EVS.enter() && startEvent() : openEntry('fiesta', true);
   if (!e.state.tk) return e.state.paid ? openEvWait() : openEntry('mes', true);
   if (entering) return;
   entering = true;
@@ -2934,8 +2934,8 @@ function passClock(m, get, done) {
 // verb: lo que dice el botón ("Entrar", "Comprar boleto"…). Con descuento se ve el precio de antes tachado.
 function buyTicketBtn(e, modal, kind = kindOf(e), after = () => wait(350).then(evPlay), verb = null) {
   const K = EVK[kind];
-  const p = K.tk ? evTicketPrice(e) : fiPrice(e);
-  const full = !K.tk && e.soon ? fiPrice({ ...e, soon: false }) : p;
+  const p = K.tk ? evTicketPrice(e) : festPrice(e);
+  const full = !K.tk && e.soon ? festPrice({ ...e, soon: false }) : p;
   const short = save.coins < p;
   return {
     label: short ? `Te faltan ${coin()} ${money(p - save.coins)}` : `${verb || (e.state?.paid || e.soon ? 'Comprar' : 'Entrar')} · ${coin()} ${full > p ? `<s>${money(full)}</s> ` : ''}${money(p)}`,
@@ -2943,7 +2943,7 @@ function buyTicketBtn(e, modal, kind = kindOf(e), after = () => wait(350).then(e
     disabled: short,
     keep: true,
     onClick: async (btn) => {
-      if (!(K.tk ? evBuyTicket() : fiBuy(e.soon ? e : undefined))) return;
+      if (!(K.tk ? evBuyTicket() : festBuy(e.soon ? e : undefined))) return;
       btn.disabled = true;
       const r = btn.getBoundingClientRect();
       await spendFromWallet('coins', { x: r.left + r.width / 2, y: r.top + r.height / 2 }, p);
@@ -3203,19 +3203,19 @@ function featHTML(fs) {
     head = `${fs.length} premios más`;
     name = Object.entries(by).map(([k, n]) => `${n} ${FEAT_WORD[k][n === 1 ? 0 : 1]}`).join(' · ');
   } else if (t === 'mis') {
-    const m = misDef(f.id);
-    pic = misIco(m);
+    const m = missionDef(f.id);
+    pic = missionIcon(m);
     name = m.text(f.goal);
     below = '<span class="mbar"><i></i></span>';
     inPic = `<i class="ft-ok">${icon('check')}</i>`;
   } else if (t === 'bonus') {
     name = 'Cofre del día';
   } else if (t === 'logro') {
-    const l = LOGROS.find((x) => x.id === f.id);
-    pic = misIco(l);
-    head = `¡Medalla de ${LOGRO_MEDAL[f.step]}!`;
+    const l = ACHIEVEMENTS.find((x) => x.id === f.id);
+    pic = missionIcon(l);
+    head = `¡Medalla de ${ACHIEVEMENT_MEDAL[f.step]}!`;
     name = l.name;
-    below = `<span class="ft-medals">${LOGRO_MEDAL.map((x, i) => `<i class="medal m${i}${i < f.step ? ' on' : ''}${i === f.step ? ' ft-new' : ''}"></i>`).join('')}</span>`;
+    below = `<span class="ft-medals">${ACHIEVEMENT_MEDAL.map((x, i) => `<i class="medal m${i}${i < f.step ? ' on' : ''}${i === f.step ? ' ft-new' : ''}"></i>`).join('')}</span>`;
     inPic = `<i class="ft-medal medal on m${f.step}"></i>`;
   } else if (t === 'pase') {
     head = `¡Sello ${f.n} de tu pasaporte!`;
@@ -3353,8 +3353,8 @@ async function featCard(back, fs) {
   fs.forEach((f) => f.title && toast(`${icon('crown')} ¡Nuevo título! ${item('title', f.title).name}`));
   chips.forEach((c) => c.classList.remove('on'));
   refreshMis();
-  refreshLogros();
-  refreshRacha();
+  refreshAchievements();
+  refreshStreak();
   await Promise.race([Promise.all(runs), wait(850)]);
   await anim(el, [{ scale: 1, opacity: 1, translate: '0 0' }, { scale: 0.6, opacity: 0, translate: '0 -60px' }], { duration: 220, easing: 'ease-in' });
   el.remove();
@@ -3378,7 +3378,7 @@ function countUp(el, n) {
 let featsRun = null;
 function playFeats() {
   autoClaim();
-  rachaPendToFeats();
+  streakPendToFeats();
   if (featsRun) return featsRun;
   if (!save.feats?.length || !document.querySelector('#app .screen.galaxy')) return Promise.resolve();
   const back = h('<div class="feat-back"></div>');
@@ -3468,7 +3468,7 @@ async function notices() {
   }
   // Misiones, logros y racha que se cumplieron jugando: su festejo y sus monedas al monedero.
   autoClaim();
-  rachaPendToFeats();
+  streakPendToFeats();
   if (save.feats?.length) {
     if (!(await calm(gen))) return;
     await playFeats();
@@ -3479,7 +3479,7 @@ async function notices() {
     await openColIntro(c);
   }
   // La festividad va antes que el evento del mes: dura solo 24 horas.
-  const f = fiesta();
+  const f = festival();
   if (f && !f.soon && !f.done && !f.state.intro) {
     if (!(await calm(gen))) return;
     await openEvIntro(f, true);
@@ -3497,15 +3497,15 @@ async function notices() {
     paintBetSticker();
   }
   // Preventa (9 nov 2026): cuando sale el botón del próximo evento (mes o festividad), su ventana avisa una vez.
-  const pf = fiestaSoon() || (fiesta()?.soon ? fiesta() : null), pe = evSoon();
-  for (const [x, open] of [[pf, () => openFiesta(pf, fiestaSoon() ? 'fiesta-next' : 'fiesta')], [pe, openEventoNext]]) {
+  const pf = festivalSoon() || (festival()?.soon ? festival() : null), pe = evSoon();
+  for (const [x, open] of [[pf, () => openFestival(pf, festivalSoon() ? 'fiesta-next' : 'fiesta')], [pe, openEventNext]]) {
     if (!x || (save.preSeen ||= {})[x.id]) continue;
     if (!(await calm(gen))) return;
     save.preSeen[x.id] = 1;
     persist();
     open();
   }
-  if (await calm(gen)) rachaLost();
+  if (await calm(gen)) streakLost();
 }
 
 // Algo nuevo en la columna de la derecha: su botón entra volando, sale la ventana que lo explica
@@ -3546,21 +3546,21 @@ function betInfo(first) {
 const ulLead = (lvl, what, essence) => `Llegaste al <b>nivel ${lvl}</b>: se abre${/^(las|los|\d)/.test(what) ? 'n' : ''} <b>${what}</b>. ${essence}`;
 const inDays = (n) => `<b>${n} ${n === 1 ? 'día' : 'días'}</b>`;
 const colNow = (c, days) => ['flag', c ? '¡Hay una ahora mismo! Búscala a la <b>derecha</b>.' : `La próxima llega en ${inDays(days)}.`];
-const fiNow = (f, nx) => ['flag', f ? (f.soon ? `${f.inDays > 1 ? `En ${f.inDays} días` : 'Mañana'} es <b>${f.name}</b>. Su botón ya está a la <b>derecha</b>.` : `¡Hoy es <b>${f.name}</b>! Búscala a la <b>derecha</b>.`) : nx ? `La próxima, <b>${nx.name}</b>, llega en ${inDays(nx.days)}.` : 'Pronto llega la primera.'];
+const festNow = (f, nx) => ['flag', f ? (f.soon ? `${f.inDays > 1 ? `En ${f.inDays} días` : 'Mañana'} es <b>${f.name}</b>. Su botón ya está a la <b>derecha</b>.` : `¡Hoy es <b>${f.name}</b>! Búscala a la <b>derecha</b>.`) : nx ? `La próxima, <b>${nx.name}</b>, llega en ${inDays(nx.days)}.` : 'Pronto llega la primera.'];
 // Reglas de todas las festividades (las de un día y los grupos nuevos).
-const FI_RULES = () => [
+const FEST_RULES = () => [
   ['reloj', 'El día de la fiesta, <b>24 horas</b> (algunas duran varios días).'],
   ['planet', '<b>3 planetas</b> de 3 niveles: <b>9 niveles</b> difíciles.'],
   ['gift', 'Cada planeta termina con un <b>regalo</b>: entre más estrellas, más fácil que sea un <b>exclusivo</b>.'],
-  ['ticket', `Pagas la entrada <b>una vez</b> y reintentas las veces que quieras. <b>3 días antes</b> sale su botón y la entrada cuesta <b>${Math.round(FI_PRE * 100)}% menos</b>.`],
+  ['ticket', `Pagas la entrada <b>una vez</b> y reintentas las veces que quieras. <b>3 días antes</b> sale su botón y la entrada cuesta <b>${Math.round(FEST_PRE * 100)}% menos</b>.`],
 ];
 // Cuáles son las nuevas (11 nov 2026, el usuario: «faltó poner cuáles son»): fichas con su icono, nombre y fecha.
-const MES3 = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
-const fiDate = (f) => { const d = f.date(new Date().getFullYear()); return `${d.getDate()} ${MES3[d.getMonth()]}`; };
-const fiList = (fs) => fs.slice().sort((a, b) => a.date(2026) - b.date(2026)).map((f) => [f.ico, f.name, `${fiDate(f)}${f.zone ? ` · ${f.zone}` : ''}`]);
+const MONTHS3 = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+const festDate = (f) => { const d = f.date(new Date().getFullYear()); return `${d.getDate()} ${MONTHS3[d.getMonth()]}`; };
+const festList = (fs) => fs.slice().sort((a, b) => a.date(2026) - b.date(2026)).map((f) => [f.ico, f.name, `${festDate(f)}${f.zone ? ` · ${f.zone}` : ''}`]);
 const colList = (cs) => cs.map((x) => [x.token, x.name, '']);
-const evList = () => Object.keys(EVENTOS).map(Number).sort((a, b) => a - b).filter((m) => EVENTOS[m].ready).map((m) => [EVENTOS[m].ico, EVENTOS[m].name, MES_LARGO[m]]);
-const MES_LARGO = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+const evList = () => Object.keys(EVENTS).map(Number).sort((a, b) => a - b).filter((m) => EVENTS[m].ready).map((m) => [EVENTS[m].ico, EVENTS[m].name, MONTHS_LONG[m]]);
+const MONTHS_LONG = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 const ulList = (list) => (list?.length ? `<ul class="ul-list">${list.map(([ico, name, sub]) => `<li>${icon(ico)}<span><b>${name}</b>${sub ? `<small>${sub}</small>` : ''}</span></li>`).join('')}</ul>` : '');
 const UNLOCK_INFO = {
   estrellas: () => ({
@@ -3602,13 +3602,13 @@ const UNLOCK_INFO = {
     ],
   }),
   racha: () => {
-    const t = rachaTheme();
+    const t = streakTheme();
     return {
       title: `¡Nueva: ${t.name}!`, ico: t.ico, color: t.color, hero: icon(t.ico, 0, 0, 'big'),
       lead: ulLead(UNLOCK.racha + 1, 'la racha', 'Gana niveles seguidos, junta estrellas y llévate premios.'),
       rules: [
         ['reloj', 'Una racha <b>cada día</b>: a medianoche empieza otra.'],
-        ['gift', `Premios a las <b>${RACHA_GOALS.map((g) => g.n).join(', ')}</b> estrellas y luego cada <b>${RACHA_STEP}</b>: monedas, <b>deshacer</b> y <b>comodines</b>. Se cobran solos.`],
+        ['gift', `Premios a las <b>${STREAK_GOALS.map((g) => g.n).join(', ')}</b> estrellas y luego cada <b>${STREAK_STEP}</b>: monedas, <b>deshacer</b> y <b>comodines</b>. Se cobran solos.`],
         ['star', 'Cada nivel <b>nuevo</b> que ganes suma sus estrellas (también los secretos). Repetir y los eventos no suman.'],
         ['flame', 'Si pierdes o abandonas un nivel nuevo, o te rindes en uno repetido, vuelve a <b>0</b>.'],
         ['flag', 'La ves a la <b>derecha</b>.'],
@@ -3620,7 +3620,7 @@ const UNLOCK_INFO = {
     return {
       title: '¡Nuevas: Colecciones!', ico: c?.token || 'concha', color: c?.color || 'blue', hero: ['concha', 'gema', 'bellota', 'caramelo'].map((t) => icon(t)).join(''),
       lead: ulLead(UNLOCK.col + 1, 'las colecciones', 'Junta fichas con tus estrellas y cámbialas por premios.'),
-      list: colList(COLECCIONES.filter((x) => !x.plus)),
+      list: colList(COLLECTIONS.filter((x) => !x.plus)),
       rules: [
         ['reloj', '<b>2 semanas al mes</b>, de lunes a domingo. Las fichas que sobren se pierden.'],
         ['gift', 'Su <b>tienda</b> tiene disfraces, reversos, naves y más que <b>solo salen ahí</b>.'],
@@ -3630,11 +3630,11 @@ const UNLOCK_INFO = {
     };
   },
   col2: () => {
-    const c = col(), days = daysToNextCol(), nuevas = plusCols(), n = nuevas.length;
+    const c = col(), days = daysToNextCol(), newCols = plusCols(), n = newCols.length;
     return {
-      title: n === 1 ? '¡Una colección nueva!' : `¡${n} colecciones nuevas!`, ico: nuevas[0].token, color: nuevas[0].color, hero: nuevas.map((x) => icon(x.token)).join(''),
+      title: n === 1 ? '¡Una colección nueva!' : `¡${n} colecciones nuevas!`, ico: newCols[0].token, color: newCols[0].color, hero: newCols.map((x) => icon(x.token)).join(''),
       lead: ulLead(UNLOCK.col2 + 1, n === 1 ? 'una colección nueva' : `${n} colecciones nuevas`, 'Con sus propios exclusivos.'),
-      list: colList(nuevas),
+      list: colList(newCols),
       rules: [
         ['reloj', 'Ahora hay colección <b>3 semanas al mes</b>, de lunes a domingo.'],
         ['gift', 'Cada una con su <b>tienda</b> de premios que <b>solo salen ahí</b>.'],
@@ -3644,11 +3644,11 @@ const UNLOCK_INFO = {
     };
   },
   col3: () => {
-    const c = col(), days = daysToNextCol(), nuevas = plusCols(2), n = nuevas.length;
+    const c = col(), days = daysToNextCol(), newCols = plusCols(2), n = newCols.length;
     return {
-      title: `¡${n} colecciones nuevas!`, ico: nuevas[0].token, color: nuevas[0].color, hero: nuevas.map((x) => icon(x.token)).join(''),
+      title: `¡${n} colecciones nuevas!`, ico: newCols[0].token, color: newCols[0].color, hero: newCols.map((x) => icon(x.token)).join(''),
       lead: ulLead(UNLOCK.col3 + 1, `${n} colecciones nuevas`, 'Con sus propios exclusivos.'),
-      list: colList(nuevas),
+      list: colList(newCols),
       rules: [
         ['reloj', 'Ahora hay colección <b>todas las semanas</b>, de lunes a domingo.'],
         ['gift', 'Cada una con su <b>tienda</b> de premios que <b>solo salen ahí</b>.'],
@@ -3658,17 +3658,17 @@ const UNLOCK_INFO = {
     };
   },
   fiesta: () => {
-    const f = fiesta(), nx = nextFiesta();
+    const f = festival(), nx = nextFestival();
     return {
-      title: '¡Nuevo: Festividades!', ico: f?.ico || nx?.ico || 'tamal', color: 'gold', hero: evHeroIcons(f?.ico || nx?.ico, FIESTAS),
+      title: '¡Nuevo: Festividades!', ico: f?.ico || nx?.ico || 'tamal', color: 'gold', hero: evHeroIcons(f?.ico || nx?.ico, FESTIVALS),
       lead: ulLead(UNLOCK.fiesta + 1, 'las festividades', 'Los días de fiesta llega un evento especial con premios exclusivos.'),
-      list: fiList(FIESTAS.filter((x) => x.ready && !x.local && !x.grp)),
-      rules: [...FI_RULES(), fiNow(f, nx)],
+      list: festList(FESTIVALS.filter((x) => x.ready && !x.local && !x.grp)),
+      rules: [...FEST_RULES(), festNow(f, nx)],
     };
   },
-  fiesta2: () => fiGroupIntro((f) => f.local, 'fiesta2', '¡Nuevas: Leyendas de México!'),
-  fiesta3: () => fiGroupIntro((f) => f.grp === 3, 'fiesta3', '¡Nuevas: Fiestas de México!'),
-  fiesta4: () => fiGroupIntro((f) => f.grp === 4, 'fiesta4', '¡Nuevas: Fiestas de América!'),
+  fiesta2: () => festGroupIntro((f) => f.local, 'fiesta2', '¡Nuevas: Leyendas de México!'),
+  fiesta3: () => festGroupIntro((f) => f.grp === 3, 'fiesta3', '¡Nuevas: Fiestas de México!'),
+  fiesta4: () => festGroupIntro((f) => f.grp === 4, 'fiesta4', '¡Nuevas: Fiestas de América!'),
   mes: () => {
     const e = ev(), nx = !e && nextEvent();
     return {
@@ -3688,20 +3688,20 @@ const UNLOCK_INFO = {
 };
 // Aviso de un grupo de festividades nuevas (leyendas, fiestas de México y de América): hasta 5 iconos arriba, cuáles
 // son y las mismas reglas que las festividades.
-function fiGroupIntro(of, k, title) {
-  const nuevas = FIESTAS.filter((f) => of(f) && f.ready), f = fiesta(), nx = nextFiesta();
-  if (!nuevas.length) return null;
-  const shown = nuevas.slice(0, 5), mid = shown[Math.floor(shown.length / 2)];
+function festGroupIntro(of, k, title) {
+  const newCols = FESTIVALS.filter((f) => of(f) && f.ready), f = festival(), nx = nextFestival();
+  if (!newCols.length) return null;
+  const shown = newCols.slice(0, 5), mid = shown[Math.floor(shown.length / 2)];
   return {
     title, ico: mid.ico, color: mid.color, hero: shown.map((x) => icon(x.ico, 0, 0, x === mid ? 'main' : '')).join(''),
-    lead: ulLead(UNLOCK[k] + 1, `${nuevas.length} festividades nuevas`, 'Con sus propios exclusivos.'),
-    list: fiList(nuevas),
-    rules: [...FI_RULES(), fiNow(f, nx)],
+    lead: ulLead(UNLOCK[k] + 1, `${newCols.length} festividades nuevas`, 'Con sus propios exclusivos.'),
+    list: festList(newCols),
+    rules: [...FEST_RULES(), festNow(f, nx)],
   };
 }
 // Solo 3: el evento anterior, el de ahora (o el próximo) al centro y más grande, y el siguiente (en orden del año).
 // list: los eventos del mes (por omisión) o las festividades.
-function evHeroIcons(main, list = Object.keys(EVENTOS).map(Number).sort((a, b) => a - b).map((m) => EVENTOS[m])) {
+function evHeroIcons(main, list = Object.keys(EVENTS).map(Number).sort((a, b) => a - b).map((m) => EVENTS[m])) {
   const all = list.filter((x) => x.ready).map((x) => x.ico);
   const i = Math.max(0, all.indexOf(main)), at = (k) => all[(i + k + all.length) % all.length];
   return [at(-1), at(0), at(1)].map((x, k) => icon(x, 0, 0, k === 1 ? 'main' : '')).join('');
@@ -3782,8 +3782,8 @@ function openColIntro(c) {
 
 // Si se perdió una racha, al llegar al mapa el botón tiembla y lo dice.
 // También si pasó la medianoche con premios sin reclamar: esos se perdieron.
-function rachaLost() {
-  const r = racha();
+function streakLost() {
+  const r = dailyStreak();
   if (!r.lost && !r.expired) return;
   const msg = r.lost ? 'Tu racha volvió a 0' : 'No reclamaste los premios de tu racha: se perdieron';
   delete r.lost;
@@ -3792,7 +3792,7 @@ function rachaLost() {
   wait(700).then(() => {
     const b = document.querySelector('[data-a="racha"]');
     b?.animate([{ rotate: '0deg' }, { rotate: '-12deg' }, { rotate: '10deg' }, { rotate: '-6deg' }, { rotate: '0deg' }], { duration: 500 });
-    toast(`${icon(rachaTheme().ico)} ${msg}`);
+    toast(`${icon(streakTheme().ico)} ${msg}`);
   });
 }
 
@@ -3990,7 +3990,7 @@ function openAlbum() {
     </div>`;
   // Pestañas Mundos / Eventos / Especiales: Eventos sale cuando ya ganó al menos un evento del mes completo, y
   // Especiales, una festividad completa.
-  const evs = evAlbum(), fis = fiAlbum();
+  const evs = evAlbum(), fis = festAlbum();
   const tab = (k, ico, label, t) => `<button role="tab" data-tab="${k}" aria-selected="${t === k}">${icon(ico)}${label}</button>`;
   const tabs = (t) => (evs.length || fis.length ? `<div class="tabs" role="tablist">${tab('mundos', 'album', 'Mundos', t)}${evs.length ? tab('eventos', 'trophy', 'Eventos', t) : ''}${fis.length ? tab('especiales', 'gift', 'Especiales', t) : ''}</div>` : '');
   // Eventos y Especiales van por año (una página por año, el más reciente primero): con los años serán muchas.
@@ -5078,16 +5078,16 @@ function openHelp(tab = 'basico', then) {
       : t === 'mesas'
         ? `<div class="steps">
         <h3 class="help-h">Mesas que se descubren</h3>
-        <div class="step" data-u="ship"><div class="ill c">${mechCard('ship')}</div><p><b>Nave ladrona:</b> ${MESA_TEXT.nave.join(' ')}</p></div>
-        <div class="step" data-u="mesa"><div class="ill"><span class="h-rug"></span>${mini(2, '4', 'c')}${mini(40, '5', 'h')}<span class="h-roll"></span></div><p><b>Mesa enrollada:</b> ${MESA_TEXT.mesa.join(' ')}</p></div>
-        <div class="step" data-u="nebulosa"><div class="ill">${mini(0, '9', 's')}${mini(34, '10', 'd')}<span class="h-neb"></span></div><p><b>Nebulosa:</b> ${MESA_TEXT.nebulosa.join(' ')}</p></div>
-        <div class="step" data-u="gravedad"><div class="ill"><span class="h-rail" style="left:10px"></span><span class="h-rail" style="left:58px"></span>${helpBack(14, 'top:0px')}${mini(14, '8', 'c', {}, 'h-low')}${helpBack(62, 'top:0px')}${mini(62, 'J', 'h', {}, 'h-low')}</div><p><b>Gravedad:</b> ${MESA_TEXT.gravedad.join(' ')}</p></div>
-        <div class="step" data-u="marea"><div class="ill">${mini(10, '7', 's')}${mini(48, '8', 'h')}<span class="h-tide"></span></div><p><b>Marea:</b> ${MESA_TEXT.marea.join(' ')}</p></div>
-        <div class="step" data-u="hoyo"><div class="ill">${mini(6, '4', 'd')}${mini(44, '9', 's')}<span class="h-hole"></span></div><p><b>Agujero negro:</b> ${MESA_TEXT.hoyo.join(' ')}</p></div>
-        <div class="step" data-u="rocas"><div class="ill">${mini(10, '7', 's')}${mini(48, '8', 'h', { marks: `<span class="rock-ov">${icon('asteroide')}<b class="outl">3</b></span>` })}</div><p><b>Asteroides:</b> ${MESA_TEXT.rocas.join(' ')}</p></div>
-        <div class="step" data-u="puertas"><div class="ill"><span class="h-door"><i></i><i></i></span>${mini(56, '6', 'h', { doorKey: 1 })}</div><p><b>Puertas:</b> ${MESA_TEXT.puertas.join(' ')}</p></div>
-        <div class="step" data-u="banda"><div class="ill"><span class="h-belt"><i></i></span>${mini(24, 'K', 'c', {}, 'h-belt-c')}${mini(58, '2', 'h', {}, 'h-belt-c')}</div><p><b>Banda transportadora:</b> ${MESA_TEXT.banda.join(' ')}</p></div>
-        <div class="step" data-u="plegable"><div class="ill"><span class="h-fold" style="left:4px;transform:perspective(90px) rotateY(55deg);transform-origin:right"></span><span class="h-fold" style="left:40px"></span><span class="h-fold" style="left:76px;transform:perspective(90px) rotateY(-55deg);transform-origin:left"></span>${mini(41, 'Q', 'h')}</div><p><b>Mesa plegable:</b> ${MESA_TEXT.plegable.join(' ')}</p></div>
+        <div class="step" data-u="ship"><div class="ill c">${mechCard('ship')}</div><p><b>Nave ladrona:</b> ${TABLE_TEXT.nave.join(' ')}</p></div>
+        <div class="step" data-u="mesa"><div class="ill"><span class="h-rug"></span>${mini(2, '4', 'c')}${mini(40, '5', 'h')}<span class="h-roll"></span></div><p><b>Mesa enrollada:</b> ${TABLE_TEXT.mesa.join(' ')}</p></div>
+        <div class="step" data-u="nebulosa"><div class="ill">${mini(0, '9', 's')}${mini(34, '10', 'd')}<span class="h-neb"></span></div><p><b>Nebulosa:</b> ${TABLE_TEXT.nebulosa.join(' ')}</p></div>
+        <div class="step" data-u="gravedad"><div class="ill"><span class="h-rail" style="left:10px"></span><span class="h-rail" style="left:58px"></span>${helpBack(14, 'top:0px')}${mini(14, '8', 'c', {}, 'h-low')}${helpBack(62, 'top:0px')}${mini(62, 'J', 'h', {}, 'h-low')}</div><p><b>Gravedad:</b> ${TABLE_TEXT.gravedad.join(' ')}</p></div>
+        <div class="step" data-u="marea"><div class="ill">${mini(10, '7', 's')}${mini(48, '8', 'h')}<span class="h-tide"></span></div><p><b>Marea:</b> ${TABLE_TEXT.marea.join(' ')}</p></div>
+        <div class="step" data-u="hoyo"><div class="ill">${mini(6, '4', 'd')}${mini(44, '9', 's')}<span class="h-hole"></span></div><p><b>Agujero negro:</b> ${TABLE_TEXT.hoyo.join(' ')}</p></div>
+        <div class="step" data-u="rocas"><div class="ill">${mini(10, '7', 's')}${mini(48, '8', 'h', { marks: `<span class="rock-ov">${icon('asteroide')}<b class="outl">3</b></span>` })}</div><p><b>Asteroides:</b> ${TABLE_TEXT.rocas.join(' ')}</p></div>
+        <div class="step" data-u="puertas"><div class="ill"><span class="h-door"><i></i><i></i></span>${mini(56, '6', 'h', { doorKey: 1 })}</div><p><b>Puertas:</b> ${TABLE_TEXT.puertas.join(' ')}</p></div>
+        <div class="step" data-u="banda"><div class="ill"><span class="h-belt"><i></i></span>${mini(24, 'K', 'c', {}, 'h-belt-c')}${mini(58, '2', 'h', {}, 'h-belt-c')}</div><p><b>Banda transportadora:</b> ${TABLE_TEXT.banda.join(' ')}</p></div>
+        <div class="step" data-u="plegable"><div class="ill"><span class="h-fold" style="left:4px;transform:perspective(90px) rotateY(55deg);transform-origin:right"></span><span class="h-fold" style="left:40px"></span><span class="h-fold" style="left:76px;transform:perspective(90px) rotateY(-55deg);transform-origin:left"></span>${mini(41, 'Q', 'h')}</div><p><b>Mesa plegable:</b> ${TABLE_TEXT.plegable.join(' ')}</p></div>
       </div>`
         : `<div class="steps">${MECH_GROUPS.map(([h, ms]) => `<h3 class="help-h">${h}</h3>${ms.map((m) => `<div class="step" data-u="${m}"><div class="ill c${MECH_BOTH[m] ? ' pair' : ''}">${MECH_BOTH[m]?.() || mechCard(m)}</div><p><b>${MECH_NAMES[m]}:</b> ${MECH_TEXT[m]}</p></div>`).join('')}`).join('')}</div>`);
   }
@@ -5169,9 +5169,9 @@ function askDeleteAgain() {
 const RUN_LIMIT = 30 * 60e3;
 const NO_EXIT_FROM = LEVELS_PER_WORLD * REGION_SIZE; // nivel 101 (antes decía 1000 por error)
 const openRuns = () => [
-  save.run && !save.run.replay && save.run.g >= NO_EXIT_FROM && !isSecret(save.run.g) ? { r: save.run, lose: () => ((save.run = null), isOn('racha') && rachaLose(), persist()) } : null,
+  save.run && !save.run.replay && save.run.g >= NO_EXIT_FROM && !isSecret(save.run.g) ? { r: save.run, lose: () => ((save.run = null), isOn('racha') && streakLose(), persist()) } : null,
   ev()?.state.run ? { r: ev().state.run, lose: evLose } : null,
-  fiesta()?.state?.run ? { r: fiesta().state.run, lose: fiLose } : null,
+  festival()?.state?.run ? { r: festival().state.run, lose: festLose } : null,
 ].filter(Boolean);
 // Al irse al fondo se marca la hora; al volver (o al abrir la app) se revisa.
 function stampRuns() {

@@ -11,8 +11,8 @@ import { maxBet } from './economy.js';
 import { passClaim } from './passport.js';
 import { mulberry32, hash } from './rng.js';
 
-export const MIS_FROM = 40; // nivel en que se abren (save.next); igual que UNLOCK en events.js
-export const LOGROS_FROM = 70;
+export const MISSIONS_FROM = 40; // nivel en que se abren (save.next); igual que UNLOCK en events.js
+export const ACHIEVEMENTS_FROM = 70;
 const DAY = 864e5;
 const today = () => {
   const d = new Date();
@@ -78,11 +78,11 @@ export const MISSIONS = [
   { id: 'coincards6', k: 'coincards', goals: [6, 8], tier: 2, mech: 'coin', ico: 'monedas', text: (n) => `Juega ${n} cartas moneda` },
   { id: 'turbo3', k: 'turbo', goals: [3], tier: 3, mech: 'turbo', ico: 'rocket', text: (n) => `Usa ${n} cohetes turbo` },
 ];
-const MIS_COINS = [0, 60, 100, 150];
+const MISSION_COINS = [0, 60, 100, 150];
 // Cofre de las 3: monedas y, por probabilidad, un comodín (si no, 2 deshacer). 8 nov 2026: la probabilidad depende de
 // qué tan difíciles tocaron (suma de escalones, de 4 a 9): fáciles 21%, difíciles hasta 51%. Se dice en la ventana.
-export const MIS_BONUS = { coins: 200, undo: 2 };
-export const misWildOdds = (s = missions()) => Math.min(0.55, 0.15 + 0.06 * Math.max(0, s.list.reduce((n, x) => n + (misDef(x.id)?.tier || 1), 0) - 3));
+export const MISSION_BONUS = { coins: 200, undo: 2 };
+export const missionWildOdds = (s = missions()) => Math.min(0.55, 0.15 + 0.06 * Math.max(0, s.list.reduce((n, x) => n + (missionDef(x.id)?.tier || 1), 0) - 3));
 
 const can = (m, evOn) => (!m.mech || (save.open || 0) >= MECH_INTRO[m.mech]) && (!m.ev || evOn);
 // Las misiones de hoy: { day, list: [{ id, goal, n, coins, got }], bonus: false | true (reclamado) }.
@@ -94,10 +94,10 @@ export function missions(evOn = false) {
     // Una de cada escalón cuando se puede (1 fácil, 1 media, 1 cualquiera), sin repetir.
     const pool = MISSIONS.filter((m) => can(m, evOn));
     const take = (ok) => {
-      const c = pool.filter((m) => ok(m) && !list.some((x) => x.id === m.id || misDef(x.id).k === m.k));
+      const c = pool.filter((m) => ok(m) && !list.some((x) => x.id === m.id || missionDef(x.id).k === m.k));
       if (!c.length) return;
       const m = c[Math.floor(r() * c.length)], goal = m.goals[Math.floor(r() * m.goals.length)];
-      list.push({ id: m.id, goal, n: 0, coins: round5(MIS_COINS[m.tier] * constK() * (goal === m.goals.at(-1) && m.goals.length > 1 ? 1.25 : 1)), got: false });
+      list.push({ id: m.id, goal, n: 0, coins: round5(MISSION_COINS[m.tier] * constK() * (goal === m.goals.at(-1) && m.goals.length > 1 ? 1.25 : 1)), got: false });
     };
     const list = [];
     take((m) => m.tier === 1);
@@ -108,31 +108,31 @@ export function missions(evOn = false) {
   }
   return save.mis;
 }
-export const misDef = (id) => MISSIONS.find((m) => m.id === id);
-export const misBonusCoins = () => round5(MIS_BONUS.coins * constK());
-export const misDone = (x) => x.n >= x.goal;
+export const missionDef = (id) => MISSIONS.find((m) => m.id === id);
+export const missionBonusCoins = () => round5(MISSION_BONUS.coins * constK());
+export const missionDone = (x) => x.n >= x.goal;
 // ¿Hay algo que reclamar?
-export const misReady = () => isMisOn() && (missions().list.some((x) => misDone(x) && !x.got) || misBonusReady());
-export const misBonusReady = () => { const s = missions(); return !s.bonus && s.list.length && s.list.every((x) => x.got); };
+export const missionReady = () => isMisOn() && (missions().list.some((x) => missionDone(x) && !x.got) || missionBonusReady());
+export const missionBonusReady = () => { const s = missions(); return !s.bonus && s.list.length && s.list.every((x) => x.got); };
 // Ya no queda nada hoy: las 3 reclamadas y el cofre abierto.
-export const misAllDone = () => { const s = missions(); return !!s.bonus && s.list.every((x) => x.got); };
-export const isMisOn = () => (save.next || 0) >= MIS_FROM;
-export const isLogrosOn = () => (save.next || 0) >= LOGROS_FROM;
+export const missionsAllDone = () => { const s = missions(); return !!s.bonus && s.list.every((x) => x.got); };
+export const isMisOn = () => (save.next || 0) >= MISSIONS_FROM;
+export const isAchievementsOn = () => (save.next || 0) >= ACHIEVEMENTS_FROM;
 // Reclamar una misión: devuelve el premio (monedas), ya sumado.
-export function misClaim(i) {
+export function missionClaim(i) {
   const x = missions().list[i];
-  if (!x || x.got || !misDone(x)) return null;
+  if (!x || x.got || !missionDone(x)) return null;
   x.got = true;
   save.coins += x.coins;
   persist();
   return { coins: x.coins };
 }
 // Las 3 reclamadas: el cofre del día.
-export function misBonus(r = Math.random) {
+export function missionBonus(r = Math.random) {
   const s = missions();
-  if (!misBonusReady()) return null;
+  if (!missionBonusReady()) return null;
   s.bonus = true;
-  const p = { coins: round5(MIS_BONUS.coins * constK()), ...(r() < misWildOdds(s) ? { wild: 1 } : { undo: MIS_BONUS.undo }) };
+  const p = { coins: round5(MISSION_BONUS.coins * constK()), ...(r() < missionWildOdds(s) ? { wild: 1 } : { undo: MISSION_BONUS.undo }) };
   save.coins += p.coins;
   save.wild += p.wild || 0;
   save.undo += p.undo || 0;
@@ -144,7 +144,7 @@ export function misBonus(r = Math.random) {
 // Cuentan para siempre (save.stats). 8 nov 2026: 5 escalones (bronce, plata, oro, platino y diamante), metas más
 // altas y mejores premios (platino y diamante traen comodines y deshacer). El oro de algunos da un título exclusivo
 // (sección title de la tienda, ev: 'logro'). Los que ya se reclamaron (save.logros = escalones) se respetan.
-export const LOGROS = [
+export const ACHIEVEMENTS = [
   { id: 'wins', k: 'win', name: 'Viajero incansable', ico: 'flag', steps: [100, 500, 1500, 3000, 5000], text: (n) => `Gana ${fmtN(n)} niveles` },
   { id: 'stars', k: 'stars', name: 'Cazaestrellas', ico: 'star', steps: [300, 1500, 4000, 8000, 14000], text: (n) => `Junta ${fmtN(n)} estrellas` },
   { id: 'three', k: 'three', name: 'Perfeccionista', ico: 'crown', steps: [50, 300, 1000, 2000, 3500], text: (n) => `Gana ${fmtN(n)} niveles con 3 estrellas`, title: 'perfeccionista' },
@@ -190,21 +190,21 @@ export const LOGROS = [
 // 8 nov 2026: los logros pedían poco (el usuario: "no están tan complicados"): todas las metas ×LOGRO_UP desde el
 // principio, redondeadas bonito. Las de "mejor de un nivel" (racha, cartas en el mazo) no: se subieron a mano (Ahorrador
 // era muy fácil: antes 8/11/14/17/20 cartas; Imparable antes 20/28/35/42/50).
-export const LOGRO_UP = 1.7;
+export const ACHIEVEMENT_UP = 1.7;
 const nice = (n) => {
-  const v = n * LOGRO_UP, s = v < 50 ? 1 : v < 200 ? 5 : v < 1000 ? 10 : v < 10000 ? 50 : 500;
+  const v = n * ACHIEVEMENT_UP, s = v < 50 ? 1 : v < 200 ? 5 : v < 1000 ? 10 : v < 10000 ? 50 : 500;
   return Math.round(v / s) * s;
 };
-for (const l of LOGROS) if (!l.best && !l.raw) l.steps = l.steps.map(nice);
+for (const l of ACHIEVEMENTS) if (!l.best && !l.raw) l.steps = l.steps.map(nice);
 // Premio de cada escalón (bronce → diamante).
 // 8 nov 2026: 10% menos monedas (el usuario: endurecer los logros, no dar más dinero). Antes 200/600/1,500/3,000/6,000.
-export const LOGRO_PRIZES = [{ coins: 180 }, { coins: 540 }, { coins: 1350 }, { coins: 2700, wild: 1 }, { coins: 5400, wild: 2, undo: 3 }];
-export const LOGRO_COINS = LOGRO_PRIZES.map((p) => p.coins);
-export const LOGRO_MEDAL = ['Bronce', 'Plata', 'Oro', 'Platino', 'Diamante'];
-export const LOGRO_TOP = LOGRO_MEDAL.length;
+export const ACHIEVEMENT_PRIZES = [{ coins: 180 }, { coins: 540 }, { coins: 1350 }, { coins: 2700, wild: 1 }, { coins: 5400, wild: 2, undo: 3 }];
+export const ACHIEVEMENT_COINS = ACHIEVEMENT_PRIZES.map((p) => p.coins);
+export const ACHIEVEMENT_MEDAL = ['Bronce', 'Plata', 'Oro', 'Platino', 'Diamante'];
+export const ACHIEVEMENT_TOP = ACHIEVEMENT_MEDAL.length;
 const fmtN = (n) => n.toLocaleString('es-MX');
 const stat = (l) => (save.stats || {})[l.best ? `${l.k}Best` : l.k] || 0;
-export const logroGot = (l) => Math.min(LOGRO_TOP, (save.logros || {})[l.id] || 0);
+export const achievementGot = (l) => Math.min(ACHIEVEMENT_TOP, (save.logros || {})[l.id] || 0);
 // 10 nov 2026 (pedido del usuario): cada medalla empieza desde cero. Lo que se suma (niveles, cartas, estrellas…) cuenta
 // desde que se cobró la anterior (save.logroBase = lo que llevaba entonces); para plata hay que juntar su meta completa
 // otra vez. Los de mejor de un nivel (racha, cartas en el mazo) ya se hacen de nuevo en cada nivel. Las partidas de
@@ -212,23 +212,23 @@ export const logroGot = (l) => Math.min(LOGRO_TOP, (save.logros || {})[l.id] || 
 const base = (l) => {
   if (l.best) return 0;
   const b = (save.logroBase ||= {});
-  if (b[l.id] == null) b[l.id] = logroGot(l) ? stat(l) : 0;
+  if (b[l.id] == null) b[l.id] = achievementGot(l) ? stat(l) : 0;
   return b[l.id];
 };
 // Lo que lleva hacia la medalla que sigue y lo que pide (la absoluta, para el modo dev).
-export const logroProg = (l) => stat(l) - base(l);
-export const logroNeed = (l) => base(l) + l.steps[Math.min(logroGot(l), LOGRO_TOP - 1)];
+export const achievementProgress = (l) => stat(l) - base(l);
+export const achievementNeed = (l) => base(l) + l.steps[Math.min(achievementGot(l), ACHIEVEMENT_TOP - 1)];
 // Escalón alcanzado: el siguiente, si ya juntó su meta.
-export const logroAt = (l) => { const got = logroGot(l); return got < LOGRO_TOP && logroProg(l) >= l.steps[got] ? got + 1 : got; };
-export const logrosVisible = () => LOGROS.filter((l) => (!l.mech || (save.open || 0) >= MECH_INTRO[l.mech]) && (!l.bet || maxBet(save.next || 0) >= l.bet) && (!l.from || (save.next || 0) >= l.from));
-export const logrosReady = () => isLogrosOn() && logrosVisible().some((l) => logroAt(l) > logroGot(l));
-export function logroClaim(id) {
-  const l = LOGROS.find((x) => x.id === id);
-  const got = logroGot(l);
-  if (!l || logroAt(l) <= got) return null;
+export const achievementAt = (l) => { const got = achievementGot(l); return got < ACHIEVEMENT_TOP && achievementProgress(l) >= l.steps[got] ? got + 1 : got; };
+export const achievementsVisible = () => ACHIEVEMENTS.filter((l) => (!l.mech || (save.open || 0) >= MECH_INTRO[l.mech]) && (!l.bet || maxBet(save.next || 0) >= l.bet) && (!l.from || (save.next || 0) >= l.from));
+export const achievementsReady = () => isAchievementsOn() && achievementsVisible().some((l) => achievementAt(l) > achievementGot(l));
+export function achievementClaim(id) {
+  const l = ACHIEVEMENTS.find((x) => x.id === id);
+  const got = achievementGot(l);
+  if (!l || achievementAt(l) <= got) return null;
   (save.logros ||= {})[id] = got + 1;
   if (!l.best) save.logroBase[id] = stat(l);
-  const p = { ...LOGRO_PRIZES[got] };
+  const p = { ...ACHIEVEMENT_PRIZES[got] };
   save.coins += p.coins;
   save.wild += p.wild || 0;
   save.undo += p.undo || 0;
@@ -257,10 +257,10 @@ export function track(stats) {
   const done = [];
   if (isMisOn()) {
     for (const x of missions().list) {
-      const m = misDef(x.id), v = stats[m.k];
-      if (!v || misDone(x)) continue;
+      const m = missionDef(x.id), v = stats[m.k];
+      if (!v || missionDone(x)) continue;
       x.n = m.best ? Math.max(x.n, v) : x.n + v;
-      if (misDone(x)) {
+      if (missionDone(x)) {
         x.n = x.goal;
         done.push(x);
         st.missions = (st.missions || 0) + 1;
@@ -280,15 +280,15 @@ export function autoClaim() {
   const q = (save.feats ||= []), n0 = q.length;
   if (isMisOn()) {
     missions().list.forEach((x, i) => {
-      if (!misDone(x) || x.got) return;
-      const p = misClaim(i);
+      if (!missionDone(x) || x.got) return;
+      const p = missionClaim(i);
       q.push({ t: 'mis', id: x.id, goal: x.goal, coins: p.coins });
     });
-    if (misBonusReady()) q.push({ t: 'bonus', ...misBonus() });
+    if (missionBonusReady()) q.push({ t: 'bonus', ...missionBonus() });
   }
-  if (isLogrosOn()) {
-    for (const l of logrosVisible()) {
-      while (logroAt(l) > logroGot(l)) q.push({ t: 'logro', id: l.id, step: logroGot(l), ...logroClaim(l.id) });
+  if (isAchievementsOn()) {
+    for (const l of achievementsVisible()) {
+      while (achievementAt(l) > achievementGot(l)) q.push({ t: 'logro', id: l.id, step: achievementGot(l), ...achievementClaim(l.id) });
     }
   }
   // Sellos del pasaporte y premios de secretos (11 nov 2026, passport.js).
@@ -299,5 +299,5 @@ export function autoClaim() {
   return true;
 }
 // Para el modo dev: las misiones de hoy otra vez.
-export const misReset = () => { save.mis = null; persist(); };
+export const missionReset = () => { save.mis = null; persist(); };
 export { LEVELS_PER_WORLD };

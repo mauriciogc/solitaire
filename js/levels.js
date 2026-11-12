@@ -452,55 +452,55 @@ const RESPITE_MIN = 10;
 export const SCROLL_FROM = { mesa: 50, gravedad: 109, nebulosa: 149, plegable: 208 };
 // Marea (7 nov 2026): el agua sube desde abajo cada 3 robos y baja cada 3 jugadas; lo que queda bajo el agua no se
 // juega. Desde el nivel MAREA_FROM + 1, ~1 de cada 10 normales del camino (sin otra mesa, respiro ni ayudas).
-export const MAREA_FROM = 340; // antes 239 (ver SCROLL_FROM)
+export const TIDE_FROM = 340; // antes 239 (ver SCROLL_FROM)
 // Estreno: el primero desde MAREA_FROM que no es otra mesa, duro ni respiro.
-let mareaDebut = null;
-export const mareaFirst = () => {
-  if (mareaDebut == null) for (mareaDebut = MAREA_FROM; cardDebut(mareaDebut) || scrollKind(mareaDebut) || hardHelp(mareaDebut) || isRespite(mareaDebut); mareaDebut++);
-  return mareaDebut;
+let tideDebut = null;
+export const tideFirst = () => {
+  if (tideDebut == null) for (tideDebut = TIDE_FROM; cardDebut(tideDebut) || scrollKind(tideDebut) || hardHelp(tideDebut) || isRespite(tideDebut); tideDebut++);
+  return tideDebut;
 };
-export const mareaKind = (g) => !cardDebut(g) && (g === mareaFirst() || (g > mareaFirst() && !((hash(g * 3571 + 61) >>> 5) % 10)));
+export const tideKind = (g) => !cardDebut(g) && (g === tideFirst() || (g > tideFirst() && !((hash(g * 3571 + 61) >>> 5) % 10)));
 // Agujero negro (8 nov 2026): mesa sobre un tablero normal, como la marea (nunca juntas). Atrapa casi todo un grupo
 // (9 nov 2026; antes 3-4 cartas marcadas) y cada HOLE_EVERY jugadas o robos les revuelve los números (ver rankOf en engine.js). Desde HOYO_FROM + 1 (a más de
 // 10 niveles de la carta moneda), se intenta en ~1 de cada 5 normales del camino sin otra mesa, respiro ni ayudas
 // (se queda en ~1 de cada 3 de esos: en los demás no hay cartas vecinas o no se podría ganar).
-export const HOYO_FROM = 373;
-let hoyoDebut = null;
-export const hoyoFirst = () => {
-  if (hoyoDebut == null) for (hoyoDebut = HOYO_FROM; cardDebut(hoyoDebut) || scrollKind(hoyoDebut) || hardHelp(hoyoDebut) || isRespite(hoyoDebut) || mareaKind(hoyoDebut); hoyoDebut++);
-  return hoyoDebut;
+export const HOLE_FROM = 373;
+let holeDebut = null;
+export const holeFirst = () => {
+  if (holeDebut == null) for (holeDebut = HOLE_FROM; cardDebut(holeDebut) || scrollKind(holeDebut) || hardHelp(holeDebut) || isRespite(holeDebut) || tideKind(holeDebut); holeDebut++);
+  return holeDebut;
 };
 // Puertas (9 nov 2026, rehechas a pedido del usuario): un tablero normal y, a la orilla, 2 o 3 puertas chicas con una
 // pila de 3 a 5 cartas detrás. Hay menos llaves que puertas (2 puertas: 1 llave; 3: 1 o 2): cada carta llave del
 // tablero da una llave y el jugador escoge qué puerta abrir. Al abrirse, su premio se activa (moneda, cometa o cohete) y
 // sus cartas salen al tablero: unas pilas ayudan (números seguidos) y otras estorban. Si no la abre, no cuentan.
-export const PUERTAS_FROM = 404;
-let puertasDebut = null;
-export const puertasFirst = () => {
-  if (puertasDebut == null) for (puertasDebut = PUERTAS_FROM; cardDebut(puertasDebut) || scrollKind(puertasDebut) || hardHelp(puertasDebut) || isRespite(puertasDebut) || mareaKind(puertasDebut) || hoyoKind(puertasDebut); puertasDebut++);
-  return puertasDebut;
+export const DOORS_FROM = 404;
+let doorsDebut = null;
+export const doorsFirst = () => {
+  if (doorsDebut == null) for (doorsDebut = DOORS_FROM; cardDebut(doorsDebut) || scrollKind(doorsDebut) || hardHelp(doorsDebut) || isRespite(doorsDebut) || tideKind(doorsDebut) || holeKind(doorsDebut); doorsDebut++);
+  return doorsDebut;
 };
-export const puertasKind = (g) => !cardDebut(g) && !mareaKind(g) && !hoyoKind(g) && (g === puertasFirst() || (g > puertasFirst() && !((hash(g * 6151 + 113) >>> 4) % 10)));
+export const doorsKind = (g) => !cardDebut(g) && !tideKind(g) && !holeKind(g) && (g === doorsFirst() || (g > doorsFirst() && !((hash(g * 6151 + 113) >>> 4) % 10)));
 // Banda transportadora (8 nov 2026): una fila de cartas da vueltas dentro de una máquina; solo se ven BELT_W a la vez
 // y avanza un lugar con cada jugada o robo (ver beltShown en engine.js). Va junto a un tablero normal.
 export const BANDA_FROM = 455;
 let bandaDebut = null;
 export const bandaFirst = () => {
-  if (bandaDebut == null) for (bandaDebut = BANDA_FROM; cardDebut(bandaDebut) || scrollKind(bandaDebut) || hardHelp(bandaDebut) || isRespite(bandaDebut) || mareaKind(bandaDebut) || hoyoKind(bandaDebut) || puertasKind(bandaDebut); bandaDebut++);
+  if (bandaDebut == null) for (bandaDebut = BANDA_FROM; cardDebut(bandaDebut) || scrollKind(bandaDebut) || hardHelp(bandaDebut) || isRespite(bandaDebut) || tideKind(bandaDebut) || holeKind(bandaDebut) || doorsKind(bandaDebut); bandaDebut++);
   return bandaDebut;
 };
-export const bandaKind = (g) => !cardDebut(g) && !mareaKind(g) && !hoyoKind(g) && !puertasKind(g) && (g === bandaFirst() || (g > bandaFirst() && !((hash(g * 2477 + 71) >>> 5) % 6)));
+export const bandaKind = (g) => !cardDebut(g) && !tideKind(g) && !holeKind(g) && !doorsKind(g) && (g === bandaFirst() || (g > bandaFirst() && !((hash(g * 2477 + 71) >>> 5) % 6)));
 // Cinturón de asteroides (10 nov 2026, pedido del usuario): mesa sobre un tablero normal, nunca con otra. Cada
 // ROCK_EVERY robos caen 2 o 3 piedras que tapan cartas libres por unas jugadas (ver dropRocks en engine.js). Desde
 // ROCAS_FROM, ~1 de cada 6 normales que no traen otra mesa.
-export const ROCAS_FROM = 505;
-let rocasDebut = null;
-export const rocasFirst = () => {
-  if (rocasDebut == null) for (rocasDebut = ROCAS_FROM; cardDebut(rocasDebut) || scrollKind(rocasDebut) || hardHelp(rocasDebut) || isRespite(rocasDebut) || mareaKind(rocasDebut) || hoyoKind(rocasDebut) || puertasKind(rocasDebut) || bandaKind(rocasDebut); rocasDebut++);
-  return rocasDebut;
+export const ROCKS_FROM = 505;
+let rocksDebut = null;
+export const rocksFirst = () => {
+  if (rocksDebut == null) for (rocksDebut = ROCKS_FROM; cardDebut(rocksDebut) || scrollKind(rocksDebut) || hardHelp(rocksDebut) || isRespite(rocksDebut) || tideKind(rocksDebut) || holeKind(rocksDebut) || doorsKind(rocksDebut) || bandaKind(rocksDebut); rocksDebut++);
+  return rocksDebut;
 };
-export const rocasKind = (g) => !cardDebut(g) && !mareaKind(g) && !hoyoKind(g) && !puertasKind(g) && !bandaKind(g) && (g === rocasFirst() || (g > rocasFirst() && !((hash(g * 5303 + 89) >>> 5) % 6)));
-export const hoyoKind = (g) => !cardDebut(g) && !mareaKind(g) && (g === hoyoFirst() || (g > hoyoFirst() && !((hash(g * 4241 + 97) >>> 6) % 5)));
+export const rocksKind = (g) => !cardDebut(g) && !tideKind(g) && !holeKind(g) && !doorsKind(g) && !bandaKind(g) && (g === rocksFirst() || (g > rocksFirst() && !((hash(g * 5303 + 89) >>> 5) % 6)));
+export const holeKind = (g) => !cardDebut(g) && !tideKind(g) && (g === holeFirst() || (g > holeFirst() && !((hash(g * 4241 + 97) >>> 6) % 5)));
 export const GRAV_SHOWN = 2; // cartas boca arriba en cada columna
 export const HOLE_MAX = 99; // cartas que atrapa el agujero negro, como mucho (10 nov 2026: todas; antes 12)
 export const HOLE_TAKE = 1; // parte que se traga y revuelve en cada vuelta (10 nov 2026: todas; antes 0.4)
@@ -525,7 +525,7 @@ export function scrollKind(g) {
 }
 // Lo bonito de la mesa es lo larga: el doble de cartas que un tablero normal.
 // La nebulosa, algo menos: solo se ven 3 tramos a la vez.
-function scrollTramos(r, d, kind) {
+function scrollSegments(r, d, kind) {
   if (kind === 'gravedad') return gravCols(r, d);
   if (kind === 'plegable') return foldPanels(r, d);
   const want = kind === 'nebulosa' ? 32 + Math.round(d * 16) : 40 + Math.round(d * 20);
@@ -804,21 +804,21 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
   let d = respite ? Math.min(d0, 0.06 + d0 * 0.15) : debut ? d0 * (scroll === 'gravedad' ? 0.35 : scroll === 'plegable' ? 0.15 : 0.3) : scroll === 'mesa' ? d0 * 0.3 : scroll === 'gravedad' ? d0 * (base < 200 ? 0.35 : 0.55) : scroll ? d0 * 0.65 : d0;
   // Mesas sobre un tablero normal (marea, agujero negro y puertas): nunca dos en el mismo nivel.
   const overlay = fresh && !secret && !respite && !scroll;
-  const hoyo = overlay && hoyoKind(base);
-  const puertas = overlay && puertasKind(base);
-  const banda = overlay && !puertas && bandaKind(base);
-  const rocas = overlay && !hoyo && !puertas && !banda && rocasKind(base);
+  const holeOn = overlay && holeKind(base);
+  const doorsOn = overlay && doorsKind(base);
+  const banda = overlay && !doorsOn && bandaKind(base);
+  const rocksOn = overlay && !holeOn && !doorsOn && !banda && rocksKind(base);
   // Agujero negro y banda ya cuestan por sí mismas: el tablero va un poco más amable (como las otras mesas). Las
   // puertas, apenas (sus pilas no cuentan si no las abres). La banda pesa más (al bot le costaba 31% contra 47%): la mitad.
-  if (hoyo) d *= base === hoyoFirst() ? 0.25 : 0.6; // su estreno, más amable
-  if (puertas) d *= 0.9;
+  if (holeOn) d *= base === holeFirst() ? 0.25 : 0.6; // su estreno, más amable
+  if (doorsOn) d *= 0.9;
   if (banda) d *= 0.5;
-  if (rocas) d *= base === rocasFirst() ? 0.4 : 0.9;
+  if (rocksOn) d *= base === rocksFirst() ? 0.4 : 0.9;
   // Evento: en cada planeta salen más seguido las formas que más cuestan (medido con el bot casual).
   const template = ev?.scroll || ev?.template || (ev && (index === LEVELS_PER_WORLD - 1 || r() < 0.15 + ev.tight * 0.17) ? pick(r, ['peaks', 'peaks', 'scatter', 'invPyramid']) : scroll || (respite ? pick(r, RESPITE_SHAPES) : chooseTemplate(r, ev ? Math.max(3, base) : base, d, true)));
 
   const shape = (dd) => (template === 'clusters' ? clusters(r, dd, index === LEVELS_PER_WORLD - 1, true) : [TEMPLATES[template](r, dd)]);
-  let raw = scroll ? scrollTramos(r, d, scroll) : shape(d);
+  let raw = scroll ? scrollSegments(r, d, scroll) : shape(d);
   // Sin ayudas: si salió muy chico, se vuelve a armar un poco más grande.
   // Niveles duros: tableros más grandes (T.min).
   const minN = respite ? RESPITE_MIN : Math.max(freshMin(base), T?.min || 0);
@@ -838,21 +838,21 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
   );
   // Mesa enrollada: una carta sale completa del rollo cuando la tira ya empieza en su orilla derecha − SCROLL_VIEW
   // o más adelante; o sea, cuando ya se fueron todas las cartas que empiezan antes de eso.
-  const mesa = scroll === 'mesa', nebula = scroll === 'nebulosa', grav = scroll === 'gravedad', fold = scroll === 'plegable';
-  const under = mesa && coveredBy.map((a) => a.slice());
-  if (mesa) rollCover(pos, groups, SCROLL_VIEW).forEach((a, i) => coveredBy[i].push(...a));
+  const tableScroll = scroll === 'mesa', nebula = scroll === 'nebulosa', grav = scroll === 'gravedad', fold = scroll === 'plegable';
+  const under = tableScroll && coveredBy.map((a) => a.slice());
+  if (tableScroll) rollCover(pos, groups, SCROLL_VIEW).forEach((a, i) => coveredBy[i].push(...a));
   // Nebulosa: tramos que hay que vaciar antes de que salga cada carta.
   // Plegable: los lados salen al vaciar el panel de en medio.
   const neb = nebula ? pos.map((p) => Math.max(0, p.group - NEB_SLOTS + 1)) : fold ? pos.map((p) => (p.group ? 1 : 0)) : null;
-  const tramos = (nebula || grav || fold) && groups.map((_, gi) => pos.reduce((a, p, i) => (p.group === gi && a.push(i), a), []));
+  const segments = (nebula || grav || fold) && groups.map((_, gi) => pos.reduce((a, p, i) => (p.group === gi && a.push(i), a), []));
   // Gravedad: a cada carta solo la tapa la de abajo de su columna (la primera de cada columna es la de abajo).
-  if (grav) for (const t of tramos) t.forEach((id, k) => (coveredBy[id] = k ? [t[k - 1]] : []));
+  if (grav) for (const t of segments) t.forEach((id, k) => (coveredBy[id] = k ? [t[k - 1]] : []));
 
   const removed = new Array(n).fill(false);
   const order = [];
   while (order.length < n) {
     const free = [];
-    const out = neb ? tramos.reduce((k, t) => k + t.every((j) => removed[j]), 0) : 0;
+    const out = neb ? segments.reduce((k, t) => k + t.every((j) => removed[j]), 0) : 0;
     for (let i = 0; i < n; i++) if (!removed[i] && coveredBy[i].every((j) => removed[j]) && (!neb || neb[i] <= out)) free.push(i);
     const i = pick(r, free);
     removed[i] = true;
@@ -863,10 +863,10 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
   // Mecánicas del nivel: cada una aparece a partir de su mundo y luego se combinan (máximo 2 tipos).
   // Respiro: una sola mecánica como mucho.
   // Agujero negro (10 nov 2026, el usuario: «¿no puede jalar todas?»): sin otras cartas especiales, para que se las trague todas.
-  const mech = new Set(chooseMechanics(r, world, index, boss, n, ev, T).slice(0, hoyo ? 0 : respite ? 1 : T ? T.mechs[0] : 2));
+  const mech = new Set(chooseMechanics(r, world, index, boss, n, ev, T).slice(0, holeOn ? 0 : respite ? 1 : T ? T.mechs[0] : 2));
   // Mesa enrollada y nebulosa sin bombas: su cuenta correría con la carta todavía escondida.
   if (scroll) mech.delete('bomb');
-  const marea = fresh && !secret && !respite && !scroll && mareaKind(base);
+  const tideOn = fresh && !secret && !respite && !scroll && tideKind(base);
 
   // Estreno de la plegable sin otras mecánicas: al principio solo se juega el panel de en medio y ya cuesta más.
   if (debut && scroll === 'plegable') mech.clear();
@@ -978,7 +978,7 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
   // Desde el tercero puede no sobrar ninguna: sigue siendo ganable, pero sin errores (o con ayudas).
   if (ev) spares = Math.max(ev.tight >= 2 ? 0 : 1, spares - ev.tight);
   // Mesa enrollada: la tira es el doble de larga; más sobrantes para que no cueste el doble (nebulosa: la mitad).
-  if (scroll) spares += Math.round(n * (mesa ? SCROLL_SPARE : SCROLL_SPARE / 2));
+  if (scroll) spares += Math.round(n * (tableScroll ? SCROLL_SPARE : SCROLL_SPARE / 2));
   // Plegable: en su estreno, unas cartas de más (al principio solo hay jugadas en el panel de en medio).
   if (debut && fold) spares += 3;
   // En niveles fáciles las sobrantes suelen ser vecinas de alguna carta del tablero.
@@ -1218,7 +1218,7 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
   // tragó antes de jugarla vale lo de la cadena. Las vueltas se repiten (c.ring.length = las que dura la referencia + 1).
   // Sorteo propio.
   let hole = null;
-  if (hoyo) {
+  if (holeOn) {
     const rh = mulberry32(hash(g * 8111 + t * 61 + 29));
     const ok = [];
     for (let k = 0; k < np; k++) if (plain(play[k])) ok.push(k);
@@ -1275,7 +1275,7 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
 
   // Marea: las cartas de la mitad de abajo de cada grupo llevan su franja (1 = la más baja). Se comprueba abajo con
   // la referencia o el solucionador; si no se puede ganar, se quita.
-  if (marea) {
+  if (tideOn) {
     for (const c of cards) {
       if (c.pack || c.bomb || c.comet) continue;
       const p = pos[c.id], rel = (p.y + 0.7) / Math.max(1.4, groups[p.group].h);
@@ -1287,7 +1287,7 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
   // las pilas se agregan al final (ids después de las del tablero; la solución no las toca: cerradas no cuentan).
   // Cada pila es su propio grupo (una columna: cada carta tapa a la de arriba). Sorteo propio.
   let doors = null;
-  if (puertas) {
+  if (doorsOn) {
     const rp = mulberry32(hash(g * 7177 + t * 67 + 31));
     const D = rp() < 0.5 ? 2 : 3, K = D === 2 ? 1 : rp() < 0.5 ? 1 : 2;
     const opts = [];
@@ -1312,10 +1312,10 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
     }
   }
   const level = {
-    g, world, index, d, template, boss, secret, event: !!ev, fresh, ...(respite && { respite }), ...(scroll && { scroll }), ...(marea && cards.some((c) => c.wet) && { tide: 1 }), ...(hole && { hole }), ...(doors && { doors }), ...(belt && { belt }), ...(rocas && { rocks: { n: base === rocasFirst() ? 2 : 2 + (hash(g * 211 + 7) % 2) } }),
+    g, world, index, d, template, boss, secret, event: !!ev, fresh, ...(respite && { respite }), ...(scroll && { scroll }), ...(tideOn && cards.some((c) => c.wet) && { tide: 1 }), ...(hole && { hole }), ...(doors && { doors }), ...(belt && { belt }), ...(rocksOn && { rocks: { n: base === rocksFirst() ? 2 : 2 + (hash(g * 211 + 7) % 2) } }),
     ...(raw.names && { pieces: raw.names }),
-    ...((nebula || fold) && { neb: tramos }),
-    ...(grav && { cols: tramos }),
+    ...((nebula || fold) && { neb: segments }),
+    ...(grav && { cols: segments }),
     // La banda ocupa solo su ventana (BELT_W lugares), acostada o parada.
     groups: [...groups.map(({ w, h }, gi) => (belt?.g === gi ? (belt.dir === 'h' ? { w: BELT_W * 1.08 - 0.08, h: 1.4 } : { w: 1, h: BELT_W * 1.55 - 0.15 }) : { w, h })), ...(doors || []).map((x) => ({ w: W, h: x.h }))],
     cards,
@@ -1498,21 +1498,21 @@ export const specialLevel = (i) => pickLevel(`p${i}`, specialHelp(i), (t) => spe
 // 3 planetas de 3 niveles, todos con tableros especiales: los dos primeros de cada planeta muy difíciles y el jefe extremo
 // (y es tablero de jefe). Usan las mecánicas que ya conoces (grupo según el mundo al empezar). seed cambia con la
 // festividad y el año: cada edición trae otros tableros, y dentro de una no se repiten.
-export const FIESTA_PLANETS = 3;
-export const FIESTA_PER_PLANET = 3;
-export const FIESTA_LEVELS = FIESTA_PLANETS * FIESTA_PER_PLANET;
+export const FESTIVAL_PLANETS = 3;
+export const FESTIVAL_PER_PLANET = 3;
+export const FESTIVAL_LEVELS = FESTIVAL_PLANETS * FESTIVAL_PER_PLANET;
 // Algunas festividades largas traen más (n: niveles por planeta); los que no son jefe muy difíciles y el jefe extremo.
 // Qué tablero especial toca (sin armarlo; el modo dev lo usa para saber qué festividad usa cada uno).
-export function fiestaPick(seed, k, world, n = FIESTA_PER_PLANET) {
+export function festivalPick(seed, k, world, n = FESTIVAL_PER_PLANET) {
   const j = k % n, p = Math.floor(k / n), boss = j === n - 1;
   const pool = specials(boss ? 3 : 2, eventGroup(world)).filter((i) => (i % 4 === 3) === boss);
   // Las de 3×3 siguen como siempre; las más largas cuentan jefes y no jefes por separado para no repetir tablero.
-  const step = n === FIESTA_PER_PLANET ? k : boss ? p : p * (n - 1) + j;
+  const step = n === FESTIVAL_PER_PLANET ? k : boss ? p : p * (n - 1) + j;
   return pool[(hash(seed) + step * 7) % pool.length];
 }
-export function fiestaLevel(seed, k, world, n = FIESTA_PER_PLANET) {
+export function festivalLevel(seed, k, world, n = FESTIVAL_PER_PLANET) {
   const p = Math.floor(k / n), boss = k % n === n - 1;
-  return { ...specialLevel(fiestaPick(seed, k, world, n)), k, planet: p, boss };
+  return { ...specialLevel(festivalPick(seed, k, world, n)), k, planet: p, boss };
 }
 
 // ---------- Mecánicas por mundo ----------
