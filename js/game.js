@@ -553,11 +553,11 @@ export class Game {
     if (!this.done) this.opts.onSave?.(this.snapshot());
   }
 
-  // Teclado (PC): espacio roba, Z deshace, C comodín, Esc sale.
+  // Teclado (PC): espacio roba, Z deshace, Esc sale. El comodín se usa desde el grupo de ayudas (11 nov 2026: sin la C).
   key(e) {
     if (this.done || this.busy || e.repeat || e.metaKey || e.ctrlKey || document.querySelector('.modal-back')) return;
     const k = e.key.toLowerCase();
-    const act = { ' ': () => this.draw(), enter: () => this.draw(), z: () => this.undo(), backspace: () => this.undo(), c: () => this.useWild(), escape: () => this.exit() }[k];
+    const act = { ' ': () => this.draw(), enter: () => this.draw(), z: () => this.undo(), backspace: () => this.undo(), escape: () => this.exit() }[k];
     if (!act) return;
     e.preventDefault();
     act();
@@ -3007,7 +3007,8 @@ export class Game {
   useWild(from) {
     if (this.coach) return;
     if (this.st.top?.wild) return toast('Ya tienes un comodín en juego');
-    if (save.wild <= 0 && !this.opts.dev?.infinite) return save.coins < this.priceOf('wild') ? this.noWayOut('wild') : this.offerBuy('wild');
+    // Sin comodines no se llega aquí: el grupo de ayudas lo compra con un toque (11 nov 2026: ya no hay ventana).
+    if (save.wild <= 0 && !this.opts.dev?.infinite) return;
     if (!this.opts.dev?.infinite) save.wild--;
     persist();
     this.usedWild = true;
@@ -3061,26 +3062,24 @@ export class Game {
     return this.opts.event ? EV_MARKUP : this.opts.meteor && kind !== 'extra' ? -MET_OFF.help : 0;
   }
 
-  // kind: 'wild' (1 comodín), 'undo' (3 deshacer) o 'extra' (+5 cartas al mazo, solo atascado).
+  // kind: 'undo' (3 deshacer) o 'extra' (+5 cartas al mazo, solo atascado). El comodín se compra en el grupo de ayudas.
   offerBuy(kind) {
     const cost = kind === 'extra' ? this.extraCost() : this.priceOf(kind);
-    const n = { wild: 1, undo: 3, extra: 5 }[kind];
+    const n = { undo: 3, extra: 5 }[kind];
     const sale = this.helpRate(kind) < 0;
     this.modalOpen = true;
     // Lo que se compra se ve en grande, flotando con rayos detrás.
     const hero = {
-      wild: '<div class="hero-card wild"></div>',
       undo: `<div class="hero-undo">${[0, 1, 2].map((k) => `<span style="--k:${k}">${icon('undo')}</span>`).join('')}</div>`,
       extra: `<div class="hero-fan">${[0, 1, 2, 3, 4].map((k) => `<i style="--k:${k}"></i>`).join('')}</div>`,
     }[kind];
     const text = {
-      wild: 'El <b>comodín</b> vale cualquier número: úsalo cuando te atores.',
       undo: 'Con <b>deshacer</b> regresas tu última jugada o robo.',
       extra: `Llegan <b>5 cartas</b> a tu mazo. ${this.opts.event ? 'Te pueden salvar el nivel.' : 'Con +5 siempre te llevas al menos 1 estrella.'}`,
     }[kind];
     openModal({
-      title: { wild: '¡Te quedaste sin comodines!', undo: '¡Te quedaste sin deshacer!', extra: '¿Comprar +5 cartas?' }[kind],
-      color: { wild: 'gold', undo: 'green', extra: 'violet' }[kind],
+      title: { undo: '¡Te quedaste sin deshacer!', extra: '¿Comprar +5 cartas?' }[kind],
+      color: { undo: 'green', extra: 'violet' }[kind],
       cls: 'buy-modal',
       body: `<div class="buy-hero"><div class="rays"></div>${hero}<b class="qty outl">${kind === 'extra' ? '+5' : `×${n}`}</b></div>
         <p class="lead">${text}</p>
@@ -3107,7 +3106,7 @@ export class Game {
 
   // Compra con animación: las monedas salen del monedero hacia el botón y luego llega lo comprado, que rebota en su sitio.
   async buyFx(kind, cost, n) {
-    const btn = this.el.querySelector(kind === 'wild' ? '.wild-card' : '.undo-btn');
+    const btn = this.el.querySelector('.undo-btn');
     const r = btn.getBoundingClientRect();
     const to = { x: r.left + r.width / 2, y: r.top + r.height / 2 };
     const counter = btn.querySelector('.badge');
@@ -3119,7 +3118,7 @@ export class Game {
     const one = async (i) => {
       const f = document.createElement('div');
       f.className = 'fly-prize gain';
-      f.innerHTML = icon(kind === 'wild' ? 'wild' : 'undo');
+      f.innerHTML = icon('undo');
       f.style.cssText = `left:${innerWidth / 2}px;top:${innerHeight * 0.42}px`;
       this.el.append(f);
       const dx = to.x - innerWidth / 2, dy = to.y - innerHeight * 0.42;
@@ -3218,11 +3217,10 @@ export class Game {
     const left = this.cards.filter((c) => !c.removed && !this.inDoor(c)).length, have = `(tienes ${save.coins})`;
     const lead = {
       stuck: `Te ${left === 1 ? 'falta 1 carta' : `faltan ${left} cartas`}, pero ya no tienes <b>comodines</b> y para <b>+5 cartas</b> necesitas ${coin()} ${Math.min(this.extraCost(), this.priceOf('wild'))} ${have}.`,
-      wild: `Ya no tienes <b>comodines</b> y uno cuesta ${coin()} ${this.priceOf('wild')} ${have}.`,
       undo: `Ya no tienes <b>deshacer</b> y 3 cuestan ${coin()} ${this.priceOf('undo')} ${have}.`,
     }[kind];
     const m = openModal({
-      title: { stuck: '¡Te quedaste sin ayudas!', wild: '¡Sin comodines ni monedas!', undo: '¡Sin deshacer ni monedas!' }[kind],
+      title: { stuck: '¡Te quedaste sin ayudas!', undo: '¡Sin deshacer ni monedas!' }[kind],
       color: 'violet',
       cls: 'ev-intro broke-modal',
       body: `<div class="evi-hero"><div class="rays"></div><span class="evi-ico">${icon(kind === 'undo' ? 'undo' : 'wild', 0, 0, 'big')}</span></div>
@@ -3243,7 +3241,7 @@ export class Game {
   }
 
   // Comprar +5 cartas tocando la carta +5 (solo si estás atascado y te alcanza).
-  // Tocar el hueco +5 del mazo: abre la ventana de compra (como comodín y deshacer).
+  // Tocar el hueco +5 del mazo: abre la ventana de compra (como deshacer).
   buyExtra() {
     if (this.done || this.busy || this.modalOpen) return;
     if (this.broke() && this.isStuck()) return this.noWayOut();

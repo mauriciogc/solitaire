@@ -456,10 +456,10 @@ export const MAREA_FROM = 340; // antes 239 (ver SCROLL_FROM)
 // Estreno: el primero desde MAREA_FROM que no es otra mesa, duro ni respiro.
 let mareaDebut = null;
 export const mareaFirst = () => {
-  if (mareaDebut == null) for (mareaDebut = MAREA_FROM; scrollKind(mareaDebut) || hardHelp(mareaDebut) || isRespite(mareaDebut); mareaDebut++);
+  if (mareaDebut == null) for (mareaDebut = MAREA_FROM; cardDebut(mareaDebut) || scrollKind(mareaDebut) || hardHelp(mareaDebut) || isRespite(mareaDebut); mareaDebut++);
   return mareaDebut;
 };
-export const mareaKind = (g) => g === mareaFirst() || (g > mareaFirst() && !((hash(g * 3571 + 61) >>> 5) % 10));
+export const mareaKind = (g) => !cardDebut(g) && (g === mareaFirst() || (g > mareaFirst() && !((hash(g * 3571 + 61) >>> 5) % 10)));
 // Agujero negro (8 nov 2026): mesa sobre un tablero normal, como la marea (nunca juntas). Atrapa casi todo un grupo
 // (9 nov 2026; antes 3-4 cartas marcadas) y cada HOLE_EVERY jugadas o robos les revuelve los números (ver rankOf en engine.js). Desde HOYO_FROM + 1 (a más de
 // 10 niveles de la carta moneda), se intenta en ~1 de cada 5 normales del camino sin otra mesa, respiro ni ayudas
@@ -467,7 +467,7 @@ export const mareaKind = (g) => g === mareaFirst() || (g > mareaFirst() && !((ha
 export const HOYO_FROM = 373;
 let hoyoDebut = null;
 export const hoyoFirst = () => {
-  if (hoyoDebut == null) for (hoyoDebut = HOYO_FROM; scrollKind(hoyoDebut) || hardHelp(hoyoDebut) || isRespite(hoyoDebut) || mareaKind(hoyoDebut); hoyoDebut++);
+  if (hoyoDebut == null) for (hoyoDebut = HOYO_FROM; cardDebut(hoyoDebut) || scrollKind(hoyoDebut) || hardHelp(hoyoDebut) || isRespite(hoyoDebut) || mareaKind(hoyoDebut); hoyoDebut++);
   return hoyoDebut;
 };
 // Puertas (9 nov 2026, rehechas a pedido del usuario): un tablero normal y, a la orilla, 2 o 3 puertas chicas con una
@@ -477,30 +477,30 @@ export const hoyoFirst = () => {
 export const PUERTAS_FROM = 404;
 let puertasDebut = null;
 export const puertasFirst = () => {
-  if (puertasDebut == null) for (puertasDebut = PUERTAS_FROM; scrollKind(puertasDebut) || hardHelp(puertasDebut) || isRespite(puertasDebut) || mareaKind(puertasDebut) || hoyoKind(puertasDebut); puertasDebut++);
+  if (puertasDebut == null) for (puertasDebut = PUERTAS_FROM; cardDebut(puertasDebut) || scrollKind(puertasDebut) || hardHelp(puertasDebut) || isRespite(puertasDebut) || mareaKind(puertasDebut) || hoyoKind(puertasDebut); puertasDebut++);
   return puertasDebut;
 };
-export const puertasKind = (g) => !mareaKind(g) && !hoyoKind(g) && (g === puertasFirst() || (g > puertasFirst() && !((hash(g * 6151 + 113) >>> 4) % 10)));
+export const puertasKind = (g) => !cardDebut(g) && !mareaKind(g) && !hoyoKind(g) && (g === puertasFirst() || (g > puertasFirst() && !((hash(g * 6151 + 113) >>> 4) % 10)));
 // Banda transportadora (8 nov 2026): una fila de cartas da vueltas dentro de una máquina; solo se ven BELT_W a la vez
 // y avanza un lugar con cada jugada o robo (ver beltShown en engine.js). Va junto a un tablero normal.
 export const BANDA_FROM = 455;
 let bandaDebut = null;
 export const bandaFirst = () => {
-  if (bandaDebut == null) for (bandaDebut = BANDA_FROM; scrollKind(bandaDebut) || hardHelp(bandaDebut) || isRespite(bandaDebut) || mareaKind(bandaDebut) || hoyoKind(bandaDebut) || puertasKind(bandaDebut); bandaDebut++);
+  if (bandaDebut == null) for (bandaDebut = BANDA_FROM; cardDebut(bandaDebut) || scrollKind(bandaDebut) || hardHelp(bandaDebut) || isRespite(bandaDebut) || mareaKind(bandaDebut) || hoyoKind(bandaDebut) || puertasKind(bandaDebut); bandaDebut++);
   return bandaDebut;
 };
-export const bandaKind = (g) => !mareaKind(g) && !hoyoKind(g) && !puertasKind(g) && (g === bandaFirst() || (g > bandaFirst() && !((hash(g * 2477 + 71) >>> 5) % 6)));
+export const bandaKind = (g) => !cardDebut(g) && !mareaKind(g) && !hoyoKind(g) && !puertasKind(g) && (g === bandaFirst() || (g > bandaFirst() && !((hash(g * 2477 + 71) >>> 5) % 6)));
 // Cinturón de asteroides (10 nov 2026, pedido del usuario): mesa sobre un tablero normal, nunca con otra. Cada
 // ROCK_EVERY robos caen 2 o 3 piedras que tapan cartas libres por unas jugadas (ver dropRocks en engine.js). Desde
 // ROCAS_FROM, ~1 de cada 6 normales que no traen otra mesa.
 export const ROCAS_FROM = 505;
 let rocasDebut = null;
 export const rocasFirst = () => {
-  if (rocasDebut == null) for (rocasDebut = ROCAS_FROM; scrollKind(rocasDebut) || hardHelp(rocasDebut) || isRespite(rocasDebut) || mareaKind(rocasDebut) || hoyoKind(rocasDebut) || puertasKind(rocasDebut) || bandaKind(rocasDebut); rocasDebut++);
+  if (rocasDebut == null) for (rocasDebut = ROCAS_FROM; cardDebut(rocasDebut) || scrollKind(rocasDebut) || hardHelp(rocasDebut) || isRespite(rocasDebut) || mareaKind(rocasDebut) || hoyoKind(rocasDebut) || puertasKind(rocasDebut) || bandaKind(rocasDebut); rocasDebut++);
   return rocasDebut;
 };
-export const rocasKind = (g) => !mareaKind(g) && !hoyoKind(g) && !puertasKind(g) && !bandaKind(g) && (g === rocasFirst() || (g > rocasFirst() && !((hash(g * 5303 + 89) >>> 5) % 6)));
-export const hoyoKind = (g) => !mareaKind(g) && (g === hoyoFirst() || (g > hoyoFirst() && !((hash(g * 4241 + 97) >>> 6) % 5)));
+export const rocasKind = (g) => !cardDebut(g) && !mareaKind(g) && !hoyoKind(g) && !puertasKind(g) && !bandaKind(g) && (g === rocasFirst() || (g > rocasFirst() && !((hash(g * 5303 + 89) >>> 5) % 6)));
+export const hoyoKind = (g) => !cardDebut(g) && !mareaKind(g) && (g === hoyoFirst() || (g > hoyoFirst() && !((hash(g * 4241 + 97) >>> 6) % 5)));
 export const GRAV_SHOWN = 2; // cartas boca arriba en cada columna
 export const HOLE_MAX = 99; // cartas que atrapa el agujero negro, como mucho (10 nov 2026: todas; antes 12)
 export const HOLE_TAKE = 1; // parte que se traga y revuelve en cada vuelta (10 nov 2026: todas; antes 0.4)
@@ -509,8 +509,12 @@ export const NEB_SLOTS = 3;
 export const SCROLL_VIEW = 8.2, SCROLL_GAP = 0.45, SCROLL_SHOW = 0.5;
 const SCROLL_SPARE = 0.2; // sobrantes extra por carta del tablero
 const SCROLL_PIECES = ['miniPyramid', 'miniInv', 'twoRows', 'twoRows', 'sandwich', 'crown', 'steps', 'stack', 'fan', 'tiltFan', 'arc', 'cross', 'rosette'];
+// Estreno de una carta (el primer nivel de su mundo; el cometa y el cohete ya buscan uno sin mesa en extraDebut): sin
+// ninguna mesa, para que se vea sola lo que anuncia el camino (11 nov 2026: la nave salía en una plegable y el fantasma
+// no salía, porque el agujero negro quita las demás cartas).
+const cardDebut = (g) => g % LEVELS_PER_WORLD === 0 && MECHANICS.some((m) => !EXTRA.includes(m) && MECH_INTRO[m] * LEVELS_PER_WORLD === g);
 export function scrollKind(g) {
-  if (g >= TOTAL_LEVELS) return null;
+  if (g >= TOTAL_LEVELS || cardDebut(g)) return null;
   // Cada una se presenta justo en su nivel de inicio; después sale al azar.
   for (const k in SCROLL_FROM) if (g === SCROLL_FROM[k]) return k;
   if (g >= SCROLL_FROM.mesa && !(hash(g * 31 + 7) % 12)) return 'mesa';
@@ -592,7 +596,8 @@ export function scrollSpan(c, at) {
 
 export function isRespite(g) {
   const w = Math.floor(g / LEVELS_PER_WORLD), i = g % LEVELS_PER_WORLD;
-  if (g < LEVELS_PER_WORLD || i === LEVELS_PER_WORLD - 1) return false;
+  // El estreno de una mesa no es respiro (ya va amable): si no, el camino la anuncia y no sale (plegable en el 209).
+  if (g < LEVELS_PER_WORLD || i === LEVELS_PER_WORLD - 1 || Object.values(SCROLL_FROM).includes(g)) return false;
   const h = hash(w * 7919 + 17);
   const a = 1 + (h % 8), b = 1 + ((h >>> 8) % 8);
   return i === a || (h >>> 16) % 3 === 0 && i === b;

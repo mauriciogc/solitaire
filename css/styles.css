@@ -1139,7 +1139,7 @@ html.dev-on .galaxy .res .me { display: none; }
 
 /* ---------- Menos movimiento ---------- */
 @media (prefers-reduced-motion: reduce) {
-  .hero-card, .hero-undo span, .hero-fan i, .g-ring, .card.shake, .undo-btn.nudge, .streak.pop, .confetti, .day.today, .iconbtn.ready, .road-btn.nuevo, .racha-btn.hot, .racha-pill.hot, .fire, .rg.ready > i, .rclaim, .rw-ico, .combo i.next, .combo.near .prize, .combo.hot, .turbo-chip, .comet-hot .ico, .combo .need, .rh-ico .ico, .dticket span, .logo-bands, .big-stars .ico, .rays, .gbox, .loot-it { animation: none !important; }
+  .hero-undo span, .hero-fan i, .g-ring, .card.shake, .undo-btn.nudge, .streak.pop, .confetti, .day.today, .iconbtn.ready, .road-btn.nuevo, .racha-btn.hot, .racha-pill.hot, .fire, .rg.ready > i, .rclaim, .rw-ico, .combo i.next, .combo.near .prize, .combo.hot, .turbo-chip, .comet-hot .ico, .combo .need, .rh-ico .ico, .dticket span, .logo-bands, .big-stars .ico, .rays, .gbox, .loot-it { animation: none !important; }
   .card .inner, .stock .card { transition-duration: 0.01ms !important; }
 }
 
@@ -1182,11 +1182,10 @@ html.dev-on .galaxy .res .me { display: none; }
 /* Mientras dura el recorrido, lo demás del mapa no se toca. */
 .touring .side, .touring .cta, .touring .out-btn, .touring .me { opacity: .3; pointer-events: none; }
 
-/* Comprar comodín o deshacer: lo que compras, en grande. */
+/* Comprar deshacer o +5: lo que compras, en grande. */
 .buy-hero { position: relative; height: 150px; display: grid; place-items: center; margin: 2px 0 6px; }
 .buy-hero .rays { width: 220px; height: 220px; z-index: 0; }
 .buy-hero > :not(.rays) { position: relative; z-index: 1; }
-.hero-card { position: relative; width: 82px; height: 115px; border-radius: 12px; background: var(--back-wild) center / 100% 100%; box-shadow: 3px 6px 0 #0b062a33, 0 0 30px #ffc83d99; animation: hero-float 2.4s ease-in-out infinite; }
 @keyframes hero-float { 0%, 100% { translate: 0 0; rotate: -6deg; } 50% { translate: 0 -8px; rotate: 6deg; } }
 .hero-undo { position: relative; width: 150px; height: 90px; }
 .hero-undo span { position: absolute; left: calc(var(--k) * 44px); top: calc(var(--k) * 8px - 4px); width: 62px; height: 62px; border-radius: 20px; display: grid; place-items: center; background: var(--cream); border: 3px solid var(--ink); box-shadow: inset 0 -5px 0 var(--cream-d), 0 3px 0 var(--ink); rotate: calc(var(--k) * 10deg - 10deg); animation: hero-float 2.4s ease-in-out infinite; animation-delay: calc(var(--k) * -0.4s); }
@@ -1734,7 +1733,6 @@ html:not(.dev-on) .dev-pill { display: none; }
   .dticket b { right: calc(50% - 62px); bottom: 4px; font-size: 28px; }
   .tk-clock { font-size: 28px; margin-bottom: 2px; }
   .buy-hero { height: 96px; margin: 0 0 2px; }
-  .buy-hero .hero-card { width: 56px; height: 78px; }
   .buy-hero .hero-undo { zoom: .68; }
   .buy-hero .hero-fan { zoom: .7; }
   .buy-hero .qty { right: calc(50% - 72px); bottom: 2px; font-size: 26px; }
@@ -2260,14 +2258,12 @@ html:not(.dev-on) .dev-pill { display: none; }
 .x2 { display: inline-block; margin-left: 4px; padding: 0 6px 1px; border-radius: 99px; background: linear-gradient(#ff8a3d, #ff5f2e); border: 2px solid var(--ink); color: #fff; font: 400 13px/1.2 'Lilita One'; font-style: normal; text-shadow: 0 1px 0 #b5401c; animation: met-x2 1.4s ease-in-out infinite; }
 .met-pill .met-clock { position: absolute; bottom: -15px; left: 50%; translate: -50% 0; padding: 0 7px 1px; border-radius: 99px; background: #2a1f66; color: #ffd85a; font: 400 11px/1.3 'Lilita One'; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .met-pill .met-clock:empty { display: none; }
-.met-sale { display: flex; align-items: center; justify-content: center; gap: 6px; width: fit-content; margin: 6px auto; padding: 3px 12px 4px 6px; border-radius: 99px; background: linear-gradient(#ff8a3d, #ff5f2e); border: 2px solid var(--ink); color: #fff; font: 400 15px/1.2 'Lilita One'; text-shadow: 0 1px 0 #b5401c; box-shadow: 0 0 12px 2px #ff8a3d88; animation: met-sale 1.4s ease-in-out infinite; }
-@keyframes met-sale { 0%, 100% { scale: 1; } 50% { scale: 1.05; } }
+/* Aviso de descuento por la lluvia de meteoritos (tienda y compra de ayudas). 11 nov 2026: todos iguales a la de la
+   tienda, que no debe parecer botón: cinta clarita sin contorno, sombra ni latido (como la de "Cuesta…"). p.met-sale:
+   .mbody p le quitaba el margin auto. */
+p.met-sale { display: flex; align-items: center; justify-content: center; gap: 6px; width: fit-content; margin: 10px auto 0; padding: 3px 14px 4px 8px; border-radius: 99px; background: #ffe2cc; color: #d6451f; font: 400 15px/1.2 'Lilita One'; }
 .met-sale .ico { width: 22px; height: 22px; }
-.met-sale b { color: #ffe066; font-weight: 400; }
-/* 9 nov 2026: en la tienda no debe parecer botón: cinta clarita sin contorno, sombra ni latido (como la de "Cuesta…"),
-   centrada (.mbody p le quitaba el margin auto). */
-.shead p.met-sale { margin: 10px auto 0; padding: 3px 14px 4px 8px; background: #ffe2cc; border: 0; box-shadow: none; color: #d6451f; text-shadow: none; animation: none; }
-.shead p.met-sale b { color: #d6451f; }
+.met-sale b { color: #d6451f; font-weight: 400; }
 .s-price s, .modal button s { opacity: 0.55; font-size: 0.8em; margin-right: 3px; text-decoration-thickness: 2px; }
 .loot-bub .x2 { position: absolute; top: -4px; right: -6px; margin: 0; }
 @keyframes met-x2 { 0%, 100% { scale: 1; } 50% { scale: 1.15; } }
