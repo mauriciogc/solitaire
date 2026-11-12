@@ -1062,6 +1062,75 @@ const MODELS = {
       });
     } };
   },
+  // Pasaporte volador (sello 9 del pasaporte, 12 nov 2026): la libreta azul con el círculo dorado que vuela aleteando
+  // con sus tapas; de vez en cuando se abre del todo y salen tres sellitos de colores que giran y regresan.
+  pasaporte(part) {
+    const g = new THREE.Group(), book = new THREE.Group();
+    // Lomo y hojas.
+    book.add(part(new THREE.BoxGeometry(0.05, 0.42, 0.06), '#2a3a9a', { ol: 0.08 }));
+    const pages = part(new THREE.BoxGeometry(0.02, 0.38, 0.3), '#fffaf0', { y: 0, z: 0, ol: 0.05 });
+    book.add(pages);
+    // Cada tapa gira desde el lomo (como alas).
+    const covers = [-1, 1].map((sd) => {
+      const pivot = new THREE.Group();
+      const c = part(new THREE.BoxGeometry(0.3, 0.42, 0.025), '#3a4fc0', { x: 0.15, ol: 0.06 });
+      if (sd > 0) {
+        c.add(part(new THREE.TorusGeometry(0.06, 0.012, 8, 24), '#ffc83d', { z: 0.016, y: 0.04, ol: 0 }));
+        c.add(part(new THREE.BoxGeometry(0.12, 0.016, 0.006), '#ffc83d', { z: 0.016, y: -0.09, ol: 0 }));
+      }
+      pivot.add(c); pivot.rotation.y = sd > 0 ? -Math.PI / 2 : Math.PI / 2; book.add(pivot);
+      return [pivot, sd];
+    });
+    const stamps = ['#4aa8de', '#2fae6a', '#ff8a3d'].map((c) => {
+      const m = part(new THREE.CylinderGeometry(0.06, 0.06, 0.015, 18).rotateX(Math.PI / 2), c, { ol: 0.15 });
+      m.add(part(new THREE.TorusGeometry(0.068, 0.006, 6, 20), '#fffaf0', { ol: 0 }));
+      m.visible = false; book.add(m); return m;
+    });
+    book.rotation.set(0.35, 0.4, 0.12);
+    g.add(book);
+    return { obj: g, tick: (t) => {
+      book.position.y = Math.sin(t * 2.2) * 0.05;
+      // Ciclo de 5 s: aletea, se abre del todo (sellos) y vuelve a aletear.
+      const c = (t % 5) / 5, open = c < 0.5 ? 0 : c < 0.6 ? (c - 0.5) / 0.1 : c < 0.85 ? 1 : c < 0.95 ? 1 - (c - 0.85) / 0.1 : 0;
+      const flap = Math.sin(t * 7) * 0.45 * (1 - open);
+      covers.forEach(([p, sd]) => (p.rotation.y = sd * (-Math.PI / 2 + 0.35 + flap + open * 1.2)));
+      stamps.forEach((m, k) => {
+        const q = (c - 0.6 - k * 0.04) / 0.24;
+        m.visible = q > 0 && q < 1;
+        if (!m.visible) return;
+        m.position.set(0.12, 0.05 + Math.sin(q * Math.PI) * 0.4, (k - 1) * 0.13);
+        m.rotation.y = t * 6 + k;
+      });
+    } };
+  },
+  // Estrella guardiana (premio de 250 niveles secretos, 12 nov 2026): la estrella morada de los secretos, gorda y con
+  // su corazón dorado que late, gira despacio; tres estrellitas le dan vueltas en órbitas inclinadas.
+  estrellasecreta(part, toon) {
+    const g = new THREE.Group(), all = new THREE.Group();
+    const star = (R, r, d) => {
+      const sh = new THREE.Shape();
+      for (let i = 0; i < 10; i++) { const a = Math.PI / 2 + (i * Math.PI) / 5, q = i % 2 ? r : R; sh[i ? 'lineTo' : 'moveTo'](Math.cos(a) * q, Math.sin(a) * q); }
+      return new THREE.ExtrudeGeometry(sh, { depth: d, bevelEnabled: true, bevelThickness: d * 0.5, bevelSize: d * 0.4, bevelSegments: 2 }).translate(0, 0, -d / 2);
+    };
+    const big = part(star(0.3, 0.14, 0.1), '#a785ff', { ol: 0.07 });
+    const coreMat = toon({ color: '#ffd23d', emissive: '#ffb02e', emissiveIntensity: 0.4 });
+    const core = part(star(0.12, 0.055, 0.06), null, { z: 0.06, ol: 0.12, mat: coreMat });
+    big.add(core);
+    for (const x of [-0.06, 0.06]) big.add(part(new THREE.SphereGeometry(0.022, 10, 8), INK, { x, y: 0.03, z: 0.1, ol: 0 }));
+    all.add(big);
+    const orbits = [0, 1, 2].map((k) => {
+      const o = new THREE.Group(); o.rotation.set(0.5 + k * 0.5, k * 1.1, 0.3 * k);
+      const m = part(star(0.05, 0.022, 0.02), '#fff6b0', { ol: 0.15 }); o.add(m); all.add(o);
+      return [o, m, k];
+    });
+    g.add(all);
+    return { obj: g, tick: (t) => {
+      all.position.y = Math.sin(t * 1.8) * 0.05;
+      big.rotation.y = Math.sin(t * 0.9) * 0.6;
+      core.scale.setScalar(1 + Math.sin(t * 4) * 0.08);
+      orbits.forEach(([o, m, k]) => { const a = t * (1.4 + k * 0.3) + k * 2; m.position.set(Math.cos(a) * 0.42, 0, Math.sin(a) * 0.42); m.rotation.z = t * 3; });
+    } };
+  },
   // Meteoro (exclusivo de la lluvia de meteoritos): piedra morada con cráteres que gira despacio, con su cola de fuego
   // que titila hacia arriba a la derecha (cae como el icono) y chispas que se quedan atrás.
   meteoro(part) {

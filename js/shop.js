@@ -121,6 +121,7 @@ export const ITEMS = {
     // Exclusivos de la lluvia de meteoritos (met): muy rara vez, por ganar con 3★ mientras cae (ver meteor.js).
     { k: 'meteorin', name: 'Meteorín', text: 'Piedrita espacial con pelo de fuego', ev: 'meteoro', met: 1 },
     { k: 'custodio', name: 'Guardián secreto', text: 'Cuida la estrella de los niveles secretos', ev: 'secretos', secreto: 1 },
+    { k: 'viajerogalactico', name: 'Explorador galáctico/Exploradora galáctica', text: 'Lleva su pasaporte a todos los planetas', ev: 'pasaporte', pase: 1 },
   ],
   ring: [
     { k: 'sencillo', name: 'Sencillo', price: 0 },
@@ -472,6 +473,8 @@ const ONE_NAME = {
 };
 // Avatares de las festividades nuevas: su nombre ya viene en festival-art.js (con «/» si cambia para niña).
 for (const it of ITEMS.avatar) if (FIESTAS.some((f) => f.grp && f.key === it.ev)) ONE_NAME[it.k] = it.name;
+// El del pasaporte cambia con niño / niña (12 nov 2026).
+ONE_NAME.viajerogalactico = 'Explorador galáctico/Exploradora galáctica';
 for (const it of ITEMS.avatar) {
   const n = ONE_NAME[it.k];
   if (!n) continue;

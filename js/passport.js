@@ -22,21 +22,21 @@ export const PASS_FRAMES = [
   ['pase5', 'Sello leyenda', '#fff6d6', '#e89a17', 'crown', 'trophy'],
 ];
 // Exclusivos del sello 6 al 11 (los 5 primeros son los marcos de postal): título, fondo, reverso, viajero 3D, disfraz
-// 3D y marco de avatar. null = todavía sin dibujar (ese sello da solo monedas).
-export const PASS_EXTRA = [['title', 'trotamundos'], ['space', 'pasaporte'], ['back', 'pasaporte'], null, null, ['ring', 'sellos']];
+// 3D y marco de avatar.
+export const PASS_EXTRA = [['title', 'trotamundos'], ['space', 'pasaporte'], ['back', 'pasaporte'], ['traveler', 'pasaporte'], ['avatar', 'viajerogalactico'], ['ring', 'sellos']];
 // Sello n (desde 1): monedas 1,000, 1,500, 2,000… con tope de 6,000 y su exclusivo si hay.
 export const passPrize = (n) => {
   const item = PASS_FRAMES[n - 1] ? ['frame', PASS_FRAMES[n - 1][0]] : PASS_EXTRA[n - 1 - PASS_FRAMES.length];
   return { coins: Math.min(6000, 500 + 500 * n), ...(item && { item }) };
 };
-// Premio de secretos m (desde 1): 10, 50, 100… 500 secretos. Del 6.º al 8.º, sus exclusivos cuando se dibujen.
+// Premio de secretos m (desde 1): 10, 50, 100… 500 secretos; los 8 primeros con su exclusivo.
 export const SECRET_PRIZES = [
   { coins: 2000, item: ['title', 'cazasecretos'] },
   { coins: 3000, item: ['frame', 'secreto'] },
   { coins: 4000, item: ['space', 'secreto'] },
   { coins: 5000, item: ['back', 'secreto'] },
   { coins: 8000, item: ['avatar', 'custodio'] },
-  { coins: 6000 }, // + viajero 3D (por dibujar)
+  { coins: 6000, item: ['traveler', 'estrellasecreta'] },
   { coins: 6500, item: ['ring', 'secreto'] },
   { coins: 7000, item: ['face', 'secreto'] },
   { coins: 7500 },
@@ -82,6 +82,7 @@ export const passItems = () => ({
   title: [{ k: 'cazasecretos', name: 'Cazador de secretos', ev: 'secretos', secreto: 1 }, { k: 'trotamundos', name: 'Trotamundos', ev: 'pasaporte', pase: 1 }],
   space: [{ k: 'secreto', name: 'Cielo secreto', ev: 'secretos', secreto: 1 }, { k: 'pasaporte', name: 'Ruta del pasaporte', ev: 'pasaporte', pase: 1 }],
   back: [{ k: 'secreto', name: 'Estrella secreta', ev: 'secretos', secreto: 1 }, { k: 'pasaporte', name: 'Pasaporte galáctico', ev: 'pasaporte', pase: 1 }],
+  traveler: [{ k: 'pasaporte', name: 'Pasaporte volador', ev: 'pasaporte', pase: 1 }, { k: 'estrellasecreta', name: 'Estrella guardiana', ev: 'secretos', secreto: 1 }],
   ring: [{ k: 'sellos', name: 'Ruta de sellos', ev: 'pasaporte', pase: 1 }, { k: 'secreto', name: 'Constelación secreta', ev: 'secretos', secreto: 1 }],
   face: [{ k: 'secreto', name: 'Bóveda de estrellas', ev: 'secretos', secreto: 1 }],
 });

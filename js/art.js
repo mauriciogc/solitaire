@@ -724,7 +724,7 @@ export const AVATARS = Object.fromEntries([
   'perrito', 'tortuga', 'abeja', 'dragoncito', 'fantasma', 'estrella', 'cangrejo', 'topo', 'ardilla', 'osito', 'triceratops', 'robodog',
   'tamalito', 'taquito', 'arbolito', 'pinatita', 'clavelito', 'bigoton', 'atigrado', 'dalmata', 'audifonos', 'bichito', 'bufoncito', 'uvita',
   'pulpopintor', 'ranita', 'mapache', 'chaneque', 'xologuia', 'lloronita', 'catrinita', 'revolucionario', 'xolo', 'reno', 'reymago', 'cupido',
-  'catarina', 'foca', 'chihuahua', 'gatobruja', 'custodio', 'meteorin', 'loro', 'sirena', 'vampiro',
+  'catarina', 'foca', 'chihuahua', 'gatobruja', 'custodio', 'viajerogalactico', 'meteorin', 'loro', 'sirena', 'vampiro',
 ].map((k) => [k, 1]));
 const initial = (p) => ((p.name || '?').trim().charAt(0).toUpperCase() || '?').replace(/[&<>"']/g, '');
 const avColor = (p) => AVATAR_COLORS[(p.avatar || 0) % AVATAR_COLORS.length];
