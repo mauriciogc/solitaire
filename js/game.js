@@ -13,6 +13,9 @@ const SUITS = ['s', 'h', 'd', 'c'];
 export const RANKS = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
 const LOCK_HUES = [350, 45, 200]; // color de cada pareja candado/llave
 const FLY_MS = 400;
+// Banda (12 nov 2026, el usuario: que crezca): paso entre cartas (acostada, parada) con poco aire y lo que miden las
+// cajas de cada punta (en CSS 0.46 carta, a 0.5 de la orilla). Antes 1.08/1.55 y cajas de 0.62 a 0.66.
+const BELT_STEP = { h: 1.06, v: 1.46 }, BELT_M = 0.54;
 const FLY_EASE = 'cubic-bezier(0.33, 0.6, 0.35, 1)';
 // Explicación de cada carta especial (11 nov 2026, homologadas a pedido del usuario: simples y por grupos). Es el
 // mismo texto en su ventana al aparecer, en Tu camino y en Cómo jugar. Cada una: qué hace y, si hace falta, cuándo.
@@ -131,7 +134,6 @@ export const TABLE_TEXT = {
   mesa: ['Esta mesa llega <b>enrollada</b>.', 'Limpia las primeras cartas y la mesa avanza: salen más del rollo.'],
   gravedad: ['Las cartas van en <b>columnas</b>.', 'Solo juegas la de <b>abajo</b>; al quitarla, la columna cae.'],
   nebulosa: ['Solo ves <b>3 grupos</b> de cartas.', 'Vacía <b>cualquiera</b> y de la nebulosa sale otro.'],
-  plegable: ['Esta mesa llega <b>doblada</b>.', 'Limpia el panel de <b>en medio</b> y se desdobla: salen más cartas a los lados.'],
   marea: ['Aquí sube la <b>marea</b>.', 'Cada <b>3 robos</b> sube y tapa las cartas de abajo; cada <b>3 jugadas</b> baja. Bajo el agua no se juegan.'],
   puertas: ['Detrás de cada <b>puerta</b> hay cartas.', 'Juega una <b>carta llave</b> y escoge qué puerta abrir: sus cartas salen al tablero.'],
   banda: ['Estas cartas dan vueltas en una <b>banda</b>.', 'Solo ves <b>4</b> a la vez y avanza con cada jugada o robo. ¡Atrápalas cuando pasen!'],
@@ -140,7 +142,7 @@ export const TABLE_TEXT = {
   nave: ['Por aquí pasa una <b>nave ladrona</b>.', 'Cada pocos robos se lleva una carta de tu <b>mazo</b>. Con racha de 4 te regresa la última.'],
   rocas: ['Por aquí pasa un <b>cinturón de asteroides</b>.', 'Cada <b>4 robos</b> caen piedras que tapan cartas <b>3 turnos</b>.'],
 };
-const TABLE_NAME = { nave: 'Nave ladrona', mesa: 'Mesa enrollada', gravedad: 'Gravedad', nebulosa: 'Nebulosa', plegable: 'Mesa plegable', marea: 'Marea', puertas: 'Puertas', banda: 'Banda transportadora', hoyo: 'Agujero negro', rocas: 'Asteroides' };
+const TABLE_NAME = { nave: 'Nave ladrona', mesa: 'Mesa enrollada', gravedad: 'Gravedad', nebulosa: 'Nebulosa', marea: 'Marea', puertas: 'Puertas', banda: 'Banda transportadora', hoyo: 'Agujero negro', rocas: 'Asteroides' };
 const TABLE_HELP = { rocas: helpTip('hlaser', '<b>Láser:</b> rompe todas las piedras.', true), nave: helpTip('hescudo', '<b>Escudo:</b> la nave ya no te roba en todo el nivel.', true) };
 // Ventana con el formato de las cartas (11 nov 2026): dibujo a la izquierda y, al lado, su nombre y su texto.
 const tipCard = (pic, name, text, cls = '') => `<div class="tip-card"><span class="tip-pic${cls}">${pic}</span><p><b>${name}</b>${text}</p></div>`;
@@ -327,21 +329,6 @@ export class Game {
         onClose: () => {
           this.modalOpen = false;
           if (!reduced()) for (const c of this.cards) if (c.el && c.gPos?.k === 0) c.el.animate([{ translate: '0 0' }, { translate: `0 ${-this.u * 0.25}px` }, { translate: '0 0' }], { duration: 420, easing: 'ease-in-out', iterations: 2 });
-          setTimeout(() => this.tips(), 300);
-        },
-        buttons: [{ label: '¡Entendido!', cls: 'green' }],
-      });
-    }
-    if (this.level.scroll === 'plegable' && !save.seen.plegable) {
-      save.seen.plegable = true;
-      persist();
-      this.modalOpen = true;
-      return openModal({
-        ...TABLE_INTRO.plegable,
-        closable: false,
-        onClose: () => {
-          this.modalOpen = false;
-          if (!reduced()) this.foldMid?.animate([{ scale: 1 }, { scale: 1.06 }, { scale: 1 }], { duration: 450, iterations: 2 });
           setTimeout(() => this.tips(), 300);
         },
         buttons: [{ label: '¡Entendido!', cls: 'green' }],
@@ -562,6 +549,16 @@ export class Game {
     act();
   }
 
+  // Número del nivel (12 nov 2026, el usuario: para identificarlos): dentro de la barra de racha, a su izquierda y
+  // separado con una rayita (así es una sola pieza centrada). El del camino es el mismo que se escribe en «Ir al
+  // tablero»; los del evento no llevan.
+  levelTag() {
+    const L = this.level;
+    if (L.event) return '';
+    const [t, n] = L.secret ? ['Secreto', L.world + 1] : ['Nivel', L.g + 1];
+    return `<span class="lvl-tag" aria-label="${t} ${n}"><small>${t}</small><b>${n.toLocaleString('es-MX')}</b></span>`;
+  }
+
   build() {
     const { level, info } = this;
     const el = document.createElement('div');
@@ -601,16 +598,6 @@ export class Game {
       el.classList.add('scroll-neb');
       this.boardEl.insertAdjacentHTML('afterbegin', `<div class="nebula"><div class="neb-in"><i></i><i></i><i></i></div></div>`);
       this.nebEl = this.boardEl.querySelector('.nebula');
-    }
-    // Plegable: tres tapetes del color de la mesa. Los de los lados son capas propias (sus cartas van adentro) para
-    // girar sobre la bisagra; empiezan doblados debajo del de en medio.
-    if (level.scroll === 'plegable') {
-      el.classList.add('scroll-fold');
-      const st = el.querySelector('.table').getAttribute('style');
-      this.boardEl.insertAdjacentHTML('afterbegin', `<div class="fold-panel side" data-g="1" style="${st}"></div><div class="fold-panel side" data-g="2" style="${st}"></div><div class="fold-panel mid" style="${st}"></div>${'<i class="fold-hinge"></i>'.repeat(4)}`);
-      this.foldEls = { 1: this.boardEl.querySelector('[data-g="1"]'), 2: this.boardEl.querySelector('[data-g="2"]') };
-      this.foldMid = this.boardEl.querySelector('.fold-panel.mid');
-      this.hingeEls = [...this.boardEl.querySelectorAll('.fold-hinge')];
     }
     // Gravedad: cada columna en su riel, sobre la mesa del planeta.
     if (level.scroll === 'gravedad') {
@@ -653,8 +640,6 @@ export class Game {
     const live = this.cards.filter((c) => c.el && !c.bomb && !c.comet && !c.nebPos?.hid && !this.inDoor(c));
     if (reduced() || !live.length) return Promise.resolve();
     if (this.level.scroll === 'mesa') return this.unroll(live);
-    // Plegable: las de los lados no se reparten (esperan dobladas).
-    if (this.foldEls) live.splice(0, live.length, ...live.filter((c) => !c.group));
     if (this.nebEl) this.nebEl.animate([{ scale: 0, opacity: 0, rotate: '-180deg' }, { scale: 1, opacity: 1, rotate: '0deg' }], { duration: 900, delay: 500, easing: 'cubic-bezier(.3,1.3,.5,1)', fill: 'backwards' });
     const cx = (parseFloat(this.boardEl.style.width) - this.u) / 2;
     const cy = (parseFloat(this.boardEl.style.height) - this.u * 1.4) / 2;
@@ -746,7 +731,7 @@ export class Game {
     const cut = E.cutOf(c, this.st);
     if (cut) d.style.clipPath = tearClip(cut);
     d.style.zIndex = c.z * 100 + c.id;
-    (this.foldEls?.[c.group] || this.stripEl || this.boardEl).append(d);
+    (this.stripEl || this.boardEl).append(d);
     c.el = d;
     this.place(c);
   }
@@ -754,7 +739,6 @@ export class Game {
   place(c) {
     if (this.level.scroll === 'mesa') return this.placeScroll(c);
     if (this.level.scroll === 'gravedad') return this.placeGrav(c);
-    if (this.level.scroll === 'plegable') return this.placeFold(c);
     if (this.level.scroll) return this.placeNeb(c);
     if (c.belt && this.level.belt) return this.placeBelt(c);
     const o = this.offsets[c.group];
@@ -769,7 +753,6 @@ export class Game {
     this.wrapSize = `${Math.round(r.width)}x${Math.round(r.height)}`;
     if (this.level.scroll === 'mesa') return this.layoutScroll(r);
     if (this.level.scroll === 'gravedad') return this.layoutGrav(r);
-    if (this.level.scroll === 'plegable') return this.layoutFold(r);
     if (this.level.scroll) return this.layoutNeb(r);
     // La carta doble se ve 10% más grande: se deja un poco de aire para que no se salga del tablero.
     const room = this.cards.some((c) => c.alt != null) ? 0.93 : 1;
@@ -801,36 +784,40 @@ export class Game {
     this.beltEl = b;
     this.placeBeltBox();
   }
+  // 12 nov 2026: el lugar de la banda incluye las cajas de las puntas (BELT_M de cada lado): antes no se contaban y se
+  // salían del tablero.
   // 11 nov 2026 (el usuario: «¿no es mejor parada, por espacio?»): la banda va acostada o parada según donde las
   // cartas salgan más grandes en esta pantalla (antes se sorteaba al armar el nivel). Empate: como venía.
+  // 12 nov 2026 (el usuario): con el teléfono acostado va siempre parada (acostada apretaba al resto del tablero).
   beltSide(W0, H0) {
     const B = this.level.belt, G = this.level.groups;
-    const dims = { h: { w: B.W * 1.08 - 0.08, h: 1.4 }, v: { w: 1, h: B.W * 1.55 - 0.15 } };
+    const dims = { h: { w: B.W * BELT_STEP.h - (BELT_STEP.h - 1) + 2 * BELT_M, h: 1.4 }, v: { w: 1, h: B.W * BELT_STEP.v - (BELT_STEP.v - 1.4) + 2 * BELT_M } };
     const uOf = (d) => packGroups(G.map((x, i) => (i === B.g ? dims[d] : x)), W0, H0).u;
     const other = B.dir === 'h' ? 'v' : 'h';
-    if (uOf(other) > uOf(B.dir) * 1.03) B.dir = other;
+    if (innerWidth > innerHeight) B.dir = 'v';
+    else if (uOf(other) > uOf(B.dir) * 1.03) B.dir = other;
     G[B.g] = dims[B.dir];
     if (this.beltEl && !this.beltEl.classList.contains(`belt-${B.dir}`)) this.beltEl.className = `belt belt-${B.dir}`;
   }
   placeBeltBox() {
     const B = this.level.belt, o = B && this.offsets?.[B.g];
     if (!this.beltEl || !o) return;
-    const g = this.level.groups[B.g];
-    Object.assign(this.beltEl.style, { left: `${o.x * this.u}px`, top: `${o.y * this.u}px`, width: `${g.w * this.u}px`, height: `${g.h * this.u}px` });
+    const g = this.level.groups[B.g], h = B.dir === 'h' ? BELT_M : 0, v = B.dir === 'v' ? BELT_M : 0;
+    Object.assign(this.beltEl.style, { left: `${(o.x + h) * this.u}px`, top: `${(o.y + v) * this.u}px`, width: `${(g.w - 2 * h) * this.u}px`, height: `${(g.h - 2 * v) * this.u}px` });
   }
   placeBelt(c) {
     const B = this.level.belt, o = this.offsets[B.g], el = c.el;
     const p = E.beltPos(this.level, c, this.st), shown = p < B.W;
     // Escondida: del lado de salida si acaba de irse (mitad final de la vuelta), si no del de entrada.
     const at = shown ? p : p >= (B.K + B.W) / 2 ? -1 : B.W;
-    const step = B.dir === 'h' ? 1.08 : 1.55;
+    const step = BELT_STEP[B.dir];
     const wasShown = el.dataset.belt === '1';
     // De escondida a escondida (por dentro de la máquina) no se anima: brincaría por encima de la ventana.
     el.style.transition = !shown && !wasShown ? 'none' : '';
     el.dataset.belt = shown ? '1' : '0';
     el.classList.toggle('belt-out', !shown);
-    el.style.left = `${(o.x + (B.dir === 'h' ? at * step : 0)) * this.u}px`;
-    el.style.top = `${(o.y + (B.dir === 'v' ? at * step : 0)) * this.u}px`;
+    el.style.left = `${(o.x + (B.dir === 'h' ? BELT_M + at * step : 0)) * this.u}px`;
+    el.style.top = `${(o.y + (B.dir === 'v' ? BELT_M + at * step : 0)) * this.u}px`;
     el.style.rotate = '0deg';
   }
 
@@ -1439,128 +1426,37 @@ export class Game {
     this.paintGrav();
   }
 
-  // ---------- Mesa plegable ----------
-  // Tres tapetes en fila (o en columna con el teléfono parado, si así salen más grandes las cartas), todos del tamaño
-  // del panel más grande, con bisagras entre ellos. El de en medio es el grupo 0; los lados, 1 y 2. Doblado, cada
-  // lado está girado media vuelta sobre su bisagra y queda escondido debajo del de en medio.
-  layoutFold(r) {
-    const gs = this.level.groups, pad = 0.3, hinge = 0.16;
-    const PW = Math.max(...gs.map((g) => g.w)) + 1 + pad * 2, PH = Math.max(...gs.map((g) => g.h)) + 1.4 + pad * 2;
-    const W = r.width - 10, H = r.height - 10;
-    const row = { bw: 3 * PW + 2 * hinge, bh: PH }, col = { bw: PW, bh: 3 * PH + 2 * hinge };
-    const fit = (o) => Math.min(W / o.bw, H / o.bh, 120);
-    const across = fit(row) >= fit(col);
-    const o = across ? row : col;
-    this.u = Math.max(18, fit(o));
-    this.foldG = { across, PW, PH, pad, hinge };
-    this.boardEl.style.width = `${o.bw * this.u}px`;
-    this.boardEl.style.height = `${o.bh * this.u}px`;
-    this.boardEl.style.setProperty('--cw', `${this.u}px`);
-    this.paintFold();
-    this.cards.forEach((c) => c.el && this.place(c));
-    this.renderStock();
-    this.coach?.update();
-  }
-
-  // Esquina de cada tapete (en unidades de carta). Lugar 0 = izquierda/arriba, 1 = en medio, 2 = derecha/abajo.
-  foldBox(gi) {
-    const G = this.foldG, k = [1, 0, 2][gi];
-    return G.across ? { x: k * (G.PW + G.hinge), y: 0 } : { x: 0, y: k * (G.PH + G.hinge) };
-  }
-
-  // Giro de un lado (sobre la bisagra que lo une al de en medio): k = 1 doblado, 0 abierto.
-  foldTurn(gi, k = 1) {
-    const a = k * (gi === 1 ? 180 : -180);
-    return `perspective(${this.u * 14}px) ${this.foldG.across ? `rotateY(${a}deg)` : `rotateX(${-a}deg)`}`;
-  }
-
-  paintFold() {
-    const G = this.foldG, u = this.u;
-    if (this.foldShown == null) this.foldShown = this.foldOpen = E.nebOut(this.level, this.st) >= 1;
-    const box = (el, gi) => {
-      const b = this.foldBox(gi);
-      Object.assign(el.style, { left: `${b.x * u}px`, top: `${b.y * u}px`, width: `${G.PW * u}px`, height: `${G.PH * u}px` });
-    };
-    box(this.foldMid, 0);
-    this.foldMid.classList.toggle('folded', !this.foldOpen);
-    this.foldMid.classList.toggle('across', G.across);
-    for (const gi of [1, 2]) {
-      const el = this.foldEls[gi];
-      box(el, gi);
-      el.style.transformOrigin = G.across ? (gi === 1 ? 'right center' : 'left center') : gi === 1 ? 'center bottom' : 'center top';
-      el.style.transform = this.foldOpen ? '' : this.foldTurn(gi);
-    }
-    // Dos bisagras en cada unión.
-    const m = this.foldBox(0);
-    this.hingeEls.forEach((h, i) => {
-      const side = i < 2 ? -1 : 1, at = i % 2 ? 0.75 : 0.25;
-      const [x, y] = G.across ? [m.x + (side < 0 ? -G.hinge / 2 : G.PW + G.hinge / 2), m.y + G.PH * at] : [m.x + G.PW * at, m.y + (side < 0 ? -G.hinge / 2 : G.PH + G.hinge / 2)];
-      Object.assign(h.style, { left: `${x * u}px`, top: `${y * u}px` });
-      h.classList.toggle('across', G.across);
-      h.classList.toggle('shut', !this.foldOpen);
-    });
-  }
-
-  // Las del panel de en medio van en el tablero; las de los lados, dentro de su tapete.
-  placeFold(c) {
-    const G = this.foldG;
-    if (!G) return;
-    const g = this.level.groups[c.group], b = c.group ? { x: 0, y: 0 } : this.foldBox(0);
-    c.el.style.left = `${(b.x + (G.PW - g.w) / 2 + c.x) * this.u}px`;
-    c.el.style.top = `${(b.y + (G.PH - g.h) / 2 + c.y) * this.u}px`;
-    c.el.style.rotate = `${c.rot}deg`;
-  }
-
-  // Al vaciar el panel de en medio, los lados se despliegan uno tras otro y luego sus cartas se voltean.
-  // Deshacer: las cartas se voltean boca abajo y los lados se vuelven a doblar.
-  foldUpdate() {
-    const open = E.nebOut(this.level, this.st) >= 1;
-    if (!this.foldG || open === this.foldOpen) return;
-    this.foldOpen = open;
-    const D = reduced() ? 0 : 820;
-    const sides = [1, 2].map((gi) => [gi, this.foldEls[gi]]);
-    if (open) {
-      this.foldMid.classList.remove('folded');
-      sides.forEach(([gi, el], i) => {
-        el.style.transform = '';
-        if (D) el.animate([{ transform: this.foldTurn(gi) }, { transform: this.foldTurn(gi, 0) }], { duration: D, delay: i * 160, easing: 'cubic-bezier(.3,1.2,.45,1)', fill: 'backwards' });
-      });
-      this.hingeEls.forEach((h) => h.classList.remove('shut'));
-      if (D) this.foldMid.animate([{ scale: 1 }, { scale: 1.03 }, { scale: 1 }], { duration: 300, easing: 'ease-out' });
-      buzz(14);
-      setTimeout(() => {
-        if (!this.foldOpen) return;
-        this.foldShown = true;
-        this.refresh();
-      }, D + 200);
-    } else {
-      this.foldShown = false;
-      setTimeout(() => {
-        if (this.foldOpen) return;
-        sides.forEach(([gi, el]) => {
-          el.style.transform = this.foldTurn(gi);
-          if (D) el.animate([{ transform: this.foldTurn(gi, 0) }, { transform: this.foldTurn(gi) }], { duration: D * 0.7, easing: 'ease-in-out' });
-        });
-        this.foldMid.classList.add('folded');
-        this.hingeEls.forEach((h) => h.classList.add('shut'));
-      }, D ? 380 : 0);
-    }
-  }
-
   // ---------- Nebulosa ----------
-  // Se ven NEB_SLOTS lugares en fila (o en columna con el teléfono parado, si así salen más grandes las cartas) y al
-  // final la nebulosa. Cada lugar mide lo del tramo más grande. En qué lugar va cada tramo sale del estado: los que
-  // ya salieron y siguen con cartas, en orden; así deshacer los regresa solos.
+  // Se ven NEB_SLOTS tramos en fila (o en columna con el teléfono parado, si así salen más grandes las cartas) y la
+  // nebulosa al final o al lado. En qué lugar va cada tramo sale del estado: los que ya salieron y siguen con cartas,
+  // en orden; así deshacer los regresa solos.
+  // 12 nov 2026 (el usuario: «exageradamente pequeño» acostado): los tramos van pegados, cada uno con su ancho (antes
+  // cada lugar medía lo del tramo más grande), centrados; se aparta lo que miden los NEB_SLOTS más grandes juntos. La
+  // nebulosa va al final de la fila o debajo (en columna: debajo o a un lado), donde las cartas salgan más grandes.
   layoutNeb(r) {
-    const gs = this.level.groups, gap = 0.35, ND = 1.9, n = NEB_SLOTS;
+    const gs = this.level.groups, gap = 0.5, ND = 1.9, n = NEB_SLOTS;
     const SW = Math.max(...gs.map((g) => g.w)), SH = Math.max(...gs.map((g) => g.h));
+    const most = (k) => gs.map((g) => g[k]).sort((a, b) => b - a).slice(0, n).reduce((a, b) => a + b, 0) + gap * (n - 1);
+    const RW = most('w'), RH = most('h');
     const W = r.width - 10, H = r.height - 10;
-    const row = { bw: n * (SW + gap) + ND, bh: Math.max(SH, ND) }, col = { bw: Math.max(SW, ND), bh: n * (SH + gap) + ND };
+    // len: largo de la fila de tramos · cross: su grueso · nx, ny: centro de la nebulosa.
+    const opts = [
+      { across: true, bw: RW + gap + ND, bh: Math.max(SH, ND), len: RW, nx: RW + gap + ND / 2 }, // nebulosa al final
+      { across: true, bw: Math.max(RW, ND), bh: SH + gap + ND, cross: SH, ny: SH + gap + ND / 2 }, // debajo
+      { across: false, bw: Math.max(SW, ND), bh: RH + gap + ND, len: RH, ny: RH + gap + ND / 2 }, // al final
+      { across: false, bw: SW + gap + ND, bh: Math.max(RH, ND), cross: SW, nx: SW + gap + ND / 2 }, // a un lado
+    ];
+    // 12 nov 2026 (el usuario: sobraba alto acostado y ancho parado): en cuadrícula de 2×2, dos tramos arriba y abajo
+    // un tramo y la nebulosa. Cada casilla mide lo del tramo más grande.
+    const CW = Math.max(SW, ND), CH = Math.max(SH, ND);
+    if (n === 3) opts.push({ grid: true, CW, CH, bw: 2 * CW + gap, bh: 2 * CH + gap, nx: CW * 1.5 + gap, ny: CH * 1.5 + gap });
     const fit = (o) => Math.min(W / o.bw, H / o.bh, 120);
-    const across = fit(row) >= fit(col);
-    const o = across ? row : col;
+    const o = opts.reduce((a, b) => (fit(b) > fit(a) * 1.01 ? b : a));
+    const { across } = o;
     this.u = Math.max(18, fit(o));
-    this.nebG = { across, SW, SH, gap, ND, ...o, nx: across ? n * (SW + gap) + ND / 2 : o.bw / 2, ny: across ? o.bh / 2 : n * (SH + gap) + ND / 2 };
+    const box = { len: o.len ?? (across ? o.bw : o.bh), cross: o.cross ?? (across ? o.bh : o.bw) };
+    const nx = o.nx ?? o.bw / 2, ny = o.ny ?? o.bh / 2;
+    this.nebG = { across, grid: o.grid, CW, CH, SW, SH, gap, ND, bw: o.bw, bh: o.bh, box, nx, ny };
     this.boardEl.style.width = `${o.bw * this.u}px`;
     this.boardEl.style.height = `${o.bh * this.u}px`;
     this.boardEl.style.setProperty('--cw', `${this.u}px`);
@@ -1580,12 +1476,26 @@ export class Game {
 
   placeNeb(c) {
     if (!this.nebG) return; // el tablero aún no tiene tamaño: lo acomoda layoutNeb
-    const G = this.nebG, u = this.u, g = this.level.groups[c.group];
-    const k = this.nebSlots().slot[c.group];
+    const G = this.nebG, u = this.u, gs = this.level.groups, g = gs[c.group];
+    const { slot } = this.nebSlots(), k = slot[c.group];
     let x, y;
     if (k < 0) [x, y] = [G.nx - 0.5, G.ny - 0.7];
-    else if (G.across) [x, y] = [k * (G.SW + G.gap) + (G.SW - g.w) / 2 + c.x, (G.bh - g.h) / 2 + c.y];
-    else [x, y] = [(G.bw - g.w) / 2 + c.x, k * (G.SH + G.gap) + (G.SH - g.h) / 2 + c.y];
+    else if (G.grid) {
+      const col = k % 2, row = k >> 1;
+      [x, y] = [col * (G.CW + G.gap) + (G.CW - g.w) / 2 + c.x, row * (G.CH + G.gap) + (G.CH - g.h) / 2 + c.y];
+    } else {
+      // Los tramos que se ven, pegados y centrados en su caja.
+      const len = (gi) => (G.across ? gs[gi].w : gs[gi].h);
+      const shown = slot.map((s, gi) => (s >= 0 && s != null ? gi : -1)).filter((gi) => gi >= 0).sort((a, b) => slot[a] - slot[b]);
+      const all = shown.reduce((a, gi) => a + len(gi), 0) + G.gap * Math.max(0, shown.length - 1);
+      let at = (G.box.len - all) / 2;
+      for (const gi of shown) {
+        if (slot[gi] >= k) break;
+        at += len(gi) + G.gap;
+      }
+      if (G.across) [x, y] = [at + c.x, (G.box.cross - g.h) / 2 + c.y];
+      else [x, y] = [(G.box.cross - g.w) / 2 + c.x, at + c.y];
+    }
     c.el.style.left = `${x * u}px`;
     c.el.style.top = `${y * u}px`;
     c.el.style.rotate = `${k < 0 ? c.rot + ((c.id * 47) % 90) - 45 : c.rot}deg`;
@@ -1661,8 +1571,6 @@ export class Game {
   // ¿Se ve boca arriba? En la mesa enrollada el rollo no voltea cartas: salen como van (solo cuentan las tapas de
   // otras cartas); una que asoma poco ya se ve, pero hasta que asoma media carta no se puede jugar.
   shownUp(c) {
-    // Plegable: las de los lados se voltean cuando ya se desdoblaron.
-    if (this.foldEls && c.group && !this.foldShown) return false;
     if (this.level.scroll === 'gravedad') return E.faceUp(this.level, this.gravIndex(c) < GRAV_SHOWN ? { ...c, coveredBy: [] } : c, this.st);
     return E.faceUp(this.level, this.level.scroll === 'mesa' ? { ...c, coveredBy: c.under } : c, this.st);
   }
@@ -1672,7 +1580,6 @@ export class Game {
     const { level, st } = this;
     if (level.scroll === 'mesa') this.scrollUpdate();
     else if (level.scroll === 'gravedad') this.gravUpdate();
-    else if (level.scroll === 'plegable') this.foldUpdate();
     else if (level.scroll) this.nebUpdate();
     this.updateStuck(true);
     this.doorUpdate();
@@ -1917,7 +1824,7 @@ export class Game {
     this.turboShown = cur;
     const pips = '<span class="tp"></span>'.repeat(cur);
     this.comboEl.classList.toggle('turbo', tb);
-    this.comboEl.innerHTML = `${tb ? `<span class="turbo-chip">${icon('rocket')}<b>×2</b><span class="tps">${pips}</span></span>` : ''}<span class="dots">${from ? `<b>×${from}</b>` : ''}${dots}${prize}</span>${near ? `<em class="need outl">¡Falta ${left}!</em>` : ''}`;
+    this.comboEl.innerHTML = `${this.levelTag()}${tb ? `<span class="turbo-chip">${icon('rocket')}<b>×2</b><span class="tps">${pips}</span></span>` : ''}<span class="dots">${from ? `<b>×${from}</b>` : ''}${dots}${prize}</span>${near ? `<em class="need outl">¡Falta ${left}!</em>` : ''}`;
     if (cur !== prev) this.turboFx(cur, prev, oldChip, oldRect);
     this.comboEl.classList.toggle('near', near);
     this.comboEl.classList.toggle('hot', near && left === 1);
@@ -3314,7 +3221,7 @@ export class Game {
         // Logros Apostador ×N (10 nov 2026): niveles ganados con cada apuesta.
         ...(this.opts.bet > 1 && { [`bet${this.opts.bet}`]: 1 }) }),
     };
-    const done = track(stats);
+    const done = track(stats, !this.opts.noAchieve);
     done.forEach((x, i) => setTimeout(() => toast(`${icon('check')} ¡Misión cumplida! ${missionDef(x.id).text(x.goal)}`), 900 + i * 1600));
   }
 

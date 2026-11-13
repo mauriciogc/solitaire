@@ -246,11 +246,13 @@ export function achievementClaim(id) {
 // curtains, brooms, boss3, pure }. Los "best" (streak, left) se
 // comparan; lo demás se suma. Devuelve las misiones que se acaban de completar (para avisar).
 // Los que guardan el mejor (no se suman): racha de un nivel y cartas en el mazo.
+// achieve = false: nivel ya ganado que se repite (12 nov 2026, el usuario): los logros solo cuentan niveles únicos, así
+// que no se suma a save.stats; las misiones del día sí avanzan.
 const BEST = ['streak', 'left'];
-export function track(stats) {
+export function track(stats, achieve = true) {
   const st = (save.stats ||= {});
   for (const [k, v] of Object.entries(stats)) {
-    if (!v) continue;
+    if (!v || !achieve) continue;
     if (BEST.includes(k)) st[`${k}Best`] = Math.max(st[`${k}Best`] || 0, v);
     else st[k] = (st[k] || 0) + v;
   }

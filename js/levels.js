@@ -444,22 +444,21 @@ const RESPITE_MIN = 10;
 // Gravedad: 3 a 5 columnas paradas sobre la mesa, cada una en su riel. Solo se juega la de abajo; la de encima va
 // boca arriba para planear y las demás esperan apiladas arriba. Al quitar la de abajo, la columna cae un lugar.
 // Para el motor: cada carta está tapada por la de abajo de su columna. Desde el nivel 70.
-// Mesa plegable: llega doblada en 3. Solo se ve y se juega el panel de en medio; al vaciarlo, los dos de los lados se
-// despliegan sobre sus bisagras (a los lados con el teléfono acostado, arriba y abajo parado). Para el motor es como
-// la nebulosa: las cartas de los lados tienen neb = 1 (level.neb = [en medio, lado, lado]). Desde el nivel 140.
+// Mesa plegable (desde el 208) y luego mantel doblado: los dos se quitaron el 12 nov 2026 (el usuario: en el celular
+// se veían chicos y las animaciones no convencieron). Sus niveles ahora llevan una de las otras mesas (scrollKind).
 // 8 nov 2026: todo lo que estrena el camino (cartas, mesas y eventos) va a 10 niveles o más de lo anterior; lo que estaba
 // encimado se separó y lo de después se corrió lo mismo (antes mesa 39, gravedad 69, nebulosa 99, plegable 139).
-export const SCROLL_FROM = { mesa: 50, gravedad: 109, nebulosa: 149, plegable: 208 };
+export const SCROLL_FROM = { mesa: 50, gravedad: 109, nebulosa: 149 };
 // Marea (7 nov 2026): el agua sube desde abajo cada 3 robos y baja cada 3 jugadas; lo que queda bajo el agua no se
 // juega. Desde el nivel MAREA_FROM + 1, ~1 de cada 10 normales del camino (sin otra mesa, respiro ni ayudas).
 export const TIDE_FROM = 340; // antes 239 (ver SCROLL_FROM)
 // Estreno: el primero desde MAREA_FROM que no es otra mesa, duro ni respiro.
 let tideDebut = null;
 export const tideFirst = () => {
-  if (tideDebut == null) for (tideDebut = TIDE_FROM; cardDebut(tideDebut) || scrollKind(tideDebut) || hardHelp(tideDebut) || isRespite(tideDebut); tideDebut++);
+  if (tideDebut == null) for (tideDebut = TIDE_FROM; cardDebut(tideDebut) || exFold(tideDebut) || scrollKind(tideDebut) || hardHelp(tideDebut) || isRespite(tideDebut); tideDebut++);
   return tideDebut;
 };
-export const tideKind = (g) => !cardDebut(g) && (g === tideFirst() || (g > tideFirst() && !((hash(g * 3571 + 61) >>> 5) % 10)));
+export const tideKind = (g) => (exFoldKind(g) ? exFoldKind(g) === 'tide' : !cardDebut(g) && (g === tideFirst() || (g > tideFirst() && !((hash(g * 3571 + 61) >>> 5) % 10))));
 // Agujero negro (8 nov 2026): mesa sobre un tablero normal, como la marea (nunca juntas). Atrapa casi todo un grupo
 // (9 nov 2026; antes 3-4 cartas marcadas) y cada HOLE_EVERY jugadas o robos les revuelve los números (ver rankOf en engine.js). Desde HOYO_FROM + 1 (a más de
 // 10 niveles de la carta moneda), se intenta en ~1 de cada 5 normales del camino sin otra mesa, respiro ni ayudas
@@ -467,7 +466,7 @@ export const tideKind = (g) => !cardDebut(g) && (g === tideFirst() || (g > tideF
 export const HOLE_FROM = 373;
 let holeDebut = null;
 export const holeFirst = () => {
-  if (holeDebut == null) for (holeDebut = HOLE_FROM; cardDebut(holeDebut) || scrollKind(holeDebut) || hardHelp(holeDebut) || isRespite(holeDebut) || tideKind(holeDebut); holeDebut++);
+  if (holeDebut == null) for (holeDebut = HOLE_FROM; cardDebut(holeDebut) || exFold(holeDebut) || scrollKind(holeDebut) || hardHelp(holeDebut) || isRespite(holeDebut) || tideKind(holeDebut); holeDebut++);
   return holeDebut;
 };
 // Puertas (9 nov 2026, rehechas a pedido del usuario): un tablero normal y, a la orilla, 2 o 3 puertas chicas con una
@@ -477,30 +476,30 @@ export const holeFirst = () => {
 export const DOORS_FROM = 404;
 let doorsDebut = null;
 export const doorsFirst = () => {
-  if (doorsDebut == null) for (doorsDebut = DOORS_FROM; cardDebut(doorsDebut) || scrollKind(doorsDebut) || hardHelp(doorsDebut) || isRespite(doorsDebut) || tideKind(doorsDebut) || holeKind(doorsDebut); doorsDebut++);
+  if (doorsDebut == null) for (doorsDebut = DOORS_FROM; cardDebut(doorsDebut) || exFold(doorsDebut) || scrollKind(doorsDebut) || hardHelp(doorsDebut) || isRespite(doorsDebut) || tideKind(doorsDebut) || holeKind(doorsDebut); doorsDebut++);
   return doorsDebut;
 };
-export const doorsKind = (g) => !cardDebut(g) && !tideKind(g) && !holeKind(g) && (g === doorsFirst() || (g > doorsFirst() && !((hash(g * 6151 + 113) >>> 4) % 10)));
+export const doorsKind = (g) => (exFoldKind(g) ? exFoldKind(g) === 'doors' : !cardDebut(g) && !tideKind(g) && !holeKind(g) && (g === doorsFirst() || (g > doorsFirst() && !((hash(g * 6151 + 113) >>> 4) % 10))));
 // Banda transportadora (8 nov 2026): una fila de cartas da vueltas dentro de una máquina; solo se ven BELT_W a la vez
 // y avanza un lugar con cada jugada o robo (ver beltShown en engine.js). Va junto a un tablero normal.
 export const BANDA_FROM = 455;
 let bandaDebut = null;
 export const bandaFirst = () => {
-  if (bandaDebut == null) for (bandaDebut = BANDA_FROM; cardDebut(bandaDebut) || scrollKind(bandaDebut) || hardHelp(bandaDebut) || isRespite(bandaDebut) || tideKind(bandaDebut) || holeKind(bandaDebut) || doorsKind(bandaDebut); bandaDebut++);
+  if (bandaDebut == null) for (bandaDebut = BANDA_FROM; cardDebut(bandaDebut) || exFold(bandaDebut) || scrollKind(bandaDebut) || hardHelp(bandaDebut) || isRespite(bandaDebut) || tideKind(bandaDebut) || holeKind(bandaDebut) || doorsKind(bandaDebut); bandaDebut++);
   return bandaDebut;
 };
-export const bandaKind = (g) => !cardDebut(g) && !tideKind(g) && !holeKind(g) && !doorsKind(g) && (g === bandaFirst() || (g > bandaFirst() && !((hash(g * 2477 + 71) >>> 5) % 6)));
+export const bandaKind = (g) => (exFoldKind(g) ? exFoldKind(g) === 'banda' : !cardDebut(g) && !tideKind(g) && !holeKind(g) && !doorsKind(g) && (g === bandaFirst() || (g > bandaFirst() && !((hash(g * 2477 + 71) >>> 5) % 6))));
 // Cinturón de asteroides (10 nov 2026, pedido del usuario): mesa sobre un tablero normal, nunca con otra. Cada
 // ROCK_EVERY robos caen 2 o 3 piedras que tapan cartas libres por unas jugadas (ver dropRocks en engine.js). Desde
 // ROCAS_FROM, ~1 de cada 6 normales que no traen otra mesa.
 export const ROCKS_FROM = 505;
 let rocksDebut = null;
 export const rocksFirst = () => {
-  if (rocksDebut == null) for (rocksDebut = ROCKS_FROM; cardDebut(rocksDebut) || scrollKind(rocksDebut) || hardHelp(rocksDebut) || isRespite(rocksDebut) || tideKind(rocksDebut) || holeKind(rocksDebut) || doorsKind(rocksDebut) || bandaKind(rocksDebut); rocksDebut++);
+  if (rocksDebut == null) for (rocksDebut = ROCKS_FROM; cardDebut(rocksDebut) || exFold(rocksDebut) || scrollKind(rocksDebut) || hardHelp(rocksDebut) || isRespite(rocksDebut) || tideKind(rocksDebut) || holeKind(rocksDebut) || doorsKind(rocksDebut) || bandaKind(rocksDebut); rocksDebut++);
   return rocksDebut;
 };
-export const rocksKind = (g) => !cardDebut(g) && !tideKind(g) && !holeKind(g) && !doorsKind(g) && !bandaKind(g) && (g === rocksFirst() || (g > rocksFirst() && !((hash(g * 5303 + 89) >>> 5) % 6)));
-export const holeKind = (g) => !cardDebut(g) && !tideKind(g) && (g === holeFirst() || (g > holeFirst() && !((hash(g * 4241 + 97) >>> 6) % 5)));
+export const rocksKind = (g) => (exFoldKind(g) ? exFoldKind(g) === 'rocks' : !cardDebut(g) && !tideKind(g) && !holeKind(g) && !doorsKind(g) && !bandaKind(g) && (g === rocksFirst() || (g > rocksFirst() && !((hash(g * 5303 + 89) >>> 5) % 6))));
+export const holeKind = (g) => (exFoldKind(g) ? exFoldKind(g) === 'hole' : !cardDebut(g) && !tideKind(g) && (g === holeFirst() || (g > holeFirst() && !((hash(g * 4241 + 97) >>> 6) % 5))));
 export const GRAV_SHOWN = 2; // cartas boca arriba en cada columna
 export const HOLE_MAX = 99; // cartas que atrapa el agujero negro, como mucho (10 nov 2026: todas; antes 12)
 export const HOLE_TAKE = 1; // parte que se traga y revuelve en cada vuelta (10 nov 2026: todas; antes 0.4)
@@ -513,6 +512,16 @@ const SCROLL_PIECES = ['miniPyramid', 'miniInv', 'twoRows', 'twoRows', 'sandwich
 // ninguna mesa, para que se vea sola lo que anuncia el camino (11 nov 2026: la nave salía en una plegable y el fantasma
 // no salía, porque el agujero negro quita las demás cartas).
 const cardDebut = (g) => g % LEVELS_PER_WORLD === 0 && MECHANICS.some((m) => !EXTRA.includes(m) && MECH_INTRO[m] * LEVELS_PER_WORLD === g);
+// Niveles que eran de la mesa plegable (desde el 208, ~1 de cada 12 normales; se quitó el 12 nov 2026, igual que el
+// mantel doblado que la iba a cambiar). El usuario pidió que salgan más las mesas especiales que ya están abiertas
+// (salían poco comparadas con la plegable): desde la marea, cada uno lleva una de las que ya se estrenaron (marea,
+// agujero negro, puertas, banda o asteroides), escogida por nivel; antes, enrollada, gravedad o nebulosa.
+const exFold = (g) => g >= 208 && g < TOTAL_LEVELS && !cardDebut(g) && !((hash(g * 3571 + 211) >>> 7) % 12);
+const exFoldKind = (g) => {
+  if (!exFold(g) || g < TIDE_FROM) return null;
+  const open = [['tide', tideFirst], ['hole', holeFirst], ['doors', doorsFirst], ['banda', bandaFirst], ['rocks', rocksFirst]].filter(([, first]) => g > first());
+  return open.length ? open[hash(g * 787 + 43) % open.length][0] : null;
+};
 export function scrollKind(g) {
   if (g >= TOTAL_LEVELS || cardDebut(g)) return null;
   // Cada una se presenta justo en su nivel de inicio; después sale al azar.
@@ -520,14 +529,13 @@ export function scrollKind(g) {
   if (g >= SCROLL_FROM.mesa && !(hash(g * 31 + 7) % 12)) return 'mesa';
   if (g >= SCROLL_FROM.nebulosa && !((hash(g * 7919 + 1013) >>> 9) % 12)) return 'nebulosa';
   if (g >= SCROLL_FROM.gravedad && !((hash(g * 104729 + 577) >>> 11) % 12)) return 'gravedad';
-  // La plegable va al final: los niveles que ya eran de otra mesa siguen igual.
-  return g >= SCROLL_FROM.plegable && !((hash(g * 3571 + 211) >>> 7) % 12) ? 'plegable' : null;
+  // Los que eran de la plegable, antes de que se abra la marea, llevan una de estas tres (después, ver exFoldKind).
+  return exFold(g) && g < TIDE_FROM ? ['mesa', 'gravedad', 'nebulosa'][hash(g * 613 + 29) % 3] : null;
 }
 // Lo bonito de la mesa es lo larga: el doble de cartas que un tablero normal.
 // La nebulosa, algo menos: solo se ven 3 tramos a la vez.
 function scrollSegments(r, d, kind) {
   if (kind === 'gravedad') return gravCols(r, d);
-  if (kind === 'plegable') return foldPanels(r, d);
   const want = kind === 'nebulosa' ? 32 + Math.round(d * 16) : 40 + Math.round(d * 20);
   const out = [], names = [];
   for (let n = 0; n < want; ) {
@@ -536,31 +544,6 @@ function scrollSegments(r, d, kind) {
     out.push(cards), names.push(name);
     n += cards.length;
   }
-  out.names = names;
-  return out;
-}
-// Mesa plegable: el panel de en medio y los dos lados (la misma figura en espejo). Cada panel es una pieza chica o
-// dos juntas, hasta tener las cartas que pide.
-function foldPanels(r, d) {
-  const names = [];
-  const panel = (want) => {
-    const cards = [];
-    let x = 0;
-    for (let k = 0; k < 3 && cards.length < want; k++) {
-      const name = pick(r, Object.keys(SMALL));
-      const g = normalizeGroup(SMALL[name](mulberry32(randInt(r, 0, 1e9))));
-      cards.push(...g.cards.map((c) => ({ ...c, x: c.x + x, h: g.h })));
-      names.push(name);
-      x += g.w + 0.4;
-    }
-    // Las piezas centradas a lo alto.
-    const H = Math.max(...cards.map((c) => c.h));
-    return cards.map(({ h, ...c }) => ({ ...c, y: c.y + (H - h) / 2 }));
-  };
-  const mid = panel(11 + Math.round(d * 6));
-  const side = panel(8 + Math.round(d * 5));
-  const w = Math.max(...side.map((c) => c.x));
-  const out = [mid, side, side.map((c) => ({ ...c, x: w - c.x, rot: -(c.rot || 0) }))];
   out.names = names;
   return out;
 }
@@ -596,7 +579,7 @@ export function scrollSpan(c, at) {
 
 export function isRespite(g) {
   const w = Math.floor(g / LEVELS_PER_WORLD), i = g % LEVELS_PER_WORLD;
-  // El estreno de una mesa no es respiro (ya va amable): si no, el camino la anuncia y no sale (plegable en el 209).
+  // El estreno de una mesa no es respiro (ya va amable): si no, el camino la anuncia y no sale.
   if (g < LEVELS_PER_WORLD || i === LEVELS_PER_WORLD - 1 || Object.values(SCROLL_FROM).includes(g)) return false;
   const h = hash(w * 7919 + 17);
   const a = 1 + (h % 8), b = 1 + ((h >>> 8) % 8);
@@ -801,7 +784,7 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
   // La nebulosa, algo menos (medido con el bot casual).
   // El nivel donde se estrena cada mesa va amable aunque sea jefe.
   const debut = scroll && base === SCROLL_FROM[scroll];
-  let d = respite ? Math.min(d0, 0.06 + d0 * 0.15) : debut ? d0 * (scroll === 'gravedad' ? 0.35 : scroll === 'plegable' ? 0.15 : 0.3) : scroll === 'mesa' ? d0 * 0.3 : scroll === 'gravedad' ? d0 * (base < 200 ? 0.35 : 0.55) : scroll ? d0 * 0.65 : d0;
+  let d = respite ? Math.min(d0, 0.06 + d0 * 0.15) : debut ? d0 * (scroll === 'gravedad' ? 0.35 : 0.3) : scroll === 'mesa' ? d0 * 0.3 : scroll === 'gravedad' ? d0 * (base < 200 ? 0.35 : 0.55) : scroll ? d0 * 0.65 : d0;
   // Mesas sobre un tablero normal (marea, agujero negro y puertas): nunca dos en el mismo nivel.
   const overlay = fresh && !secret && !respite && !scroll;
   const holeOn = overlay && holeKind(base);
@@ -838,13 +821,12 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
   );
   // Mesa enrollada: una carta sale completa del rollo cuando la tira ya empieza en su orilla derecha − SCROLL_VIEW
   // o más adelante; o sea, cuando ya se fueron todas las cartas que empiezan antes de eso.
-  const tableScroll = scroll === 'mesa', nebula = scroll === 'nebulosa', grav = scroll === 'gravedad', fold = scroll === 'plegable';
+  const tableScroll = scroll === 'mesa', nebula = scroll === 'nebulosa', grav = scroll === 'gravedad';
   const under = tableScroll && coveredBy.map((a) => a.slice());
   if (tableScroll) rollCover(pos, groups, SCROLL_VIEW).forEach((a, i) => coveredBy[i].push(...a));
   // Nebulosa: tramos que hay que vaciar antes de que salga cada carta.
-  // Plegable: los lados salen al vaciar el panel de en medio.
-  const neb = nebula ? pos.map((p) => Math.max(0, p.group - NEB_SLOTS + 1)) : fold ? pos.map((p) => (p.group ? 1 : 0)) : null;
-  const segments = (nebula || grav || fold) && groups.map((_, gi) => pos.reduce((a, p, i) => (p.group === gi && a.push(i), a), []));
+  const neb = nebula ? pos.map((p) => Math.max(0, p.group - NEB_SLOTS + 1)) : null;
+  const segments = (nebula || grav) && groups.map((_, gi) => pos.reduce((a, p, i) => (p.group === gi && a.push(i), a), []));
   // Gravedad: a cada carta solo la tapa la de abajo de su columna (la primera de cada columna es la de abajo).
   if (grav) for (const t of segments) t.forEach((id, k) => (coveredBy[id] = k ? [t[k - 1]] : []));
 
@@ -868,8 +850,6 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
   if (scroll) mech.delete('bomb');
   const tideOn = fresh && !secret && !respite && !scroll && tideKind(base);
 
-  // Estreno de la plegable sin otras mecánicas: al principio solo se juega el panel de en medio y ya cuesta más.
-  if (debut && scroll === 'plegable') mech.clear();
   // Cometa: es un regalo, así que va aparte de las demás (no cuenta en el límite de 2 y sale con cualquiera).
   // Por ahora solo sin ayudas y sin mesas especiales. Se estrena en el primer nivel de su mundo y después sale de
   // vez en cuando (es un regalo: no muy seguido). Usa su propio sorteo: un nivel que no lo trae queda igual que antes.
@@ -979,8 +959,6 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
   if (ev) spares = Math.max(ev.tight >= 2 ? 0 : 1, spares - ev.tight);
   // Mesa enrollada: la tira es el doble de larga; más sobrantes para que no cueste el doble (nebulosa: la mitad).
   if (scroll) spares += Math.round(n * (tableScroll ? SCROLL_SPARE : SCROLL_SPARE / 2));
-  // Plegable: en su estreno, unas cartas de más (al principio solo hay jugadas en el panel de en medio).
-  if (debut && fold) spares += 3;
   // En niveles fáciles las sobrantes suelen ser vecinas de alguna carta del tablero.
   const helpfulCard = (p) => card(r() < p ? (pick(r, known) + pick(r, [1, 12])) % 13 : randInt(r, 0, 12));
   // Niveles duros: pocas sobrantes (las estrellas se miden contra el camino acertado, ver abajo).
@@ -1314,7 +1292,7 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
   const level = {
     g, world, index, d, template, boss, secret, event: !!ev, fresh, ...(respite && { respite }), ...(scroll && { scroll }), ...(tideOn && cards.some((c) => c.wet) && { tide: 1 }), ...(hole && { hole }), ...(doors && { doors }), ...(belt && { belt }), ...(rocksOn && { rocks: { n: base === rocksFirst() ? 2 : 2 + (hash(g * 211 + 7) % 2) } }),
     ...(raw.names && { pieces: raw.names }),
-    ...((nebula || fold) && { neb: segments }),
+    ...(nebula && { neb: segments }),
     ...(grav && { cols: segments }),
     // La banda ocupa solo su ventana (BELT_W lugares), acostada o parada.
     groups: [...groups.map(({ w, h }, gi) => (belt?.g === gi ? (belt.dir === 'h' ? { w: BELT_W * 1.08 - 0.08, h: 1.4 } : { w: 1, h: BELT_W * 1.55 - 0.15 }) : { w, h })), ...(doors || []).map((x) => ({ w: W, h: x.h }))],

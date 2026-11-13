@@ -1060,7 +1060,6 @@ const ROAD_TABLES = [
   ['mesa', 'Mesa enrollada', 'Limpia las cartas del principio y la mesa avanza: salen más cartas del rollo.'],
   ['gravedad', 'Gravedad', 'Solo juegas la carta de abajo de cada columna. Al quitarla, la columna cae.'],
   ['nebulosa', 'Nebulosa', 'Solo ves 3 grupos. Vacía cualquiera y de la nebulosa sale otro.'],
-  ['plegable', 'Mesa plegable', 'Llega doblada. Limpia el panel de en medio y se desdobla.'],
 ];
 function roadItems() {
   const t = streakTheme();
@@ -1608,6 +1607,7 @@ function startLevel(g, { resume = false, free = false, anim = 'up', bet = 1, pai
     canExit: !(saved && g >= NO_EXIT_FROM),
     free: !!save.stars[g] || isSecret(g) || free || dev.infinite, // intento que no costó boleto
     noTrack: free, // la galería del modo dev no cuenta para misiones ni logros
+    noAchieve: replay, // 12 nov 2026 (el usuario): repetir un nivel ya ganado no cuenta para los logros (sí para misiones)
     tutorial: g === 0 && !save.tutorial,
     racha: counts && isOn('racha') ? { n: dailyStreak().n, ico: streakTheme().ico, hot: streakHot() } : null,
     onSave: saved
@@ -4449,7 +4449,8 @@ function openProfile() {
 // Formulario de jugador (crear o editar): nombre, avatar (inicial o personaje), color, marco, título, viajero,
 // fondo del universo y postal. p: { name, avatar, look, char, ring, title, traveler, space, frame } · onSave(p). La ventana toma el estilo del marco elegido.
 // first: al crear el jugador solo se elige entre lo gratis (inicial, Nico, Lila; marco sencillo o destello).
-function profileForm({ title, p, action, onSave, noCancel = false, first = false, tab = 'kid' }) {
+// onChange(p) (editar, 12 nov 2026, el usuario): cada cosa que eliges se guarda al momento; ya no hay botón Guardar.
+function profileForm({ title, p, action, onSave, onChange, onClose, noCancel = false, first = false, tab = 'kid' }) {
   p = { ...p, kid: { ...kidOf(p) } };
   // Al crear el jugador se arma tu personaje (niño o niña, piel, pelo y peinado) con su ropa de inicio.
   if (p.char === 'nina') p.char = 'nino'; // la ropa de inicio es una sola: cada base la suya
@@ -4502,7 +4503,7 @@ function profileForm({ title, p, action, onSave, noCancel = false, first = false
     space: () => grouped(spaces, (it) => `<button data-space="${it.k}" class="${on(it.k === p.space)}" aria-label="${it.name}" title="${it.name}"><div class="space-prev space-${it.k}"><div class="space"></div></div><small>${it.name}</small></button>`, 'space-pick'),
     frame: () => grouped(frames, (it) => `<button data-frame="${it.k}" class="${on(it.k === p.frame)}" aria-label="${it.name}" title="${it.name}"><div class="frame-prev">${postcardHTML(0, 24, 'mini', it.k)}</div><small>${it.name}</small></button>`, 'frame-pick'),
   })[tab]();
-  let tabNow = tab; // la pestaña abierta: el botón de la tienda (junto a Guardar) lleva a esa sección
+  let tabNow = tab; // la pestaña abierta: el botón de la tienda lleva a esa sección
   const editBody = `<div class="pf-top"><div class="pf-hero space-${p.space}"><div class="space"></div><div class="avatar-preview">${avatarHTML(p, 'huge')}</div>
       <div class="pf-id"><input class="text-in" maxlength="16" aria-label="Tu nombre" placeholder="Tu nombre" autocomplete="off" autocapitalize="words" enterkeyhint="done" value="${esc(p.name)}"><div class="pf-title">${titleHTML(p.title)}</div></div></div>
       <div class="pf-tabs">${TABS.map((t) => `<button class="pf-tab ${on(t.k === tab)}" data-tab="${t.k}">${icon(t.ico)}<span>${t.name}</span></button>`).join('')}</div></div>
@@ -4527,14 +4528,15 @@ function profileForm({ title, p, action, onSave, noCancel = false, first = false
       </div>
       <div class="pf-nav"><button class="pf-back" hidden>${icon('prev')}Atrás</button><button class="btn green pf-next">Siguiente</button></div></div></div>` : editBody,
     buttons: first ? [] : [
-      { label: icon('bag'), cls: 'ghost sq', title: 'Ir a la tienda', onClick: () => openShop(tabNow === 'kid' ? 'avatar' : tabNow) },
-      { label: action, cls: 'green grow', onClick: () => onSave({ ...p, name: p.name.trim() }) },
+      // keep: se cierra sin onClose (que regresa al perfil), como el botón de la tienda de cada pestaña.
+      { label: `${icon('bag')}<span>Tienda</span>`, cls: 'ghost grow', title: 'Ir a la tienda', keep: true, onClick: () => (closeShelf(), document.getElementById('modal-root').replaceChildren(), openShop(tabNow === 'kid' ? 'avatar' : tabNow)) },
     ],
-    onClose: closeShelf,
+    onClose: () => (closeShelf(), onClose?.()),
   });
   const box = document.querySelector('.pform');
   if (!first) pauseOffscreen(box.querySelector('.pf-panel'), 'button');
   const input = box.querySelector('.text-in');
+  const changed = () => onChange?.({ ...p, name: p.name.trim() });
   // Creación por pasos: Siguiente / Atrás con los pasos deslizándose y los puntitos de avance; el último es «¡Listo!».
   let step = 0;
   const goStep = (to) => {
@@ -4571,8 +4573,9 @@ function profileForm({ title, p, action, onSave, noCancel = false, first = false
   input.addEventListener('input', () => {
     p.name = input.value;
     if (p.look === 'letter') paint();
+    changed();
   });
-  input.addEventListener('keydown', (e) => e.key === 'Enter' && box.querySelector('.mbtns .btn, .pf-next')?.click());
+  input.addEventListener('keydown', (e) => e.key === 'Enter' && (first ? box.querySelector('.pf-next')?.click() : input.blur()));
   const pick = (sel, b) => box.querySelectorAll(sel).forEach((x) => x.classList.toggle('on', x === b));
   const bounce = (el) => !reduced() && el.animate([{ scale: 0.8 }, { scale: 1.12, offset: 0.6 }, { scale: 1 }], { duration: 360, easing: 'ease-out' });
   box.addEventListener('click', (e) => {
@@ -4617,6 +4620,7 @@ function profileForm({ title, p, action, onSave, noCancel = false, first = false
     if (b.dataset.trav) { p.traveler = b.dataset.trav; pick('[data-trav]', b); bounce(b); }
     if (b.dataset.space) { p.space = b.dataset.space; pick('[data-space]', b); bounce(b); const hero = box.querySelector('.pf-hero'); if (hero) hero.className = `pf-hero space-${p.space}`; }
     if (b.dataset.frame) { p.frame = b.dataset.frame; pick('[data-frame]', b); bounce(b); }
+    changed();
   });
   if (matchMedia('(pointer: fine)').matches) input.focus();
 }
@@ -4747,14 +4751,14 @@ function showSignup() {
   });
 }
 
+// Se guarda solo con cada cambio (12 nov 2026, el usuario); al cerrar regresa al perfil y se repinta lo de atrás.
 function editProfile() {
+  const trav = equipped('traveler'), name = save.name;
   profileForm({
     title: 'Tu jugador',
     p: playerNow(),
-    action: 'Guardar',
-    onSave: (p) => {
-      const trav = equipped('traveler');
-      savePlayer(p, save.name);
+    onChange: (p) => savePlayer(p, name),
+    onClose: () => {
       paintMe();
       if (equipped('traveler') !== trav) current?.();
       openProfile();
@@ -5087,7 +5091,6 @@ function openHelp(tab = 'basico', then) {
         <div class="step" data-u="rocas"><div class="ill">${mini(10, '7', 's')}${mini(48, '8', 'h', { marks: `<span class="rock-ov">${icon('asteroide')}<b class="outl">3</b></span>` })}</div><p><b>Asteroides:</b> ${TABLE_TEXT.rocas.join(' ')}</p></div>
         <div class="step" data-u="puertas"><div class="ill"><span class="h-door"><i></i><i></i></span>${mini(56, '6', 'h', { doorKey: 1 })}</div><p><b>Puertas:</b> ${TABLE_TEXT.puertas.join(' ')}</p></div>
         <div class="step" data-u="banda"><div class="ill"><span class="h-belt"><i></i></span>${mini(24, 'K', 'c', {}, 'h-belt-c')}${mini(58, '2', 'h', {}, 'h-belt-c')}</div><p><b>Banda transportadora:</b> ${TABLE_TEXT.banda.join(' ')}</p></div>
-        <div class="step" data-u="plegable"><div class="ill"><span class="h-fold" style="left:4px;transform:perspective(90px) rotateY(55deg);transform-origin:right"></span><span class="h-fold" style="left:40px"></span><span class="h-fold" style="left:76px;transform:perspective(90px) rotateY(-55deg);transform-origin:left"></span>${mini(41, 'Q', 'h')}</div><p><b>Mesa plegable:</b> ${TABLE_TEXT.plegable.join(' ')}</p></div>
       </div>`
         : `<div class="steps">${MECH_GROUPS.map(([h, ms]) => `<h3 class="help-h">${h}</h3>${ms.map((m) => `<div class="step" data-u="${m}"><div class="ill c${MECH_BOTH[m] ? ' pair' : ''}">${MECH_BOTH[m]?.() || mechCard(m)}</div><p><b>${MECH_NAMES[m]}:</b> ${MECH_TEXT[m]}</p></div>`).join('')}`).join('')}</div>`);
   }
