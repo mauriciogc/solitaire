@@ -41,6 +41,17 @@
 //   (escudo: desde el 11 nov 2026 ya no es carta; es la ayuda Escudo, useShield: s.shield = la nave ya no roba)
 //   cst       constelación (10 nov 2026): estrellita. Jugar todas las del nivel seguidas (sin robar ni jugar otra en
 //             medio) da un premio (lo da el juego). s.cst = cuántas van (0 sin empezar, -1 perdida, level.cst lograda)
+//   vine      enredadera (13 nov 2026): su lugar en el orden en que crece (level.vine = { n0, n }). Empiezan tapadas
+//             las n0 primeras y cada VINE_EVERY acciones crece a la siguiente (el reloj de arena la detiene). No se
+//             juega mientras la tenga (ver vineOn)
+//   fire      fuego: al jugarla quema todas las enredaderas para siempre (s.burnt) y derrite el hielo
+//   magnet    imán (13 nov 2026): al jugarlo, tu siguiente robo saca del mazo la carta que da la racha más larga (ver
+//             magnetPick) y ese robo no corta la racha. Si ninguna sirve, robo normal y el imán sigue esperando.
+//             s.magnet = está esperando el robo
+//   rainbow   arcoíris: al jugarlo, las RAINBOW jugadas siguientes pueden ser ±2 (s.top.rb = las que quedan; robar
+//             lo apaga porque el descarte cambia)
+//   sleep     carta dormida (2-4): no se juega hasta que la racha llegue a `sleep`; entonces despierta y se queda
+//             despierta (s.awake = ids)
 //
 // Mesas del nivel: level.rocks = { n } cinturón de asteroides (10 nov 2026, ver dropRocks).
 import { hash } from './rng.js';
@@ -91,6 +102,8 @@ export const useMaster = (s0) => ({ ...cloneState(s0), master: true });
 export const useLaser = (s0) => ({ ...cloneState(s0), rock: {} });
 // Ayuda Escudo: la nave ladrona ya no se lleva nada en lo que queda del nivel.
 export const useShield = (s0) => ({ ...cloneState(s0), shield: true });
+// Ayuda imán (13 nov 2026): lo mismo que jugar la carta imán.
+export const useMagnet = (s0) => ({ ...cloneState(s0), magnet: true });
 
 export function initState(level, extra = {}) {
   return {
@@ -116,7 +129,7 @@ export function initState(level, extra = {}) {
 }
 
 // (Partidas guardadas antes del boleto partido no traen cut.)
-export const cloneState = (s) => ({ ...s, rem: s.rem.slice(), stock: s.stock.slice(), boom: s.boom.slice(), cut: (s.cut || []).slice(), ...(s.open && { open: s.open.slice() }), ...(s.lift && { lift: s.lift.slice() }), ...(s.rock && { rock: { ...s.rock } }) });
+export const cloneState = (s) => ({ ...s, rem: s.rem.slice(), stock: s.stock.slice(), boom: s.boom.slice(), cut: (s.cut || []).slice(), ...(s.awake && { awake: s.awake.slice() }), ...(s.open && { open: s.open.slice() }), ...(s.lift && { lift: s.lift.slice() }), ...(s.rock && { rock: { ...s.rock } }) });
 
 // Mitad del boleto partido que ya se jugó (0 = está entero, 1 = la de arriba, 2 = la de abajo).
 export const cutOf = (c, s) => (c.half != null && s.cut?.[c.id]) || 0;
@@ -139,11 +152,52 @@ const near = (a, b) => {
   const d = Math.abs(a - b);
   return d === 1 || d === 12;
 };
+// Arcoíris: con top.rb > 0 también vale saltar dos (±2; A y Q, 2 y K también se conectan).
+const near2 = (a, b) => {
+  const d = Math.abs(a - b);
+  return d === 2 || d === 11;
+};
 export function follows(top, r) {
   if (!top || r == null) return false;
   if (top.wild) return true;
   if (top.arrow) return r === mod13(top.rank + top.arrow);
+  if (top.rb > 0 && (near2(top.rank, r) || (top.alt != null && near2(top.alt, r)))) return true;
   return near(top.rank, r) || (top.alt != null && near(top.alt, r));
+}
+export const RAINBOW = 3;
+// Carta dormida: ¿sigue dormida? Cuántas le faltan (con la racha de ahora).
+export const asleep = (c, s) => !!c.sleep && !s.awake?.includes(c.id);
+export const sleepLeft = (c, s) => (asleep(c, s) ? Math.max(0, c.sleep - s.streak) : 0);
+// Despierta las que ya alcanzó la racha (y se quedan despiertas).
+function wakeUp(level, s) {
+  for (const c of level.cards) if (c.sleep && !s.rem[c.id] && s.streak >= c.sleep && !s.awake?.includes(c.id)) s.awake = [...(s.awake || []), c.id];
+}
+// Imán (13 nov 2026, pedido del usuario: que mire hacia adelante): de las cartas del mazo que dejan jugar algo, la que
+// da la racha más larga sin robar (empate: la que deja jugar más ahorita; luego, la de más arriba). Devuelve su lugar en
+// el mazo y la primera carta del tablero de esa racha (la que conviene jugar), o null si ninguna sirve.
+const MAGNET_LOOK = 60; // jugadas que prueba por cada carta (para que el solucionador no se alente)
+function longestRun(level, s, budget) {
+  let best = 0, first = null;
+  const go = (st, depth, root) => {
+    if (depth > best) (best = depth), (first = root);
+    for (const c of legal(level, st)) {
+      if (budget.n-- <= 0) return;
+      go(play(level, st, c.id).s, depth + 1, root ?? c.id);
+    }
+  };
+  go(s, 0, null);
+  return { run: best, first };
+}
+function magnetPick(level, s) {
+  let pick = null;
+  s.stock.forEach((x, i) => {
+    const t = { ...s, top: x, stock: s.stock.filter((_, j) => j !== i), magnet: false };
+    const now = legal(level, t).length;
+    if (!now) return;
+    const { run, first } = longestRun(level, t, { n: MAGNET_LOOK });
+    if (!pick || run > pick.run || (run === pick.run && now > pick.now)) pick = { i, aim: first, run, now };
+  });
+  return pick;
 }
 
 // Tramos de la nebulosa ya vaciados.
@@ -159,7 +213,13 @@ export const counts = (level, c, s) => c.door == null || doorOpen(level, c.door,
 export const isFree = (c, s, level) => (c.coveredBy.every((j) => s.rem[j]) || !!s.lift?.includes(c.id)) && (!c.neb || nebOut(level, s) >= c.neb) && (c.door == null || doorOpen(level, c.door, s));
 export const curtainOpen = (level, c, s) => c.curtain == null || !!s.master || !!s.rem[level.curtains[c.curtain]];
 export const lockOpen = (level, c, s) => c.lock == null || !!s.master || !!s.rem[level.keys[c.lock]];
-export const iceLeft = (c, s) => (c.ice ? Math.max(0, c.ice - s.plays) : 0);
+export const iceLeft = (c, s) => (c.ice && !s.burnt ? Math.max(0, c.ice - s.plays) : 0);
+// Enredadera (13 nov 2026): cuántas tiene ya y si esta carta está tapada. El fuego (s.burnt) las quema todas.
+export const VINE_EVERY = 5;
+export const vineCount = (level, s) => (!level.vine || s.burnt ? 0 : Math.min(level.vine.n, level.vine.n0 + Math.floor(s.actions / VINE_EVERY)));
+export const vineOn = (level, c, s) => c.vine != null && c.vine < vineCount(level, s);
+// Acciones que faltan para que crezca (null si ya no crece).
+export const vineLeft = (level, s) => (vineCount(level, s) && vineCount(level, s) < level.vine.n ? VINE_EVERY - (s.actions % VINE_EVERY) : null);
 export const bombLeft = (c, s) => (c.bomb && !s.rem[c.id] ? c.bomb - s.actions : null);
 export const cometLeft = (c, s) => (c.comet && !s.rem[c.id] ? c.comet - s.actions : null);
 
@@ -186,7 +246,7 @@ export const underWater = (c, s) => !!c.wet && (s.tide || 0) >= c.wet;
 export const BELT_W = 4; // 8 nov 2026: con 3 el bot casual ganaba 30% (47% en uno normal)
 export const beltPos = (level, c, s) => (((c.belt - 1 - s.actions) % level.belt.K) + level.belt.K) % level.belt.K;
 export const beltShown = (level, c, s) => !c.belt || !level.belt || beltPos(level, c, s) < level.belt.W;
-export const isOpen = (level, c, s) => faceUp(level, c, s) && lockOpen(level, c, s) && !iceLeft(c, s) && ghostShown(c, s) && !underWater(c, s) && beltShown(level, c, s) && !rockOn(c, s);
+export const isOpen = (level, c, s) => faceUp(level, c, s) && lockOpen(level, c, s) && !iceLeft(c, s) && ghostShown(c, s) && !underWater(c, s) && beltShown(level, c, s) && !rockOn(c, s) && !vineOn(level, c, s) && !asleep(c, s);
 // Cinturón de asteroides (10 nov 2026, pedido del usuario): cada ROCK_EVERY robos caen level.rocks.n piedras (2 o 3)
 // sobre cartas libres; cada una la tapa ROCK_PLAYS turnos (jugadas o robos; 11 nov 2026, antes solo jugadas) o hasta usar la ayuda Láser. Como la marea,
 // tiene límite: nunca más de ROCK_MAX piedras a la vez y siempre deja ROCK_KEEP cartas libres sin piedra. El reloj de
@@ -329,10 +389,10 @@ function buried(level, s, n, ok = () => true) {
 }
 
 // Escoba (13 nov 2026, pedido del usuario): toda la capa del fondo que queda, las más tapadas (la z más baja), estén
-// boca arriba o boca abajo. Sin las especiales, los boletos partidos, la banda, las puertas ni lo que la nebulosa aún
-// esconde.
+// boca arriba o boca abajo. Sin las especiales, los boletos partidos, la banda, las puertas, el fuego (sin él las
+// enredaderas no se quitarían) ni lo que la nebulosa aún esconde.
 export function deepLayer(level, s) {
-  const ok = level.cards.filter((c) => !s.rem[c.id] && !special(c) && c.half == null && c.belt == null && c.door == null && (!c.neb || nebOut(level, s) >= c.neb));
+  const ok = level.cards.filter((c) => !s.rem[c.id] && !special(c) && c.half == null && c.belt == null && c.door == null && !c.fire && (!c.neb || nebOut(level, s) >= c.neb));
   if (!ok.length) return [];
   // En algunas formas la capa más baja ya está libre (no la tapa nada): cuenta la más baja de las que siguen tapadas.
   const hid = ok.filter((c) => !isFree(c, s, level));
@@ -410,6 +470,11 @@ export function play(level, s0, id, low = false) {
   else s.rem[id] = true;
   // La carta doble llega al descarte con sus dos números; la flecha, con su obligación.
   s.top = chamWild(c, s0) ? { wild: true } : c.alt != null ? { rank: c.rank, alt: c.alt, suit: c.suit } : { rank: r, suit: c.suit, ...(c.arrow && { arrow: c.arrow }) };
+  // Arcoíris: el descarte lleva las jugadas ±2 que quedan.
+  const rb = c.rainbow ? RAINBOW : Math.max(0, (s0.top?.rb || 0) - 1);
+  if (rb && !s.top.wild) s.top.rb = rb;
+  // Imán: espera tu siguiente robo.
+  if (c.magnet) s.magnet = true;
   s.plays++;
   tick(s);
   s.streak++;
@@ -439,16 +504,20 @@ export function play(level, s0, id, low = false) {
   let shipBack = null;
   if (level.ship) for (let k = at; k <= s.streak; k++) if (k % SHIP_STREAK === 0) shipBack = giveBack(level, s, k) || shipBack;
   setTide(level, s, -1);
+  wakeUp(level, s);
   const rockOff = wearRocks(s);
+  // Fuego: quema las enredaderas que hay (las que ya crecieron) y ya no crecen.
+  const burnt = c.fire && !s0.burnt ? level.cards.filter((x) => !s.rem[x.id] && vineOn(level, x, s0)).map((x) => x.id) : null;
+  if (c.fire) s.burnt = true;
   // Rayo: las cartas más enterradas (1-3) se van al final del mazo de robo (después de todo lo demás de la jugada).
   // Ni la carta llave de las puertas ni las de la constelación (se perderían).
-  const bolted = c.bolt ? buried(level, s, c.bolt, (x) => x.curtain == null && x.door == null && !x.doorKey && !x.cst) : [];
+  const bolted = c.bolt ? buried(level, s, c.bolt, (x) => x.curtain == null && x.door == null && !x.doorKey && !x.cst && !x.fire && x.vine == null) : [];
   for (const b of bolted) {
     const x = level.cards[b];
     s.rem[b] = true;
     s.stock.push({ rank: rankOf(x, s), suit: x.suit, ...(x.alt != null && { alt: x.alt }), ...(x.arrow && { arrow: x.arrow }) });
   }
-  return { s, ev: { t: 'play', id, rank: r, packs, defused, reward, boost, boom, wished, wishes, gone, ...(c.turbo && { turbo: true }), ...(split && { split }), ...(shipBack && { shipBack }), ...(c.doorKey && { key: true }), ...(cst && { cst }), ...(rockOff.length && { rockOff }), ...(bolted.length && { bolted }) } };
+  return { s, ev: { t: 'play', id, rank: r, packs, defused, reward, boost, boom, wished, wishes, gone, ...(c.turbo && { turbo: true }), ...(split && { split }), ...(shipBack && { shipBack }), ...(c.doorKey && { key: true }), ...(cst && { cst }), ...(rockOff.length && { rockOff }), ...(bolted.length && { bolted }), ...(burnt && { burnt }) } };
 }
 
 // Abrir la puerta d con una llave. No es jugada ni robo: no mueve la racha ni las cuentas, salvo su premio
@@ -469,6 +538,7 @@ export function openDoor(level, s0, d) {
       if (w) wishes.push({ ...w, at: k });
     }
   } else if (prize === 'turbo') s.turbo = TURBO;
+  wakeUp(level, s);
   return { s, ev: { t: 'door', d, prize, wishes, from: s0.streak } };
 }
 
@@ -482,10 +552,20 @@ export function cstStep(level, s, on) {
 
 export function draw(level, s0) {
   const s = cloneState(s0);
+  // Imán: la carta que más sirve pasa al tope antes de robar (de dónde salió, para animarlo).
+  // Si ninguna sirve, no se gasta: robas normal y sigue esperando el siguiente robo. Si sí, la carta jalada no corta la
+  // racha (aim = la del tablero que conviene jugar, para señalarla).
+  let pulled = null, aim = null;
+  const pick = s.magnet ? magnetPick(level, s) : null;
+  if (pick) {
+    s.magnet = false;
+    s.stock.unshift(...s.stock.splice(pick.i, 1));
+    (pulled = pick.i), (aim = pick.aim);
+  }
   const card = s.stock.shift();
   s.top = card;
   tick(s);
-  s.streak = 0;
+  if (!pick) s.streak = 0;
   s.turbo = card.turbo ? TURBO : 0;
   const boom = checkBombs(level, s);
   const gone = checkComets(level, s);
@@ -500,18 +580,18 @@ export function draw(level, s0) {
   // también se gastan al robar. Primero se gastan las que ya estaban y luego caen las nuevas (con sus 3 turnos).
   const rockOff = wearRocks(s);
   const rocks = dropRocks(level, s, s0.freeze > 0);
-  return { s, ev: { t: 'draw', card, boom, gone, ...act, wishes, ...(card.turbo && { turbo: true }), ...(ship && { ship }), ...(cst && { cst }), ...(rockOff.length && { rockOff }), ...(rocks.length && { rocks }) } };
+  return { s, ev: { t: 'draw', card, boom, gone, ...act, wishes, ...(card.turbo && { turbo: true }), ...(ship && { ship }), ...(cst && { cst }), ...(rockOff.length && { rockOff }), ...(rocks.length && { rocks }), ...(s0.magnet && { pulled, aim }) } };
 }
 
 // ---------- Solucionador y bot ----------
-const sig = (c) => (c.wild ? 'w' : `${c.rank}${c.alt != null ? `/${c.alt}` : ''}${c.arrow ? (c.arrow > 0 ? '+' : '-') : ''}${c.turbo ? 't' : ''}`);
+const sig = (c) => (c.wild ? 'w' : `${c.rank}${c.alt != null ? `/${c.alt}` : ''}${c.arrow ? (c.arrow > 0 ? '+' : '-') : ''}${c.turbo ? 't' : ''}${c.rb ? `r${c.rb}` : ''}`);
 // Niveles con cohete turbo: el turbo que queda también es parte del estado.
 const hasTurbo = (level) => level.cards.some((c) => c.turbo) || level.stock.some((c) => c.turbo);
 
 // Busca una solución desde un estado (profundidad primero, con memoria). Devuelve [id | 'draw' | 'wild', …] o null.
 // wilds: comodines que puede usar (como en el juego, solo al quedarse sin jugadas).
 export function solve(level, s0, limit = 250000, wilds = 0) {
-  const timed = level.cards.some((c) => c.live || c.bomb || c.comet || c.ghost || c.cham || c.ring || c.belt);
+  const timed = !!level.vine || level.cards.some((c) => c.live || c.bomb || c.comet || c.ghost || c.cham || c.ring || c.belt);
   const turbo = hasTurbo(level);
   const seen = new Set();
   const path = [];
@@ -519,7 +599,7 @@ export function solve(level, s0, limit = 250000, wilds = 0) {
   const dfs = (s, w = wilds) => {
     if (won(s, level)) return true;
     if (++nodes > limit) return false;
-    const key = `${w}|${s.rem.map((b, i) => (b ? 1 : s.cut?.[i] ? s.cut[i] + 1 : 0)).join('')}|${s.stock.map(sig).join(',')}|${sig(s.top)}|${(s.streak <= LAST_REWARD ? s.streak : LAST_REWARD + 1 + ((s.streak - LAST_REWARD) % 3))}${timed ? `|${s.actions}|${s.boom}|${s.freeze || 0}` : ''}${level.ship ? `|${s.shipIn}|${s.stolen.map(sig).join('.')}` : ''}${level.tide ? `|${s.tq}` : ''}${s.master ? '|m' : ''}${turbo ? `|${s.turbo}` : ''}${level.rocks ? `|${s.rq}|${Object.entries(s.rock).join(';')}` : ''}${s.lift ? `|${s.lift}` : ''}${s.shield ? '|S' : ''}`;
+    const key = `${w}|${s.rem.map((b, i) => (b ? 1 : s.cut?.[i] ? s.cut[i] + 1 : 0)).join('')}|${s.stock.map(sig).join(',')}|${sig(s.top)}|${(s.streak <= LAST_REWARD ? s.streak : LAST_REWARD + 1 + ((s.streak - LAST_REWARD) % 3))}${timed ? `|${s.actions}|${s.boom}|${s.freeze || 0}` : ''}${level.ship ? `|${s.shipIn}|${s.stolen.map(sig).join('.')}` : ''}${level.tide ? `|${s.tq}` : ''}${s.master ? '|m' : ''}${turbo ? `|${s.turbo}` : ''}${level.rocks ? `|${s.rq}|${Object.entries(s.rock).join(';')}` : ''}${s.lift ? `|${s.lift}` : ''}${s.shield ? '|S' : ''}${s.burnt ? '|B' : ''}${s.magnet ? '|M' : ''}${s.awake ? `|a${s.awake}` : ''}`;
     if (seen.has(key)) return false;
     seen.add(key);
     const moves = legal(level, s);

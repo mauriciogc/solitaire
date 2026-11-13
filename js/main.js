@@ -5,7 +5,7 @@ import { Game, faceHTML, backHTML, TIPS, TABLE_TEXT, MECH_KINDS, ART } from './g
 import { maxBet, betFee, betSteps, BET_STEPS, HELPS, DAILY_PATH, dailyState, dailyPieces, DAILY_SHIELD_MAX, starsNeeded, TICKET_PRICE, ticketCost, ticketRefund, coinsFor, bossChest, rollChest, CONST_PRIZE, openCost, boosted, secretCoins, rollSecret, openSurprise, MET_OFF, metShopPrice } from './economy.js';
 import { track, missions, missionDef, missionDone, missionsAllDone, autoClaim, ACHIEVEMENTS, ACHIEVEMENT_PRIZES, ACHIEVEMENT_MEDAL, ACHIEVEMENT_TOP, achievementGot, achievementProgress, achievementsVisible } from './missions.js';
 import { pauseOffscreen, openModal, toast, updateCoins, money, esc, reduced, wait, flyToWallet, spendFromWallet, sparkle, confetti, starsHTML, warp, buzz, balloons, lootBubbles, floatBubbles, streakWarnHTML, popPrize, popBalloon, countPop, HEADS, betLoseHTML, shownCoins } from './ui.js';
-import { icon, iconURL, iconInner, star, coin, miniPlanet, avatarHTML, AVATAR_COLORS, kidOf, KID_SKINS, KID_HAIRS, KID_STYLES, cardBackURL, setDeck, lockIcon, curtainIcon, chestBody, chestLid, boxBody, boxLid, capChute, capBody, capLid } from './art.js';
+import { icon, iconURL, iconInner, star, coin, miniPlanet, avatarHTML, AVATAR_COLORS, kidOf, KID_SKINS, KID_HAIRS, KID_STYLES, cardBackURL, setDeck, lockIcon, curtainIcon, chestBody, chestLid, boxBody, boxLid, capChute, capBody, capLid, vineSVG } from './art.js';
 import { GROUPS, SECTIONS, ITEMS, shopItems, groupOf, owns, equipped, equip, buy, item, lockedUntil, titleHTML, titleIcon, sell, sellable, sellPrice } from './shop.js';
 import { BIOMES, biomeKey, EVENT_BIOMES, tableHTML } from './biomes.js';
 import { redeem } from './codes.js';
@@ -1017,6 +1017,8 @@ const MECH_BOTH = {
   curtain: () => mini(0, '5', 's', { marks: `<span class="curtain-mark">${curtainIcon()}</span>` }, 'curtain-key-demo') + mechCard('curtain'),
   arrow: () => mini(0, '6', 'd', { arrow: 1 }) + mini(0, '6', 'c', { arrow: -1 }),
   live: () => mini(0, 'K', 's', { live: 1 }) + mini(0, '4', 'h', { live: -1 }),
+  // Enredadera: con la carta de fuego que la quema.
+  vine: () => mini(0, '3', 'h', { fire: 1 }) + mechCard('vine'),
 };
 // Ayuda → Cartas especiales, en bloques como "Cómo jugar".
 // Grupos de Cómo jugar: los mismos de las ventanas (MECH_KINDS en game.js).
@@ -1041,6 +1043,10 @@ function mechCard(m, x = 0) {
   if (m === 'cham') return mini(x, '7', 'c', { cham: 1 }, 'cham-demo');
   if (m === 'bolt') return mini(x, '6', 'h', { bolt: 1 });
   if (m === 'cst') return mini(x, 'J', 'd', { cst: 1 });
+  if (m === 'vine') return mini(x, '9', 's', { marks: `<span class="vine-ov">${vineSVG()}</span>` }, 'vined vine-demo');
+  if (m === 'magnet') return mini(x, '4', 'h', { magnet: 1 });
+  if (m === 'rainbow') return mini(x, '6', 'c', { rainbow: 1 });
+  if (m === 'sleep') return mini(x, '8', 'd', { marks: `<span class="sleep-ov"><i class="sl-cap">${icon('dormida')}</i><span class="zz"><i>z</i><i>z</i><i>z</i></span><b>3</b></span>` }, 'asleep');
   if (m === 'comet') return `<div class="card comet-card up" style="left:${x}px"><div class="inner"><div class="face front"></div></div><span class="comet-face">${icon('comet')}<b>4</b><em>+3</em></span></div>`;
   return '';
 }
@@ -3830,15 +3836,17 @@ function openDaily() {
   // Piezas que ya tienes: semanas completas de este ciclo (al reclamar el día 28 el ciclo vuelve a empezar).
   const pieces = st.claimed && idx === N - 1 ? 4 : dailyPieces(st.claimed ? idx + 1 : idx);
   let shield = save.daily.shield || 0;
-  const tap = '<em class="tap-me">¡Tócalo!</em>';
+  const tap = '<em class="tap-me">¡Reclama!</em>';
+  // 13 nov 2026 (pedido del usuario): sin «Día n»; el número va donde sale la paloma y al reclamar la paloma lo cambia.
+  const mark = (k, n) => (k === 'got' ? `<i class="ok">${icon('check')}</i>` : `<b class="ok dnum outl">${n}</b>`);
   let nodes = '';
   for (let i = week; i < week + 6; i++) {
     const p = DAILY_PATH[i], k = stateOf(i);
     const main = p.coins ? `${coin()}<b>${p.coins}</b>` : p.tickets ? `${icon('ticket')}<b>${p.tickets}</b>` : '';
-    nodes += `<div class="dnode ${k}" data-i="${i}"><span class="dpl">${miniPlanet(DAY_PLANETS[i - week])}${k === 'got' ? `<i class="ok">${icon('check')}</i>` : ''}${k === 'today' ? tap : ''}</span><small>Día ${i - week + 1}</small><span class="dp">${main}</span></div>`;
+    nodes += `<div class="dnode ${k}" data-i="${i}"><span class="dpl">${miniPlanet(DAY_PLANETS[i - week])}${mark(k, i - week + 1)}${k === 'today' ? tap : ''}</span><span class="dp">${main}</span></div>`;
   }
   const big = week + 6, bk = stateOf(big);
-  nodes += `<div class="dnode d7 ${bk}" data-i="${big}"><span class="dpl worm"><i></i><i></i><i></i><b></b>${bk === 'got' ? `<i class="ok">${icon('check')}</i>` : ''}${bk === 'today' ? tap : ''}</span><small>Día 7</small><span class="dp q">${icon('gift')}<b>?</b></span></div>`;
+  nodes += `<div class="dnode d7 ${bk}" data-i="${big}"><span class="dpl worm"><i></i><i></i><i></i><b></b>${mark(bk, 7)}${bk === 'today' ? tap : ''}</span><span class="dp q">${icon('gift')}<b>?</b></span></div>`;
   const quarters = PIECE_CLIP.map((c, i) => `<span class="pq${i < pieces ? ' on' : ''}" style="clip-path:${c}">${miniPlanet(emblem)}</span>`).join('');
   const note = st.saved ? `<p class="note dly-saved">${icon('escudito')} ¡Tu escudo te salvó! Sigues en el día ${idx + 1}.</p>` : st.reset ? '<p class="note">Se rompió tu racha: vuelves al día 1.</p>' : '';
   // Lo ganado: se suma al reclamar; al cerrar, monedas y boletos vuelan al monedero.
@@ -3893,7 +3901,10 @@ function openDaily() {
     // Logros Constante (regalos reclamados) y Constructor de planetas (planetas armados).
     track({ dailies: 1, ...(last && { planets: 1 }) });
     cell.classList.replace('today', 'got');
+    // El número se va y llega la paloma con un brinco.
+    pl.querySelector('.dnum')?.remove();
     pl.insertAdjacentHTML('beforeend', `<i class="ok">${icon('check')}</i>`);
+    if (!reduced()) pl.querySelector('.ok').animate([{ scale: 0, rotate: '-30deg' }, { scale: 1.4, rotate: '8deg', offset: 0.6 }, { scale: 1, rotate: '0deg' }], { duration: 420, easing: 'ease-out' });
     document.querySelector('[data-a="daily"] .dot')?.remove();
     document.querySelector('[data-a="daily"]')?.classList.remove('ready');
     lootBubbles(m, prizeIcons(p), pl);
@@ -5152,11 +5163,12 @@ function openHelp(tab = 'basico', then) {
         <h3 class="help-h">Ayudas</h3>
         <div class="step"><div class="ill c"><span class="help-btn gold">${icon('ayudas')}</span></div><p>El <b>botón dorado</b> abre tus ayudas. Abajo de cada una compras <b>+1</b> con un toque; tocar la carta la usa cuando tú quieras. Solo salen las que sirven en ese nivel.</p></div>
         <div class="step"><div class="ill c"><div class="card up"><div class="inner"><div class="face front wild"></div></div></div></div><p><b>Comodín:</b> vale cualquier número. Úsalo cuando no tengas jugada.</p></div>
-        <div class="step" data-u="bomb|comet|live|ghost|cham"><div class="ill c"><span class="help-card" style="background-image:${cardBackURL('hreloj')}"></span></div><p><b>Reloj de arena:</b> congela 3 turnos todo lo que cuenta: bombas, cometas, cartas vivas, fantasmas y camaleones.</p></div>
+        <div class="step" data-u="bomb|comet|live|ghost|cham|vine"><div class="ill c"><span class="help-card" style="background-image:${cardBackURL('hreloj')}"></span></div><p><b>Reloj de arena:</b> congela 3 turnos todo lo que cuenta: bombas, cometas, cartas vivas, fantasmas y camaleones.</p></div>
         <div class="step"><div class="ill c"><span class="help-card" style="background-image:${cardBackURL('hver')}"></span></div><p><b>Ver cartas:</b> voltea todas las cartas de la mesa unos segundos.</p></div>
         <div class="step" data-u="lock|curtain"><div class="ill c"><span class="help-card" style="background-image:${cardBackURL('hllave')}"></span></div><p><b>Llave maestra:</b> abre todos los candados y cortinas.</p></div>
         <div class="step" data-u="rocas"><div class="ill c"><span class="help-card" style="background-image:${cardBackURL('hlaser')}"></span></div><p><b>Láser:</b> rompe todas las piedras de los asteroides.</p></div>
         <div class="step" data-u="ship"><div class="ill c"><span class="help-card" style="background-image:${cardBackURL('hescudo')}"></span></div><p><b>Escudo:</b> la nave ladrona ya no te roba en todo el nivel.</p></div>
+        <div class="step" data-u="magnet"><div class="ill c"><span class="help-card" style="background-image:${cardBackURL('himan')}"></span></div><p><b>Imán:</b> tu siguiente robo saca del mazo la carta que más te sirve, sin cortar tu racha, y la carta que conviene jugar tiembla.</p></div>
         <div class="step"><div class="ill c"><span class="help-btn">${icon('undo')}</span></div><p><b>Deshacer:</b> regresa tu última jugada o la carta que robaste.</p></div>
         <div class="step"><div class="ill c"><span class="help-five"><b>+5</b></span></div><p>¿Se acabó el mazo? Toca el <b>+5</b> para comprar 5 cartas. Con ellas te llevas solo 1 estrella.</p></div>
         <h3 class="help-h">Estrellas y boletos</h3>

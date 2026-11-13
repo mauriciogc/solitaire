@@ -890,6 +890,16 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
     [...mech].filter((m) => m !== 'comet').slice(keep).forEach((m) => mech.delete(m));
     mech.add('ship');
   }
+  // Enredadera y fuego (13 nov 2026): sorteo propio, como el fantasma; en su mundo, en todos (sola en los 5 primeros).
+  // Cuenta en el límite de 2. Fuera de las mesas que se recorren y del agujero negro (ese no lleva otras cartas).
+  const rvi = mulberry32(hash(g * 9173 + t * 79 + 53));
+  if (n >= 12 && !scroll && !holeOn && world >= MECH_INTRO.vine && (world === MECH_INTRO.vine || rvi() < VINE_ODDS)) {
+    const keep = respite || (world === MECH_INTRO.vine && index < 5) ? 0 : 1;
+    const comet = mech.has('comet');
+    [...mech].filter((m) => m !== 'comet').slice(keep).forEach((m) => mech.delete(m));
+    mech.add('vine');
+    if (!comet) mech.delete('comet');
+  }
 
   // Carta regalo: una carta especial (sin número) que se activa sola al quedar destapada del todo
   // y manda 2-5 cartas al final del mazo. Va tapada y en el primer 40% del orden de retirada.
@@ -967,7 +977,7 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
 
   const cards = pos.map((p, i) => ({ id: i, ...p, rank: ranks[i], suit: randInt(r, 0, 3), coveredBy: coveredBy[i], ...(under && { under: under[i] }), ...(neb?.[i] && { neb: neb[i] }) }));
   for (const id of [...bombIds, ...cometIds]) delete cards[id].rank;
-  const SPECIAL = ['lock', 'key', 'pack', 'ice', 'alt', 'arrow', 'curtain', 'curtainKey', 'bomb', 'live', 'comet', 'turbo', 'half', 'ghost', 'coin', 'cham', 'ring', 'doorKey', 'belt', 'bolt', 'shield'];
+  const SPECIAL = ['lock', 'key', 'pack', 'ice', 'alt', 'arrow', 'curtain', 'curtainKey', 'bomb', 'live', 'comet', 'turbo', 'half', 'ghost', 'coin', 'cham', 'ring', 'doorKey', 'belt', 'bolt', 'shield', 'vine', 'fire', 'sleep', 'rainbow', 'magnet'];
   const plain = (id) => SPECIAL.every((f) => cards[id][f] == null);
 
   // Boleto partido (1-2): la referencia juega primero la mitad de arriba (su número de la cadena) y la de abajo al final
@@ -1166,6 +1176,28 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
       }
     }
   }
+  // Enredadera (13 nov 2026, pedido del usuario): la carta de fuego va entre el 15% y el 50% de la referencia y las
+  // enredaderas en cartas que la referencia juega después del fuego (así nunca le estorban). Empiezan 2-4 y crecen a
+  // 2-4 más, cada una la más cercana a las que ya tienen (orden de c.vine; ver vineOn en engine.js).
+  let vine = null;
+  if (mech.has('vine')) {
+    const rv = mulberry32(hash(g * 9173 + t * 83 + 59));
+    const kf = pickPlain(Math.max(2, Math.floor(np * 0.15)), Math.ceil(np * 0.5));
+    const after = [];
+    if (kf != null) for (let k = kf + 1; k < np; k++) if (plain(play[k]) && !after.includes(play[k])) after.push(play[k]);
+    if (after.length >= 3) {
+      const n0 = Math.min(after.length, randInt(rv, 2, 4)), total = Math.min(after.length, n0 + randInt(rv, 2, 4));
+      const got = shuffle(rv, after.slice()).slice(0, n0);
+      const dist = (a, b) => (pos[a].group === pos[b].group ? Math.hypot(pos[a].x - pos[b].x, (pos[a].y - pos[b].y) * 1.4) : 99);
+      while (got.length < total) {
+        const rest = after.filter((id) => !got.includes(id));
+        got.push(rest.reduce((best, id) => (Math.min(...got.map((j) => dist(id, j))) < Math.min(...got.map((j) => dist(best, j))) ? id : best)));
+      }
+      cards[play[kf]].fire = 1;
+      got.forEach((id, i) => (cards[id].vine = i));
+      vine = { n0, n: total };
+    }
+  }
   // Bomba: explota si llevas `bomb` acciones sin destaparla. La referencia la destapa antes, con 2-5 de margen.
   for (const id of bombIds) cards[id].bomb = (bombFree[id] ?? 0) + randInt(r, 2, 5);
   // Cometa: la referencia lo alcanza con 2-4 acciones de margen.
@@ -1290,7 +1322,7 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
     }
   }
   const level = {
-    g, world, index, d, template, boss, secret, event: !!ev, fresh, ...(respite && { respite }), ...(scroll && { scroll }), ...(tideOn && cards.some((c) => c.wet) && { tide: 1 }), ...(hole && { hole }), ...(doors && { doors }), ...(belt && { belt }), ...(rocksOn && { rocks: { n: base === rocksFirst() ? 2 : 2 + (hash(g * 211 + 7) % 2) } }),
+    g, world, index, d, template, boss, secret, event: !!ev, fresh, ...(respite && { respite }), ...(scroll && { scroll }), ...(tideOn && cards.some((c) => c.wet) && { tide: 1 }), ...(hole && { hole }), ...(vine && { vine }), ...(doors && { doors }), ...(belt && { belt }), ...(rocksOn && { rocks: { n: base === rocksFirst() ? 2 : 2 + (hash(g * 211 + 7) % 2) } }),
     ...(raw.names && { pieces: raw.names }),
     ...(nebula && { neb: segments }),
     ...(grav && { cols: segments }),
@@ -1311,7 +1343,7 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
   if (ev) level.rewardStep = 2;
   if (mech.has('ship')) level.ship = 1;
   // Primero el camino acertado (instantáneo); el solucionador solo si ese no llega a tiempo.
-  const check = () => (!level.ship && !level.tide && !level.hole && !level.belt && !level.rocks && !cards.some((c) => c.live || c.bomb || c.ghost)) || refLeft(level) >= 0 || !!solve(level, initState(level), 60000);
+  const check = () => (!level.ship && !level.tide && !level.hole && !level.belt && !level.rocks && !level.vine && !cards.some((c) => c.live || c.bomb || c.ghost)) || refLeft(level) >= 0 || !!solve(level, initState(level), 60000);
   // La banda: si no se puede ganar, se para (queda como una fila de cartas sueltas).
   if (level.belt && !check()) {
     level.groups[level.belt.g] = { w: groups[level.belt.g].w, h: groups[level.belt.g].h };
@@ -1375,6 +1407,43 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
         const i = pick(rcs, at);
         for (const x of seq.slice(i, i + m)) cards[x.id].cst = 1;
         level.cst = m;
+      }
+    }
+    // Carta dormida (13 nov 2026, pedido del usuario): no se juega hasta llevar racha de `sleep` (2-4, cartas seguidas
+    // sin robar); al llegar despierta y se queda despierta. Va donde la referencia ya trae esa racha antes de jugarla,
+    // así nunca le estorba. En su mundo, en todos (1-2); después, con su sorteo.
+    const rsl = mulberry32(hash(g * 4447 + t * 89 + 61));
+    if (world >= MECH_INTRO.sleep && (world === MECH_INTRO.sleep || rsl() < SLEEP_ODDS)) {
+      const run = new Map();
+      let r0 = 0;
+      for (const x of seq) {
+        if (x.dn) r0 = 0;
+        if (!x.tail && !run.has(x.id)) run.set(x.id, r0);
+        r0++;
+      }
+      const ok = [...run].filter(([id, r]) => r >= 2 && plain(id));
+      for (let w = 1 + (rsl() < 0.4 ? 1 : 0); w > 0 && ok.length; w--) {
+        const [id, r] = ok.splice(Math.floor(rsl() * ok.length), 1)[0];
+        cards[id].sleep = 2 + Math.floor(rsl() * (Math.min(4, r) - 1));
+      }
+    }
+    // Arcoíris (13 nov 2026): al jugarlo, las 3 jugadas siguientes pueden ser ±2. Solo ayuda: no se comprueba.
+    const rar = mulberry32(hash(g * 3767 + t * 97 + 67));
+    if (world >= MECH_INTRO.rainbow && (world === MECH_INTRO.rainbow || rar() < RAINBOW_ODDS)) {
+      const ks = [];
+      for (let k = 0; k < np; k++) if (plain(play[k])) ks.push(k);
+      if (ks.length) cards[play[pick(rar, ks)]].rainbow = 1;
+    }
+    // Imán (13 nov 2026): al jugarlo, tu siguiente robo saca del mazo la carta que deja jugar más cartas del tablero.
+    // Cambia lo que robas, así que la referencia puede no servir: se comprueba y si no se gana, se quita.
+    const rmg = mulberry32(hash(g * 2909 + t * 101 + 71));
+    if (world >= MECH_INTRO.magnet && (world === MECH_INTRO.magnet || rmg() < MAGNET_ODDS)) {
+      const ks = [];
+      for (let k = 1; k < Math.ceil(np * 0.7); k++) if (plain(play[k])) ks.push(k);
+      if (ks.length) {
+        const c = cards[play[pick(rmg, ks)]];
+        c.magnet = 1;
+        if (!(refLeft(level) >= 0 || solve(level, initState(level), 60000))) delete c.magnet;
       }
     }
   }
@@ -1494,18 +1563,20 @@ export function festivalLevel(seed, k, world, n = FESTIVAL_PER_PLANET) {
 }
 
 // ---------- Mecánicas por mundo ----------
-export const MECHANICS = ['lock', 'pack', 'ice', 'double', 'arrow', 'curtain', 'bomb', 'live', 'ticket', 'comet', 'turbo', 'ghost', 'ship', 'coin', 'cham', 'bolt', 'cst'];
-const MECH_FIELD = { lock: 'lock', pack: 'pack', ice: 'ice', double: 'alt', arrow: 'arrow', curtain: 'curtain', bomb: 'bomb', live: 'live', ticket: 'half', comet: 'comet', turbo: 'turbo', ghost: 'ghost', ship: 'ship', coin: 'coin', cham: 'cham', bolt: 'bolt', cst: 'cst' };
+export const MECHANICS = ['lock', 'pack', 'ice', 'double', 'arrow', 'curtain', 'bomb', 'live', 'ticket', 'comet', 'turbo', 'ghost', 'ship', 'coin', 'cham', 'bolt', 'cst', 'vine', 'magnet', 'rainbow', 'sleep'];
+const MECH_FIELD = { lock: 'lock', pack: 'pack', ice: 'ice', double: 'alt', arrow: 'arrow', curtain: 'curtain', bomb: 'bomb', live: 'live', ticket: 'half', comet: 'comet', turbo: 'turbo', ghost: 'ghost', ship: 'ship', coin: 'coin', cham: 'cham', bolt: 'bolt', cst: 'cst', vine: 'vine', magnet: 'magnet', rainbow: 'rainbow', sleep: 'sleep' };
 // Van con su sorteo, fuera de chooseMechanics (si entraran, cambiarían todos los niveles ya probados).
-const OWN_DRAW = ['ticket', 'ghost', 'ship', 'coin', 'cham', 'bolt', 'cst'];
+const OWN_DRAW = ['ticket', 'ghost', 'ship', 'coin', 'cham', 'bolt', 'cst', 'vine', 'magnet', 'rainbow', 'sleep'];
 // Mundo (índice desde 0) en el que se presenta cada una.
 // 8 nov 2026: corridas para que cada estreno quede a 10 niveles o más del anterior (antes lock 1, pack 2, ice 4, double 7,
 // arrow 11, curtain 15, bomb 19, live 24, ticket 20, comet 12, turbo 16, ghost 29, ship 34, coin 26, cham 32).
 // 10 nov 2026: rayo 47, constelación 49 y escudo 52 (a 10 niveles o más de las festividades del 461 y de los asteroides
 // del ROCAS_FROM).
-export const MECH_INTRO = { lock: 1, pack: 2, ice: 6, double: 12, arrow: 17, curtain: 22, bomb: 27, live: 33, ticket: 28, comet: 19, turbo: 24, ghost: 39, ship: 44, coin: 36, cham: 42, bolt: 47, cst: 49 };
+// 13 nov 2026: enredadera 52 (nivel 521, a 14 de los asteroides del 507), imán 54 (541), arcoíris 56 (561) y carta
+// dormida 58 (581).
+export const MECH_INTRO = { lock: 1, pack: 2, ice: 6, double: 12, arrow: 17, curtain: 22, bomb: 27, live: 33, ticket: 28, comet: 19, turbo: 24, ghost: 39, ship: 44, coin: 36, cham: 42, bolt: 47, cst: 49, vine: 52, magnet: 54, rainbow: 56, sleep: 58 };
 export const MECH_NAMES = {
-  lock: 'Candado', pack: 'Carta regalo', ice: 'Hielo', double: 'Carta doble', arrow: 'Flecha', curtain: 'Cortina', bomb: 'Bomba', live: 'Carta viva', ticket: 'Boleto partido', comet: 'Cometa', turbo: 'Cohete turbo', ghost: 'Fantasma', ship: 'Nave ladrona', coin: 'Carta moneda', cham: 'Camaleón', bolt: 'Rayo', cst: 'Constelación',
+  lock: 'Candado', pack: 'Carta regalo', ice: 'Hielo', double: 'Carta doble', arrow: 'Flecha', curtain: 'Cortina', bomb: 'Bomba', live: 'Carta viva', ticket: 'Boleto partido', comet: 'Cometa', turbo: 'Cohete turbo', ghost: 'Fantasma', ship: 'Nave ladrona', coin: 'Carta moneda', cham: 'Camaleón', bolt: 'Rayo', cst: 'Constelación', vine: 'Enredadera', magnet: 'Imán', rainbow: 'Arcoíris', sleep: 'Carta dormida',
 };
 // Cartas de regalo (cometa y cohete turbo): no entran al sorteo de mecánicas, van aparte (buildLevel).
 // En el camino sin ayudas cada una sale de 1 a 4 veces en cada tramo de 30-35 niveles (extraPlan, pedido 6 nov 2026).
@@ -1524,6 +1595,10 @@ export const COIN_ODDS = 0.18;
 export const CHAM_ODDS = 0.12;
 // Rayo, constelación y escudo (10 nov 2026): con su sorteo. El escudo, en la mitad de los niveles con nave.
 export const BOLT_ODDS = 0.12, CST_ODDS = 0.12;
+// Enredadera (13 nov 2026): con su sorteo, como el fantasma.
+export const VINE_ODDS = 0.12;
+// Imán, arcoíris y carta dormida (13 nov 2026): con su sorteo, al final de buildLevel como el rayo.
+export const MAGNET_ODDS = 0.1, RAINBOW_ODDS = 0.1, SLEEP_ODDS = 0.12;
 export const EXTRA_ODDS = 0.047;
 // Estreno: el primer nivel de su mundo que no es duro ni mesa especial.
 const debuts = {};

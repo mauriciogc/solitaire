@@ -350,6 +350,18 @@ const ICONS = {
   planet: () => planetInner('#86cf5c', '#4d9f45', '#2f86c8', '#ffc83d'),
   crown: () => tshape('M4 26 3 8l7 6 6-9 6 9 7-6-1 18z', '#ffc83d', '#ec9a17', '<circle cx="16" cy="18" r="2.6" fill="#ff5f7e"/>', 2.2),
   trophy: () => tshape('M9 5h14v6a7 7 0 0 1-14 0z', '#ffc83d', '#ec9a17', '', 2.2) + `<path d="M9 7H5a4 4 0 0 0 4 6M23 7h4a4 4 0 0 1-4 6" fill="none" stroke="${K}" stroke-width="2.2"/>` + tshape('M13 18h6l1 5h-8z', '#ffc83d', '#ec9a17', '', 2) + tshape('M9 23h14v4H9z', '#9a5a32', '#7a4024', '', 2),
+  // Imán (13 nov 2026): herradura roja con puntas plateadas.
+  iman: () => tshape('M6 4h7v12a3 3 0 0 0 6 0V4h7v12a10 10 0 0 1-20 0z', '#ff5f7e', '#d63d5f', `<path d="M9 17a7 7 0 0 0 4.5 6" fill="none" stroke="#ffd0da" stroke-width="2" stroke-linecap="round"/>`, 2.2) + tshape('M6 4h7v5H6zM19 4h7v5h-7z', '#eef0f8', '#c4c9dc', '', 2),
+  // Arcoíris (13 nov 2026): cuatro arcos de color y dos nubes.
+  arcoiris: () => ['#ff5f7e', '#ffd54a', '#5fd47a', '#5ab0ff'].map((c, i) => `<path d="M${4 + i * 3} 24a${12 - i * 3} ${12 - i * 3} 0 0 1 ${24 - i * 6} 0" fill="none" stroke="${K}" stroke-width="5.2"/><path d="M${4 + i * 3} 24a${12 - i * 3} ${12 - i * 3} 0 0 1 ${24 - i * 6} 0" fill="none" stroke="${c}" stroke-width="2.8"/>`).join('')
+    + tshape('M1.5 26.5a3.6 3.6 0 0 1 3-4.5 4 4 0 0 1 7 1.3 3 3 0 0 1 .3 5.7h-8a2.6 2.6 0 0 1-2.3-2.5z', '#fff', '#dfe6f5', '', 1.8) + tshape('M20.2 26.5a3.6 3.6 0 0 1 3-4.5 4 4 0 0 1 7 1.3 3 3 0 0 1 .3 5.7h-8a2.6 2.6 0 0 1-2.3-2.5z', '#fff', '#dfe6f5', '', 1.8),
+  // Carta dormida (13 nov 2026): gorro de dormir con borla.
+  dormida: () => tshape('M3 25C6 12 16 5 28 8l-3 7c-7-1-12 3-14 10z', '#7c55e0', '#5a3bbf', `<path d="M8 22c3-6 8-9 14-9" fill="none" stroke="#a37bff" stroke-width="2" stroke-linecap="round"/>`, 2.2)
+    + tshape(CIRCLE(27.5, 8.5, 3.6), '#fff', '#dfe6f5', '', 2) + tshape('M2 23.5h12.5v4.5H2z', '#fff', '#dfe6f5', '', 2),
+  // Enredadera (13 nov 2026): rama con tres hojas y un zarcillo.
+  enredadera: () => `<path d="M4 29C10 22 8 15 16 12S26 6 28 2" fill="none" stroke="${K}" stroke-width="5.4" stroke-linecap="round"/><path d="M4 29C10 22 8 15 16 12S26 6 28 2" fill="none" stroke="#4fa646" stroke-width="2.8" stroke-linecap="round"/>`
+    + [[9, 20, -40, '#5bbf4a'], [18, 9, 30, '#7fd45a'], [24, 17, 120, '#5bbf4a']].map(([x, y, r, c]) => `<g transform="translate(${x} ${y}) rotate(${r}) scale(1.05)">${tshape('M0-7.5Q6.5-2.5 0 7.5Q-6.5-2.5 0-7.5z', c, '#3d8f3a', '<path d="M0-5v10" stroke="#3d8f3a" stroke-width="1.1" stroke-linecap="round"/>', 1.6, [-0.8, -1])}</g>`).join('')
+    + `<path d="M26 26c3-1 4 2 2 3s-3-1-1-2" fill="none" stroke="${K}" stroke-width="1.5" stroke-linecap="round"/>`,
   flame: () => tshape('M16 3c1.5 5 8 7 8 15a8 8 0 0 1-16 0c0-4 2-6 3.5-8 .5 2.5 2 4 3.5 4-1-5 0-8.5 1-11z', '#ff6a3d', '#e04a20', '<path d="M16 15c1 3 4 4 4 7a4 4 0 0 1-8 0c0-2 1.5-3.5 4-7z" fill="#ffc83d"/>', 2.2),
   vibra: () => tshape('M11 4h10a2 2 0 0 1 2 2v20a2 2 0 0 1-2 2H11a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z', '#4aa8de', '#2f86c0', '<path d="M11 7h10v15H11z" fill="#d8f0ff"/>', 2.2) + `<path d="M5 11v10M27 11v10M2 13.5v5M30 13.5v5" stroke="${K}" stroke-width="2.4" stroke-linecap="round"/>`,
   snail: () => tshape('M4 25h20c3 0 4-2 4-4v-2l-2-1-2 3H4z', '#ffd27a', '#e8a94a', '', 2) + tshape(CIRCLE(14, 16, 8), '#ff9c5b', '#e2753a', `<path d="M14 16a3 3 0 1 1 3-3" fill="none" stroke="${K}" stroke-width="1.8"/>`, 2.2) + `<path d="M26 18l1-6M28.5 18.5l2.5-5" stroke="${K}" stroke-width="1.8" stroke-linecap="round"/>`,
@@ -426,6 +438,16 @@ const hsl = (h, s, l) => `hsl(${h} ${s}% ${l}%)`;
 export const lockIcon = (hue, cls = '') => svg(lockInner(hsl(hue, 75, 60), hsl(hue, 65, 45)), `lock ${cls}`);
 export const keyIcon = (hue, cls = '') => svg(`<g transform="rotate(-35 16 16)">${tshape('M14 14.2h14.5v3.6H26v3.6h-3v-3.6h-2v3h-3v-3h-4z', hsl(hue, 75, 60), hsl(hue, 65, 45), '', 2)}${tshape(CIRCLE(9, 16, 6.4), hsl(hue, 75, 60), hsl(hue, 65, 45), `<circle cx="8" cy="14.2" r="2.2" fill="#fffdf7"/>`, 2.2)}</g>`, `key ${cls}`);
 export const arrowIcon = (up) => svg(tshape(CIRCLE(16, 16, 13), '#ff9c5b', '#e2753a', '', 2.2) + glyph(up ? 'M14.6 22V9.5M9.6 14 14.6 9l5 5' : 'M14.6 8v12.5M9.6 16l5 5 5-5', 3.6, '#fff'), 'arrow');
+// Enredadera (13 nov 2026): capa de hojas que tapa la carta (boca arriba o boca abajo). Tallos con contorno de tinta y
+// hojas de dos verdes; detrás, un velo verde que no deja ver el número. Mide como la carta (60 × 84) y se sale un poco.
+const VINE_LEAVES = [[8, 10, -30], [27, 6, 20], [48, 12, 60], [16, 26, 110], [40, 28, -20], [56, 36, 30], [6, 44, -70], [26, 42, 40], [46, 50, 150], [14, 60, 10], [34, 62, -40], [54, 66, 80], [6, 76, 60], [24, 80, -10], [44, 80, 120], [30, 22, 170]];
+export const vineSVG = () => `<svg class="vine-svg" viewBox="-4 -4 68 92" aria-hidden="true"><rect x="1" y="1" width="58" height="82" rx="8" fill="#2f6e35" opacity=".82"/>`
+  + ['M-2 74C14 58 6 42 26 32S52 12 62 2', 'M-2 18C16 30 30 44 38 60S54 82 62 88', 'M30 86C26 70 40 56 30 40S20 14 32 -2'].map((d) => `<path d="${d}" fill="none" stroke="${K}" stroke-width="6.2" stroke-linecap="round"/><path d="${d}" fill="none" stroke="#4fa646" stroke-width="3.2" stroke-linecap="round"/>`).join('')
+  + `<path d="M50 30c4-2 7 1 5 4s-6 1-4-2" fill="none" stroke="${K}" stroke-width="1.6" stroke-linecap="round"/><path d="M10 52c-4 0-5-4-2-5s4 3 1 4" fill="none" stroke="${K}" stroke-width="1.6" stroke-linecap="round"/>`
+  + VINE_LEAVES.map(([x, y, r], i) => `<g transform="translate(${x} ${y}) rotate(${r}) scale(${1.25 + (i % 3) * 0.18})"><path d="M0-7.5Q6.5-2.5 0 7.5Q-6.5-2.5 0-7.5z" fill="${i % 2 ? '#7fd45a' : '#5bbf4a'}" stroke="${K}" stroke-width="1.5" stroke-linejoin="round"/><path d="M0-5.5v11" stroke="${i % 2 ? '#4fa646' : '#3d8f3a'}" stroke-width="1.1" stroke-linecap="round"/></g>`).join('')
+  + '</svg>';
+// Brote: la punta de la enredadera que se asoma a la carta donde va a crecer.
+export const sproutSVG = () => `<svg class="sprout-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 22C6 16 4 11 10 8S18 6 18 2" fill="none" stroke="${K}" stroke-width="4.6" stroke-linecap="round"/><path d="M2 22C6 16 4 11 10 8S18 6 18 2" fill="none" stroke="#4fa646" stroke-width="2.2" stroke-linecap="round"/><g transform="translate(12 12) rotate(50) scale(.9)"><path d="M0-7.5Q6.5-2.5 0 7.5Q-6.5-2.5 0-7.5z" fill="#7fd45a" stroke="${K}" stroke-width="1.5"/></g><path d="M18 2c3 0 4 3 2 4s-3-1-1-2" fill="none" stroke="${K}" stroke-width="1.4" stroke-linecap="round"/></svg>`;
 export const curtainIcon = () => svg(`${tshape('M2 4h28v4H2z', '#c9893a', '#a86a22', '', 1.8)}${tshape('M3.5 8H15c-1 5-3 9-6.5 12.5h-5z', '#e8435f', '#c22c49', '', 1.8)}${tshape('M28.5 8H17c1 5 3 9 6.5 12.5h5z', '#e8435f', '#c22c49', '', 1.8)}`, 'curtain');
 
 // ---------- Reversos ----------
@@ -664,6 +686,7 @@ export const BACKS = {
   hllave: { a: '#8a5cf0', b: '#6c3fd4', dots: '#efe6ff', art: () => `<g transform="translate(17 37) scale(2.06)">${ICONS.llaveMaestra()}</g>` },
   hlaser: { a: '#ff7aa0', b: '#e8507e', dots: '#ffe6ee', art: () => `<g transform="translate(17 37) scale(2.06)">${ICONS.laser()}</g>` },
   hescudo: { a: '#5fc7e8', b: '#3a8fc8', dots: '#e6fbff', art: () => `<g transform="translate(17 37) scale(2.06)">${ICONS.escudito()}</g>` },
+  himan: { a: '#ff7a8e', b: '#e8506a', dots: '#ffe6ea', art: () => `<g transform="translate(17 37) scale(2.06)">${ICONS.iman()}</g>` },
   // Mazo de ayudas (botón de la bandeja): genérico, turquesa con un destello mágico (no es el comodín).
   ayudas: { a: '#2fb4b0', b: '#1f9490', dots: '#e6fffb',
     art: () => {
