@@ -2,8 +2,8 @@ import { save, prefs, persist, resetProfile, deleteProfile, renameProfile, expor
 import { UNLOCK, EVENTS, FESTIVALS, COLLECTIONS, evSoon, isOn, nextEvent, daysToNextCol, plusCols, STREAK_GOALS, STREAK_STEP, streakGoal, nextIndex, dailyStreak, streakTheme, streakReady, streakHot, streakWin, streakLose, streakPendToFeats, msToMidnight, col, colLeft, colWin, colOffers, colBuy, ev, evLeft, evTicketLeft, evTicketPrice, evBuyTicket, evPrize, evEnter, evWin, evLose, evAlbum, festAlbum, EVENT_PLANETS, EVENT_PER_PLANET, EVENT_LEVELS, festival, festivalLeft, festivalSoon, soonLeft, evPrePrice, evPreOwned, evPreBuy, nextFestival, festEnter, festWin, festLose, festShape, festPrice, festPaid, festBuy, festPre, FEST_PRE, FEST_ENTRY, EV_FIRST } from './events.js';
 import { WORLD_COUNT, LEVELS_PER_WORLD, TOTAL_LEVELS, worldInfo, generateLevel, variantLevel, MECH_INTRO, MECH_NAMES, MECHANICS, EXTRA, extraDebut, SCROLL_FROM, tideFirst, holeFirst, doorsFirst, bandaFirst, rocksFirst, secretId, isSecret, eventLevel, festivalLevel } from './levels.js';
 import { Game, faceHTML, backHTML, TIPS, TABLE_TEXT, MECH_KINDS, ART } from './game.js';
-import { maxBet, betFee, betSteps, BET_STEPS, HELPS, DAILY_PATH, dailyState, starsNeeded, TICKET_PRICE, ticketCost, ticketRefund, coinsFor, bossChest, rollChest, CONST_PRIZE, openCost, boosted, secretCoins, rollSecret, openSurprise, MET_OFF, metShopPrice } from './economy.js';
-import { missions, missionDef, missionDone, missionsAllDone, autoClaim, ACHIEVEMENTS, ACHIEVEMENT_PRIZES, ACHIEVEMENT_MEDAL, ACHIEVEMENT_TOP, achievementGot, achievementProgress, achievementsVisible } from './missions.js';
+import { maxBet, betFee, betSteps, BET_STEPS, HELPS, DAILY_PATH, dailyState, dailyPieces, DAILY_SHIELD_MAX, starsNeeded, TICKET_PRICE, ticketCost, ticketRefund, coinsFor, bossChest, rollChest, CONST_PRIZE, openCost, boosted, secretCoins, rollSecret, openSurprise, MET_OFF, metShopPrice } from './economy.js';
+import { track, missions, missionDef, missionDone, missionsAllDone, autoClaim, ACHIEVEMENTS, ACHIEVEMENT_PRIZES, ACHIEVEMENT_MEDAL, ACHIEVEMENT_TOP, achievementGot, achievementProgress, achievementsVisible } from './missions.js';
 import { pauseOffscreen, openModal, toast, updateCoins, money, esc, reduced, wait, flyToWallet, spendFromWallet, sparkle, confetti, starsHTML, warp, buzz, balloons, lootBubbles, floatBubbles, streakWarnHTML, popPrize, popBalloon, countPop, HEADS, betLoseHTML, shownCoins } from './ui.js';
 import { icon, iconURL, iconInner, star, coin, miniPlanet, avatarHTML, AVATAR_COLORS, kidOf, KID_SKINS, KID_HAIRS, KID_STYLES, cardBackURL, setDeck, lockIcon, curtainIcon, chestBody, chestLid, boxBody, boxLid, capChute, capBody, capLid } from './art.js';
 import { GROUPS, SECTIONS, ITEMS, shopItems, groupOf, owns, equipped, equip, buy, item, lockedUntil, titleHTML, titleIcon, sell, sellable, sellPrice } from './shop.js';
@@ -624,7 +624,7 @@ const EV_ORDER = ['evento', 'evento-next', 'fiesta', 'fiesta-next', 'col', 'rach
 const SIDE_TOUR = [
   // 8 nov 2026: los menús van agrupados; primero el botón que los junta (tocarlo abre su cajón) y luego cada uno.
   { sel: '.side.l .grp-btn', open: 'l', title: 'Menú', text: () => 'Aquí se juntan el <b>regalo diario</b>, los <b>boletos</b>, la <b>tienda</b>, el <b>álbum</b>, <b>tu camino</b> y los <b>ajustes</b>. Tócalo para abrirlo; toca afuera para cerrarlo.' },
-  { a: 'daily', title: 'Regalo diario', text: () => (dailyState(save.daily).claimed ? 'Cada día te espera un <b>regalo</b>. Hoy ya lo abriste: vuelve mañana por el siguiente.' : 'Cada día te espera un <b>regalo</b>. Tócalo y reclámalo.'), act: () => !dailyState(save.daily).claimed },
+  { a: 'daily', title: 'Regalo diario', text: () => (dailyState(save.daily).claimed ? 'Cada día te espera un <b>regalo</b>. Hoy ya lo abriste: vuelve mañana por el siguiente.' : 'Cada día te espera un <b>regalo</b>: ábrelo y <b>toca el planeta de hoy</b>. Cada semana ganas una pieza de planeta y con 4 piezas, un <b>escudo</b>.'), act: () => !dailyState(save.daily).claimed },
   { a: 'dticket', title: 'Boletos de regalo', text: () => 'Cada 24 horas te regalamos <b>boletos</b> para entrar a niveles nuevos.' },
   { a: 'shop', title: 'Tienda', text: () => 'Con tus monedas cambia cómo se ven tus <b>cartas</b>, tu <b>avatar</b> y tu <b>viajero</b>.' },
   { a: 'album', title: 'Álbum', text: () => 'Cada planeta que terminas te da una <b>postal</b> para tu álbum.' },
@@ -3796,76 +3796,164 @@ function streakLost() {
   });
 }
 
+// Regalo diario (13 nov 2026, rehecho a pedido del usuario: el de antes se veía viejo). Un camino de 7 planetitas por
+// semana; se reclama tocando el planetita de hoy (sin botón ni personaje: el usuario los quitó). Debajo de cada uno, lo
+// que trae (para motivar); lo que ganas sale en burbujas y al cerrar las monedas y boletos vuelan al monedero. El día 7
+// es un agujero de gusano que gira y escupe los premios de la caja sorpresa y una pieza de planeta (arriba, el planeta
+// de tu mundo en 4 piezas). Con las 4 (28 días seguidos) el planeta se arma y da un escudo: si un día no entras, te
+// salva (dailyState). El escudo arriba es solo un botón con su número; tocarlo recuerda para qué sirve.
+const DAY_PLANETS = [['#ff9c5b', '#e2753a', '#ffd27a'], ['#5ab0ff', '#2f86c8', '#9fe6ff'], ['#86cf5c', '#4d9f45', '#2f86c8'], ['#ff7aa2', '#d64f7c', '#ffd0e0'], ['#ffd54a', '#e8a91a', '#ff9c5b', '#fff'], ['#a37bff', '#7c55e0', '#e0d0ff']];
+const PIECE_CLIP = ['inset(0 50% 50% 0)', 'inset(0 0 50% 50%)', 'inset(50% 50% 0 0)', 'inset(50% 0 0 50%)'];
+// Presentación del regalo diario (13 nov 2026, pedido del usuario: decirle antes cómo funciona). Sale una vez, la
+// primera vez que lo abre (también en el recorrido de botones), con el mismo formato que las ventanas de cartas.
+function openDailyIntro(then) {
+  const step = (pic, name, text) => `<div class="tip-card"><span class="tip-pic tip-ico">${pic}</span><p><b>${name}</b>${text}</p></div>`;
+  openModal({
+    title: '¡Nuevo regalo diario!',
+    color: 'green',
+    cls: 'daily-intro',
+    body: `<div class="dly-intro">${step(miniPlanet(DAY_PLANETS[1]), 'Un planeta por día', 'Entra cada día y <b>toca el planeta de hoy</b> para reclamar tu regalo.')}
+      ${step('<span class="worm mini"><i></i><i></i><i></i><b></b></span>', 'Día 7: agujero de gusano', 'Gira y te escupe premios sorpresa y una <b>pieza de planeta</b>.')}
+      ${step(icon('escudito'), 'Escudo', 'Junta las <b>4 piezas</b> (4 semanas seguidas) y ganas un escudo: si un día no entras, te salva y no vuelves al día 1.')}</div>`,
+    buttons: [{ label: '¡Entendido!', cls: 'green wide', onClick: () => { save.intro.regalo = true; persist(); then(); } }],
+  });
+}
+const SHIELD_TXT = 'Escudo: si un día no entras, te salva y no vuelves al día 1. Ganas uno al armar tu planeta.';
 function openDaily() {
+  if (!save.intro?.regalo) return openDailyIntro(openDaily);
   const st = dailyState(save.daily);
   const N = DAILY_PATH.length;
   const idx = st.claimed ? (st.day - 1 + N) % N : st.day;
   const week = Math.floor(idx / 7) * 7;
   const stateOf = (i) => (i < idx || (st.claimed && i === idx) ? 'got' : i === idx ? 'today' : 'next');
-  let days = '';
+  const info = worldInfo(Math.min(WORLD_COUNT - 1, Math.floor((save.next || 0) / LEVELS_PER_WORLD))), emblem = BIOMES[biomeKey(info.place)].emblem;
+  // Piezas que ya tienes: semanas completas de este ciclo (al reclamar el día 28 el ciclo vuelve a empezar).
+  const pieces = st.claimed && idx === N - 1 ? 4 : dailyPieces(st.claimed ? idx + 1 : idx);
+  let shield = save.daily.shield || 0;
+  const tap = '<em class="tap-me">¡Tócalo!</em>';
+  let nodes = '';
   for (let i = week; i < week + 6; i++) {
     const p = DAILY_PATH[i], k = stateOf(i);
-    const main = p.coins ? `${coin('big')}<b>+${p.coins}</b>` : p.tickets ? `${icon('ticket', 0, 0, 'big')}<b>+${p.tickets}</b>` : '';
-    days += `<div class="day ${k}" data-i="${i}"><small>Día ${i - week + 1}</small><span class="dp">${main}</span>${k === 'got' ? `<i class="ok">${icon('check')}</i>` : ''}</div>`;
+    const main = p.coins ? `${coin()}<b>${p.coins}</b>` : p.tickets ? `${icon('ticket')}<b>${p.tickets}</b>` : '';
+    nodes += `<div class="dnode ${k}" data-i="${i}"><span class="dpl">${miniPlanet(DAY_PLANETS[i - week])}${k === 'got' ? `<i class="ok">${icon('check')}</i>` : ''}${k === 'today' ? tap : ''}</span><small>Día ${i - week + 1}</small><span class="dp">${main}</span></div>`;
   }
   const big = week + 6, bk = stateOf(big);
-  const seven = `<div class="day day7 ${bk}" data-i="${big}"><small>Día 7</small>
-      <div class="gbox"><span class="lid">${boxLid()}</span><span class="body">${boxBody()}</span></div>
-      <b class="q">${bk === 'got' ? '¡Abierta!' : '¡Sorpresa!'}</b><div class="loot"></div>${bk === 'got' ? `<i class="ok">${icon('check')}</i>` : ''}</div>`;
+  nodes += `<div class="dnode d7 ${bk}" data-i="${big}"><span class="dpl worm"><i></i><i></i><i></i><b></b>${bk === 'got' ? `<i class="ok">${icon('check')}</i>` : ''}${bk === 'today' ? tap : ''}</span><small>Día 7</small><span class="dp q">${icon('gift')}<b>?</b></span></div>`;
+  const quarters = PIECE_CLIP.map((c, i) => `<span class="pq${i < pieces ? ' on' : ''}" style="clip-path:${c}">${miniPlanet(emblem)}</span>`).join('');
+  const note = st.saved ? `<p class="note dly-saved">${icon('escudito')} ¡Tu escudo te salvó! Sigues en el día ${idx + 1}.</p>` : st.reset ? '<p class="note">Se rompió tu racha: vuelves al día 1.</p>' : '';
+  // Lo ganado: se suma al reclamar; al cerrar, monedas y boletos vuelan al monedero.
+  let won = null, wonAt = null;
   const m = openModal({
     title: 'Regalo diario',
-    ico: 'gift',
     color: 'green',
     wide: true,
-    body: `${st.reset ? '<p class="note">Se rompió tu racha: vuelves al día 1.</p>' : ''}<div class="daily"><div class="dgrid">${days}</div>${seven}</div>`,
-    buttons: [
-      {
-        label: st.claimed ? 'Vuelve mañana' : `${icon('gift')} Reclamar`,
-        cls: 'green',
-        disabled: st.claimed,
-        keep: true,
-        onClick: async (btn) => {
-          btn.disabled = true;
-          const cell = m.el.querySelector('.day.today');
-          let p = DAILY_PATH[st.day];
-          if (p.surprise) {
-            // La caja tiembla, la tapa sale volando y aparece lo que traía.
-            p = openSurprise(p.surprise);
-            const box = cell.querySelector('.gbox');
-            if (!reduced()) {
-              await box.animate([{ rotate: '0deg' }, { rotate: '-9deg' }, { rotate: '8deg' }, { rotate: '-6deg' }, { rotate: '4deg' }, { rotate: '0deg' }], { duration: 650, iterations: 2 }).finished;
-              box.querySelector('.lid').animate([{ translate: '0 0', rotate: '0deg' }, { translate: '30px -70px', rotate: '40deg', opacity: 1, offset: 0.6 }, { translate: '60px -40px', rotate: '80deg', opacity: 0 }], { duration: 600, easing: 'cubic-bezier(0.2, 0.8, 0.4, 1)', fill: 'forwards' });
-            }
-            const r = box.getBoundingClientRect();
-            sparkle({ x: r.left + r.width / 2, y: r.top + r.height / 3 }, 20);
-            cell.querySelector('.q').textContent = '¡Abierta!';
-            cell.classList.add('opened');
-            cell.querySelector('.loot').innerHTML = lootHTML(p);
-            await wait(1500);
-          } else if (!reduced()) {
-            await cell.animate([{ scale: 1 }, { scale: 1.18 }, { scale: 1 }], { duration: 380, easing: 'cubic-bezier(0.34, 1.45, 0.64, 1)' }).finished;
-          }
-          cell.classList.replace('today', 'got');
-          cell.insertAdjacentHTML('beforeend', `<i class="ok">${icon('check')}</i>`);
-          save.daily = { day: (st.day + 1) % N, last: new Date().toDateString() };
-          document.querySelector('[data-a="daily"] .dot')?.remove();
-          document.querySelector('[data-a="daily"]')?.classList.remove('ready');
-          await wait(450);
-          const r = cell.getBoundingClientRect();
-          m.close();
-          grantPrize(p, { x: r.left + r.width / 2, y: r.top + r.height / 2 });
-        },
-      },
-    ],
+    cls: 'daily-modal',
+    body: `${note}<div class="dly">
+      <div class="dly-top"><div class="dly-box"><div class="dly-planet">${quarters}</div><p><b>Tu planeta · <span class="pc">${pieces}</span>/4</b><small>Una pieza por semana completa</small></p></div>
+        <button class="dly-shield${shield ? '' : ' none'}" aria-label="Escudos: ${shield}">${icon('escudito')}<b>${shield}</b></button></div>
+      <div class="dpath"><svg class="dline" aria-hidden="true"><path/><path/></svg>${nodes}</div>
+    </div>`,
+    onClose: () => {
+      if (!won) return;
+      if (won.coins) flyToWallet('coins', wonAt, won.coins);
+      if (won.tickets) wait(200).then(() => flyToWallet('tickets', wonAt, won.tickets));
+    },
   });
-  // 10 nov 2026: el día de hoy también reclama (además del botón).
-  const today = m.el.querySelector('.day.today'), go = m.el.querySelector('.mbtns .btn');
+  m.el.querySelector('.dly-shield').addEventListener('click', (e) => {
+    toast(`${icon('escudito')} ${SHIELD_TXT}`);
+    e.currentTarget.animate([{ scale: 1 }, { scale: 1.2 }, { scale: 1 }], { duration: 300, easing: 'ease-out' });
+  });
+  let busy = false;
+  const claim = async () => {
+    if (busy) return;
+    busy = true;
+    const cell = m.el.querySelector('.dnode.today');
+    cell.querySelector('.tap-me')?.remove();
+    cell.removeAttribute('role');
+    let p = DAILY_PATH[st.day];
+    const last = st.day === N - 1;
+    const pl = cell.querySelector('.dpl'), r = pl.getBoundingClientRect();
+    if (p.surprise) {
+      // El agujero de gusano gira cada vez más rápido, se traga la luz y escupe los premios en burbujas.
+      p = openSurprise(p.surprise);
+      cell.classList.add('gulp');
+      if (!reduced()) await wait(1300);
+      sparkle({ x: r.left + r.width / 2, y: r.top + r.height / 2 }, 20);
+    } else if (!reduced()) {
+      await cell.animate([{ scale: 1 }, { scale: 1.25 }, { scale: 1 }], { duration: 380, easing: 'cubic-bezier(0.34, 1.45, 0.64, 1)' }).finished;
+    }
+    // Se suma ya (si cierra la app, ya lo tiene) y sale en burbujas.
+    save.coins += p.coins || 0;
+    save.tickets += p.tickets || 0;
+    save.undo += p.undo || 0;
+    save.wild += p.wild || 0;
+    won = p;
+    wonAt = { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+    save.daily = { day: (st.day + 1) % N, last: new Date().toDateString(), shield: Math.min(DAILY_SHIELD_MAX, (save.daily.shield || 0) - (st.saved || 0) + (last ? 1 : 0)) };
+    // Logros Constante (regalos reclamados) y Constructor de planetas (planetas armados).
+    track({ dailies: 1, ...(last && { planets: 1 }) });
+    cell.classList.replace('today', 'got');
+    pl.insertAdjacentHTML('beforeend', `<i class="ok">${icon('check')}</i>`);
+    document.querySelector('[data-a="daily"] .dot')?.remove();
+    document.querySelector('[data-a="daily"]')?.classList.remove('ready');
+    lootBubbles(m, prizeIcons(p), pl);
+    // Como el de los boletos: al terminar, la ventana se cierra sola y lo ganado vuela al monedero (onClose).
+    const done = async () => { await wait(reduced() ? 300 : 1700); m.close(); };
+    if (p === DAILY_PATH[st.day]) return done();
+    await wait(reduced() ? 0 : 900);
+    // La pieza del planeta sale del agujero y vuela a su lugar.
+    const slot = m.el.querySelectorAll('.dly-planet .pq')[pieces];
+    if (slot) {
+      const to = slot.getBoundingClientRect();
+      if (!reduced()) {
+        const f = slot.cloneNode(true);
+        f.classList.add('on', 'pq-fly');
+        Object.assign(f.style, { left: `${to.left}px`, top: `${to.top}px`, width: `${to.width}px`, height: `${to.height}px` });
+        document.body.append(f);
+        await f.animate([{ translate: `${r.left + r.width / 2 - to.left - to.width / 2}px ${r.top + r.height / 2 - to.top - to.height / 2}px`, scale: 0.3, rotate: '-180deg' }, { translate: '0 -30px', scale: 1.4, rotate: '0deg', offset: 0.6 }, { translate: '0 0', scale: 1, rotate: '0deg' }], { duration: 800, easing: 'cubic-bezier(0.3, 0.7, 0.4, 1)' }).finished;
+        f.remove();
+      }
+      slot.classList.add('on');
+      m.el.querySelector('.dly-top .pc').textContent = pieces + 1;
+      sparkle({ x: to.left + to.width / 2, y: to.top + to.height / 2 }, 10);
+    }
+    // Con la 4.ª el planeta se arma, brilla y suelta un escudo.
+    if (last) {
+      m.el.querySelector('.dly-planet').classList.add('whole');
+      confetti(40);
+      await wait(reduced() ? 0 : 900);
+      shield = Math.min(DAILY_SHIELD_MAX, shield + 1);
+      const sh = m.el.querySelector('.dly-shield');
+      sh.classList.remove('none');
+      sh.querySelector('b').textContent = shield;
+      if (!reduced()) sh.animate([{ scale: 0.2, rotate: '-30deg' }, { scale: 1.4, rotate: '8deg', offset: 0.6 }, { scale: 1, rotate: '0deg' }], { duration: 600, easing: 'ease-out' });
+      toast(`${icon('escudito')} ¡Planeta armado! Ganaste un escudo`);
+    }
+    done();
+  };
+  const path = m.el.querySelector('.dpath');
+  // En vertical (pantalla angosta) el camino va de arriba hacia abajo (--vert lo pone el CSS).
+  const vert = () => getComputedStyle(path).getPropertyValue('--vert').trim() === '1';
+  const line = () => {
+    if (!path.isConnected) return;
+    const a = path.getBoundingClientRect();
+    const pts = [...path.querySelectorAll('.dpl')].map((d) => { const b = d.getBoundingClientRect(); return [b.left - a.left + b.width / 2, b.top - a.top + b.height / 2]; });
+    const v = vert(), w = (i) => (i % 2 ? 18 : -18);
+    const d = pts.map(([x, y], i) => (i ? `Q${(pts[i - 1][0] + x) / 2 + (v ? w(i) : 0)} ${(y + pts[i - 1][1]) / 2 + (v ? 0 : w(i))} ${x} ${y}` : `M${x} ${y}`)).join(' ');
+    const svgEl = path.querySelector('.dline');
+    svgEl.setAttribute('viewBox', `0 0 ${a.width} ${a.height}`);
+    svgEl.querySelectorAll('path').forEach((q) => q.setAttribute('d', d));
+  };
+  requestAnimationFrame(line);
+  new ResizeObserver(line).observe(path);
+  // Se reclama tocando el planetita de hoy (13 nov 2026: ya no hay botón).
+  const today = m.el.querySelector('.dnode.today');
   if (today && !st.claimed) {
     today.setAttribute('role', 'button');
-    today.setAttribute('aria-label', 'Reclamar');
-    today.addEventListener('click', () => !go.disabled && go.click());
+    today.setAttribute('aria-label', 'Reclamar el regalo de hoy');
+    today.addEventListener('click', claim);
   }
-  helpTip(m, 'Entra cada día y reclama tu regalo. El día 7 abres una caja sorpresa. Si un día faltas, vuelves al día 1.');
+  helpTip(m, 'Toca el planeta de hoy para reclamar tu regalo. El día 7 el agujero de gusano te da premios sorpresa y una pieza de tu planeta. Con 4 piezas ganas un escudo: si un día no entras, te salva.');
 }
 
 // ---------- Jefe vencido: postal del mundo (según sus estrellas) y cofre ----------
@@ -5060,7 +5148,7 @@ function openHelp(tab = 'basico', then) {
         <h3 class="help-h">Racha</h3>
         <div class="step"><div class="ill c dots">${'<i></i>'.repeat(4)}<div class="card gift-card"><div class="inner"><div class="face back"></div></div></div></div><p>Juega cartas <b>seguidas</b> sin tocar el mazo. A las <b>6</b> te cae una carta extra al mazo y a las <b>13</b>, un comodín.</p></div>
         <div class="step"><div class="ill c pair"><div class="card gift-card"><div class="inner"><div class="face back"></div></div></div><div class="card up"><div class="inner"><div class="face front wild"></div></div></div></div><p>Si sigues: carta extra a las <b>18</b> y <b>23</b>, y a las <b>31</b> un comodín para guardar.</p></div>
-        <div class="step"><div class="ill c">${icon('escoba')}</div><p>A las <b>20</b> y <b>30</b> pasa la <b>escoba</b> y se lleva las cartas más enterradas de la mesa.</p></div>
+        <div class="step"><div class="ill c">${icon('escoba')}</div><p>A las <b>30</b> pasa la <b>escoba</b> y se lleva todas las cartas del fondo, las más tapadas.</p></div>
         <h3 class="help-h">Ayudas</h3>
         <div class="step"><div class="ill c"><span class="help-btn gold">${icon('ayudas')}</span></div><p>El <b>botón dorado</b> abre tus ayudas. Abajo de cada una compras <b>+1</b> con un toque; tocar la carta la usa cuando tú quieras. Solo salen las que sirven en ese nivel.</p></div>
         <div class="step"><div class="ill c"><div class="card up"><div class="inner"><div class="face front wild"></div></div></div></div><p><b>Comodín:</b> vale cualquier número. Úsalo cuando no tengas jugada.</p></div>

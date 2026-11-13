@@ -1803,7 +1803,7 @@ export class Game {
     updateCoins();
   }
 
-  // Indicador de racha por puntos: del premio anterior al siguiente (1-6, 7-13, 14-18, 19-23, 24-31 y luego tramos de 3).
+  // Indicador de racha por puntos: del premio anterior al siguiente (1-6, 7-13, 14-18, 19-23, 24-30, 31 y luego tramos de 3).
   // Al final de los puntos se dibuja el premio del tramo (carta violeta, comodín dorado o estrella al inventario).
   // En el evento del mes los premios van al doble de distancia (level.rewardStep = 2).
   showCombo() {
@@ -2456,7 +2456,9 @@ export class Game {
     }).then(() => sh.remove());
   }
 
-  // Escoba (premio de racha 20 y 30): una escoba cruza el tablero y las cartas más enterradas salen barridas.
+  // Escoba (premio de racha 30; 13 nov 2026): la escoba entra por la izquierda a la altura de la capa del fondo,
+  // barre meciéndose y cada carta sale empujada hacia la derecha, girando, en cuanto la escoba la alcanza, con polvo
+  // de estrellas.
   sweep(ids) {
     toast(`${icon('escoba')} ¡Escoba!`);
     const els = ids.map((id) => {
@@ -2466,15 +2468,32 @@ export class Game {
     }).filter(Boolean);
     if (reduced()) return els.forEach((el) => el.remove());
     const b = this.boardEl.getBoundingClientRect();
+    const rects = els.map((e) => e.getBoundingClientRect());
+    const size = Math.max(64, this.u * 1.6);
+    const y = rects.length ? rects.reduce((a, r) => a + r.top + r.height / 2, 0) / rects.length - size / 2 : b.top + b.height / 3;
+    const x0 = b.left - size, x1 = b.right + size * 0.2, dur = 1100;
     const br = document.createElement('div');
     br.className = 'broom-fly';
+    br.style.width = br.style.height = `${size}px`;
     br.innerHTML = icon('escoba');
     this.el.appendChild(br);
-    const y = els.length ? Math.min(...els.map((e) => e.getBoundingClientRect().top)) : b.top + b.height / 3;
-    br.animate([{ translate: `${b.left - 80}px ${y}px`, rotate: '-20deg' }, { translate: `${b.right + 20}px ${y}px`, rotate: '15deg' }], { duration: 900, easing: 'ease-in-out', fill: 'forwards' }).finished.then(() => br.remove());
+    br.animate([
+      { translate: `${x0}px ${y}px`, rotate: '-25deg' },
+      { translate: `${x0 + (x1 - x0) * 0.25}px ${y + 6}px`, rotate: '10deg', offset: 0.25 },
+      { translate: `${x0 + (x1 - x0) * 0.5}px ${y}px`, rotate: '-15deg', offset: 0.5 },
+      { translate: `${x0 + (x1 - x0) * 0.75}px ${y + 6}px`, rotate: '10deg', offset: 0.75 },
+      { translate: `${x1}px ${y - 30}px`, rotate: '-30deg' },
+    ], { duration: dur, easing: 'ease-in-out', fill: 'forwards' }).finished.then(() => br.remove());
     els.forEach((el, i) => {
+      const r = rects[i], at = Math.max(0, Math.min(1, (r.left + r.width / 2 - x0 - size * 0.6) / (x1 - x0)));
+      const delay = at * dur;
       el.style.zIndex = 9999;
-      el.animate([{ translate: '0 0', rotate: '0deg', opacity: 1 }, { translate: `${this.u * 1.5}px ${-this.u * 0.6}px`, rotate: '40deg', opacity: 0 }], { duration: 520, delay: 250 + i * 220, easing: 'ease-in', fill: 'forwards' }).finished.then(() => el.remove());
+      setTimeout(() => sparkle({ x: r.left + r.width / 2, y: r.top + r.height * 0.8 }, 8), delay);
+      el.animate([
+        { translate: '0 0', rotate: '0deg', opacity: 1 },
+        { translate: `${this.u * 0.6}px ${-this.u * 0.35}px`, rotate: '18deg', opacity: 1, offset: 0.35 },
+        { translate: `${this.u * 2.2}px ${this.u * 0.4}px`, rotate: '70deg', opacity: 0 },
+      ], { duration: 560, delay, easing: 'ease-out', fill: 'forwards' }).finished.then(() => el.remove());
     });
   }
 
@@ -3387,6 +3406,26 @@ export class Game {
     this.autoplay = true;
     while (this.autoplay && !this.done && this.devStep()) await new Promise((r) => setTimeout(r, 220));
     this.autoplay = false;
+  }
+
+  // Dev (13 nov 2026): la racha a 1 del siguiente premio, para probarlo con la siguiente jugada (la escoba en 30).
+  devStreak() {
+    const next = E.nextReward(this.st.streak, this.level.rewardStep ?? 1);
+    if (!next) return;
+    this.st = { ...E.cloneState(this.st), streak: next.at - 1 };
+    this.refresh();
+    this.showCombo();
+    toast(`Racha ${next.at - 1}: la siguiente jugada da ${next.kind === 'broom' ? 'la escoba' : 'el premio'}`);
+  }
+
+  // Dev: la racha a 1 de la escoba (29; en el evento, 59).
+  devBroom() {
+    const step = this.level.rewardStep ?? 1;
+    if (!step) return toast('Aquí no hay premios de racha');
+    this.st = { ...E.cloneState(this.st), streak: 30 * step - 1 };
+    this.refresh();
+    this.showCombo();
+    toast(`${icon('escoba')} Racha ${30 * step - 1}: la siguiente jugada trae la escoba`);
   }
 
   devWin() {

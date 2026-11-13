@@ -89,8 +89,8 @@ export const round5 = (n) => Math.round(n / 5) * 5;
 export const metShopPrice = (p, met) => (met && p ? round5(p * (1 - (met.K?.shop ?? MET_OFF.shop))) : p);
 
 // ---------- Regalo diario: camino de 28 días ----------
-// Premios modestos para que dure semanas. Si un día no se reclama, se vuelve al día 1.
-// El día 7 de cada semana es una caja sorpresa: se sabe qué trae hasta abrirla (`openSurprise`).
+// Premios modestos para que dure semanas. Si un día no se reclama, se vuelve al día 1 (salvo con escudo).
+// El día 7 de cada semana es el agujero de gusano: escupe premios sorpresa (`openSurprise`) y una pieza de planeta.
 const c = (coins) => ({ coins });
 export const DAILY_PATH = [
   c(20), c(25), { tickets: 1 }, c(30), c(30), c(40), { surprise: 1 },
@@ -107,12 +107,19 @@ export function openSurprise(tier, r = Math.random) {
 }
 
 const dayKey = (d) => d.toDateString();
-// Estado del regalo hoy: qué día toca (0..27) y si ya se reclamó.
+// Regalo diario (13 nov 2026, rehecho a pedido del usuario): cada semana completa (el día 7, el agujero de gusano) da una
+// pieza de planeta; con las 4 (28 días seguidos) el planeta se arma y da un escudo. Un escudo te salva un día que no
+// entraste (no vuelves al día 1). Se guardan hasta DAILY_SHIELD_MAX. Las piezas son las semanas completas del ciclo.
+export const DAILY_SHIELD_MAX = 3;
+export const dailyPieces = (day) => Math.floor(day / 7);
+// Estado del regalo hoy: qué día toca (0..27), si ya se reclamó y cuántos escudos gasta (saved) para no perder el día.
 export function dailyState(daily, now = new Date()) {
   const today = dayKey(now);
-  const yesterday = dayKey(new Date(now.getTime() - 864e5));
   if (daily.last === today) return { day: daily.day, claimed: true };
-  if (daily.last === yesterday) return { day: daily.day % DAILY_PATH.length, claimed: false };
+  const gap = daily.last ? Math.round((new Date(today) - new Date(daily.last)) / 864e5) : 0;
+  if (gap === 1) return { day: daily.day % DAILY_PATH.length, claimed: false };
+  // Faltó gap − 1 días: si le alcanzan los escudos, sigue donde iba.
+  if (gap > 1 && gap - 1 <= (daily.shield || 0)) return { day: daily.day % DAILY_PATH.length, claimed: false, saved: gap - 1 };
   return { day: 0, claimed: false, reset: !!daily.last }; // primera vez o se rompió la racha
 }
 

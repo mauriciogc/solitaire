@@ -87,7 +87,7 @@ export function attachDevBar(game, { go, toGallery }) {
     <div class="db-menu">
     <div class="db-grp">${btn('gal', 'grid', 'Galería')}</div>
     <div class="db-grp db-nav">${btn('prev', 'prev', '', `aria-label="Nivel anterior" ${g === 0 ? 'disabled' : ''}`)}<button data-d="goto" class="db-lvl" title="Ir a nivel"><b>#${num}</b><small>${where}${L.tier ? ` · ${TIERS[L.tier].name.toLowerCase()}` : ''}</small></button>${btn('next', 'next', '', `aria-label="Nivel siguiente" ${g >= TOTAL_LEVELS - 1 ? 'disabled' : ''}`)}</div>
-    <div class="db-grp">${btn('reveal', 'eye', 'Ver todo')}${btn('sol', 'flag', 'Solución')}${btn('step', 'step', 'Paso')}${btn('auto', 'play', 'Resolver')}${btn('win', 'trophy', 'Ganar')}</div>
+    <div class="db-grp">${btn('reveal', 'eye', 'Ver todo')}${btn('sol', 'flag', 'Solución')}${btn('step', 'step', 'Paso')}${btn('auto', 'play', 'Resolver')}${btn('win', 'trophy', 'Ganar')}${btn('streak', 'next', 'Premio de racha')}${btn('broom', 'next', 'A 1 de la escoba')}</div>
     <div class="db-grp">${btn('info', 'info', 'Info')}</div>
     </div>`;
   const open = (on) => {
@@ -125,6 +125,8 @@ export function attachDevBar(game, { go, toGallery }) {
         game.devAuto().then(() => b.classList.remove('on'));
       },
       win: () => game.devWin(),
+      streak: () => game.devStreak(),
+      broom: () => game.devBroom(),
       info: () => showInfo(game.level),
     };
     act[b.dataset.d]?.();
@@ -557,6 +559,13 @@ function devStreakNext() {
   while (dailyStreak().n < g.n) streakWin(Math.min(3, g.n - dailyStreak().n));
   return '';
 }
+// Regalo diario en pruebas: toca reclamar el día `day` (0-27) y la última vez fue hace `ago` días.
+function devDaily(day, ago, onRefresh) {
+  save.daily = { ...save.daily, day, last: new Date(Date.now() - ago * 864e5).toDateString() };
+  persist();
+  onRefresh();
+  toast(ago > 1 ? 'Faltaste un día: abre el regalo diario' : `Abre el regalo diario: toca el día ${(day % 7) + 1}`);
+}
 const devDo = (fns, onRefresh) => {
   const no = fns.map((f) => f()).filter(Boolean);
   persist();
@@ -750,6 +759,14 @@ export function openDevMenu({ onGallery, onPlanets, onFestivals, onGoLevel, onRe
         { l: '+1 victoria (3★)', fn: () => (streakWin(3), onRefresh()) },
         { l: 'Perderla', fn: () => (streakLose(), onRefresh()) },
         { l: 'Pasar al otro día', fn: () => ((save.devDay = (save.devDay || 0) + 1), persist(), onRefresh()) },
+      ] },
+      // Regalo diario (13 nov 2026): mover el día sin esperar.
+      { k: 'mis', h: 'Regalo diario', ico: 'gift', sub: `día ${((save.daily?.day || 0) % 28) + 1} · ${save.daily?.shield || 0} escudos`, items: [
+        { l: 'Reclamar otra vez', title: 'Como si fuera el día siguiente', fn: () => devDaily(save.daily?.day || 0, 1, onRefresh) },
+        { l: 'Ir al día 7', fn: () => devDaily(6, 1, onRefresh) },
+        { l: 'Ir al día 28', title: 'El 4.º agujero de gusano: arma el planeta y da un escudo', fn: () => devDaily(27, 1, onRefresh) },
+        { l: 'Faltar un día', title: 'Como si no hubieras entrado ayer (con escudo te salva)', fn: () => devDaily(save.daily?.day || 0, 2, onRefresh) },
+        { l: 'Darme un escudo', fn: () => ((save.daily = { ...save.daily, shield: Math.min(3, (save.daily?.shield || 0) + 1) }), persist(), onRefresh()) },
       ] },
       { k: 'mis', h: 'Misiones del día', ico: 'misiones', sub: `${missions().list.filter(missionDone).length}/3 cumplidas`, items: [
         { l: 'Cumplir una', title: 'Una de las de hoy que falte, al azar', fn: () => devDo([devMisOne], onRefresh) },

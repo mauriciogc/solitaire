@@ -242,14 +242,15 @@ export const legal = (level, s) => level.cards.filter((c) => playRank(level, c, 
 export const won = (s, level) => s.rem.every((r, i) => r || (level?.cards[i].door != null && !s.open?.[level.cards[i].door]));
 
 // ---------- Premios de racha ----------
-// Racha 6: +1 carta útil al mazo · 13: un comodín al mazo · 18 y 23: +1 carta útil · 20 y 30: escoba (barre 1 y 2 de
-// las cartas más enterradas del tablero; 7 nov 2026) · 31: +1 comodín al inventario · después, cada 3: +1 carta útil. Las cartas de premio entran en un lugar "al azar" del mazo, nunca entre las 3 primeras
+// Racha 6: +1 carta útil al mazo · 13: un comodín al mazo · 18 y 23: +1 carta útil · 30: escoba (barre toda la capa
+// del fondo del tablero, boca arriba o boca abajo; 13 nov 2026, antes en 20 y 30 se llevaba 1 y 2 de las más
+// enterradas) · 31: +1 comodín al inventario · después, cada 3: +1 carta útil. Las cartas de premio entran en un lugar "al azar" del mazo, nunca entre las 3 primeras
 // (determinista según el estado, para que juego, solucionador y bot coincidan).
 // Los premios solo añaden cartas.
 // step: cada cuántas cartas cuenta un paso (level.rewardStep): 1 normal, 2 = premios al doble de distancia
 // (evento del mes), 0 = sin premios.
-const REWARDS = { 6: 'card', 13: 'wild', 18: 'card', 20: 'broom', 23: 'card', 30: 'broom2', 31: 'bank' };
-export const BROOM = { broom: 1, broom2: 2 };
+const REWARDS = { 6: 'card', 13: 'wild', 18: 'card', 23: 'card', 30: 'broom', 31: 'bank' };
+export const BROOM = { broom: true };
 const LAST_REWARD = 31;
 export function streakReward(streak, step = 1) {
   if (!step || streak % step) return null;
@@ -291,9 +292,9 @@ function rewardCard(level, s, kind) {
 function applyReward(level, s, at = s.streak) {
   const kind = streakReward(at, level.rewardStep ?? 1);
   if (!kind) return null;
-  // Escoba: retira las cartas más enterradas (no cuentan como jugadas ni suman a la racha).
+  // Escoba: retira la capa del fondo (no cuentan como jugadas ni suman a la racha).
   if (BROOM[kind]) {
-    const ids = buried(level, s, BROOM[kind]);
+    const ids = deepLayer(level, s);
     for (const id of ids) s.rem[id] = true;
     if (level.cst && s.cst !== level.cst && ids.some((id) => level.cards[id].cst)) s.cst = -1;
     return { kind: 'broom', ids, pos: -1 };
@@ -325,6 +326,18 @@ function buried(level, s, n, ok = () => true) {
     .sort((a, b) => b[1] - a[1] || a[0] - b[0])
     .slice(0, n)
     .map(([id]) => id);
+}
+
+// Escoba (13 nov 2026, pedido del usuario): toda la capa del fondo que queda, las más tapadas (la z más baja), estén
+// boca arriba o boca abajo. Sin las especiales, los boletos partidos, la banda, las puertas ni lo que la nebulosa aún
+// esconde.
+export function deepLayer(level, s) {
+  const ok = level.cards.filter((c) => !s.rem[c.id] && !special(c) && c.half == null && c.belt == null && c.door == null && (!c.neb || nebOut(level, s) >= c.neb));
+  if (!ok.length) return [];
+  // En algunas formas la capa más baja ya está libre (no la tapa nada): cuenta la más baja de las que siguen tapadas.
+  const hid = ok.filter((c) => !isFree(c, s, level));
+  const z = Math.min(...(hid.length ? hid : ok).map((c) => c.z));
+  return ok.filter((c) => c.z === z).map((c) => c.id);
 }
 
 // Cartas especiales que quedaron destapadas: la carta regalo manda su contenido al final del mazo,

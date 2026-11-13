@@ -87,8 +87,12 @@ const ICONS = {
     + tshape('M13 17Q15 8 23 9Q30 10 29.5 17Q29 23 22 23.5Q16 24 13 17z', '#6cd66a', '#3fa84a', `<path d="M16 15q3-3 6-1M17 19q3 1 6-1" fill="none" stroke="#3fa84a" stroke-width="1.4" stroke-linecap="round"/>`, 2.2)
     + `<circle cx="24.5" cy="15" r="3.6" fill="#fff" stroke="${K}" stroke-width="1.8"/><circle cx="25.3" cy="15.2" r="1.6" fill="${K}"/>`,
   ghost: () => tshape('M6 27V14a10 10 0 0 1 20 0v13l-3.4-2.6L19.3 27l-3.3-2.6L12.7 27l-3.3-2.6z', '#f4f1ff', '#cfc6f2', `<ellipse cx="12.5" cy="14" rx="1.8" ry="2.4" fill="${K}"/><ellipse cx="19.5" cy="14" rx="1.8" ry="2.4" fill="${K}"/><ellipse cx="16" cy="19.5" rx="2" ry="1.4" fill="${K}"/>`, 2.2),
-  // Escoba: premio de racha (barre las cartas más enterradas).
-  escoba: () => `<g transform="rotate(-35 16 16)">${tshape('M14.6 2.5h2.8V16h-2.8z', '#c98a4b', '#a0602c', '', 1.8)}${tshape('M10 16h12l3 12.5H7z', '#ffd54a', '#e8a91a', `<path d="M12.5 19l-1 7.5M16 19v7.5M19.5 19l1 7.5" stroke="${K}" stroke-width="1.4" stroke-linecap="round"/>`, 2)}${tshape('M9.5 15.2h13v2.6h-13z', '#ff5f7e', '#d63d5f', '', 1.6)}</g>`,
+  // Escoba: premio de racha 30 (barre la fila de hasta abajo). 13 nov 2026: escoba de paja con listón morado y destellos.
+  escoba: () => `<g transform="rotate(-32 16 16)">${tshape('M14.9 1.8q1.5-.5 2.5.3l-.5 13.6h-2.6z', '#b5733c', '#8a5228', '', 1.8)}`
+    + tshape('M11.5 15.6h9l4.4 10.6-1.7 2.5-1.8-1.6-1.6 2.4-1.9-1.8-1.9 2.5-1.9-2.5-1.9 1.8-1.6-2.4-1.8 1.6-1.7-2.5z', '#ffd04a', '#e9a31b', `<path d="M13.4 18.4l-2.3 7.4M16 18.4v8.4M18.6 18.4l2.3 7.4" stroke="#c9821a" stroke-width="1.3" stroke-linecap="round"/>`, 2)
+    + tshape('M10.9 13.9h10.2v3.3H10.9z', '#a37bff', '#7c55e0', '', 1.6)
+    + tshape('M19.6 16.6l3.6 4.4-2.5.5-2.5-3.7z', '#a37bff', '#7c55e0', '', 1.4)
+    + `</g><path d="${starPath(27, 24.5, 3.6, 1.2)}" fill="#fff6b0" stroke="${K}" stroke-width="1.3" stroke-linejoin="round"/><path d="${starPath(23, 30, 2.2, 0.8)}" fill="#fff" stroke="${K}" stroke-width="1" stroke-linejoin="round"/>`,
   coin: () => tshape(CIRCLE(16, 16, 12.5), '#ffc83d', '#ec9a17', `<circle cx="14.6" cy="13.8" r="8" fill="none" stroke="#ec9a17" stroke-width="2"/><path d="${starPath(14.6, 14.2, 4.8, 2.2)}" fill="#fff4c7"/>`),
   star: () => tshape(starPath(16, 17, 14, 6.6), '#ffc83d', '#ec9a17', `<path d="M10.5 13.5l2.2-3.6" stroke="#fff4c7" stroke-width="2.2" stroke-linecap="round"/>`),
   // Evento del mes: Día de Muertos.

@@ -156,7 +156,10 @@ export const ACHIEVEMENTS = [
   { id: 'noundo', k: 'noundo', name: 'Sin mirar atrás', ico: 'undo', steps: [30, 150, 500, 1200, 2500], text: (n) => `Gana ${fmtN(n)} niveles sin usar deshacer` },
   { id: 'nowild', k: 'nowild', name: 'Sin trucos', ico: 'wild', steps: [30, 150, 500, 1200, 2500], text: (n) => `Gana ${fmtN(n)} niveles sin usar comodín` },
   { id: 'rewards', k: 'rewards', name: 'Premiado', ico: 'gift', steps: [100, 500, 2000, 5000, 10000], text: (n) => `Gana ${fmtN(n)} premios de racha` },
-  { id: 'brooms', k: 'brooms', name: 'Barrendero', ico: 'escoba', steps: [10, 50, 200, 500, 1000], text: (n) => `Gana ${fmtN(n)} escobas de racha` },
+  // Regalo diario (13 nov 2026, pedido del usuario): metas tal cual (raw).
+  { id: 'dailies', k: 'dailies', raw: true, name: 'Constante', ico: 'gift', steps: [7, 30, 90, 180, 365], text: (n) => `Reclama ${fmtN(n)} regalos diarios` },
+  { id: 'planets', k: 'planets', raw: true, name: 'Constructor de planetas', ico: 'planet', steps: [1, 3, 6, 12, 24], text: (n) => `Arma ${fmtN(n)} planeta${n > 1 ? 's' : ''} del regalo diario` },
+  { id: 'brooms', k: 'brooms', name: 'Barrendero', ico: 'escoba', steps: [5, 25, 100, 250, 500], text: (n) => `Gana ${fmtN(n)} escobas de racha` },
   { id: 'left', k: 'left', best: true, name: 'Ahorrador', ico: 'deck', steps: [12, 16, 20, 24, 28], text: (n) => `Gana un nivel con ${n} cartas o más en tu mazo` },
   { id: 'coins', k: 'coins', name: 'Millonario', ico: 'coin', steps: [5000, 25000, 100000, 250000, 500000], text: (n) => `Junta ${fmtN(n)} monedas jugando` },
   { id: 'locks', k: 'locks', mech: 'lock', name: 'Cerrajero', ico: 'lock', steps: [100, 500, 1500, 3000, 6000], text: (n) => `Abre ${fmtN(n)} candados` },

@@ -791,44 +791,14 @@ html.dev-on .galaxy .res .me { display: none; }
 .sw[aria-checked="true"] { background: #5ad68c; }
 .sw[aria-checked="true"]::after { left: 25px; }
 
-/* Regalo diario: 6 días en rejilla y el día 7 grande al lado (abajo en vertical), como meta. */
-.daily { display: grid; grid-template-columns: 3fr 2fr; gap: 10px; }
-.dgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-.day { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-height: 92px; padding: 24px 4px 8px; border-radius: 16px; overflow: visible;
-  background: #fffaf0; border: 2.5px solid var(--ink); box-shadow: inset 0 -5px 0 #efe2c8, 0 3px 0 var(--ink); font-weight: 800; color: var(--ink); }
-.day small { position: absolute; left: -2.5px; right: -2.5px; top: -2.5px; padding: 3px 0 2px; border-radius: 14px 14px 0 0; border: 2.5px solid var(--ink); background: #ff9c5b; box-shadow: inset 0 -3px 0 #e2753a;
-  font: 400 13px/1.1 'Lilita One'; color: #fff; text-shadow: 0 1.5px 0 var(--ink); }
-.day .dp { display: flex; flex-direction: column; align-items: center; gap: 2px; }
-.day .dp .ico.big { width: 36px; height: 36px; }
-.day .dp b { font: 400 16px/1 'Lilita One'; }
-.day.got { background: #e6dccb; box-shadow: inset 0 -5px 0 #d3c6ad, 0 3px 0 var(--ink); }
-.day.got small { background: #a99d86; box-shadow: none; }
-.day.got .dp, .day.got .gbox { opacity: 0.4; filter: grayscale(0.6); }
-.day .ok { position: absolute; left: 50%; top: 54%; translate: -50% -50%; }
-.day .ok .ico { width: 40px; height: 40px; }
-.day.today { background: #e9ffe9; box-shadow: inset 0 -5px 0 #b9eec4, 0 0 0 4px #5ad68c, 0 3px 0 4px var(--ink); animation: beat 1.4s ease-in-out infinite; z-index: 1; }
-.day.today[role="button"] { cursor: pointer; }
-.day.today[role="button"]:active { translate: 0 3px; }
-.day.today small { background: #47c27a; box-shadow: inset 0 -3px 0 #2f9e5c; }
-@keyframes beat { 50% { scale: 1.05; } }
-.day7 { min-height: 100%; padding-top: 30px; background: linear-gradient(#f3eaff, #e2d2ff); box-shadow: inset 0 -6px 0 #cdb6ff, 0 3px 0 var(--ink); }
-.day7 small, .day7.today small { background: #8a5cf0; box-shadow: inset 0 -3px 0 #6c3fd4; font-size: 16px; }
-.day7 .gbox::before { content: ''; position: absolute; inset: -34px; border-radius: 50%; opacity: 0; scale: 0.4; transition: opacity 300ms, scale 500ms var(--spring);
-  background: repeating-conic-gradient(#ffd75a 0 10deg, transparent 10deg 24deg); mask: radial-gradient(circle, #000 20%, transparent 66%); animation: spin 8s linear infinite; }
-.day7.opened .gbox::before { opacity: .85; scale: 1; }
-.day7.today { background: linear-gradient(#f6efff, #e6d8ff); box-shadow: inset 0 -6px 0 #cdb6ff, 0 0 0 4px #b36bff, 0 3px 0 4px var(--ink); }
 .gbox { position: relative; width: 96px; height: 96px; }
 .gbox .lid, .gbox .body { position: absolute; inset: 0; }
 .gbox .ico { width: 100%; height: 100%; }
-.day7:not(.got):not(.opened) .gbox { animation: wobble 2.4s ease-in-out infinite; }
 @keyframes wobble { 0%, 70%, 100% { rotate: 0deg; } 76% { rotate: -6deg; } 82% { rotate: 6deg; } 88% { rotate: -3deg; } }
-.day7 .q { font: 400 19px 'Lilita One'; color: #6c3fd4; }
-.day7 .loot { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; }
 .loot-it { display: inline-flex; align-items: center; gap: 2px; padding: 2px 8px 3px 3px; border-radius: 12px; background: #fff; border: 2px solid var(--ink); font: 400 15px/1 'Lilita One'; animation: lootpop 420ms var(--spring) both; }
 .loot-it .ico { width: 24px; height: 24px; }
 .loot-it:nth-child(2) { animation-delay: 150ms; } .loot-it:nth-child(3) { animation-delay: 300ms; }
 @keyframes lootpop { from { scale: 0; translate: 0 20px; } }
-@media (max-width: 560px) { .daily { grid-template-columns: 1fr; } .day7 { min-height: 0; flex-direction: row; flex-wrap: wrap; gap: 6px 12px; } .gbox { width: 72px; height: 72px; } }
 
 /* Postal del mundo (al vencer al jefe y en el álbum): marco y sello según el % de estrellas. */
 .postcard { --pc: #fffaf0; --edge: #e3d3b5; --st: #7a6f9d; position: relative; display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 12px; padding: 12px 18px 12px 12px; margin: 2px 6px 10px;
@@ -1187,13 +1157,6 @@ html.dev-on .galaxy .res .me { display: none; }
 /* "Ahora no": texto discreto debajo del botón de comprar (8 nov 2026). */
 .btn.later { min-height: 40px; border: 0; box-shadow: none; background: none; font: 800 15px 'Baloo 2'; color: #8a80b0; }
 
-/* Pantallas bajas (teléfono acostado): el regalo diario cabe completo, sin cortar el texto de abajo. */
-@media (max-height: 460px) {
-  .day { min-height: 74px; padding: 20px 4px 6px; }
-  .day .dp .ico, .day .dp svg { width: 32px; height: 32px; }
-  .gbox { width: 78px; height: 78px; }
-  .day7 { padding-top: 26px; }
-}
 /* Botón atrás y monedero en la misma línea. */
 .galaxy .res { top: calc(8px + var(--st)); height: calc(46px * var(--k)); align-items: center; }
 
@@ -3177,3 +3140,90 @@ p.met-sale { display: flex; align-items: center; justify-content: center; gap: 6
 .pv-seal .ico { width: 26px; height: 26px; }
 .pv-seal i { position: absolute; right: -6px; bottom: -5px; font: 400 13px 'Lilita One'; font-style: normal; color: #fff; }
 .pc-modal .pv-pass-btn { font-size: 15px; }
+
+/* Regalo diario (13 nov 2026): camino de 7 planetitas en ola; se reclama tocando el de hoy; el día 7 es un agujero
+   de gusano. Arriba, el planeta de tu mundo en 4 piezas (una por semana completa) y tus escudos. */
+.dly { display: flex; flex-direction: column; gap: 10px; }
+.dly-top { display: flex; align-items: center; gap: 10px; }
+.dly-top .dly-box { flex: 1; }
+.dly-box { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 16px; background: #eef0ff; color: var(--ink); min-width: 0; }
+.dly-box p { flex: 1; margin: 0; display: flex; flex-direction: column; line-height: 1.15; min-width: 0; }
+.dly-box p b { font: 400 16px/1.1 'Lilita One'; }
+.dly-box p small { font-weight: 700; font-size: 12px; opacity: .8; }
+.dly-planet { position: relative; width: 58px; height: 58px; flex: none; }
+.dly-planet .pq { position: absolute; inset: 0; opacity: .18; filter: grayscale(1); transition: opacity .3s, filter .3s; }
+.dly-planet .pq.on { opacity: 1; filter: none; }
+.dly-planet .pq .ico { width: 100%; height: 100%; display: block; }
+.dly-planet::after { content: ''; position: absolute; inset: 3px; border-radius: 50%; border: 2px dashed #8a7ad8; opacity: .5; pointer-events: none; }
+.dly-planet.whole { animation: dly-whole 1.2s ease-out; filter: drop-shadow(0 0 10px #ffd54a); }
+@keyframes dly-whole { 30% { scale: 1.3; rotate: -10deg; } 60% { scale: 1.1; rotate: 6deg; } }
+.pq-fly { position: fixed; z-index: 10050; pointer-events: none; }
+.pq-fly .ico { width: 100%; height: 100%; display: block; }
+.dly-shield { position: relative; flex: none; width: 58px; height: 58px; padding: 6px; border-radius: 18px; background: #e6f4ff; border: 2.5px solid var(--ink); box-shadow: 0 3px 0 var(--ink); cursor: pointer; }
+.dly-shield:active { translate: 0 3px; box-shadow: none; }
+.dly-shield .ico { width: 100%; height: 100%; }
+.dly-shield b { position: absolute; right: -7px; bottom: -6px; min-width: 22px; padding: 0 4px; border-radius: 11px; background: #fff; border: 2px solid var(--ink); font: 400 14px/18px 'Lilita One'; color: var(--ink); text-align: center; }
+.dly-shield.none .ico { opacity: .35; filter: grayscale(1); }
+/* «¡Tócalo!» sobre el planetita de hoy (se reclama tocándolo) y el aviso de que ya se reclamó. */
+.tap-me { position: absolute; left: 50%; bottom: calc(100% + 8px); translate: -50% 0; z-index: 3; padding: 2px 8px; border-radius: 10px; background: #47c27a; color: #fff; border: 2px solid var(--ink); font: 400 13px/1.2 'Lilita One'; font-style: normal; white-space: nowrap; pointer-events: none; animation: tap-bob 1.1s ease-in-out infinite; }
+.tap-me::after { content: ''; position: absolute; left: 50%; top: 100%; translate: -50% -1px; border: 6px solid transparent; border-top-color: var(--ink); }
+@keyframes tap-bob { 50% { translate: -50% -5px; } }
+@keyframes tap-bob-x { 50% { translate: -5px -50%; } }
+.dly-saved { display: flex; align-items: center; gap: 6px; justify-content: center; color: #2f86c8; }
+.dly-saved .ico { width: 24px; height: 24px; }
+.dpath { position: relative; display: grid; grid-template-columns: repeat(6, 1fr) 1.6fr; align-items: start; padding: 34px 2px 4px; min-height: 164px; }
+.dline { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+.dline path { fill: none; stroke-linecap: round; }
+.dline path:first-child { stroke: #2a1f5c33; stroke-width: 9; }
+.dline path:last-child { stroke: #fff; stroke-width: 3.5; stroke-dasharray: 2 9; }
+.dnode { position: relative; display: flex; flex-direction: column; align-items: center; gap: 1px; color: var(--ink); }
+.dnode:nth-child(even) { margin-top: 26px; }
+.dnode .dpl { position: relative; width: 44px; height: 44px; display: grid; place-items: center; transition: scale .3s var(--spring); }
+.dnode .dpl > .ico { width: 100%; height: 100%; filter: drop-shadow(0 3px 0 #2a1f5c55); }
+.dnode small { font: 400 12px/1.1 'Lilita One'; opacity: .75; margin-top: 2px; }
+.dnode .dp { display: flex; align-items: center; gap: 1px; font: 400 14px/1 'Lilita One'; }
+.dnode .dp .ico { width: 20px; height: 20px; }
+.dnode .ok { position: absolute; right: -6px; bottom: -4px; width: 24px; height: 24px; }
+.dnode .ok .ico { width: 100%; height: 100%; }
+.dnode.got .dpl > .ico, .dnode.got .dp { opacity: .45; filter: grayscale(.7); }
+.dnode.today .dpl { scale: 1.2; }
+.dnode.today .dpl::before { content: ''; position: absolute; inset: -7px; border-radius: 50%; border: 3px solid #5ad68c; box-shadow: 0 0 12px #5ad68c; animation: beat 1.4s ease-in-out infinite; }
+.dnode.today[role="button"] { cursor: pointer; }
+.dnode.today small { opacity: 1; color: #2f9e5c; }
+@keyframes beat { 50% { scale: 1.05; } }
+/* Agujero de gusano: espiral que gira; al reclamar gira cada vez más rápido y se traga la luz. */
+.dnode.d7 .dpl.worm { width: 66px; height: 66px; border-radius: 50%; border: 3px solid var(--ink); background: radial-gradient(circle, #0b0620 0 16%, #3a1f8f 30%, #7c55e0 52%, #5ab0ff 72%, #bfeaff 86%); box-shadow: 0 0 0 4px #b36bff55, 0 0 22px #7c55e0aa; overflow: visible; }
+.worm > i:not(.ok) { position: absolute; inset: 6%; border-radius: 50%; border: 3px solid transparent; border-top-color: #fff; border-right-color: #ffffff88; animation: spin 2.2s linear infinite; }
+.worm > i:nth-child(2) { inset: 20%; animation-duration: 1.5s; border-top-color: #ffd54a; }
+.worm > i:nth-child(3) { inset: 33%; animation-duration: 1s; border-top-color: #ff9cd6; }
+.worm > b { position: absolute; inset: 40%; border-radius: 50%; background: #0b0620; box-shadow: 0 0 8px 3px #0b0620; }
+.dnode.d7.gulp .worm { animation: worm-gulp 1.3s ease-in forwards; }
+.dnode.d7.gulp .worm > i:not(.ok) { animation-duration: .25s; }
+@keyframes worm-gulp { 0% { scale: 1; } 60% { scale: 1.35; rotate: -40deg; box-shadow: 0 0 0 10px #b36bff55, 0 0 40px #7c55e0; } 85% { scale: .85; } 100% { scale: 1.1; } }
+.dnode.d7 .q { font: 400 15px/1 'Lilita One'; color: #6c3fd4; margin-top: 2px; }
+.dnode.d7.got .worm { filter: grayscale(.6); opacity: .6; }
+@media (max-width: 420px) { .dnode .dpl { width: 36px; height: 36px; } .dnode.d7 .dpl.worm { width: 54px; height: 54px; } .dnode .dp { font-size: 12px; } .dnode .dp .ico { width: 16px; height: 16px; } }
+@media (max-height: 500px) { .dpath { min-height: 140px; padding-top: 30px; } .dnode:nth-child(even) { margin-top: 18px; } .dly-top { padding: 4px 10px; } .dly-planet { width: 46px; height: 46px; } .dly-top p small { display: none; } }
+@media (prefers-reduced-motion: reduce) { .tap-me, .worm > i:not(.ok), .dnode.today .dpl::before { animation: none; } }
+/* Vertical (pantalla angosta): el camino va de arriba hacia abajo en zigzag; cada planetita con su día y premio al
+   lado; el avatar se para a la izquierda del de hoy (--vert lo lee main.js). */
+@media (max-width: 520px) and (min-height: 501px) {
+  .dpath { --vert: 1; grid-template-columns: 1fr; gap: 4px; padding: 2px 0 4px; min-height: 0; }
+  .dnode, .dnode:nth-child(even) { flex-direction: row; justify-content: center; gap: 8px; margin-top: 0; }
+  .dnode:nth-child(even) { translate: -18% 0; }
+  .dnode:nth-child(odd) { translate: 18% 0; }
+  .dnode small { margin: 0; min-width: 40px; }
+  .dnode.d7 { translate: 0 0; flex-wrap: wrap; margin-top: 6px; }
+  /* El «¡Tócalo!» va a un lado (arriba taparía al de antes), con la flecha hacia el planetita. */
+  .tap-me { left: auto; right: calc(100% + 10px); bottom: auto; top: 50%; translate: 0 -50%; animation-name: tap-bob-x; }
+  .tap-me::after { left: 100%; top: 50%; translate: -1px -50%; border-top-color: transparent; border-left-color: var(--ink); }
+  .dly-box { padding: 6px 8px; gap: 6px; }
+  .dly-planet { width: 44px; height: 44px; }
+  .dly-shield { width: 50px; height: 50px; }
+  .dly-box p b { font-size: 14px; }
+  .dly-box p small { font-size: 11px; }
+}
+/* Presentación: el agujero de gusano chiquito y los pasos como las ventanas de cartas. */
+.dly-intro { display: flex; flex-direction: column; gap: 10px; }
+.worm.mini { position: relative; display: block; width: 100%; height: 100%; border-radius: 50%; border: 3px solid var(--ink); background: radial-gradient(circle, #0b0620 0 16%, #3a1f8f 30%, #7c55e0 52%, #5ab0ff 72%, #bfeaff 86%); }
+@media (max-height: 500px) { .dly-intro { flex-direction: row; } .dly-intro .tip-card { flex: 1; flex-direction: column; text-align: center; } }
