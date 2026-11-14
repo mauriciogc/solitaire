@@ -2701,8 +2701,14 @@ p.met-sale { display: flex; align-items: center; justify-content: center; gap: 6
 .bet-opt.b7 { --bc: #ef5a3c; --bg: linear-gradient(#ff9a7a, #ef5a3c); } .bet-opt.b13 { --bc: #c2186b; --bg: linear-gradient(#ef4a93, #c2186b); } .bet-opt.b15 { --bc: #14101f; --bg: linear-gradient(#3a3050, #14101f); }
 .bet-opt.sel:is(.b10, .b13, .b15) b { color: #ffd85a; }
 /* 14 nov 2026: con 6 fichas o más (hasta ×15) ya no caben en una fila del teléfono: van de 4 en 4. */
-.bet-opts:has(> :nth-child(6)) { flex-wrap: wrap; gap: 14px 10px; max-width: 300px; }
+.bet-opts:has(> :nth-child(6)) { flex-wrap: wrap; gap: 10px 10px; max-width: 300px; }
 .bet-opts:has(> :nth-child(6)) .bet-opt { flex: 0 0 56px; }
+/* 14 nov 2026 (el usuario): menos espacio crema alrededor del carril gris, arriba (el halo del ×N ya no aparta 110 px:
+   aparta lo que mide la ficha) y abajo (hasta el botón Jugar), para que la ventana quepa sin desplazarse. */
+.bet-modal .bet-hero { height: 96px; }
+.bet-modal .bet-opts { margin-top: 6px; position: relative; z-index: 2; } /* encima del halo que gira */
+.modal.bet-modal .mbody { padding-bottom: 0; }
+.modal.bet-modal .mbtns { padding-top: 8px; }
 .bet-opt b { font: 400 24px/1 'Lilita One'; color: var(--bc); -webkit-text-stroke: 0; text-shadow: none; }
 .bet-opt > .ico { position: absolute; top: -8px; right: -8px; width: 20px; height: 20px; padding: 2px; border-radius: 50%; background: var(--gold); border: 2px solid var(--ink); opacity: 0; scale: .4; transition: opacity .2s, scale .25s cubic-bezier(.34, 1.45, .64, 1); }
 .bet-opt.sel { background: var(--bg); opacity: 1; translate: 0 -4px; box-shadow: 0 5px 0 var(--ink), 0 0 0 3px var(--gold); }
@@ -2728,7 +2734,7 @@ p.met-sale { display: flex; align-items: center; justify-content: center; gap: 6
 @media (max-width: 420px) { .bet-opts { gap: 8px; padding: 10px 10px 8px; } .bet-modal .bet-opt { min-width: 46px; height: 46px; } .bet-opt b { font-size: 21px; } }
 /* 1.ª apuesta (gratis): las demás fichas bloqueadas y apagadas. */
 .bet-opt:disabled { opacity: .35; filter: grayscale(.7); box-shadow: 0 2px 0 var(--ink); }
-@media (max-width: 420px) { .bet-top { flex-direction: column; gap: 4px; } .bet-hero { width: 96px; height: 96px; } .bet-big { min-width: 76px; height: 76px; padding: 0 12px 2px; font-size: 36px; } }
+@media (max-width: 420px) { .bet-top { flex-direction: column; gap: 4px; } .bet-hero { width: 96px; height: 96px; } .bet-modal .bet-hero { height: 82px; } .bet-big { min-width: 76px; height: 76px; padding: 0 12px 2px; font-size: 36px; } }
 /* Noticia al subir de apuesta (openBetUp, ancho de las presentaciones): la ficha, la frase grande y un cuadrito por
    premio con su etiqueta ×N. La presentación al abrirse usa la de desbloqueo (openUnlock 'apuesta'). */
 .br-lead { margin: 2px 0 0; text-align: center; font: 400 28px/1.1 'Lilita One'; color: #ffc83d; }
@@ -2750,7 +2756,7 @@ p.met-sale { display: flex; align-items: center; justify-content: center; gap: 6
   [class*="unlock-apuesta"] .evi-hero .rays { width: 150px; height: 150px; }
 }
 @media (orientation: landscape) and (max-height: 520px) {
-  .bet-hero { width: 76px; height: 76px; } .bet-hero .rays { width: 120px; height: 120px; }
+  .bet-hero, .bet-modal .bet-hero { width: 76px; height: 76px; } .bet-hero .rays { width: 120px; height: 120px; }
   .bet-modal .bet-big { min-width: 62px; height: 62px; padding: 0 10px 2px; font-size: 30px; border-radius: 20px; }
   .bet-loot .bl b { font-size: 21px; } .bet-loot .bl > .ico { width: 24px; height: 24px; }
   .bet-modal .bet-sell { padding: 6px 14px 8px; gap: 4px; } .bet-lead { font-size: 17px; }
