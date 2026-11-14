@@ -661,6 +661,8 @@ export function openDevMenu({ onGallery, onPlanets, onFestivals, onGoLevel, onRe
     ['Festividades de leyendas mexicanas', UNLOCK.fiesta2, 'catrina', fisOf(true)],
     ['Fiestas de México', UNLOCK.fiesta3, 'piramide', fisOf(false, 3)],
     ['Fiestas de América', UNLOCK.fiesta4, 'antifaz', fisOf(false, 4)],
+    ['Fiestas de Europa', UNLOCK.fiesta5, 'cascovikingo', fisOf(false, 5)],
+    ['Fiestas de Oriente', UNLOCK.fiesta6, 'koinobori', fisOf(false, 6)],
   ];
   const KINDS = { ev: 'Evento', card: 'Carta', mesa: 'Mesa' };
   const rows = [
@@ -784,6 +786,8 @@ export function openDevMenu({ onGallery, onPlanets, onFestivals, onGoLevel, onRe
         { l: 'Ir al día 28', title: 'El 4.º agujero de gusano: arma el planeta y da un escudo', fn: () => devDaily(27, 1, onRefresh) },
         { l: 'Faltar un día', title: 'Como si no hubieras entrado ayer (con escudo te salva)', fn: () => devDaily(save.daily?.day || 0, 2, onRefresh) },
         { l: 'Darme un escudo', fn: () => ((save.daily = { ...save.daily, shield: Math.min(3, (save.daily?.shield || 0) + 1) }), persist(), onRefresh()) },
+        // 14 nov 2026 (pedido del usuario): volver a ver la ventana de reglas que sale la primera vez.
+        { l: 'Ver el aviso del regalo diario', title: 'La ventana «¡Nuevo regalo diario!» con sus reglas: sale al abrir el regalo diario', fn: () => (save.intro && delete save.intro.regalo, persist(), onRefresh(), toast('Abre el regalo diario para ver su aviso')) },
       ] },
       { k: 'mis', h: 'Misiones del día', ico: 'misiones', sub: `${missions().list.filter(missionDone).length}/3 cumplidas`, items: [
         { l: 'Cumplir una', title: 'Una de las de hoy que falte, al azar', fn: () => devDo([devMisOne], onRefresh) },
@@ -822,11 +826,13 @@ export function openDevMenu({ onGallery, onPlanets, onFestivals, onGoLevel, onRe
         festOn && { l: 'Siguiente planeta', fn: () => festSet({ k: Math.min(FL - 1, (Math.floor(festNow.state.k / FN) + 1) * FN) }) },
         festOn && { l: 'Ganar todo hasta el último jefe', title: 'Gana los niveles que faltan (con sus premios) y te deja en el jefe del último planeta', fn: () => ((festival().state.run = null), winTo(festival, festEnter, festWin, FL - 1)) },
         festOn && { l: 'Empezar de cero', fn: () => ((save.fi = null), persist(), onRefresh()) },
-        { l: 'Ver el paquete de festividades', cls: 'gold', title: 'Leyendas, fiestas de México y de América: cada una con su mesa y sus 7 exclusivos (solo para ver, no te da nada)', fn: onFestivals },
+        { l: 'Ver el paquete de festividades', cls: 'gold', title: 'Leyendas y fiestas de México, América, Europa y Oriente: cada una con su mesa y sus 7 exclusivos (solo para ver, no te da nada)', fn: onFestivals },
         { l: 'Ver el aviso de Festividades', title: `La ventana que sale al desbloquearlas (nivel ${UNLOCK.fiesta + 1}), con 3 iconos`, fn: () => (save.intro && delete save.intro.fiesta, persist(), onRefresh()) },
         { l: 'Ver el aviso de Leyendas', title: `La ventana que sale al llegar al nivel ${UNLOCK.fiesta2}, con las festividades nuevas`, fn: () => (save.intro && delete save.intro.fiesta2, persist(), onRefresh()) },
         { l: 'Ver el aviso de Fiestas de México', title: `La ventana que sale al llegar al nivel ${UNLOCK.fiesta3 + 1}`, fn: () => (save.intro && delete save.intro.fiesta3, persist(), onRefresh()) },
         { l: 'Ver el aviso de Fiestas de América', title: `La ventana que sale al llegar al nivel ${UNLOCK.fiesta4 + 1}`, fn: () => (save.intro && delete save.intro.fiesta4, persist(), onRefresh()) },
+        { l: 'Ver el aviso de Fiestas de Europa', title: `La ventana que sale al llegar al nivel ${UNLOCK.fiesta5 + 1}`, fn: () => (save.intro && delete save.intro.fiesta5, persist(), onRefresh()) },
+        { l: 'Ver el aviso de Fiestas de Oriente', title: `La ventana que sale al llegar al nivel ${UNLOCK.fiesta6 + 1}`, fn: () => (save.intro && delete save.intro.fiesta6, persist(), onRefresh()) },
       ] },
       { k: 'col', h: 'Colección', ico: colNow?.token || COLLECTIONS[0].token, sub: colNow ? `${colNow.name} · ${colNow.state.n} fichas` : 'no hay esta semana', items: [
         { l: colNow ? 'Siguiente colección' : 'Ir a la próxima', fn: () => ((save.devDay = (save.devDay || 0) + daysToNextCol()), persist(), onRefresh()) },

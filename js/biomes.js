@@ -331,6 +331,133 @@ export const EVENT_BIOMES = {
       planet: { amp: 0.13, freq: 1.9, seed: 349, outline: 0x0a0420, glow: 0xffd27a, prop: 'candle', crown: '#ffc83d', path: '#fff6e6' } },
     [[0.42, 0.64, 1.1], [0.36, 0.58, 1.3], [0.3, 0.52, 1.5]],
   ),
+  // Fiestas de Europa (381) y de Oriente (431) (14 nov 2026). [agua, color desde, cuántas matas].
+  // Up Helly Aa: fiordos con pinos y cumbres nevadas; la nieve baja en cada planeta.
+  uphellyaa: sameLook(
+    { emblem: ['#c22c3c', '#b8c0d8', '#ffc83d'], colors: [['#14305a', '#2f6aa8', '#c9c4d8', '#5a7a6a', '#8f98b8', '#fffdf7']],
+      planet: { amp: 0.13, freq: 1.8, seed: 353, outline: 0x0a0e24, glow: 0xffb13d, prop: 'pine', crown: '#2f6a3a', path: '#fff6e6' } },
+    [[0.42, 0.66, 1.0], [0.38, 0.6, 1.2], [0.34, 0.54, 1.4]],
+  ),
+  // San Patricio: colinas verdes de tréboles; el verde claro sube en cada planeta.
+  patricio: sameLook(
+    { emblem: ['#2f9e5c', '#ffd84a', '#7fd36a'], colors: [['#1f5a8a', '#4a9ad0', '#f6eed0', '#5fbf5a', '#2f9e5c', '#9be08a']],
+      planet: { amp: 0.13, freq: 1.8, seed: 359, outline: 0x06200e, glow: 0x9be08a, prop: 'round', crown: '#3f9a46', path: '#fffdf0' } },
+    [[0.4, 0.6, 1.1], [0.34, 0.54, 1.3], [0.3, 0.5, 1.5]],
+  ),
+  // Las Fallas: plazas de colores con ninots (bolitas de colores); el naranja sube en cada planeta.
+  fallas: sameLook(
+    { emblem: ['#ff9c3d', '#4aa8de', '#ffd27a'], colors: [['#2a4aa8', '#4a8ae0', '#f6e0c0', '#e8a35a', '#ff9c3d', '#ffd27a']],
+      planet: { amp: 0.13, freq: 1.8, seed: 367, outline: 0x1a0a06, glow: 0xffc83d, prop: 'lollipop', crown: '#ff9c3d', path: '#fff6e6' } },
+    [[0.4, 0.62, 1.1], [0.34, 0.56, 1.3], [0.3, 0.5, 1.5]],
+  ),
+  // Sant Jordi: campos de rosas rojas; el rojo sube en cada planeta.
+  santjordi: sameLook(
+    { emblem: ['#e8434f', '#5fbf5a', '#ffd84a'], colors: [['#2a3a8a', '#5a6ad0', '#f6e6d6', '#7fae5a', '#c22c3c', '#ff8a8f']],
+      planet: { amp: 0.13, freq: 1.8, seed: 373, outline: 0x1a0610, glow: 0xff8a8f, prop: 'flower', crown: '#e8434f', path: '#fff4f4' } },
+    [[0.4, 0.6, 1.2], [0.34, 0.54, 1.4], [0.3, 0.5, 1.6]],
+  ),
+  // Día del Rey: polders verdes con canales y casitas; el naranja sube en cada planeta.
+  koningsdag: sameLook(
+    { emblem: ['#ff9c3d', '#4aa8de', '#fffdf7'], colors: [['#1f4a8a', '#4a8ad0', '#f6e6c0', '#5fbf5a', '#ff9c3d', '#ffc27a']],
+      planet: { amp: 0.13, freq: 1.8, seed: 379, outline: 0x1a0e04, glow: 0xffc27a, prop: 'house', crown: '#ff9c3d', path: '#fff6ec' } },
+    [[0.44, 0.62, 1.0], [0.4, 0.56, 1.2], [0.36, 0.5, 1.4]],
+  ),
+  // Midsommar: praderas con flores y lagos; las flores amarillas suben en cada planeta.
+  midsommar: sameLook(
+    { emblem: ['#ffd84a', '#4aa8de', '#7fd36a'], colors: [['#2a5aa8', '#5aa0e0', '#fff6d6', '#7fd36a', '#5fbf5a', '#ffe27a']],
+      planet: { amp: 0.13, freq: 1.8, seed: 383, outline: 0x0a1a30, glow: 0xffe27a, prop: 'flower', crown: '#ffd84a', path: '#fffdf0' } },
+    [[0.46, 0.64, 1.1], [0.42, 0.58, 1.3], [0.38, 0.52, 1.5]],
+  ),
+  // Fiesta de los Globos (4 planetas): campos verdes con globos (bolitas rosas); el dorado sube en cada planeta.
+  globosbristol: sameLook(
+    { emblem: ['#ff5f7e', '#ffd84a', '#4aa8de'], colors: [['#2a5aa8', '#5fa0e0', '#f6f0e0', '#7fbf5a', '#4a8a3a', '#ffd84a']],
+      planet: { amp: 0.13, freq: 1.8, seed: 389, outline: 0x0a2040, glow: 0xffd84a, prop: 'round', crown: '#ff5f7e', path: '#f0f8ff' } },
+    [[0.4, 0.62, 1.1], [0.36, 0.58, 1.2], [0.32, 0.54, 1.4], [0.28, 0.5, 1.6]],
+  ),
+  // Alfombra de Flores: plazas doradas con flores rosas; el rosa sube en cada planeta.
+  alfombraflor: sameLook(
+    { emblem: ['#e8559a', '#ffd23d', '#ff6a5a'], colors: [['#2a3a8a', '#5a6ad0', '#f6e6e0', '#c9a24a', '#e8559a', '#ffd23d']],
+      planet: { amp: 0.13, freq: 1.8, seed: 397, outline: 0x1a0a1a, glow: 0xff9cc8, prop: 'flower', crown: '#ff7ab8', path: '#fff6fa' } },
+    [[0.4, 0.6, 1.2], [0.34, 0.54, 1.4], [0.3, 0.5, 1.6]],
+  ),
+  // Regata Histórica: lagunas grandes con islas de casas; el agua baja en cada planeta.
+  regata: sameLook(
+    { emblem: ['#2f86c0', '#2a2540', '#ffc83d'], colors: [['#0e3a6a', '#2f86c0', '#f6e6c0', '#e8b06a', '#c98a4b', '#e8434f']],
+      planet: { amp: 0.13, freq: 1.8, seed: 401, outline: 0x061430, glow: 0x8fd6ff, prop: 'building', crown: '#e8434f', path: '#eefaff' } },
+    [[0.58, 0.74, 0.9], [0.54, 0.7, 1.0], [0.5, 0.66, 1.1]],
+  ),
+  // Bajada de las vacas: prados alpinos con pinos y picos nevados; la nieve baja en cada planeta.
+  vacas: sameLook(
+    { emblem: ['#3f9a46', '#d8b04a', '#fffdf7'], colors: [['#1f4a7a', '#4a8ad0', '#e6f0d0', '#6fc25a', '#8f98b8', '#fffdf7']],
+      planet: { amp: 0.13, freq: 1.8, seed: 409, outline: 0x0a1a2a, glow: 0xd8f8d0, prop: 'pine', crown: '#3f8a3a', path: '#f4fff4' } },
+    [[0.36, 0.64, 1.1], [0.32, 0.58, 1.3], [0.28, 0.52, 1.5]],
+  ),
+  // Festival de Hielo: todo de hielo y nieve con cristales; el hielo sube en cada planeta.
+  harbin: sameLook(
+    { emblem: ['#5fb6e0', '#e6f7ff', '#ff7ab8'], colors: [['#1a3a6a', '#5fb6e0', '#e6f7ff', '#d6f2ff', '#bfe8ff', '#fffdf7']],
+      planet: { amp: 0.13, freq: 1.8, seed: 419, outline: 0x06102a, glow: 0xbfe8ff, prop: 'crystal', crown: '#bfe8ff', path: '#f0faff' } },
+    [[0.4, 0.62, 1.0], [0.36, 0.56, 1.2], [0.32, 0.5, 1.4]],
+  ),
+  // Pongal: campos de arroz y caña con tierra roja; el rojo sube en cada planeta.
+  pongal: sameLook(
+    { emblem: ['#d2694e', '#ffc83d', '#5fbf5a'], colors: [['#2a5a8a', '#5fa0d0', '#f6e0b0', '#7fae5a', '#d2694e', '#ffc83d']],
+      planet: { amp: 0.13, freq: 1.8, seed: 421, outline: 0x1a0a06, glow: 0xffc83d, prop: 'wheat', crown: '#ffc83d', path: '#fff6e8' } },
+    [[0.4, 0.6, 1.2], [0.34, 0.54, 1.4], [0.3, 0.5, 1.6]],
+  ),
+  // Songkran (4 planetas): islas de playa con palmeras en mucho mar; el agua baja en cada planeta.
+  songkran: sameLook(
+    { emblem: ['#2fa8d8', '#ffd84a', '#fffdf7'], colors: [['#0a4a8a', '#2fa8d8', '#fff1c9', '#5fbf5a', '#ffd84a', '#fffdf7']],
+      planet: { amp: 0.13, freq: 1.8, seed: 431, outline: 0x04203a, glow: 0x8fe8ff, prop: 'palm', crown: '#3f9a46', path: '#eefcff' } },
+    [[0.58, 0.74, 1.0], [0.54, 0.7, 1.1], [0.5, 0.66, 1.2], [0.46, 0.62, 1.3]],
+  ),
+  // Kodomo no Hi: bosques de bambú con ríos; el rosa de los cerezos sube en cada planeta.
+  kodomo: sameLook(
+    { emblem: ['#e8434f', '#2f6aa8', '#ffd84a'], colors: [['#1f4a8a', '#4a8ad0', '#f6eed6', '#7fd36a', '#3f9a46', '#ff8a8f']],
+      planet: { amp: 0.13, freq: 1.8, seed: 433, outline: 0x06142e, glow: 0xffb0b6, prop: 'bamboo', crown: '#6fc25a', path: '#f0f6ff' } },
+    [[0.42, 0.62, 1.1], [0.36, 0.56, 1.3], [0.32, 0.5, 1.5]],
+  ),
+  // Pahiyas: islas tropicales con palmeras y huertos de colores; el rosa sube en cada planeta.
+  pahiyas: sameLook(
+    { emblem: ['#5fbf5a', '#ff5f7e', '#ffd84a'], colors: [['#14468a', '#2fa8d8', '#fff1c9', '#7fd36a', '#ff5f7e', '#ffd84a']],
+      planet: { amp: 0.13, freq: 1.8, seed: 439, outline: 0x0a1a0e, glow: 0xffd84a, prop: 'palm', crown: '#5fbf5a', path: '#f6fff0' } },
+    [[0.5, 0.68, 1.0], [0.46, 0.64, 1.2], [0.42, 0.6, 1.3]],
+  ),
+  // Tanabata: noches violetas con bambú; el violeta sube en cada planeta.
+  tanabata: sameLook(
+    { emblem: ['#8a5cf0', '#ff9cc8', '#8fd6ff'], colors: [['#1a1a5a', '#3a3a8a', '#e6e0ff', '#5fbf5a', '#8a5cf0', '#ff9cc8']],
+      planet: { amp: 0.13, freq: 1.8, seed: 443, outline: 0x0a0628, glow: 0xc9a6ff, prop: 'bamboo', crown: '#8fdc6a', path: '#f8f2ff' } },
+    [[0.42, 0.62, 1.1], [0.38, 0.56, 1.3], [0.34, 0.5, 1.5]],
+  ),
+  // Naadam: estepa dorada con yurtas blancas; lo seco sube en cada planeta.
+  naadam: sameLook(
+    { emblem: ['#ffc83d', '#4aa8de', '#e8434f'], colors: [['#2a5a8a', '#5fa0d0', '#f6e6c0', '#c9b86a', '#a8925a', '#fff6dc']],
+      planet: { amp: 0.13, freq: 1.8, seed: 449, outline: 0x1a1406, glow: 0xffe58a, prop: 'house', crown: '#fffdf7', path: '#fffaf0' } },
+    [[0.34, 0.58, 0.9], [0.3, 0.52, 1.1], [0.26, 0.46, 1.3]],
+  ),
+  // Festival del Lodo: playas de lodo café con rocas; el lodo sube en cada planeta.
+  lodo: sameLook(
+    { emblem: ['#a8764a', '#4aa8de', '#ffc83d'], colors: [['#2a5a8a', '#5fa0d0', '#e8d4b0', '#a8764a', '#7a4a2a', '#c99a6a']],
+      planet: { amp: 0.13, freq: 1.8, seed: 457, outline: 0x140c06, glow: 0xe8c49a, prop: 'rock', crown: '#a8764a', path: '#fbf4ec' } },
+    [[0.44, 0.6, 1.0], [0.4, 0.54, 1.2], [0.36, 0.48, 1.4]],
+  ),
+  // Medio Otoño: jardines de noche con faroles; el dorado sube en cada planeta.
+  otono: sameLook(
+    { emblem: ['#e8a35a', '#fff3c4', '#e8434f'], colors: [['#1a1a4a', '#3a3a7a', '#f6e6c0', '#c98a3a', '#e8a35a', '#fff3c4']],
+      planet: { amp: 0.13, freq: 1.8, seed: 461, outline: 0x0a0a24, glow: 0xfff3c4, prop: 'candle', crown: '#ffc83d', path: '#fffbea' } },
+    [[0.42, 0.62, 1.1], [0.36, 0.56, 1.3], [0.32, 0.5, 1.5]],
+  ),
+  // Banquete de los Monos: selvas con palmeras y templos dorados; el dorado sube en cada planeta.
+  monos: sameLook(
+    { emblem: ['#c9a24a', '#ffd84a', '#7fd36a'], colors: [['#2a5a8a', '#5fa0d0', '#f6e6c0', '#7fae5a', '#c9a24a', '#ffd84a']],
+      planet: { amp: 0.13, freq: 1.8, seed: 463, outline: 0x140e04, glow: 0xffe58a, prop: 'palm', crown: '#3f9a46', path: '#fffbe8' } },
+    [[0.4, 0.62, 1.2], [0.34, 0.56, 1.4], [0.3, 0.5, 1.6]],
+  ),
+  // Festival del Cálao: colinas de bosque con tierra roja; el rojo sube en cada planeta.
+  hornbill: sameLook(
+    { emblem: ['#c22c3c', '#2a2540', '#ffc83d'], colors: [['#1f4a7a', '#4a8ad0', '#f0e0c0', '#3f8a3a', '#c22c3c', '#ffc83d']],
+      planet: { amp: 0.13, freq: 1.8, seed: 467, outline: 0x0a1a0e, glow: 0xffc83d, prop: 'round', crown: '#2f7a3a', path: '#fff6ee' } },
+    [[0.4, 0.6, 1.2], [0.34, 0.54, 1.4], [0.3, 0.5, 1.6]],
+  ),
   // Halloween: mares morados, huertos de calabaza naranjas y árboles otoñales; el naranja sube en cada planeta.
   halloween: sameLook(
     { emblem: ['#5a2f9a', '#3a1a6a', '#ff8a1a'], colors: [['#3a1a6a', '#6a3fb0', '#c9b0e8', '#4a6a3a', '#ff8a1a', '#ffb13d']],
@@ -1058,6 +1185,28 @@ const EVENT_TABLES = {
     ['pupusa', '#3f9a46', 'pupusa', 'curtido', '#041408', ['#c96a3a', '#a8502a', '#f0b08a']],
     ['velitas', '#2a2a5a', 'farolpapel', 'vela', '#04041a', ['#ffc83d', '#e89a17', '#fff0c0']],
     ['anioviejo', '#4a2a8a', 'monigote', 'bengala', '#0a0420', ['#ffc83d', '#e89a17', '#fff0c0']],
+    // Fiestas de Europa y de Oriente (14 nov 2026).
+    ['uphellyaa', '#c22c3c', 'cascovikingo', 'antorchavik', '#1a0408', ['#8f98b8', '#6e66a3', '#d8deec']],
+    ['patricio', '#2f9e5c', 'trebolsuerte', 'olladeoro', '#041a0c', ['#ffc83d', '#e89a17', '#fff0c0']],
+    ['fallas', '#e2753a', 'ninot', 'peineta', '#1a0a04', ['#4aa8de', '#2f86c0', '#bfe2ff']],
+    ['santjordi', '#c22c3c', 'rosaroja', 'librojordi', '#1a0408', ['#5fbf5a', '#3f9a46', '#c8f0a8']],
+    ['koningsdag', '#ff9c3d', 'coronanaranja', 'molino', '#1a0a04', ['#4aa8de', '#2f86c0', '#bfe2ff']],
+    ['midsommar', '#4aa8de', 'coronaflores', 'fresa', '#04142a', ['#ffd84a', '#ec9a17', '#fff0c0']],
+    ['globosbristol', '#4aa8de', 'globoaire', 'nubeglobo', '#04142a', ['#ff5f7e', '#d63d5f', '#ffc2d0']],
+    ['alfombraflor', '#e8559a', 'begonia', 'petalosflor', '#1a0410', ['#ffd23d', '#f0a81a', '#fff0c0']],
+    ['regata', '#2f86c0', 'gondola', 'remo', '#04142a', ['#e8434f', '#c22c3c', '#ffb0b6']],
+    ['vacas', '#3f9a46', 'cencerro', 'edelweiss', '#041408', ['#e8434f', '#c22c3c', '#ffb0b6']],
+    ['harbin', '#5fb6e0', 'castillohielo', 'cristalhielo', '#04102a', ['#ff7ab8', '#e0559a', '#ffc2dc']],
+    ['pongal', '#d2694e', 'ollapongal', 'kolam', '#1a0804', ['#ffc83d', '#e89a17', '#fff0c0']],
+    ['songkran', '#2fa8d8', 'pistolagua', 'jazmin', '#04142a', ['#ffd84a', '#ec9a17', '#fff0c0']],
+    ['kodomo', '#2f6aa8', 'koinobori', 'kabuto', '#04102a', ['#e8434f', '#c22c3c', '#ffb0b6']],
+    ['pahiyas', '#5fbf5a', 'kiping', 'salakot', '#041408', ['#ff5f7e', '#d63d5f', '#ffc2d0']],
+    ['tanabata', '#4a2a8a', 'tanzaku', 'estrellasdeseo', '#0a0420', ['#ff9cc8', '#ff7ab8', '#ffe0ee']],
+    ['naadam', '#e89a17', 'yurta', 'arcomongol', '#1a1004', ['#4aa8de', '#2f86c0', '#bfe2ff']],
+    ['lodo', '#a8764a', 'charco', 'cubetalodo', '#140a04', ['#4aa8de', '#2f86c0', '#bfe2ff']],
+    ['otono', '#2a2a5a', 'pastelluna', 'conejoluna', '#04041a', ['#e8434f', '#c22c3c', '#ffb0b6']],
+    ['monos', '#c9a24a', 'monito', 'platanos', '#140e04', ['#7fd36a', '#56b83a', '#c8f0a8']],
+    ['hornbill', '#c22c3c', 'calao', 'tamborcalao', '#1a0404', ['#ffc83d', '#e89a17', '#fff0c0']],
   ].map(([k, bg, a, b, tint, mug]) => [k, { tile: clothIconTile(bg, a, b, tint), tint, props: [['bigIco', a], ['pairIco', b], ['mug', mug], ['pairIco', a]] }])),
 };
 // HTML del fondo de la mesa para el mundo w (o la del evento del mes: theme = su clave).

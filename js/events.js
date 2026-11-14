@@ -18,8 +18,9 @@ import { EVENT_LEVELS, EVENT_PER_PLANET, EVENT_PLANETS, FESTIVAL_LEVELS, FESTIVA
 // 10 nov 2026 (pedido del usuario): fiesta3 = fiestas mexicanas nuevas, fiesta4 = fiestas de América (niveles en UNLOCK).
 // 14 nov 2026 (pedido del usuario, calendario nuevo): logros 51; colecciones cada 50 desde el 91 (91, 141, 191); evento
 // del mes 131; festividades cada 50 desde el 181 (de un día 181, leyendas 231, México 281, América 331; Europa 381 y
-// Oriente 431 cuando existan).
-export const UNLOCK = { racha: 30, mis: 40, logros: 50, col: 90, mes: 130, col2: 140, fiesta: 180, col3: 190, fiesta2: 230, fiesta3: 280, fiesta4: 330 };
+// Oriente 431).
+// 14 nov 2026 (pedido del usuario): fiesta5 = fiestas de Europa, fiesta6 = fiestas de Oriente.
+export const UNLOCK = { racha: 30, mis: 40, logros: 50, col: 90, mes: 130, col2: 140, fiesta: 180, col3: 190, fiesta2: 230, fiesta3: 280, fiesta4: 330, fiesta5: 380, fiesta6: 430 };
 export const isOn = (k) => (save.next || 0) >= UNLOCK[k];
 
 // En estrellas (7 nov 2026: llegaba a 30 victorias sin problema porque contaba cualquiera): cada victoria suma sus
@@ -533,6 +534,9 @@ const easter = (y) => {
 };
 // El primer lunes después del día d del mes m (Guelaguetza: el lunes después del 16 de julio).
 const mondayAfter = (y, m, d) => { const x = new Date(y, m, d + 1); return new Date(y, m, d + 1 + ((8 - x.getDay()) % 7)); };
+// El primer día de la semana dow (0 = domingo) desde el día d del mes m (con d = 1 es el primero del mes; con el
+// último día − 6, el último del mes).
+const weekdayFrom = (y, m, d, dow) => { const x = new Date(y, m, d); return new Date(y, m, d + ((dow - x.getDay() + 7) % 7)); };
 export const FESTIVALS = [
   { key: 'anionuevo', name: 'Año Nuevo', date: (y) => new Date(y, 0, 1), ready: true,
     ico: 'reloj', deco: 'uvas', color: 'gold',
@@ -662,6 +666,106 @@ FESTIVALS.push(
     ico: 'monigote', deco: 'bengala', color: 'violet',
     planets: ['Calle de los Monigotes', 'Plaza del Reloj', 'Planeta Último Día'],
     ex: [{ space: 'aniviejo', frame: 'monigotes' }, { ring: 'chispasviejo', back: 'anioviejo' }, { avatar: 'monigotito', title: 'despedida', traveler: 'monigotevuela' }] },
+);
+// ---------- Fiestas de Europa (grp 5, nivel 381) y de Oriente (grp 6, nivel 431) (14 nov 2026, pedido del usuario) ----------
+// Escogidas para que nunca se encimen con otra (revisado año por año de 2026 a 2075): solo fechas fijas o un día de
+// la semana que no choca. Las de luna (Año Nuevo Lunar, Holi) se quedaron fuera porque siempre caían en días llenos.
+// note: aclaración que sale en su pase de entrada (Medio Otoño va en fecha fija aunque su día real cambia con la luna).
+FESTIVALS.push(
+  { key: 'uphellyaa', name: 'Up Helly Aa', date: (y) => weekdayFrom(y, 0, 25, 2), grp: 5, ready: true, zone: 'Shetland, Escocia',
+    ico: 'cascovikingo', deco: 'antorchavik', color: 'red',
+    planets: ['Fiordo de las Antorchas', 'Puerto del Drakkar', 'Planeta Vikingo'],
+    ex: [{ space: 'vikinga', frame: 'escudosvik' }, { ring: 'escuditos', back: 'drakkares' }, { avatar: 'vikinguito', title: 'jarl', traveler: 'drakkar' }] },
+  { key: 'patricio', name: 'San Patricio', date: (y) => new Date(y, 2, 17), grp: 5, ready: true, zone: 'Irlanda',
+    ico: 'trebolsuerte', deco: 'olladeoro', color: 'green',
+    planets: ['Colinas de Tréboles', 'Fin del Arcoíris', 'Planeta Esmeralda'],
+    ex: [{ space: 'esmeralda', frame: 'treboles' }, { ring: 'trebolitos', back: 'ollasoro' }, { avatar: 'duendecito', title: 'suertudo', traveler: 'ollavuela' }] },
+  { key: 'fallas', name: 'Las Fallas', date: (y) => new Date(y, 2, 19), grp: 5, ready: true, zone: 'Valencia, España',
+    ico: 'ninot', deco: 'peineta', color: 'orange',
+    planets: ['Plaza de los Ninots', 'Calle de la Traca', 'Planeta Fallero'],
+    ex: [{ space: 'falleranoche', frame: 'fallera' }, { ring: 'ninots', back: 'ninotgigante' }, { avatar: 'ninotito', title: 'fallero', traveler: 'ninotvuela' }] },
+  { key: 'santjordi', name: 'Sant Jordi', date: (y) => new Date(y, 3, 23), grp: 5, ready: true, zone: 'Cataluña, España',
+    ico: 'rosaroja', deco: 'librojordi', color: 'red',
+    planets: ['Calle de las Rosas', 'Torre del Dragón', 'Planeta de los Libros'],
+    ex: [{ space: 'rosasylibros', frame: 'rosasjordi' }, { ring: 'rosaljordi', back: 'dragonrosa' }, { avatar: 'dragonjordi', title: 'lector', traveler: 'librovuela' }] },
+  // El 27 de abril; si cae domingo se festeja el 26.
+  { key: 'koningsdag', name: 'Día del Rey', date: (y) => { const d = new Date(y, 3, 27); return d.getDay() ? d : new Date(y, 3, 26); }, grp: 5, ready: true, zone: 'Países Bajos',
+    ico: 'coronanaranja', deco: 'molino', color: 'orange',
+    planets: ['Canales Naranjas', 'Mercadito del Rey', 'Planeta de los Molinos'],
+    ex: [{ space: 'reynaranja', frame: 'molinitos' }, { ring: 'zuecos', back: 'molinos' }, { avatar: 'holandesito', title: 'todonaranja', traveler: 'zuecovuela' }] },
+  // Viernes entre el 19 y el 25 de junio.
+  { key: 'midsommar', name: 'Midsommar', date: (y) => weekdayFrom(y, 5, 19, 5), grp: 5, ready: true, zone: 'Suecia',
+    ico: 'coronaflores', deco: 'fresa', color: 'gold',
+    planets: ['Prado del Palo de Flores', 'Lago de la Noche Clara', 'Planeta Sol de Medianoche'],
+    ex: [{ space: 'solmedianoche', frame: 'floresmidsommar' }, { ring: 'coronitas', back: 'palomayo' }, { avatar: 'coronadaflor', title: 'solsticio', traveler: 'palovuela' }] },
+  // Del 10 al 13 de agosto siempre (la de verdad es de jueves a domingo; así no choca con el Día del Gato).
+  { key: 'globosbristol', name: 'Fiesta de los Globos', date: (y) => new Date(y, 7, 10), days: 4, p: 4, n: 4, grp: 5, ready: true, zone: 'Bristol, Inglaterra',
+    ico: 'globoaire', deco: 'nubeglobo', color: 'blue',
+    planets: ['Prado del Despegue', 'Cielo de Canastas', 'Valle de las Nubes', 'Planeta Globo'],
+    ex: [{ space: 'cieloglobos', frame: 'globosaire' }, { ring: 'canastitas', back: 'globoaerostatico' }, { title: 'aeronauta', traveler: 'globoaerovuela' }, { avatar: 'globin' }] },
+  { key: 'alfombraflor', name: 'Alfombra de Flores', date: (y) => new Date(y, 7, 15), grp: 5, ready: true, zone: 'Bruselas, Bélgica',
+    ico: 'begonia', deco: 'petalosflor', color: 'pink',
+    planets: ['Gran Plaza de Flores', 'Calle de los Pétalos', 'Planeta Begonia'],
+    ex: [{ space: 'alfombraflores', frame: 'mosaicoflor' }, { ring: 'begonias', back: 'alfombrapetalos' }, { avatar: 'begonito', title: 'florista', traveler: 'regaderavuela' }] },
+  // Primer domingo de septiembre.
+  { key: 'regata', name: 'Regata Histórica', date: (y) => weekdayFrom(y, 8, 1, 0), grp: 5, ready: true, zone: 'Venecia, Italia',
+    ico: 'gondola', deco: 'remo', color: 'blue',
+    planets: ['Gran Canal', 'Puente de los Faroles', 'Planeta Laguna'],
+    ex: [{ space: 'laguna', frame: 'canales' }, { ring: 'gondolitas', back: 'gondolas' }, { avatar: 'gondolerito', title: 'gondolero', traveler: 'gondolavuela' }] },
+  // Primer sábado de octubre (el último de septiembre chocaba con el Nahual).
+  { key: 'vacas', name: 'Bajada de las Vacas', date: (y) => weekdayFrom(y, 9, 1, 6), grp: 5, ready: true, zone: 'los Alpes de Austria y Suiza',
+    ico: 'cencerro', deco: 'edelweiss', color: 'green',
+    planets: ['Pradera Alpina', 'Camino de los Cencerros', 'Planeta Montaña'],
+    ex: [{ space: 'alpes', frame: 'florecitasalpes' }, { ring: 'cencerros', back: 'vaquitas' }, { avatar: 'vaquita', title: 'pastoralpino', traveler: 'cencerrovuela' }] },
+  { key: 'harbin', name: 'Festival de Hielo', date: (y) => new Date(y, 0, 5), grp: 6, ready: true, zone: 'Harbin, China',
+    ico: 'castillohielo', deco: 'cristalhielo', color: 'blue',
+    planets: ['Ciudad de Hielo', 'Río Congelado', 'Planeta Escarcha'],
+    ex: [{ space: 'nochehielo', frame: 'escarcha' }, { ring: 'castillitos', back: 'palaciohielo' }, { avatar: 'heladito', title: 'escultor', traveler: 'trineohielo' }] },
+  { key: 'pongal', name: 'Pongal', date: (y) => new Date(y, 0, 14), grp: 6, ready: true, zone: 'el sur de la India',
+    ico: 'ollapongal', deco: 'kolam', color: 'orange',
+    planets: ['Campo de Caña', 'Patio del Kolam', 'Planeta Cosecha'],
+    ex: [{ space: 'cosechapongal', frame: 'kolams' }, { ring: 'canitas', back: 'ollasdulces' }, { avatar: 'ollita', title: 'cosechero', traveler: 'ollapongalvuela' }] },
+  { key: 'songkran', name: 'Songkran', date: (y) => new Date(y, 3, 13), days: 3, p: 4, n: 4, grp: 6, ready: true, zone: 'Tailandia',
+    ico: 'pistolagua', deco: 'jazmin', color: 'blue',
+    planets: ['Calle Mojada', 'Templo del Elefante', 'Río de las Flores', 'Planeta Agua'],
+    ex: [{ space: 'songkran', frame: 'chapuzones' }, { ring: 'gotasagua', back: 'elefantes' }, { title: 'remojado', traveler: 'elefantevuela' }, { avatar: 'elefantito' }] },
+  { key: 'kodomo', name: 'Kodomo no Hi', date: (y) => new Date(y, 4, 5), grp: 6, ready: true, zone: 'Japón',
+    ico: 'koinobori', deco: 'kabuto', color: 'blue',
+    planets: ['Río de las Carpas', 'Jardín del Viento', 'Planeta Koinobori'],
+    ex: [{ space: 'carpas', frame: 'koinoboris' }, { ring: 'carpitas', back: 'carpasviento' }, { avatar: 'carpita', title: 'carpafuerte', traveler: 'koinoborivuela' }] },
+  { key: 'pahiyas', name: 'Pahiyas', date: (y) => new Date(y, 4, 15), grp: 6, ready: true, zone: 'Lucban, Filipinas',
+    ico: 'kiping', deco: 'salakot', color: 'green',
+    planets: ['Calle de las Casitas', 'Huerto del Kiping', 'Planeta Arcoíris de Arroz'],
+    ex: [{ space: 'pahiyas', frame: 'kipings' }, { ring: 'hojitasarroz', back: 'casitaspahiyas' }, { avatar: 'salakotito', title: 'decorador', traveler: 'casitapahiyas' }] },
+  { key: 'tanabata', name: 'Tanabata', date: (y) => new Date(y, 6, 7), grp: 6, ready: true, zone: 'Japón',
+    ico: 'tanzaku', deco: 'estrellasdeseo', color: 'violet',
+    planets: ['Río de Estrellas', 'Bosque de Bambú', 'Planeta de los Deseos'],
+    ex: [{ space: 'tanabata', frame: 'tanzakus' }, { ring: 'deseitos', back: 'bambudeseos' }, { avatar: 'estrelladeseo', title: 'pidedeseos', traveler: 'bambuvuela' }] },
+  { key: 'naadam', name: 'Naadam', date: (y) => new Date(y, 6, 11), grp: 6, ready: true, zone: 'Mongolia',
+    ico: 'yurta', deco: 'arcomongol', color: 'gold',
+    planets: ['Estepa de los Caballos', 'Campo del Arquero', 'Planeta Estepa'],
+    ex: [{ space: 'estepa', frame: 'nudosmongol' }, { ring: 'arquitos', back: 'yurtas' }, { avatar: 'jinetito', title: 'arquero', traveler: 'yurtavuela' }] },
+  // Tercer sábado de julio.
+  { key: 'lodo', name: 'Festival del Lodo', date: (y) => weekdayFrom(y, 6, 15, 6), grp: 6, ready: true, zone: 'Boryeong, Corea',
+    ico: 'charco', deco: 'cubetalodo', color: 'orange',
+    planets: ['Playa de Lodo', 'Tobogán de Barro', 'Planeta Chapoteo'],
+    ex: [{ space: 'lodazal', frame: 'salpicaduras' }, { ring: 'charquitos', back: 'lodo' }, { avatar: 'lodito', title: 'chapoteador', traveler: 'cubetavuela' }] },
+  // Su día real es la luna llena del 8.º mes chino (entre el 8 de septiembre y el 7 de octubre): algunos años chocaba
+  // con el Nahual o el Día del Programador. El usuario pidió fecha fija y que el pase lo aclare (note).
+  { key: 'otono', name: 'Medio Otoño', date: (y) => new Date(y, 8, 17), grp: 6, ready: true, zone: 'China y Vietnam',
+    note: 'Su día real cambia cada año con la luna. Aquí la festejamos siempre el 17 de septiembre.',
+    ico: 'pastelluna', deco: 'conejoluna', color: 'gold',
+    planets: ['Jardín de los Faroles', 'Puente de la Luna', 'Planeta Conejo de Jade'],
+    ex: [{ space: 'lunaotono', frame: 'pastelitos' }, { ring: 'lunitas', back: 'conejojade' }, { avatar: 'conejitoluna', title: 'guardianluna', traveler: 'farolconejo' }] },
+  // Último domingo de noviembre.
+  { key: 'monos', name: 'Banquete de los Monos', date: (y) => weekdayFrom(y, 10, 24, 0), grp: 6, ready: true, zone: 'Lopburi, Tailandia',
+    ico: 'monito', deco: 'platanos', color: 'gold',
+    planets: ['Templo de los Monos', 'Mesa de Frutas', 'Planeta Banquete'],
+    ex: [{ space: 'banquete', frame: 'frutitas' }, { ring: 'platanitos', back: 'monos' }, { avatar: 'changuito', title: 'comelon', traveler: 'platanovuela' }] },
+  { key: 'hornbill', name: 'Festival del Cálao', date: (y) => new Date(y, 11, 1), grp: 6, ready: true, zone: 'Nagaland, India',
+    ico: 'calao', deco: 'tamborcalao', color: 'red',
+    planets: ['Colinas del Cálao', 'Aldea de los Tambores', 'Planeta Plumaje'],
+    ex: [{ space: 'nagaland', frame: 'chales' }, { ring: 'plumascalao', back: 'calaos' }, { avatar: 'calaito', title: 'tamborilero', traveler: 'calaovuela' }] },
 );
 // Subidas 50% el 6 nov 2026 (antes 20-50 y 300/200/400), como las del evento del mes.
 export const FEST_COINS = [30, 45, 60, 75];

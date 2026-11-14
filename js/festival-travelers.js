@@ -1,6 +1,7 @@
 // Naves 3D de las festividades nuevas (10 nov 2026; datos en festival-art.js y FIESTAS de events.js). Mismo estilo que
 // travelers.js: material toon con contorno de tinta, ~1 de alto, centradas en el origen. Cada una: { obj, tick(t) }.
 import * as THREE from 'three';
+import { worldModels } from './festival-travelers-world.js';
 
 const TAU = Math.PI * 2;
 const glow = (color, opacity = 0.85) => new THREE.MeshBasicMaterial({ color, transparent: true, opacity, depthWrite: false });
@@ -213,5 +214,7 @@ export function festivalModels() {
       g.add(m);
       return { obj: g, tick: (t) => { m.position.y = Math.sin(t * 2) * 0.05; m.rotation.y = Math.sin(t * 0.7) * 0.5; m.rotation.z = Math.sin(t * 1.4) * 0.1; sp(t, 0, -0.35); } };
     },
+    // Fiestas de Europa y de Oriente (14 nov 2026): festival-travelers-world.js.
+    ...worldModels(),
   };
 }

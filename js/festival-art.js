@@ -3,6 +3,8 @@
 // art.js y set-art.js, y sus datos: colores del fondo del espacio, la postal y el título, y lo que va a la tienda
 // (fiestaCSS y fiestaItems, como setCSS en sets.js). Las naves van en festival-travelers.js y los disfraces 3D en
 // js/costumes/i.js, con la misma clave. Lo que se juega (fechas, planetas, premios) está en FIESTAS de events.js.
+// Las de Europa y Oriente (14 nov 2026) viven en festival-art-world.js y se juntan aquí.
+import { WORLD_LOOK, worldArt } from './festival-art-world.js';
 
 // ---------- Datos ----------
 // sky: [noche, medio, abajo, brillo 1, brillo 2] · motif: las 2 figuras sueltas del espacio · frame: [fondo, banda,
@@ -35,6 +37,8 @@ export const FESTIVAL_LOOK = {
   anioviejo: { ico: 'monigote', deco: 'bengala', sky: ['#0a0620', '#1a1040', '#2a1a5a', '#ffc83d', '#ff5f7e'], frame: ['#f6f2ff', '#6c3fd4'], tc: ['#c9a6ff', '#6c3fd4', '#2a1060', '#ffc83d'],
     names: { space: 'Última noche del año', frame: 'Monigotes', ring: 'Chispas de fin de año', back: 'Año Viejo', avatar: ['Monigote', 'Se despide del año'], title: 'Adiós año viejo', traveler: ['Monigote volador', 'Chispea como bengala'] } },
 };
+
+Object.assign(FESTIVAL_LOOK, WORLD_LOOK);
 
 // Lo que va a la tienda de cada festividad (claves de FIESTAS[].ex): { avatar: [...], ring: [...], … } como ITEMS.
 export function festivalItems(FESTIVALS) {
@@ -219,5 +223,11 @@ export function festivalArt({ tshape: T, CIRCLE: C, starPath, K, ICONS }) {
 
   // Disfraces de las festividades: solo las claves (12 nov 2026, ya no hay dibujo 2D; son 3D en costumes/i.js).
   const avatars = ['abanderado', 'serpientita', 'pinatin', 'ekekito', 'moaisito', 'carnavalito', 'boyerito', 'chinita', 'volantinito', 'alfajorcito', 'pupusita', 'farolin', 'monigotito'];
-  return { icons, rings, backs, avatars };
+  // Europa y Oriente: con las mismas piezas.
+  const w = worldArt({ T, C, E, L, dot, shine, pts, starPath, K, at, band, stitch, put, many, studs, twinkle, back, stripes, dots });
+  for (const [name, mine, more] of [['Icono', icons, w.icons], ['Marco', rings, w.rings], ['Reverso', backs, w.backs]]) for (const k in more) {
+    if (mine[k]) throw new Error(`${name} repetido: ${k}`);
+    mine[k] = more[k];
+  }
+  return { icons, rings, backs, avatars: [...avatars, ...w.avatars] };
 }

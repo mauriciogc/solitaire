@@ -1103,6 +1103,8 @@ function roadItems() {
     ['fiesta2', UNLOCK.fiesta2, 'Leyendas mexicanas', 'catrina', 'Festividades nuevas de leyendas mexicanas.'],
     ['fiesta3', UNLOCK.fiesta3, 'Fiestas de México', 'piramide', 'Día de la Bandera, Equinoccio de Primavera y Las Posadas.'],
     ['fiesta4', UNLOCK.fiesta4, 'Fiestas de América', 'antifaz', 'Festividades de toda América: Carnaval, Alasitas, Tapati, Guelaguetza y más.'],
+    ['fiesta5', UNLOCK.fiesta5, 'Fiestas de Europa', 'cascovikingo', 'Festividades de Europa: San Patricio, Las Fallas, Midsommar, la Fiesta de los Globos y más.'],
+    ['fiesta6', UNLOCK.fiesta6, 'Fiestas de Oriente', 'koinobori', 'Festividades de Asia: Songkran, Tanabata, Medio Otoño, el Festival de Hielo y más.'],
   ].map(([id, n, name, ico, text]) => ({ id, n: n + 1, k: 'ev', name, pic: icon(ico), text }));
   // Apuesta (9 nov 2026): una parada por cada ×N, con su etiqueta.
   const BET_TXT = { 2: 'En los niveles nuevos apuesta al tocar Jugar y gana hasta el doble de todo. Tu primer ×2 va por nuestra cuenta.', 3: 'Ya puedes apostar ×3 y ganar hasta el triple. Tu primer ×3, gratis.' };
@@ -2106,7 +2108,7 @@ function openShop(tab = 'avatar') {
 // Dev (11 nov 2026, pedido del usuario): el paquete completo de las festividades nuevas, una pestaña por grupo. Cada
 // festividad con su fecha, su mesa y sus 7 exclusivos dibujados como en la tienda. Solo para ver: no da nada.
 function openFestivalPack() {
-  const TABS = [['Leyendas', (f) => f.local], ['Fiestas de México', (f) => f.grp === 3], ['Fiestas de América', (f) => f.grp === 4]];
+  const TABS = [['Leyendas', (f) => f.local], ['México', (f) => f.grp === 3], ['América', (f) => f.grp === 4], ['Europa', (f) => f.grp === 5], ['Oriente', (f) => f.grp === 6]];
   const LBL = { avatar: 'Disfraz', ring: 'Marco', title: 'Título', traveler: 'Nave', back: 'Reverso', space: 'Espacio', frame: 'Postal' };
   const MONTHS_ABBR = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
   const y = new Date().getFullYear(), when = (f) => { const d = f.date(y); return `${d.getDate()} ${MONTHS_ABBR[d.getMonth()]}${f.days > 1 ? ` · ${f.days} días` : ''}`; };
@@ -2967,13 +2969,14 @@ function evPlay() {
 // todas se ven igual y caben en una sola vista (también acostado). Las reglas del evento viven en su bienvenida (?).
 // state: 'buy' (para comprar) · 'wait' (sin boleto, gris) · 'soon' (todavía no empieza) · 'owned' (entrada lista).
 // sub: lo de abajo (HTML; un reloj lleva data-pclock). off: descuento ("−20%") en una cinta.
+// e.note (14 nov 2026): aclaración debajo del pase (Medio Otoño: su día real cambia con la luna; aquí va en fecha fija).
 function passHTML(e, { ico = e.tk || e.ico, state = 'buy', label = 'Boleto de entrada', sub = '', off = '' } = {}) {
   const [hc, hd] = HEADS[e.color] || HEADS.violet;
   return `<div class="ev-pass-wrap"><div class="rays"></div><div class="ev-pass ${state}" style="--pc:${hc};--pd:${hd}">
     <div class="ep-card"><span class="ep-stub">${icon(ico, 0, 0, 'big')}</span>
     <span class="ep-main"><small>${label}</small><b>${e.name}</b>${e.zone ? `<small class="ep-zone">Celebrando en ${e.zone}</small>` : ''}<em>${sub}</em></span></div>
     ${off ? `<i class="ep-off">${off}</i>` : ''}${state === 'owned' ? `<i class="ep-stamp">${icon('check')}¡Lista!</i>` : ''}
-  </div></div>`;
+  </div></div>${e.note ? `<p class="ep-note">${icon(e.deco)}${e.note}</p>` : ''}`;
 }
 // Reloj que corre dentro del pase (cierra la ventana cuando llega a 0). get: ms que faltan (0 = ya).
 function passClock(m, get, done) {
@@ -3531,7 +3534,7 @@ async function notices() {
     if (!(await calm(gen))) return;
     if (rescueDue()) await openRescue();
   }
-  for (const k of ['racha', 'mis', 'logros', 'meteoro', 'col', 'apuesta', 'estrellas', 'mes', 'col2', 'cometas', 'fiesta', 'col3', 'aurora', 'fiesta2', 'cristales', 'fiesta3', 'fiesta4']) {
+  for (const k of ['racha', 'mis', 'logros', 'meteoro', 'col', 'apuesta', 'estrellas', 'mes', 'col2', 'cometas', 'fiesta', 'col3', 'aurora', 'fiesta2', 'cristales', 'fiesta3', 'fiesta4', 'fiesta5', 'fiesta6']) {
     // La lluvia: solo si nunca se ha visto una (quien ya la vio caer no necesita la ventana). La apuesta: nivel 101.
     // Las lluvias nuevas (14 nov 2026), igual: al llegar a su nivel, si todavía no ha visto caer una.
     const rk = RAIN_KEY[k];
@@ -3776,6 +3779,8 @@ const UNLOCK_INFO = {
   fiesta2: () => festGroupIntro((f) => f.local, 'fiesta2', '¡Nuevas: Leyendas de México!'),
   fiesta3: () => festGroupIntro((f) => f.grp === 3, 'fiesta3', '¡Nuevas: Fiestas de México!'),
   fiesta4: () => festGroupIntro((f) => f.grp === 4, 'fiesta4', '¡Nuevas: Fiestas de América!'),
+  fiesta5: () => festGroupIntro((f) => f.grp === 5, 'fiesta5', '¡Nuevas: Fiestas de Europa!'),
+  fiesta6: () => festGroupIntro((f) => f.grp === 6, 'fiesta6', '¡Nuevas: Fiestas de Oriente!'),
   mes: () => {
     const e = ev(), nx = !e && nextEvent();
     return {
@@ -3814,7 +3819,7 @@ function evHeroIcons(main, list = Object.keys(EVENTS).map(Number).sort((a, b) =>
   return [at(-1), at(0), at(1)].map((x, k) => icon(x, 0, 0, k === 1 ? 'main' : '')).join('');
 }
 async function openUnlock(k) {
-  const sel = k === 'meteoro' || k === 'estrellas' || RAIN_KEY[k] || k.startsWith('apuesta') ? null : `.side.r [data-a="${{ racha: 'racha', mis: 'mis', logros: 'logros', col: 'col', mes: 'evento', col2: 'col', col3: 'col', fiesta: 'fiesta', fiesta2: 'fiesta', fiesta3: 'fiesta', fiesta4: 'fiesta' }[k]}"]`;
+  const sel = k === 'meteoro' || k === 'estrellas' || RAIN_KEY[k] || k.startsWith('apuesta') ? null : `.side.r [data-a="${{ racha: 'racha', mis: 'mis', logros: 'logros', col: 'col', mes: 'evento', col2: 'col', col3: 'col', fiesta: 'fiesta', fiesta2: 'fiesta', fiesta3: 'fiesta', fiesta4: 'fiesta', fiesta5: 'fiesta', fiesta6: 'fiesta' }[k]}"]`;
   if (sel) openGroup('r', 'open');
   const btn = sel && document.querySelector(sel);
   revealed.add(k);
