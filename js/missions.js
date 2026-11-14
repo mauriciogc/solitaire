@@ -10,9 +10,12 @@ import { MECH_INTRO, LEVELS_PER_WORLD } from './levels.js';
 import { maxBet } from './economy.js';
 import { passClaim } from './passport.js';
 import { mulberry32, hash } from './rng.js';
+import { UNLOCK } from './events.js';
 
-export const MISSIONS_FROM = 40; // nivel en que se abren (save.next); igual que UNLOCK en events.js
-export const ACHIEVEMENTS_FROM = 70;
+// Nivel en que se abren (save.next): los de UNLOCK en events.js. 14 nov 2026: antes eran números aparte y al mover los
+// logros al 51 (calendario nuevo) se quedó en 70: entre el 51 y el 70 se veían llenos pero no se cobraban.
+export const MISSIONS_FROM = UNLOCK.mis;
+export const ACHIEVEMENTS_FROM = UNLOCK.logros;
 const DAY = 864e5;
 const today = () => {
   const d = new Date();
@@ -180,6 +183,8 @@ export const ACHIEVEMENTS = [
   { id: 'balloons', k: 'globo', name: 'Globero', ico: 'globo', steps: [50, 250, 800, 1600, 3000], text: (n) => `Truena ${fmtN(n)} globos` },
   { id: 'meteors', k: 'meteoro', name: 'Cazameteoros', ico: 'meteoro', steps: [25, 100, 300, 700, 1500], text: (n) => `Truena ${fmtN(n)} meteoros en el cielo` },
   // 12 nov 2026 (el usuario): las estrellas fugaces de la lluvia de estrellas, desde que cae (STAR_FROM en meteor.js).
+  // from: el nivel de la lluvia de estrellas (STAR_FROM en meteor.js; no se importa para no hacer un ciclo). La prueba
+  // tests/verify-levels.mjs avisa si se desfasan.
   { id: 'shootingstars', k: 'estrella', from: 120, name: 'Pide deseos', ico: 'starFall', steps: [25, 100, 300, 700, 1500], text: (n) => `Truena ${fmtN(n)} estrellas fugaces en el cielo` },
   { id: 'missions', k: 'missions', name: 'Cumplidor', ico: 'check', steps: [30, 150, 365, 700, 1200], text: (n) => `Completa ${fmtN(n)} misiones del día`, title: 'cumplidor' },
   { id: 'events', k: 'event', name: 'Fiestero', ico: 'calavera', steps: [15, 75, 200, 400, 750], text: (n) => `Gana ${n} niveles de eventos` },

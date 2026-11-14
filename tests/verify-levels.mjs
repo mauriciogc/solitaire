@@ -69,4 +69,30 @@ console.log('Plantillas:', stats.tpl);
 console.log('Niveles por mecánica:', Object.fromEntries(MECHANICS.map((m) => [m, stats.mechs[m] || 0])));
 console.log('Con carta regalo y mazo de 3 o menos:', stats.short || 0);
 console.log('Niveles duros (sin ayudas, con el camino acertado):', stats.tiers);
+
+// ---------- Tu camino (14 nov 2026) ----------
+// Al mover el calendario los logros se quedaron con su nivel viejo (se veían llenos sin cobrarse) y dos estrenos de
+// carta cayeron en niveles duros (el 121 salía sin gemelas). Aquí se revisa que cada parada traiga lo que anuncia.
+{
+  const Lv = await import('../js/levels.js');
+  const { UNLOCK } = await import('../js/events.js');
+  const { STAR_FROM } = await import('../js/meteor.js');
+  const Ms = await import('../js/missions.js');
+  const W = Lv.LEVELS_PER_WORLD, TABLE = ['scroll', 'tide', 'hole', 'doors', 'belt', 'rocks'];
+  const road = [];
+  const bad = (msg) => { road.push(msg); fails++; };
+  for (const m of MECHANICS) {
+    const g = Lv.EXTRA.includes(m) ? Lv.extraDebut(m) : Lv.MECH_INTRO[m] * W, L = generateLevel(g);
+    if (!['ship', 'astro'].includes(m) && !L.meta.mechs.includes(m)) bad(`carta ${m}: el nivel ${g + 1} no la trae`);
+    if (TABLE.some((k) => L[k])) bad(`carta ${m}: el nivel ${g + 1} trae una mesa`);
+    if (Lv.hardHelp(g)) bad(`carta ${m}: el nivel ${g + 1} es duro`);
+  }
+  for (const k in Lv.SCROLL_FROM) if (Lv.scrollKind(Lv.SCROLL_FROM[k]) !== k || Lv.hardHelp(Lv.SCROLL_FROM[k])) bad(`mesa ${k}: el nivel ${Lv.SCROLL_FROM[k] + 1} no la estrena bien`);
+  for (const [n, first, kind] of [['marea', Lv.tideFirst, Lv.tideKind], ['agujero', Lv.holeFirst, Lv.holeKind], ['puertas', Lv.doorsFirst, Lv.doorsKind], ['banda', Lv.bandaFirst, Lv.bandaKind], ['asteroides', Lv.rocksFirst, Lv.rocksKind]]) {
+    if (!kind(first()) || Lv.hardHelp(first())) bad(`mesa ${n}: el nivel ${first() + 1} no la estrena bien`);
+  }
+  if (Ms.MISSIONS_FROM !== UNLOCK.mis || Ms.ACHIEVEMENTS_FROM !== UNLOCK.logros) bad('misiones o logros no se abren en el nivel de UNLOCK');
+  for (const l of Ms.ACHIEVEMENTS) if (l.k === 'estrella' && l.from !== STAR_FROM) bad(`logro ${l.id}: from ${l.from} y la lluvia de estrellas es en ${STAR_FROM}`);
+  console.log(`Tu camino: ${road.length ? road.join(' · ') : 'cada estreno trae lo que anuncia'}`);
+}
 process.exit(fails ? 1 : 0);

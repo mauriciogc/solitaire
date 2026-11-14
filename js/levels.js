@@ -1732,14 +1732,31 @@ export const isEvent = (g) => g >= EVENT_ID;
 // difícil, extremo o demasiado extremo. Constelaciones 1-15: todos 1; 16-35: algunos 2; 36-52: algunos 2 y 3.
 export const CONST_LEVELS = 10 * LEVELS_PER_WORLD;
 export const hardCount = (c) => Math.round(3 + (c * 37) / 51); // c desde 0
-const HARD = new Map();
-for (let c = 0; c < TOTAL_LEVELS / CONST_LEVELS; c++) {
-  const from = c ? 0 : 5 * LEVELS_PER_WORLD;
-  const slots = shuffle(mulberry32(hash(9e6 + c)), [...Array(CONST_LEVELS - from).keys()]).slice(0, hardCount(c));
-  const n = slots.length, n3 = c >= 35 ? Math.round(n * 0.2) : 0, n2 = c >= 15 ? Math.round(n * 0.3) : 0;
-  slots.forEach((i, k) => HARD.set(c * CONST_LEVELS + from + i, k < n3 ? 3 : k < n3 + n2 ? 2 : 1));
+// 14 nov 2026: el estreno de una carta nunca es duro (con el calendario nuevo el 121 de las gemelas y el 571 del
+// arcoíris cayeron en duros y el 121 salía sin gemelas): el duro pasa al siguiente nivel que no sea estreno, así cada
+// constelación tiene los mismos. Se arma la primera vez que se pide (MECH_INTRO y los *_FROM se definen después).
+let HARD = null;
+const debutLevels = () => new Set([...MECHANICS.filter((m) => !EXTRA.includes(m)).map((m) => MECH_INTRO[m] * LEVELS_PER_WORLD), ...Object.values(SCROLL_FROM), TIDE_FROM, HOLE_FROM, DOORS_FROM, BANDA_FROM, ROCKS_FROM]);
+function hardMap() {
+  if (HARD) return HARD;
+  HARD = new Map();
+  for (let c = 0; c < TOTAL_LEVELS / CONST_LEVELS; c++) {
+    const from = c ? 0 : 5 * LEVELS_PER_WORLD;
+    const slots = shuffle(mulberry32(hash(9e6 + c)), [...Array(CONST_LEVELS - from).keys()]).slice(0, hardCount(c));
+    const n = slots.length, n3 = c >= 35 ? Math.round(n * 0.2) : 0, n2 = c >= 15 ? Math.round(n * 0.3) : 0;
+    slots.forEach((i, k) => HARD.set(c * CONST_LEVELS + from + i, k < n3 ? 3 : k < n3 + n2 ? 2 : 1));
+  }
+  const debut = debutLevels();
+  for (const g of [...HARD.keys()]) {
+    if (!debut.has(g)) continue;
+    let to = g + 1;
+    while (to < TOTAL_LEVELS && (HARD.has(to) || debut.has(to))) to++;
+    if (to < TOTAL_LEVELS) HARD.set(to, HARD.get(g));
+    HARD.delete(g);
+  }
+  return HARD;
 }
-export const hardHelp = (g) => HARD.get(g) || 0;
+export const hardHelp = (g) => hardMap().get(g) || 0;
 
 // ---------- Tableros especiales (para eventos exclusivos) ----------
 // 1,000 tableros aparte, que no salen ni en el camino ni en el evento del mes, ordenados por escalón
