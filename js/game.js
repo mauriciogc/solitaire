@@ -22,9 +22,9 @@ const FLY_EASE = 'cubic-bezier(0.33, 0.6, 0.35, 1)';
 export const MECH_KINDS = [
   ['Se abren después', ['lock', 'curtain', 'ice', 'vine', 'sleep']],
   ['Cambian con los turnos', ['live', 'ghost', 'cham']],
-  ['Reglas al jugar', ['double', 'arrow', 'ticket']],
+  ['Reglas al jugar', ['double', 'arrow', 'ticket', 'domino', 'triple']],
   ['No se juegan', ['pack', 'bomb', 'comet']],
-  ['Te ayudan', ['coin', 'turbo', 'bolt', 'cst', 'magnet', 'rainbow']],
+  ['Te ayudan', ['coin', 'turbo', 'bolt', 'cst', 'magnet', 'rainbow', 'scratch']],
 ];
 // Dibujos que viven en main.js y dev.js (la carta de ejemplo y el icono de cada mesa): main.js los pone al arrancar.
 export const ART = { mechCard: () => '', tableIcon: () => '' };
@@ -38,6 +38,9 @@ export const TIPS = {
   double: 'Vale <b>dos números</b>: juégala con cualquiera y sigue desde cualquiera.',
   arrow: 'Después de jugarla, la siguiente tiene que ser <b>uno más (↑)</b> o <b>uno menos (↓)</b>.',
   ticket: 'Tiene <b>dos mitades</b>: juega una y la otra se queda para después.',
+  scratch: 'No se ve su número: cada carta que juegas <b>pegada a ella</b> le abre una ventanita. Si te arriesgas a jugarla antes de verla toda y le atinas, te da <b>monedas</b>. Si no conecta, se corta tu racha.',
+  domino: 'Tiene <b>dos números</b>: entra por cualquiera y en el descarte se queda <b>el otro</b>.',
+  triple: 'Tiene <b>3 talones</b>: arranca el de una <b>punta</b> cuando encaje. El de en medio sale cuando ya quedó en la orilla.',
   pack: 'No se juega: <b>destápala</b> y mete cartas extra a tu mazo.',
   bomb: 'No se juega: <b>destápala</b> antes de que su cuenta llegue a 0. Si no, explota y quema 3 cartas de tu mazo.',
   comet: 'No se juega: <b>destápalo</b> antes de que su cuenta llegue a 0 y suma puntos a tu racha. Si no, se va.',
@@ -63,7 +66,7 @@ export const TIP_HELP = {
   ghost: ['reloj', 'hreloj', '<b>Reloj de arena:</b> congela 3 turnos todo lo que cuenta.'],
   vine: ['reloj', 'hreloj', '<b>Reloj de arena:</b> congela 3 turnos todo lo que cuenta.'],
 };
-const MECH_FIELD = { lock: 'lock', pack: 'pack', ice: 'ice', double: 'alt', arrow: 'arrow', curtain: 'curtain', bomb: 'bomb', live: 'live', ticket: 'half', comet: 'comet', turbo: 'turbo', ghost: 'ghost', ship: 'ship', coin: 'coin', cham: 'cham', bolt: 'bolt', cst: 'cst', vine: 'vine', magnet: 'magnet', rainbow: 'rainbow', sleep: 'sleep' };
+const MECH_FIELD = { lock: 'lock', pack: 'pack', ice: 'ice', double: 'alt', arrow: 'arrow', curtain: 'curtain', bomb: 'bomb', live: 'live', ticket: 'half', comet: 'comet', turbo: 'turbo', ghost: 'ghost', ship: 'ship', coin: 'coin', cham: 'cham', bolt: 'bolt', cst: 'cst', vine: 'vine', magnet: 'magnet', rainbow: 'rainbow', sleep: 'sleep', domino: 'dom', triple: 'tri', scratch: 'scr' };
 // Constelación (10 nov 2026, pedido del usuario): al juntarla, CST_HELP de las veces una ayuda y si no monedas, de 50 a
 // 200 (casi siempre de las bajas: el promedio queda en ~100, unas 2 veces lo que paga un nivel ahí).
 const CST_HELP = 0.15;
@@ -113,6 +116,11 @@ export function faceHTML(c, rank = c.rank) {
   const arrow = c.arrow ? `<span class="arrow-badge">${arrowIcon(c.arrow > 0)}</span>` : '';
   // Boleto partido: dos mitades con su número, separadas por una línea picada con muescas a los lados.
   if (c.half != null) return `<div class="face front ticket${red}">${[c.rank, c.half].map((x, i) => `<span class="tk ${i ? 'b' : 'a'}"><span class="${cs}">${s}</span><b${UL(RANKS[x])}>${RANKS[x]}</b></span>`).join('')}<i class="perf"></i></div>`;
+  // Dominó (13 nov 2026): sus dos números, uno arriba y otro abajo, con la rayita y el clavito del dominó. Cuál va
+  // arriba cambia por carta (dmFlip): así no siempre se entra por el de arriba.
+  if (c.dom != null) return `<div class="face front domino${red}">${(dmFlip(c) ? [c.dom, c.rank] : [c.rank, c.dom]).map((x, i) => `<span class="dm ${i ? 'b' : 'a'}"><b${UL(RANKS[x])}>${RANKS[x]}</b><span class="${cs}">${s}</span></span>`).join('')}<i class="dm-line"></i></div>`;
+  // Boleto triple: tres talones con su número, separados por líneas picadas con muescas.
+  if (c.tri) return `<div class="face front triple${red}">${[c.rank, ...c.tri].map((x, i) => `<span class="ts t${i}"><span class="${cs}">${s}</span><b${UL(RANKS[x])}>${RANKS[x]}</b></span>`).join('')}<i class="perf p1"></i><i class="perf p2"></i></div>`;
   // Carta doble: los dos números ("5/8").
   if (c.alt != null) return `<div class="face front double${red}"><span class="${cs}">${s}</span><span class="dbl"><b${UL(RANKS[c.rank])}>${RANKS[c.rank]}</b><i></i><b${UL(RANKS[c.alt])}>${RANKS[c.alt]}</b></span></div>`;
   const r = RANKS[rank];
@@ -148,8 +156,13 @@ export const TABLE_TEXT = {
   // La nave (11 nov 2026, pedido del usuario): no es carta, es mecánica: va como mesa.
   nave: ['Por aquí pasa una <b>nave ladrona</b>.', 'Cada pocos robos se lleva una carta de tu <b>mazo</b>. Con racha de 4 te regresa la última.'],
   rocas: ['Por aquí pasa un <b>cinturón de asteroides</b>.', 'Cada <b>4 robos</b> caen piedras que tapan cartas <b>3 turnos</b>.'],
+  // 13 nov 2026 (pedido del usuario): sin cuenta a la vista; un temblor avisa justo antes de la vuelta.
+  hangar: ['Las columnas salen de un <b>hangar</b>.', 'Solo juegas la de <b>abajo</b>. Cuando vacías una columna, las demás se recorren y del hangar sale otra.'],
+  bitacora: ['Hojas de <b>bitácora</b> encimadas.', 'Por las <b>escotillas</b> se ven cartas de la hoja de abajo: esas se juegan cuando quieras. Vacía la hoja de encima y se arranca.'],
+  portal: ['Unas <b>grúas de feria</b> jalan las columnas hacia arriba.', 'Solo juegas la carta que agarra la <b>garra</b>; al quitarla, la garra baja y sube la columna.'],
+  voltea: ['Las cartas van en <b>columnas</b> dentro de una cápsula.', 'Solo juegas la de <b>abajo</b>. Cada <b>5 jugadas o robos</b> la cápsula da <b>media vuelta</b>. Cuando tiembla, ¡cuidado!'],
 };
-const TABLE_NAME = { nave: 'Nave ladrona', mesa: 'Mesa enrollada', gravedad: 'Gravedad', nebulosa: 'Nebulosa', marea: 'Marea', puertas: 'Puertas', banda: 'Banda transportadora', hoyo: 'Agujero negro', rocas: 'Asteroides' };
+const TABLE_NAME = { nave: 'Nave ladrona', mesa: 'Mesa enrollada', gravedad: 'Gravedad', nebulosa: 'Nebulosa', marea: 'Marea', puertas: 'Puertas', banda: 'Banda transportadora', hoyo: 'Agujero negro', rocas: 'Asteroides', voltea: 'Mesa que se voltea', hangar: 'Hangar', bitacora: 'Bitácora', portal: 'Grúa de feria' };
 const TABLE_HELP = { rocas: helpTip('hlaser', '<b>Láser:</b> rompe todas las piedras.', true), nave: helpTip('hescudo', '<b>Escudo:</b> la nave ya no te roba en todo el nivel.', true) };
 // Ventana con el formato de las cartas (11 nov 2026): dibujo a la izquierda y, al lado, su nombre y su texto.
 const tipCard = (pic, name, text, cls = '') => `<div class="tip-card"><span class="tip-pic${cls}">${pic}</span><p><b>${name}</b>${text}</p></div>`;
@@ -195,6 +208,27 @@ function tearClip(keep, open = 0) {
   // Un poco más ancho que la carta: así no se recorta su sombra.
   return `polygon(${keep === 1 ? `${pts.join(',')}, 108% 115%, -8% 115%` : `-8% -8%, 108% -8%, ${pts.reverse().join(',')}`})`;
 }
+// Dominó: con el número de la cadena abajo en la mitad de las cartas.
+const dmFlip = (c) => c.id % 2 === 1;
+// Boleto triple: franja de la carta que se ve (de y0 a y1, en %), con zigzag arriba y/o abajo. Siempre 22 puntos, para
+// poder animar de un talón a la carta entera.
+function band(y0, y1, zt, zb) {
+  const pts = [];
+  for (let i = 0; i <= 10; i++) pts.push(`${(-8 + i * 11.6).toFixed(1)}% ${(y0 + (zt ? (i % 2 ? 2.5 : -2.5) : 0)).toFixed(1)}%`);
+  for (let i = 10; i >= 0; i--) pts.push(`${(-8 + i * 11.6).toFixed(1)}% ${(y1 + (zb ? (i % 2 ? 2.5 : -2.5) : 0)).toFixed(1)}%`);
+  return `polygon(${pts.join(',')})`;
+}
+const T3 = 100 / 3;
+const FULL_BAND = band(-8, 108, false, false);
+// Un talón solo (0 arriba, 1 en medio, 2 abajo).
+const stubClip = (k) => band(k ? k * T3 : -8, k < 2 ? (k + 1) * T3 : 108, k > 0, k < 2);
+// Lo que queda del boleto con los talones m ya jugados (bits: 1 arriba, 2 en medio, 4 abajo).
+function triClip(m) {
+  const left = [0, 1, 2].filter((k) => !(m & (1 << k)));
+  if (!m || !left.length) return '';
+  const lo = left[0], hi = left[left.length - 1];
+  return band(lo ? lo * T3 : -8, hi < 2 ? (hi + 1) * T3 : 108, lo > 0, hi < 2);
+}
 const LIVE_DIR = {
   up: '<svg viewBox="0 0 24 24"><path d="M12 20V5M5 11.5 12 4.5l7 7" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
   down: '<svg viewBox="0 0 24 24"><path d="M12 4v15M5 12.5l7 7 7-7" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
@@ -216,6 +250,8 @@ const BACK_MARK = (c) =>
   : c.cst ? ['#ffc83d', 'tb-ico mk-cst', icon('star')]
   : c.ghost ? ['#b9aef0', 'tb-ico mk-ghost', icon('ghost')]
   : c.doorKey ? ['#c9893a', 'tb-ico mk-door', icon('llavePuerta')]
+  // Raspadita (13 nov 2026, el usuario: «no sé cuál es»): orilla plateada y su plata con el «?» al centro.
+  : c.scr ? ['#a9b1c7', 'tb-ico mk-scr', SCR_ICO]
   : null;
 export const backHTML = (c) => {
   const m = BACK_MARK(c);
@@ -223,8 +259,15 @@ export const backHTML = (c) => {
 };
 const inner = (c) => `<div class="inner">${faceHTML(c)}${backHTML(c)}</div>`;
 // Marcas que se ven aunque la carta esté boca abajo, para poder planear.
+// Raspadita (13 nov 2026): plata con SCR_WIN ventanitas redondas que se abren con cada carta pegada que juegas.
+// Grúa de feria (13 nov 2026, el usuario escogió la grúa en lugar del portal): la garra de cada columna.
+const CLAW = `<i class="g-claw"><svg viewBox="0 0 60 64"><path d="M30 -60V14" stroke="#2a1f5c" stroke-width="3"/><rect x="17" y="10" width="26" height="14" rx="4" fill="#ffc83d" stroke="#2a1f5c" stroke-width="2.6"/><circle cx="30" cy="17" r="3" fill="#ff5f7e" stroke="#2a1f5c" stroke-width="1.6"/><g class="cl-l"><path d="M24 24Q12 34 15 50Q17 56 22 55" fill="none" stroke="#2a1f5c" stroke-width="7" stroke-linecap="round"/><path d="M24 24Q12 34 15 50Q17 56 22 55" fill="none" stroke="#c9d0ea" stroke-width="3.6" stroke-linecap="round"/></g><g class="cl-r"><path d="M36 24Q48 34 45 50Q43 56 38 55" fill="none" stroke="#2a1f5c" stroke-width="7" stroke-linecap="round"/><path d="M36 24Q48 34 45 50Q43 56 38 55" fill="none" stroke="#c9d0ea" stroke-width="3.6" stroke-linecap="round"/></g></svg></i>`;
+const SCR_ICO = '<svg class="ico" viewBox="0 0 32 32"><rect x="6" y="3" width="20" height="26" rx="4" fill="#d6dbe8" stroke="#2a1f5c" stroke-width="2.4"/><path d="M10 8l12 0M10 24l7 0" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/><text x="16" y="21" text-anchor="middle" font-family="Lilita One" font-size="13" fill="#7a8299">?</text></svg>';
+const SCR_SPOTS = [[66, 34, 15], [32, 98, 15], [52, 66, 16], [70, 112, 14]];
+export const scrSVG = (id, open = 0) => `<svg viewBox="0 0 100 140" preserveAspectRatio="none"><defs><linearGradient id="sg${id}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#cfd5e4"/><stop offset=".35" stop-color="#f3f5fb"/><stop offset=".6" stop-color="#a9b1c7"/><stop offset="1" stop-color="#dfe3ee"/></linearGradient><mask id="sm${id}"><rect width="100" height="140" fill="#fff"/>${SCR_SPOTS.map(([x, y, r], k) => `<circle class="h" cx="${x}" cy="${y}" r="${k < open ? r : 0}" data-r="${r}" fill="#000"/>`).join('')}</mask></defs><g mask="url(#sm${id})"><rect x="4" y="4" width="92" height="132" rx="9" fill="url(#sg${id})"/><path d="M14 22l14-7M72 128l14-7M18 120l8-5" stroke="#fff" stroke-width="3" stroke-linecap="round"/><text x="50" y="82" text-anchor="middle" font-family="Lilita One" font-size="34" fill="#8a92aa">?</text></g></svg>`;
 const marks = (c) =>
   (c.ice ? `<span class="ice-ov"><b></b></span>` : '') +
+  (c.scr ? `<span class="scr-ov">${scrSVG(`c${c.id}`)}</span>` : '') +
   (c.curtainKey != null ? `<span class="curtain-mark">${curtainIcon()}</span>` : '') +
   (c.wet ? '<span class="tide-ov"><i></i></span>' : '') +
   // Enredadera: la capa de hojas (se ve cuando la tapa) y el brote que se asoma cuando está por crecer aquí.
@@ -333,7 +376,25 @@ export class Game {
         buttons: [{ label: '¡Entendido!', cls: 'green' }],
       });
     }
-    if (this.level.scroll === 'gravedad' && !save.seen.gravedad) {
+    // Mesas de columnas nuevas y la bitácora (13 nov 2026): su ventana la primera vez.
+    const tk = this.level.flip ? 'voltea' : this.level.portal ? 'portal' : this.level.hangar ? 'hangar' : this.level.sheets ? 'bitacora' : null;
+    if (tk && !save.seen[tk]) {
+      save.seen[tk] = true;
+      persist();
+      this.modalOpen = true;
+      return openModal({
+        ...TABLE_INTRO[tk],
+        closable: false,
+        onClose: () => {
+          this.modalOpen = false;
+          // La cápsula tiembla una vez, como cuando está por voltearse.
+          if (!reduced() && tk === 'voltea') this.boardEl.animate([{ translate: '0 0' }, { translate: '-4px 1px' }, { translate: '4px -1px' }, { translate: '-3px 0' }, { translate: '0 0' }], { duration: 450, iterations: 2 });
+          setTimeout(() => this.tips(), 300);
+        },
+        buttons: [{ label: '¡Entendido!', cls: 'green' }],
+      });
+    }
+    if (this.level.scroll === 'gravedad' && !tk && !save.seen.gravedad) {
       save.seen.gravedad = true;
       persist();
       this.modalOpen = true;
@@ -616,7 +677,15 @@ export class Game {
     // Gravedad: cada columna en su riel, sobre la mesa del planeta.
     if (level.scroll === 'gravedad') {
       el.classList.add('scroll-grav');
-      this.boardEl.insertAdjacentHTML('afterbegin', level.cols.map(() => `<div class="g-rail"><b class="g-n"></b></div>`).join(''));
+      // Mesa que se voltea: las columnas van dentro de una cápsula. Portales: cada riel con su portal arriba. Hangar:
+      // solo level.hangar rieles y la compuerta a la derecha.
+      if (level.flip) el.classList.add('flip-pod');
+      if (level.portal) el.classList.add('portal-mesa');
+      this.boardEl.insertAdjacentHTML('afterbegin', Array.from({ length: level.hangar || level.cols.length }, () => `<div class="g-rail">${level.portal ? CLAW : ''}<b class="g-n"></b></div>`).join(''));
+      if (level.hangar) {
+        this.boardEl.insertAdjacentHTML('beforeend', '<div class="hangar"><i class="hg-door"></i><i class="hg-lamp"></i></div>');
+        this.hangarEl = this.boardEl.querySelector('.hangar');
+      }
       this.railEls = [...this.boardEl.querySelectorAll('.g-rail')];
     }
     this.stockEl = el.querySelector('.stock');
@@ -744,6 +813,7 @@ export class Game {
     if (this.inDoor(c)) d.classList.add('in-door');
     const cut = E.cutOf(c, this.st);
     if (cut) d.style.clipPath = tearClip(cut);
+    if (c.tri && E.triOf(c, this.st)) d.style.clipPath = triClip(E.triOf(c, this.st));
     d.style.zIndex = c.z * 100 + c.id;
     (this.stripEl || this.boardEl).append(d);
     c.el = d;
@@ -769,7 +839,7 @@ export class Game {
     if (this.level.scroll === 'gravedad') return this.layoutGrav(r);
     if (this.level.scroll) return this.layoutNeb(r);
     // La carta doble se ve 10% más grande: se deja un poco de aire para que no se salga del tablero.
-    const room = this.cards.some((c) => c.alt != null) ? 0.93 : 1;
+    const room = this.cards.some((c) => c.alt != null) || this.level.sheets ? 0.93 : 1;
     if (this.level.belt) this.beltSide((r.width - 10) * room, (r.height - 10) * room);
     const { u, bw, bh, offsets } = this.railItems().length ? this.packRail((r.width - 10) * room, (r.height - 10) * room) : packGroups(this.level.groups, (r.width - 10) * room, (r.height - 10) * room);
     this.u = Math.max(18, u);
@@ -778,6 +848,7 @@ export class Game {
     this.boardEl.style.height = `${bh * this.u}px`;
     this.boardEl.style.setProperty('--cw', `${this.u}px`);
     this.cards.forEach((c) => c.el && this.place(c));
+    this.paintSheets();
     this.placeHole();
     this.placeDoors();
     this.placeBeltBox();
@@ -1410,28 +1481,42 @@ export class Game {
   // ---------- Gravedad ----------
   // Columnas en rieles: abajo la carta que se juega, encima la que sigue (boca arriba, para planear) y arriba de
   // todo la pila con las demás boca abajo (se ven hasta 5 de canto; el número dice cuántas quedan).
+  // Mesas de columnas (13 nov 2026): la que se voltea va dentro de una cápsula (con orilla: m), los portales al revés
+  // (la que se juega arriba, junto a su portal) y el hangar con solo level.hangar columnas a la vista y la compuerta a
+  // la derecha (hw).
   layoutGrav(r) {
-    const n = this.level.cols.length, gap = 0.42, pad = 0.2;
-    const G = { gap, pad, pile: 0.45, row1: 0.45 + 1.4 + 0.3 };
+    const L = this.level, n = L.hangar || L.cols.length, gap = 0.42, pad = 0.2;
+    const G = { gap, pad, pile: 0.45, row1: 0.45 + 1.4 + 0.3, m: L.flip ? 0.34 : L.portal ? 0.1 : 0, hw: L.hangar ? 1.05 : 0 };
     G.row0 = G.row1 + 1.4 + 0.16;
-    G.bw = n + (n - 1) * gap + pad * 2;
-    G.bh = G.row0 + 1.4 + 0.32;
+    G.ih = G.row0 + 1.4 + 0.32 + (L.portal ? 0.6 : 0); // alto de adentro (sin la orilla; la grúa, aire arriba para su garra)
+    G.bw = n + (n - 1) * gap + pad * 2 + G.m * 2 + G.hw;
+    G.bh = G.ih + G.m * 2;
     this.u = Math.max(18, Math.min((r.width - 10) / G.bw, (r.height - 10) / G.bh, 120));
     this.gravG = G;
     const u = this.u;
     this.boardEl.style.width = `${G.bw * u}px`;
     this.boardEl.style.height = `${G.bh * u}px`;
     this.boardEl.style.setProperty('--cw', `${u}px`);
-    this.railEls.forEach((el, i) => Object.assign(el.style, { left: `${(pad + i * (1 + gap) - 0.12) * u}px`, width: `${1.24 * u}px`, top: 0, height: `${G.bh * u}px` }));
+    this.railEls.forEach((el, i) => Object.assign(el.style, { left: `${(G.m + pad + i * (1 + gap) - 0.12) * u}px`, width: `${1.24 * u}px`, top: `${G.m * u}px`, height: `${G.ih * u}px` }));
+    if (this.hangarEl) Object.assign(this.hangarEl.style, { left: `${(G.bw - G.hw) * u}px`, width: `${G.hw * u}px`, top: 0, height: `${G.bh * u}px` });
     this.cards.forEach((c) => c.el && this.place(c));
     this.paintGrav();
     this.renderStock();
     this.coach?.update();
   }
 
+  // Hangar: las columnas a la vista (las que ya salieron y no se han vaciado), en orden.
+  gravShown() {
+    const L = this.level, st = this.st;
+    if (!L.hangar) return L.cols.map((_, i) => i);
+    const out = E.nebOut(L, st);
+    return L.cols.map((_, i) => i).filter((i) => Math.max(0, i - L.hangar + 1) <= out && L.cols[i].some((id) => !st.rem[id])).slice(0, L.hangar);
+  }
+
   // Lugar de la carta en su columna: 0 = abajo (la que se juega), 1 = la que sigue, 2+ = en la pila.
+  // Mesa que se voltea: volteada, la de abajo es la última de la columna.
   gravIndex(c) {
-    const col = this.level.cols[c.group];
+    const col = E.flipped(this.level, this.st) ? this.level.cols[c.group].slice().reverse() : this.level.cols[c.group];
     let k = 0;
     for (const id of col) {
       if (id === c.id) return k;
@@ -1444,36 +1529,91 @@ export class Game {
     const G = this.gravG;
     if (!G) return;
     const k = this.gravIndex(c), j = k - 2, u = this.u;
-    const y = k === 0 ? G.row0 : k === 1 ? G.row1 : G.pile - Math.min(j, 4) * 0.09;
-    c.el.style.left = `${(G.pad + c.group * (1 + G.gap)) * u}px`;
-    c.el.style.top = `${y * u}px`;
+    let y = k === 0 ? G.row0 : k === 1 ? G.row1 : G.pile - Math.min(j, 4) * 0.09;
+    // Portales: al revés (la que se juega arriba, la pila abajo).
+    if (this.level.portal) y = G.ih - 1.4 - y;
+    // Hangar: la columna va en su lugar a la vista; si todavía no sale, espera escondida en la compuerta.
+    const slot = this.level.hangar ? this.gravShown().indexOf(c.group) : this.gravSlot(c.group);
+    const x = slot < 0 ? G.bw - G.hw - G.m - 0.2 : G.m + G.pad + slot * (1 + G.gap);
+    c.el.style.left = `${x * u}px`;
+    c.el.style.top = `${(y + G.m) * u}px`;
     c.el.style.rotate = '0deg';
     c.el.style.zIndex = k === 0 ? 900 : k === 1 ? 800 : 700 - j;
+    c.el.style.opacity = slot < 0 ? '0' : '';
+    c.el.style.pointerEvents = slot < 0 ? 'none' : '';
     c.el.classList.toggle('g-next', k === 1);
     c.el.classList.toggle('g-deep', j > 4);
-    c.gPos = { y, k };
+    c.gPos = { x, y, k, hid: slot < 0 };
   }
 
-  // Cuántas quedan en la pila de cada columna.
+  // Mesa que se voltea: la cápsula gira media vuelta con todo y cartas; al terminar, cada carta queda derecha en su
+  // nuevo lugar (lo que estaba arriba ahora está abajo y las columnas al revés, como giró) y cae con un rebote.
+  // (13 nov 2026: se probó voltear cada columna como tabla y al usuario le gustó más el giro de toda la mesa.)
+  flipFx() {
+    this.flipping = true;
+    buzz(30);
+    const done = () => {
+      this.flipping = false;
+      for (const c of this.cards) if (c.el && !c.removed) this.placeGrav(c);
+      this.paintGrav();
+    };
+    if (reduced()) return done();
+    this.boardEl.animate([{ rotate: '0deg' }, { rotate: '-10deg', offset: 0.15 }, { rotate: '190deg', offset: 0.85 }, { rotate: '180deg' }], { duration: 1000, easing: 'ease-in-out' }).finished.then(() => {
+      done();
+      for (const c of this.cards) if (c.el && !c.removed) c.el.animate([{ translate: `0 ${-this.u * 0.45}px`, opacity: 0.3 }, { translate: '0 0', opacity: 1 }], { duration: 420, easing: 'cubic-bezier(.3,1.4,.5,1)' });
+    }, done);
+  }
+
+  // Columna que se ve en el riel j (volteada la mesa, las columnas quedan al revés).
+  gravSlot(i) {
+    return E.flipped(this.level, this.st) ? this.level.cols.length - 1 - i : i;
+  }
+
+  // Cuántas quedan en la pila de cada columna (en el hangar, de las que se ven).
   paintGrav() {
-    this.railEls?.forEach((el, i) => {
-      const left = this.level.cols[i].filter((id) => !this.st.rem[id]).length - 2;
+    const shown = this.gravShown();
+    this.railEls?.forEach((el, j) => {
+      const i = this.level.hangar ? shown[j] : this.gravSlot(j);
+      const left = i == null ? 0 : this.level.cols[i].filter((id) => !this.st.rem[id]).length - 2;
       const b = el.querySelector('.g-n');
       b.textContent = left > 0 ? left : '';
       b.classList.toggle('on', left > 0);
     });
+    if (this.hangarEl) {
+      // Ya no guarda nada: la compuerta se queda cerrada y apagada.
+      this.hangarEl.classList.toggle('empty', !this.level.cols.some((col, i) => !shown.includes(i) && col.some((id) => !this.st.rem[id])));
+    }
   }
 
   // Al quitar la de abajo, la columna cae un lugar y rebota al llegar; al deshacer, sube de regreso.
   gravUpdate() {
     const u = this.u;
     let fell = 0;
+    // Hangar (13 nov 2026, el usuario: salían las cartas antes de abrirse): primero se abre la compuerta y luego sale la
+    // columna nueva (las de a la vista se recorren al momento).
+    if (this.hangarEl) {
+      // Solo si guardaba alguna columna (13 nov 2026, el usuario: vacío ya no debe abrirse).
+      const out = E.nebOut(this.level, this.st), shown = this.gravShown();
+      if (this.hgOut != null && out > this.hgOut && this.hgWait && !reduced()) {
+        this.hangarEl.classList.add('open');
+        setTimeout(() => this.hangarEl?.classList.remove('open'), 1100);
+      }
+      this.hgOut = out;
+      this.hgWait = this.level.cols.some((col, i) => !shown.includes(i) && col.some((id) => !this.st.rem[id]));
+    }
     for (const c of this.cards) {
       if (!c.el || !c.gPos) continue;
       const p = c.gPos;
       this.placeGrav(c);
-      const dy = (p.y - c.gPos.y) * u;
-      if (reduced() || Math.abs(dy) < 0.5) continue;
+      const dy = (p.y - c.gPos.y) * u, dx = ((p.x ?? c.gPos.x) - c.gPos.x) * u;
+      if (this.level.portal && dy > 0.5) (this.clawCols ||= new Set()).add(c.group);
+      if (reduced() || (Math.abs(dy) < 0.5 && Math.abs(dx) < 0.5)) continue;
+      // Hangar: las columnas se recorren de lado (y la nueva sale de la compuerta).
+      if (Math.abs(dx) >= 0.5) {
+        const out = p.hid && !c.gPos.hid; // sale del hangar: espera a que se abra la compuerta
+        c.el.animate(out ? [{ translate: `${dx}px ${dy}px`, opacity: 0 }, { opacity: 1, offset: 0.2 }, { translate: '0 0', opacity: 1 }] : [{ translate: `${dx}px ${dy}px` }, { translate: '0 0' }], { duration: out ? 620 : 520, delay: (out ? 420 : 0) + Math.min(c.gPos.k, 3) * 40, easing: 'cubic-bezier(.3,1.25,.5,1)', fill: 'backwards' });
+        continue;
+      }
       if (dy < 0) {
         fell++;
         c.el.animate(
@@ -1488,6 +1628,12 @@ export class Game {
       } else c.el.animate([{ translate: `0 ${dy}px` }, { translate: '0 0' }], { duration: 420, easing: 'cubic-bezier(.3,1.2,.5,1)' });
     }
     if (fell) setTimeout(() => buzz(8), 300);
+    // Grúa: la garra de la columna que subió baja, la agarra y la jala.
+    if (this.level.portal && !reduced()) for (const j of this.clawCols || []) {
+      const cl = this.railEls[j]?.querySelector('.g-claw');
+      if (cl) cl.classList.remove('grab'), void cl.offsetWidth, cl.classList.add('grab');
+    }
+    this.clawCols = null;
     this.paintGrav();
   }
 
@@ -1636,16 +1782,25 @@ export class Game {
   // ¿Se ve boca arriba? En la mesa enrollada el rollo no voltea cartas: salen como van (solo cuentan las tapas de
   // otras cartas); una que asoma poco ya se ve, pero hasta que asoma media carta no se puede jugar.
   shownUp(c) {
-    if (this.level.scroll === 'gravedad') return E.faceUp(this.level, this.gravIndex(c) < GRAV_SHOWN ? { ...c, coveredBy: [] } : c, this.st);
+    if (this.level.scroll === 'gravedad') return E.faceUp(this.level, this.gravIndex(c) < GRAV_SHOWN ? { ...c, coveredBy: [], flipBy: [] } : c, this.st);
     return E.faceUp(this.level, this.level.scroll === 'mesa' ? { ...c, coveredBy: c.under } : c, this.st);
   }
 
   // Pinta lo que depende del estado: boca arriba, candados, cortinas, hielo, bomba y carta viva.
   refresh() {
     const { level, st } = this;
+    // Mesa que se voltea: a 1 jugada o robo de la vuelta, la cápsula tiembla (no con el reloj de arena); al voltearse, gira.
+    if (level.flip) {
+      const f = E.flipped(level, st), turned = this.flipNow != null && f !== this.flipNow;
+      this.flipNow = f;
+      this.boardEl.classList.toggle('flip-warn', E.flipLeft(st) === 1 && !(st.freeze > 0));
+      if (turned) this.flipFx();
+    }
     if (level.scroll === 'mesa') this.scrollUpdate();
-    else if (level.scroll === 'gravedad') this.gravUpdate();
+    else if (level.scroll === 'gravedad') !this.flipping && this.gravUpdate();
     else if (level.scroll) this.nebUpdate();
+    for (const c of this.cards) if (c.scr && c.el && !c.removed) this.paintScr(c);
+    this.paintSheets();
     this.updateStuck(true);
     this.doorUpdate();
     // Banda: cada acción la mueve un lugar (y su cinta avanza).
@@ -1998,6 +2153,7 @@ export class Game {
     }
     if (this.coach && !this.coach.allows(c)) return;
     if (E.playRank(level, c, st) == null) {
+      if (c.scr && E.isOpen(level, c, st) && E.scrOpen(c, st) < E.SCR_WIN) return this.scrMiss(c);
       buzz();
       if (E.faceUp(level, c, st)) {
         if (!E.lockOpen(level, c, st)) this.tell('lock', 'Juega la carta con la llave del mismo color');
@@ -2009,12 +2165,102 @@ export class Game {
     this.play(c, !!e && this.lowHalf(c, e));
   }
 
+  // Raspadita: te arriesgaste y no conectaba. Tiembla y cuenta como un robo (se corta la racha); se deshace.
+  scrMiss(c) {
+    const before = this.st;
+    const { s, ev } = E.miss(this.level, before);
+    this.history.push({ t: 'miss', before, ev, best: this.best, bonus: this.bonus, lock: true });
+    this.st = s;
+    this.sync();
+    buzz(30);
+    this.shake(c.el);
+    this.showStreak('¡No era! Se corta tu racha');
+    this.showCombo();
+    this.refresh();
+    this.save();
+    this.checkEnd();
+  }
+
+  // Raspadita: ventanitas abiertas (una por carta pegada que ya jugaste); al verla toda se le cae la plata.
+  paintScr(c) {
+    const n = E.scrOpen(c, this.st), ov = c.el.querySelector('.scr-ov');
+    if (!ov) return;
+    const was = +(ov.dataset.n || 0);
+    ov.dataset.n = n;
+    ov.querySelectorAll('circle.h').forEach((h, k) => {
+      const to = k < n ? +h.dataset.r : 0, from = +h.getAttribute('r');
+      if (to === from) return;
+      if (reduced() || this.dealing || to < from) return h.setAttribute('r', to);
+      const t0 = performance.now();
+      const step = (t) => {
+        const q = Math.min(1, (t - t0) / 420);
+        h.setAttribute('r', (to * q).toFixed(2));
+        if (q < 1) requestAnimationFrame(step);
+      };
+      requestAnimationFrame(step);
+    });
+    if (n > was && !this.dealing && !reduced()) {
+      const [x, y] = center(c.el.getBoundingClientRect());
+      sparkle({ x, y }, 6);
+    }
+    ov.classList.toggle('done', n >= E.SCR_WIN);
+  }
+
+  // Bitácora (13 nov 2026): de 2 a 7 hojas. Cada página va entre su hoja de cartas y la siguiente, con escotillas
+  // donde se asoman las cartas de la de abajo; la última página, detrás de todo. Al vaciarse una hoja su página se
+  // arranca y se va volando. El guiño (pedido del usuario): la primera es el día del nivel en que vas (su número) y
+  // las de abajo suman décimas (311.1, 311.2…).
+  paintSheets() {
+    const L = this.level;
+    if (!L.sheets || !this.offsets) return;
+    const n = L.sheets.length, u = this.u, o = this.offsets[0], p = 0.2, W = (L.groups[0].w + 2 * p) * u, H = (L.groups[0].h + 2 * p) * u;
+    const day0 = L.event ? 1 : L.secret ? L.world + 1 : L.g + 1;
+    // 13 nov 2026 (el usuario): las hojas de abajo suman décimas: 311, 311.1, 311.2…
+    const dayTxt = (k) => `${k ? '' : 'BITÁCORA · '}DÍA ${day0}${k ? `.${k}` : ''}`;
+    if (!this.sheetEls) {
+      // Páginas 0 … n−2 encima de sus cartas y la última detrás de todo.
+      this.sheetEls = Array.from({ length: n }, (_, k) => {
+        const el = document.createElement('div');
+        el.className = `bita-page${k === n - 1 ? ' last' : ' top'}`;
+        el.innerHTML = `<span class="bita-hdr">${dayTxt(k)}</span>`;
+        el.style.zIndex = k === n - 1 ? 0 : (n - 1 - k) * 1000 - 50;
+        if (k === n - 1) this.boardEl.prepend(el);
+        else this.boardEl.append(el);
+        return el;
+      });
+    }
+    for (const el of this.sheetEls) Object.assign(el.style, { left: `${(o.x - p) * u}px`, top: `${(o.y - p) * u}px`, width: `${W}px`, height: `${H}px` });
+    const r = 0.24 * u, g = 0.5 * u;
+    const box = (x, y, w, h) => `M${x + r} ${y}H${x + w - r}A${r} ${r} 0 0 1 ${x + w} ${y + r}V${y + h - r}A${r} ${r} 0 0 1 ${x + w - r} ${y + h}H${x + r}A${r} ${r} 0 0 1 ${x} ${y + h - r}V${y + r}A${r} ${r} 0 0 1 ${x + r} ${y}Z`;
+    this.sheetEls.forEach((el, k) => {
+      if (k === n - 1) return;
+      if (el.dataset.w !== `${W}x${H}`) {
+        el.dataset.w = `${W}x${H}`;
+        const holes = L.peek.filter((id) => L.sheets[k + 1].includes(id)).map((id) => { const c = L.cards[id]; return [(c.x + p - 0.12) * u, (c.y + p - 0.12) * u, 1.24 * u, 1.64 * u]; });
+        const id = `bp${(this.sheetN = (this.sheetN || 0) + 1)}`;
+        el.querySelector('svg')?.remove();
+        el.insertAdjacentHTML('afterbegin', `<svg width="${W}" height="${H}"><defs><pattern id="${id}" width="${g}" height="${g}" patternUnits="userSpaceOnUse"><rect width="${g}" height="${g}" fill="${k % 2 ? '#22326e' : '#1d2a62'}"/><path d="M${g} 0V${g}H0" stroke="#ffffff14" fill="none"/></pattern></defs><path class="bp" d="${box(0, 0, W, H)}${holes.map((h) => box(...h)).join('')}" fill="url(#${id})" fill-rule="evenodd"/>${holes.map(([x, y, w, h]) => `<rect class="bh" x="${x}" y="${y}" width="${w}" height="${h}" rx="${r}"/>`).join('')}</svg>`);
+      }
+      const left = L.sheets[k].some((i) => !this.st.rem[i]);
+      if (left === el.classList.contains('gone')) {
+        el.classList.toggle('gone', !left);
+        if (!left && !this.dealing) buzz(15);
+      }
+    });
+  }
+
   // Boleto partido entero: ¿tocó la mitad de abajo? (se mide en el giro de la carta). Solo cuenta si las dos conectan.
+  // Dominó: el número de abajo (true = c.dom). Boleto triple: el talón que tocó (0, 1 o 2).
   lowHalf(c, e) {
-    if (c.half == null || E.cutOf(c, this.st)) return false;
-    const [cx, cy] = center(c.el.getBoundingClientRect());
+    if ((c.half == null || E.cutOf(c, this.st)) && c.dom == null && !c.tri) return false;
+    const r = c.el.getBoundingClientRect(), [cx, cy] = center(r);
     const a = (c.rot * Math.PI) / 180;
-    return -(e.clientX - cx) * Math.sin(a) + (e.clientY - cy) * Math.cos(a) > 0;
+    const v = -(e.clientX - cx) * Math.sin(a) + (e.clientY - cy) * Math.cos(a);
+    if (c.tri) {
+      const t = v / (this.u * 1.4) + 0.5;
+      return t < 1 / 3 ? 0 : t < 2 / 3 ? 1 : 2;
+    }
+    return c.dom != null ? v > 0 !== dmFlip(c) : v > 0;
   }
 
   // Avisos cortos, una vez por partida cada uno.
@@ -2027,10 +2273,13 @@ export class Game {
 
   play(c, low = false) {
     this.magnetAimOff();
+    if (c.scr) c.el?.querySelector('.scr-ov')?.remove();
     const before = this.st;
     const { s, ev } = E.play(this.level, before, c.id, low);
     const burnRects = this.burnRects(ev.boom);
-    this.history.push({ t: 'play', before, ev, best: this.best, bonus: this.bonus });
+    // Raspadita: si esta jugada la raspa (o es ella), ya no se deshace.
+    const scraped = c.scr || this.level.cards.some((x) => x.scr && !before.rem[x.id] && E.scrOpen(x, s) > E.scrOpen(x, before));
+    this.history.push({ t: 'play', before, ev, best: this.best, bonus: this.bonus, ...(scraped && { lock: true }) });
     this.st = s;
     this.sync();
     this.best = Math.max(this.best, s.streak);
@@ -2041,12 +2290,15 @@ export class Game {
     // Vuela de centro a centro dando una vuelta y se asienta al caer.
     // Boleto partido: la primera vez solo se va la mitad jugada; la otra se queda.
     if (ev.split) this.splitTicket(c, ev);
-    else this.flyToWaste(c, ev, E.cutOf(c, before));
+    else if (ev.tri?.left) this.tearStub(c, ev);
+    else this.flyToWaste(c, ev, E.cutOf(c, before), ev.tri?.stub);
     this.afterPlay(before, ev, burnRects);
   }
 
   // cut: del boleto partido, la mitad que ya se había jugado (la que queda se vuelve carta entera en el aire).
-  flyToWaste(c, ev, cut) {
+  // stub: del boleto triple, el último talón (también se vuelve carta entera). Dominó: en el aire se vuelve el número
+  // que se queda en el descarte (ev.exit).
+  flyToWaste(c, ev, cut, stub = null) {
     const el = c.el;
     c.el = null;
     el.classList.remove('shake');
@@ -2060,6 +2312,8 @@ export class Game {
     el.style.rotate = '0deg';
     // Última mitad de un boleto: en el aire se vuelve una carta entera con su número.
     if (cut) this.becomeCard(el, { rank: ev.rank, suit: c.suit }, cut);
+    else if (stub != null) this.becomeStub(el, { rank: ev.rank, suit: c.suit }, stub);
+    else if (ev.exit != null) this.becomeExit(el, { rank: ev.exit, suit: c.suit });
     toss(el, { r0: c.rot }, { x1: bx - ax, y1: by - ay, s1: b.width / this.u }, 360).then(() => {
       el.remove();
       this.landWaste();
@@ -2090,6 +2344,64 @@ export class Game {
     toss(f, { r0: c.rot, y0: keep === 1 ? -u * 0.08 : u * 0.08 }, { x1: bx - cx, y1: by - cy, s1: b.width / u }, 360).then(() => {
       f.remove();
       this.landWaste();
+    });
+  }
+
+  // Boleto triple: se arranca un talón por su línea picada y vuela al descarte (en el aire se vuelve carta entera); lo
+  // demás se queda en su lugar, recortado.
+  tearStub(c, ev) {
+    const el = c.el, k = ev.tri.stub;
+    const [cx, cy] = center(el.getBoundingClientRect());
+    const u = this.u;
+    const f = this.flyer(c, { left: cx - u / 2, top: cy - u * 0.7, width: u }, true);
+    f.style.clipPath = stubClip(k);
+    f.style.rotate = '0deg';
+    el.style.clipPath = triClip(E.triOf(c, this.st));
+    this.becomeStub(f, { rank: ev.rank, suit: c.suit }, k, 120);
+    buzz(10);
+    if (!reduced()) {
+      // Tirón: lo que se queda se jala hacia el otro lado y regresa.
+      const pull = k === 0 ? 6 : k === 2 ? -6 : 0;
+      el.animate([{ translate: '0 0' }, { translate: `0 ${pull}%`, offset: 0.35 }, { translate: '0 0' }], { duration: 280, easing: 'ease-out' });
+      sparkle({ x: cx, y: cy + (k - 1) * u * 0.45 }, 8);
+    }
+    const b = this.wasteEl.getBoundingClientRect();
+    const [bx, by] = center(b);
+    toss(f, { r0: c.rot, y0: (k - 1) * u * 0.1 }, { x1: bx - cx, y1: by - cy, s1: b.width / u }, 360).then(() => {
+      f.remove();
+      this.landWaste();
+    });
+  }
+
+  // Un talón del boleto triple se vuelve en el aire la carta entera: el recorte se abre y la cara se funde.
+  becomeStub(el, card, k, delay = 0) {
+    el.insertAdjacentHTML('beforeend', `<div class="inner become">${faceHTML(card)}</div>`);
+    if (reduced()) return (el.style.clipPath = '');
+    const t = { duration: FLY_MS, delay, easing: 'ease-in-out', fill: 'forwards' };
+    el.animate([{ clipPath: stubClip(k) }, { clipPath: FULL_BAND }], t);
+    el.querySelector('.become').animate([{ opacity: 0 }, { opacity: 0, offset: 0.2 }, { opacity: 1 }], t);
+  }
+
+  // Dominó: en el aire la ficha se vuelve la carta con el número por el que no entraste.
+  becomeExit(el, card) {
+    el.insertAdjacentHTML('beforeend', `<div class="inner become">${faceHTML(card)}</div>`);
+    if (reduced()) return;
+    el.querySelector('.become').animate([{ opacity: 0 }, { opacity: 0, offset: 0.3 }, { opacity: 1 }], { duration: FLY_MS, easing: 'ease-in-out', fill: 'forwards' });
+  }
+
+  // Deshacer un talón (si el boleto sigue en el tablero): la carta regresa del descarte y el talón vuelve a su lugar.
+  untearStub(c, ev, from) {
+    const el = c.el;
+    if (!el) return;
+    const [cx, cy] = center(el.getBoundingClientRect());
+    const u = this.u;
+    const f = this.flyer({ rank: ev.rank, suit: c.suit }, { left: cx - u / 2, top: cy - u * 0.7, width: u }, true);
+    const [ax, ay] = center(from);
+    toss(f, { x0: ax - cx, y0: ay - cy, s0: from.width / u }, { r1: c.rot }, 360).then(() => {
+      f.remove();
+      if (c.el !== el) return;
+      el.style.clipPath = triClip(E.triOf(c, this.st));
+      squash(el);
     });
   }
 
@@ -2147,6 +2459,18 @@ export class Game {
     const pc = this.level.cards[ev.id];
     if (pc?.magnet) toast(`${icon('iman')} ¡Imán! Tu siguiente robo te sirve`);
     if (pc?.rainbow) toast(`${icon('arcoiris')} ¡Arcoíris! 3 jugadas pueden saltar dos`);
+    // Raspadita jugada antes de verla toda: monedas (entre menos se veía, más). Deshacer las quita.
+    if (pc?.scr) {
+      const pay = E.scrPay(pc, before);
+      if (pay) {
+        save.coins += pay;
+        persist();
+        const [x, y] = center(this.wasteEl.getBoundingClientRect());
+        flyToWallet('coins', { x, y }, pay, shownCoins() - pay);
+        this.showStreak(`¡Le atinaste! +${pay} monedas`);
+        this.history[this.history.length - 1].scrPay = pay;
+      }
+    }
     if (ev.bolted) this.boltFx(ev.bolted);
     if (ev.cst) this.cstFx(ev, this.flewFrom || [0, 0]);
     if (this.cards[ev.id].coin && !ev.split) this.coinCard(this.cards[ev.id]);
@@ -2729,6 +3053,9 @@ export class Game {
     if (!this.history.length) return toast('Nada que deshacer');
     // Abrir una puerta no se deshace (9 nov 2026, pedido del usuario): ni eso ni lo de antes.
     if (this.history[this.history.length - 1].t === 'door') return toast('Abrir una puerta no se puede deshacer');
+    // Raspadita (13 nov 2026, el usuario): lo que la raspa o la juega, y fallarle, no se deshace (si no, se ve el número
+    // y se regresa para cobrar las monedas).
+    if (this.history[this.history.length - 1].lock) return toast('Lo que raspa la raspadita no se puede deshacer');
     this.magnetAimOff();
     const inf = this.opts.dev?.infinite;
     if (save.undo <= 0 && !inf) return save.coins < this.priceOf('undo') ? this.noWayOut('undo') : this.offerBuy('undo');
@@ -2775,7 +3102,9 @@ export class Game {
       // Carta moneda: se devuelven las monedas.
       const cc = this.cards[ev.id];
       if (cc.coin && !ev.split) (save.coins = Math.max(0, save.coins - cc.coin)), updateCoins();
+      if (h.scrPay) (save.coins = Math.max(0, save.coins - h.scrPay)), updateCoins();
       if (ev.split) this.unsplitTicket(this.cards[ev.id], ev, wasteRect);
+      else if (ev.tri?.left) this.untearStub(this.cards[ev.id], ev, wasteRect);
       else this.returnToBoard(this.cards[ev.id], wasteRect);
     } else if (h.t === 'draw') {
       this.returnToStock(ev.card, wasteRect);

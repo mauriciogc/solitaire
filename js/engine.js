@@ -134,6 +134,49 @@ export const cloneState = (s) => ({ ...s, rem: s.rem.slice(), stock: s.stock.sli
 // Mitad del boleto partido que ya se jugó (0 = está entero, 1 = la de arriba, 2 = la de abajo).
 export const cutOf = (c, s) => (c.half != null && s.cut?.[c.id]) || 0;
 
+// Boleto triple (13 nov 2026, pedido del usuario): 3 talones, arriba c.rank, en medio c.tri[0] y abajo c.tri[1]. Se
+// arranca el de una punta (arriba o abajo) cuando conecta; el de en medio solo cuando ya quedó de punta (se fue alguno
+// de los otros). Se queda en el tablero (y sigue tapando) hasta el último. s.cut[id] = talones ya jugados (bits:
+// 1 arriba, 2 en medio, 4 abajo).
+export const TRI_ALL = 7;
+export const triOf = (c, s) => (c.tri && s.cut?.[c.id]) || 0;
+export const triRank = (c, k) => (k === 0 ? c.rank : c.tri[k - 1]);
+// Talones que se pueden arrancar ahora (0 arriba, 1 en medio, 2 abajo).
+export const triEnds = (c, s) => {
+  const m = triOf(c, s), out = [];
+  if (!(m & 1)) out.push(0);
+  if (!(m & 4)) out.push(2);
+  if (!(m & 2) && m & 5) out.push(1);
+  return out;
+};
+// El talón que se jugaría: el que tocó el jugador (want) si conecta; si no, el primero que conecte. null = ninguno.
+export const triPick = (c, s, want = null) => {
+  const ok = triEnds(c, s).filter((k) => follows(s.top, triRank(c, k)));
+  return ok.includes(want) ? want : ok.length ? ok[0] : null;
+};
+
+// Mesa que se voltea (13 nov 2026, pedido del usuario): columnas como la gravedad; cada FLIP_EVERY jugadas o robos da
+// media vuelta y se juega la otra punta (a cada carta la tapa la de encima: c.flipBy). El reloj de arena la detiene.
+// Raspadita (13 nov 2026, pedido del usuario): su número no se ve; cada carta pegada a ella (c.scr) que juegas le abre
+// una de sus SCR_WIN ventanitas. Si la juegas antes de verla toda, da monedas: entre más ventanitas cerradas, más
+// (SCR_PAY). Si la tocas y no conecta (sin verla toda), cuenta como un robo: se corta la racha (miss).
+export const SCR_WIN = 4;
+export const SCR_PAY = [0, 10, 30, 60];
+// Ventanitas abiertas: en proporción a las pegadas que ya jugaste (con todas, se ve completa).
+export const scrOpen = (c, s) => (c.scr ? Math.floor((SCR_WIN * c.scr.filter((j) => s.rem[j]).length) / c.scr.length) : SCR_WIN);
+export const scrPay = (c, s) => SCR_PAY[Math.min(3, SCR_WIN - scrOpen(c, s))];
+export function miss(level, s0) {
+  const s = cloneState(s0);
+  s.streak = 0;
+  s.turbo = 0;
+  tick(s);
+  return { s, ev: { t: 'miss' } };
+}
+
+export const FLIP_EVERY = 5;
+export const flipped = (level, s) => !!level?.flip && Math.floor(s.actions / FLIP_EVERY) % 2 === 1;
+export const flipLeft = (s) => FLIP_EVERY - (s.actions % FLIP_EVERY);
+
 // Agujero negro (8 nov 2026): cada HOLE_EVERY jugadas o robos se traga sus cartas y las escupe con los números
 // revueltos (cada una toma el de la siguiente del giro). El reloj de arena lo detiene (las acciones no avanzan).
 export const HOLE_EVERY = 4;
@@ -144,7 +187,7 @@ export const holeTook = (c, t) => !!c.ring && t > 0 && c.ring[t % c.ring.length]
 
 // Número que muestra ahora una carta (la carta viva cambia con las acciones; del boleto partido, la mitad que queda;
 // la del agujero negro, la que le toca en el giro).
-export const rankOf = (c, s) => (c.ring ? c.ring[holeTurn(s) % c.ring.length] : c.live ? mod13(c.rank + c.live * s.actions) : cutOf(c, s) === 1 ? c.half : c.rank);
+export const rankOf = (c, s) => (c.ring ? c.ring[holeTurn(s) % c.ring.length] : c.live ? mod13(c.rank + c.live * s.actions) : cutOf(c, s) === 1 ? c.half : c.tri && triOf(c, s) & 1 ? triRank(c, triEnds(c, s)[0] ?? 0) : c.rank);
 
 // ¿Vale el rango r sobre el descarte? A y K se conectan. Una flecha en el descarte obliga a una dirección.
 // Una carta doble en el descarte abre dos caminos (vale seguir desde cualquiera de sus dos números).
@@ -210,7 +253,7 @@ export const doorOpen = (level, d, s) => !!s.open?.[d];
 // ¿Cuenta para ganar? Las cartas tras una puerta cerrada no.
 export const counts = (level, c, s) => c.door == null || doorOpen(level, c.door, s);
 // El rayo de antes (s.lift, partidas guardadas del 10 nov) sacaba una carta de abajo: queda libre aunque sigan ahí.
-export const isFree = (c, s, level) => (c.coveredBy.every((j) => s.rem[j]) || !!s.lift?.includes(c.id)) && (!c.neb || nebOut(level, s) >= c.neb) && (c.door == null || doorOpen(level, c.door, s));
+export const isFree = (c, s, level) => ((flipped(level, s) ? c.flipBy : c.coveredBy).every((j) => s.rem[j]) || !!s.lift?.includes(c.id)) && (!c.neb || nebOut(level, s) >= c.neb) && (c.door == null || doorOpen(level, c.door, s));
 export const curtainOpen = (level, c, s) => c.curtain == null || !!s.master || !!s.rem[level.curtains[c.curtain]];
 export const lockOpen = (level, c, s) => c.lock == null || !!s.master || !!s.rem[level.keys[c.lock]];
 export const iceLeft = (c, s) => (c.ice && !s.burnt ? Math.max(0, c.ice - s.plays) : 0);
@@ -290,6 +333,12 @@ export function playRank(level, c, s, low = false) {
   if (!isOpen(level, c, s)) return null;
   const r = rankOf(c, s);
   if (chamWild(c, s)) return r;
+  if (c.tri) {
+    const k = triPick(c, s, typeof low === 'number' ? low : null);
+    return k == null ? null : triRank(c, k);
+  }
+  // Dominó: se entra por cualquiera de sus dos números (low = el de abajo, si los dos conectan).
+  if (c.dom != null) return low && follows(s.top, c.dom) ? c.dom : follows(s.top, r) ? r : follows(s.top, c.dom) ? c.dom : null;
   const both = c.half != null && !cutOf(c, s);
   if (both && low && follows(s.top, c.half)) return c.half;
   if (follows(s.top, r)) return r;
@@ -297,6 +346,11 @@ export function playRank(level, c, s, low = false) {
   if (both && follows(s.top, c.half)) return c.half;
   return null;
 }
+
+// Lo que juega la solución de referencia con esta carta (npm test y refLeft): del boleto partido entero, la mitad de
+// arriba; del boleto triple, arriba, luego abajo y al final en medio (low = el talón).
+export const refStep = (c, s) => (c.half != null && !cutOf(c, s) ? { rank: c.rank } : c.tri ? { low: !triOf(c, s) ? 0 : triOf(c, s) === 1 ? 2 : 1 } : {});
+export const refReady = (level, c, s, w = refStep(c, s)) => (w.rank != null ? playRank(level, c, s) === w.rank : w.low != null ? isOpen(level, c, s) && triPick(c, s, w.low) === w.low : playRank(level, c, s) != null);
 
 export const legal = (level, s) => level.cards.filter((c) => playRank(level, c, s) != null);
 export const won = (s, level) => s.rem.every((r, i) => r || (level?.cards[i].door != null && !s.open?.[level.cards[i].door]));
@@ -381,7 +435,7 @@ function buried(level, s, n, ok = () => true) {
     return d;
   };
   return level.cards
-    .filter((c) => !s.rem[c.id] && !special(c) && c.half == null && counts(level, c, s) && !isFree(c, s, level) && ok(c))
+    .filter((c) => !s.rem[c.id] && !special(c) && c.half == null && !c.tri && counts(level, c, s) && !isFree(c, s, level) && ok(c))
     .map((c) => [c.id, depth(c.id)])
     .sort((a, b) => b[1] - a[1] || a[0] - b[0])
     .slice(0, n)
@@ -392,7 +446,7 @@ function buried(level, s, n, ok = () => true) {
 // boca arriba o boca abajo. Sin las especiales, los boletos partidos, la banda, las puertas, el fuego (sin él las
 // enredaderas no se quitarían) ni lo que la nebulosa aún esconde.
 export function deepLayer(level, s) {
-  const ok = level.cards.filter((c) => !s.rem[c.id] && !special(c) && c.half == null && c.belt == null && c.door == null && !c.fire && (!c.neb || nebOut(level, s) >= c.neb));
+  const ok = level.cards.filter((c) => !s.rem[c.id] && !special(c) && c.half == null && !c.tri && c.belt == null && c.door == null && !c.fire && (!c.neb || nebOut(level, s) >= c.neb));
   if (!ok.length) return [];
   // En algunas formas la capa más baja ya está libre (no la tapa nada): cuenta la más baja de las que siguen tapadas.
   const hid = ok.filter((c) => !isFree(c, s, level));
@@ -466,10 +520,18 @@ export function play(level, s0, id, low = false) {
   const s = cloneState(s0);
   // Boleto entero: se parte y la otra mitad se queda en el tablero.
   const split = c.half != null && !cutOf(c, s0) ? (r === c.rank && !(low && r === c.half) ? 1 : 2) : 0;
+  // Boleto triple: se arranca un talón; la carta sale del tablero con el último.
+  const stub = c.tri ? triPick(c, s0, typeof low === 'number' ? low : null) : null;
   if (split) s.cut[id] = split;
-  else s.rem[id] = true;
+  else if (stub != null) {
+    s.cut[id] = triOf(c, s0) | (1 << stub);
+    if (s.cut[id] === TRI_ALL) s.rem[id] = true;
+  } else s.rem[id] = true;
+  const tri = stub != null ? { stub, left: s.cut[id] !== TRI_ALL } : null;
   // La carta doble llega al descarte con sus dos números; la flecha, con su obligación.
-  s.top = chamWild(c, s0) ? { wild: true } : c.alt != null ? { rank: c.rank, alt: c.alt, suit: c.suit } : { rank: r, suit: c.suit, ...(c.arrow && { arrow: c.arrow }) };
+  // Dominó: en el descarte se queda el otro número (por el que no entraste).
+  const exit = c.dom != null ? (r === c.rank ? c.dom : c.rank) : null;
+  s.top = chamWild(c, s0) ? { wild: true } : c.alt != null ? { rank: c.rank, alt: c.alt, suit: c.suit } : exit != null ? { rank: exit, suit: c.suit } : { rank: r, suit: c.suit, ...(c.arrow && { arrow: c.arrow }) };
   // Arcoíris: el descarte lleva las jugadas ±2 que quedan.
   const rb = c.rainbow ? RAINBOW : Math.max(0, (s0.top?.rb || 0) - 1);
   if (rb && !s.top.wild) s.top.rb = rb;
@@ -481,7 +543,7 @@ export function play(level, s0, id, low = false) {
   // Carta llave: una llave más en la mano.
   if (c.doorKey) s.keys = (s.keys || 0) + 1;
   // Constelación: suma si es estrellita; cualquier otra carta a la mitad la apaga.
-  const cst = cstStep(level, s, !!c.cst && !split);
+  const cst = cstStep(level, s, !!c.cst && !split && !tri?.left);
   const at = s.streak;
   // Turbo: esta jugada suma un punto más (y su premio, si toca).
   const boosted = s0.turbo > 0;
@@ -511,13 +573,13 @@ export function play(level, s0, id, low = false) {
   if (c.fire) s.burnt = true;
   // Rayo: las cartas más enterradas (1-3) se van al final del mazo de robo (después de todo lo demás de la jugada).
   // Ni la carta llave de las puertas ni las de la constelación (se perderían).
-  const bolted = c.bolt ? buried(level, s, c.bolt, (x) => x.curtain == null && x.door == null && !x.doorKey && !x.cst && !x.fire && x.vine == null) : [];
+  const bolted = c.bolt ? buried(level, s, c.bolt, (x) => x.curtain == null && x.door == null && !x.doorKey && !x.cst && !x.fire && x.vine == null && x.dom == null && !x.tri) : [];
   for (const b of bolted) {
     const x = level.cards[b];
     s.rem[b] = true;
     s.stock.push({ rank: rankOf(x, s), suit: x.suit, ...(x.alt != null && { alt: x.alt }), ...(x.arrow && { arrow: x.arrow }) });
   }
-  return { s, ev: { t: 'play', id, rank: r, packs, defused, reward, boost, boom, wished, wishes, gone, ...(c.turbo && { turbo: true }), ...(split && { split }), ...(shipBack && { shipBack }), ...(c.doorKey && { key: true }), ...(cst && { cst }), ...(rockOff.length && { rockOff }), ...(bolted.length && { bolted }), ...(burnt && { burnt }) } };
+  return { s, ev: { t: 'play', id, rank: r, packs, defused, reward, boost, boom, wished, wishes, gone, ...(c.turbo && { turbo: true }), ...(split && { split }), ...(tri && { tri }), ...(exit != null && { exit }), ...(shipBack && { shipBack }), ...(c.doorKey && { key: true }), ...(cst && { cst }), ...(rockOff.length && { rockOff }), ...(bolted.length && { bolted }), ...(burnt && { burnt }) } };
 }
 
 // Abrir la puerta d con una llave. No es jugada ni robo: no mueve la racha ni las cuentas, salvo su premio
@@ -591,7 +653,7 @@ const hasTurbo = (level) => level.cards.some((c) => c.turbo) || level.stock.some
 // Busca una solución desde un estado (profundidad primero, con memoria). Devuelve [id | 'draw' | 'wild', …] o null.
 // wilds: comodines que puede usar (como en el juego, solo al quedarse sin jugadas).
 export function solve(level, s0, limit = 250000, wilds = 0) {
-  const timed = !!level.vine || level.cards.some((c) => c.live || c.bomb || c.comet || c.ghost || c.cham || c.ring || c.belt);
+  const timed = !!level.vine || !!level.flip || level.cards.some((c) => c.live || c.bomb || c.comet || c.ghost || c.cham || c.ring || c.belt);
   const turbo = hasTurbo(level);
   const seen = new Set();
   const path = [];

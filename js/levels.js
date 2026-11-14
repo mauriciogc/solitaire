@@ -1,5 +1,5 @@
 import { mulberry32, hash, randInt, pick, shuffle } from './rng.js';
-import { follows, mod13, HOLE_EVERY, BELT_W, solve, initState, playRank, cutOf, play as playCard, draw as drawCard, won, starsFor, playCasual } from './engine.js';
+import { follows, mod13, HOLE_EVERY, BELT_W, solve, initState, playRank, cutOf, refStep, refReady, play as playCard, draw as drawCard, won, starsFor, playCasual } from './engine.js';
 
 // Unidades del tablero: una carta mide W x H. Posiciones = esquina superior izquierda.
 export const W = 1;
@@ -448,7 +448,9 @@ const RESPITE_MIN = 10;
 // se veían chicos y las animaciones no convencieron). Sus niveles ahora llevan una de las otras mesas (scrollKind).
 // 8 nov 2026: todo lo que estrena el camino (cartas, mesas y eventos) va a 10 niveles o más de lo anterior; lo que estaba
 // encimado se separó y lo de después se corrió lo mismo (antes mesa 39, gravedad 69, nebulosa 99, plegable 139).
-export const SCROLL_FROM = { mesa: 50, gravedad: 109, nebulosa: 149 };
+// 13 nov 2026: mesa que se voltea (columnas como la gravedad que dan media vuelta) en el nivel 611.
+// 13 nov 2026 (pedido del usuario): hangar 201 y bitácora 311 (entre el 170 y el 331 no había mesa) y portales 551.
+export const SCROLL_FROM = { mesa: 50, gravedad: 109, nebulosa: 149, hangar: 200, bitacora: 310, portal: 550, voltea: 610 };
 // Marea (7 nov 2026): el agua sube desde abajo cada 3 robos y baja cada 3 jugadas; lo que queda bajo el agua no se
 // juega. Desde el nivel MAREA_FROM + 1, ~1 de cada 10 normales del camino (sin otra mesa, respiro ni ayudas).
 export const TIDE_FROM = 340; // antes 239 (ver SCROLL_FROM)
@@ -529,6 +531,10 @@ export function scrollKind(g) {
   if (g >= SCROLL_FROM.mesa && !(hash(g * 31 + 7) % 12)) return 'mesa';
   if (g >= SCROLL_FROM.nebulosa && !((hash(g * 7919 + 1013) >>> 9) % 12)) return 'nebulosa';
   if (g >= SCROLL_FROM.gravedad && !((hash(g * 104729 + 577) >>> 11) % 12)) return 'gravedad';
+  if (g >= SCROLL_FROM.voltea && !((hash(g * 6151 + 331) >>> 8) % 12)) return 'voltea';
+  if (g >= SCROLL_FROM.hangar && !((hash(g * 4127 + 61) >>> 7) % 12)) return 'hangar';
+  if (g >= SCROLL_FROM.bitacora && !((hash(g * 8297 + 19) >>> 6) % 12)) return 'bitacora';
+  if (g >= SCROLL_FROM.portal && !((hash(g * 2389 + 503) >>> 9) % 12)) return 'portal';
   // Los que eran de la plegable, antes de que se abra la marea, llevan una de estas tres (después, ver exFoldKind).
   return exFold(g) && g < TIDE_FROM ? ['mesa', 'gravedad', 'nebulosa'][hash(g * 613 + 29) % 3] : null;
 }
@@ -536,6 +542,7 @@ export function scrollKind(g) {
 // La nebulosa, algo menos: solo se ven 3 tramos a la vez.
 function scrollSegments(r, d, kind) {
   if (kind === 'gravedad') return gravCols(r, d);
+  if (kind === 'hangar') return hangarCols(r, d);
   const want = kind === 'nebulosa' ? 32 + Math.round(d * 16) : 40 + Math.round(d * 20);
   const out = [], names = [];
   for (let n = 0; n < want; ) {
@@ -552,6 +559,54 @@ function gravCols(r, d) {
   const n = randInt(r, 3, 5), want = 26 + Math.round(d * 14);
   const out = Array.from({ length: n }, () => []);
   for (let i = 0; i < want; i++) out[i % n].push({ x: 0, y: -out[i % n].length * 0.2, z: out[i % n].length });
+  return out;
+}
+// Hangar (13 nov 2026): más columnas, más cortas; solo se ven HANGAR_SHOW y las demás esperan en el hangar.
+export const HANGAR_SHOW = 4;
+function hangarCols(r, d) {
+  const n = randInt(r, 6, 8), out = [];
+  for (let i = 0; i < n; i++) out.push(Array.from({ length: randInt(r, 3, 4 + Math.round(d * 2)) }, (_, k) => ({ x: 0, y: -k * 0.2, z: k })));
+  return out;
+}
+// Bitácora (13 nov 2026): hojas encimadas, cada una de piezas chicas sin giros, en un solo grupo (ocupa lo de un tablero
+// chico y cabe acostado). De 2 a 7 hojas (el usuario: «de dos a 7»; casi siempre 2 o 3): con 2-3 cada hoja trae dos
+// piezas; con más, una (así no pasa de ~48 cartas). raw.sheet dice de qué hoja es cada carta (0 = la de encima).
+const BITA_PIECES = ['miniPyramid', 'miniInv', 'twoRows', 'sandwich', 'crown', 'steps', 'stack', 'cross'];
+export const BITA_MAX = 7;
+function bitaSheets(r) {
+  const n = Math.min(BITA_MAX, 2 + Math.floor(r() * r() * 6));
+  const piece = () => normalizeGroup(SMALL[pick(r, BITA_PIECES)](mulberry32(randInt(r, 0, 1e9))));
+  const sheet = () => {
+    if (n > 3) return piece();
+    const a = piece(), b = piece();
+    return normalizeGroup([...a.cards, ...b.cards.map((c) => ({ ...c, x: c.x + a.w + 0.35, y: c.y + (a.h - b.h) / 2 }))]);
+  };
+  const s = Array.from({ length: n }, sheet);
+  // Con 4 o más hojas (una pieza cada una) cada hoja lleva además una carta suelta en una orilla, una vez a la
+  // izquierda y otra a la derecha: así siempre queda lugar para la escotilla de la de abajo.
+  const side = n > 3 ? 1.4 : 0, W = Math.max(...s.map((g) => g.w)) + side * 2, H = Math.max(...s.map((g) => g.h), 1.4);
+  const sh = s.map((g, k) => [...g.cards.map((c) => ({ ...c, x: c.x + (W - g.w) / 2, y: c.y + (H - g.h) / 2 })), ...(side ? [{ x: k % 2 ? W - 1 : 0, y: (H - 1.4) / 2, z: 0, rot: 0 }] : [])]);
+  // Escotillas: en cada hoja, 1-2 cartas que no tapa ninguna de su hoja; las de la hoja de encima que les quedan
+  // arriba se quitan (esa hoja se queda con 4 o más).
+  const near = (a, b, mx = 1, my = 1.4) => Math.abs(a.x - b.x) < mx && Math.abs(a.y - b.y) < my;
+  // 13 nov 2026 (el usuario): todas las hojas con escotilla; se prueban las libres hasta abrir 1 (o 2). De abajo hacia
+  // arriba: así abrir el hueco de una hoja nunca se lleva la escotilla de la de encima (ya escogida).
+  const peek = new Set();
+  for (let k = n - 1; k >= 1; k--) {
+    const free = shuffle(r, sh[k].filter((c) => !sh[k].some((o) => o !== c && o.z > c.z && near(c, o, 1.05, 1.45))));
+    let want = 1 + (r() < 0.5 ? 1 : 0);
+    for (const c of free) {
+      if (!want) break;
+      const rest = sh[k - 1].filter((o) => !near(c, o, 1.3, 1.7));
+      if (rest.length >= 3) (sh[k - 1] = rest), peek.add(c), want--;
+    }
+  }
+  const cards = [], ix = [], pk = [];
+  // Capas de 10 en 10 por hoja (13 nov 2026: con 50 las cartas quedaban por encima de lo que vuela y pasaban por detrás).
+  sh.forEach((g, k) => g.forEach((c) => (peek.has(c) && pk.push(cards.length), cards.push({ ...c, z: c.z + (n - 1 - k) * 10 }), ix.push(k))));
+  const out = [cards];
+  out.sheet = ix;
+  out.peek = pk;
   return out;
 }
 // Dónde empieza cada tramo en la tira (de izquierda a derecha).
@@ -752,13 +807,13 @@ export function refLeft(L) {
   let s = initState(L);
   for (const id of L.solution) {
     if (s.rem[id]) continue;
-    // Boleto partido entero: la solución juega primero la mitad de arriba.
-    const c = L.cards[id], top = c.half != null && !cutOf(c, s);
-    while (top ? playRank(L, c, s) !== c.rank : playRank(L, c, s) == null) {
+    // Boleto partido entero: la solución juega primero la mitad de arriba; el triple, arriba, abajo y en medio.
+    const c = L.cards[id], w = refStep(c, s);
+    while (!refReady(L, c, s, w)) {
       if (!s.stock.length) return -1;
       s = drawCard(L, s).s;
     }
-    s = playCard(L, s, id).s;
+    s = playCard(L, s, id, w.low ?? false).s;
   }
   return won(s, L) ? s.stock.length : -1;
 }
@@ -777,13 +832,19 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
   const fresh = !ev && !hardHelp(g);
   // Respiro: en cada mundo 1 nivel (a veces 2) sale fácil, para que no todos sean cuesta arriba (ver isRespite).
   const respite = fresh && !secret && isRespite(base);
-  const kind = !ev && !secret && !respite ? scrollKind(base) : null;
-  const scroll = ev ? ev.scroll || null : fresh || kind !== 'mesa' ? kind : null;
+  const kind0 = !ev && !secret && !respite ? scrollKind(base) : null;
+  const want = ev ? ev.scroll || null : fresh || kind0 !== 'mesa' ? kind0 : null;
+  // Mesas de columnas (son la gravedad, scroll 'gravedad'): la que se voltea (media vuelta cada FLIP_EVERY acciones,
+  // level.flip, c.flipBy; los duros no la llevan: su tablero y sus estrellas salen del camino acertado, que no sabe de
+  // la vuelta), los portales (la gravedad al revés: solo se ve distinta) y el hangar (solo se ven HANGAR_SHOW columnas;
+  // al vaciar una sale otra, con la regla de la nebulosa). La bitácora es un tablero normal de hojas encimadas.
+  const flipOn = want === 'voltea' && !T, portalOn = want === 'portal', hangarOn = want === 'hangar', bitaOn = want === 'bitacora';
+  const scroll = ['voltea', 'portal', 'hangar'].includes(want) ? 'gravedad' : bitaOn ? null : want;
   const d0 = ev ? ev.d : secret ? Math.min(1, difficulty(base) + 0.05) : difficulty(base);
   // Mesa enrollada: la tira es larga y solo se ve un pedazo; el mazo va más amable (y con más sobrantes, abajo).
   // La nebulosa, algo menos (medido con el bot casual).
   // El nivel donde se estrena cada mesa va amable aunque sea jefe.
-  const debut = scroll && base === SCROLL_FROM[scroll];
+  const debut = !!want && base === SCROLL_FROM[want];
   let d = respite ? Math.min(d0, 0.06 + d0 * 0.15) : debut ? d0 * (scroll === 'gravedad' ? 0.35 : 0.3) : scroll === 'mesa' ? d0 * 0.3 : scroll === 'gravedad' ? d0 * (base < 200 ? 0.35 : 0.55) : scroll ? d0 * 0.65 : d0;
   // Mesas sobre un tablero normal (marea, agujero negro y puertas): nunca dos en el mismo nivel.
   const overlay = fresh && !secret && !respite && !scroll;
@@ -797,15 +858,18 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
   if (doorsOn) d *= 0.9;
   if (banda) d *= 0.5;
   if (rocksOn) d *= base === rocksFirst() ? 0.4 : 0.9;
+  // Bitácora: lo de abajo no se ve hasta arrancar la hoja; un poco más amable. (Con el bot, en los niveles altos queda
+  // en ~20% y la mesa que se voltea en ~15%: el usuario los quiere así, 13 nov 2026.)
+  if (bitaOn && !debut) d *= 0.8;
   // Evento: en cada planeta salen más seguido las formas que más cuestan (medido con el bot casual).
-  const template = ev?.scroll || ev?.template || (ev && (index === LEVELS_PER_WORLD - 1 || r() < 0.15 + ev.tight * 0.17) ? pick(r, ['peaks', 'peaks', 'scatter', 'invPyramid']) : scroll || (respite ? pick(r, RESPITE_SHAPES) : chooseTemplate(r, ev ? Math.max(3, base) : base, d, true)));
+  const template = (ev?.scroll && (bitaOn ? 'bitacora' : scroll)) || ev?.template || (ev && (index === LEVELS_PER_WORLD - 1 || r() < 0.15 + ev.tight * 0.17) ? pick(r, ['peaks', 'peaks', 'scatter', 'invPyramid']) : (bitaOn ? 'bitacora' : scroll) || (respite ? pick(r, RESPITE_SHAPES) : chooseTemplate(r, ev ? Math.max(3, base) : base, d, true)));
 
   const shape = (dd) => (template === 'clusters' ? clusters(r, dd, index === LEVELS_PER_WORLD - 1, true) : [TEMPLATES[template](r, dd)]);
-  let raw = scroll ? scrollSegments(r, d, scroll) : shape(d);
+  let raw = bitaOn ? bitaSheets(r) : scroll ? scrollSegments(r, d, hangarOn ? 'hangar' : scroll) : shape(d);
   // Sin ayudas: si salió muy chico, se vuelve a armar un poco más grande.
   // Niveles duros: tableros más grandes (T.min).
   const minN = respite ? RESPITE_MIN : Math.max(freshMin(base), T?.min || 0);
-  for (let k = 1; (!ev || T) && !scroll && k <= 12 && raw.reduce((s, gr) => s + gr.length, 0) < minN; k++) raw = shape(Math.min(1, d + k * 0.15));
+  for (let k = 1; (!ev || T) && !scroll && !bitaOn && k <= 12 && raw.reduce((s, gr) => s + gr.length, 0) < minN; k++) raw = shape(Math.min(1, d + k * 0.15));
   // Banda: un grupo más, una fila de 6-9 cartas sueltas (no se tapan). Su lugar en la vuelta se decide abajo.
   const rbe = mulberry32(hash(g * 3929 + t * 71 + 37));
   if (banda) raw.push(Array.from({ length: randInt(rbe, 6, 9) }, (_, j) => ({ x: j * 1.08, y: 0, z: 0 })));
@@ -825,10 +889,30 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
   const under = tableScroll && coveredBy.map((a) => a.slice());
   if (tableScroll) rollCover(pos, groups, SCROLL_VIEW).forEach((a, i) => coveredBy[i].push(...a));
   // Nebulosa: tramos que hay que vaciar antes de que salga cada carta.
-  const neb = nebula ? pos.map((p) => Math.max(0, p.group - NEB_SLOTS + 1)) : null;
+  const neb = nebula ? pos.map((p) => Math.max(0, p.group - NEB_SLOTS + 1)) : hangarOn ? pos.map((p) => Math.max(0, p.group - HANGAR_SHOW + 1)) : null;
   const segments = (nebula || grav) && groups.map((_, gi) => pos.reduce((a, p, i) => (p.group === gi && a.push(i), a), []));
   // Gravedad: a cada carta solo la tapa la de abajo de su columna (la primera de cada columna es la de abajo).
   if (grav) for (const t of segments) t.forEach((id, k) => (coveredBy[id] = k ? [t[k - 1]] : []));
+  // Volteada, a cada carta la tapa la de encima.
+  const flipBy = flipOn && pos.map(() => []);
+  if (flipOn) for (const t of segments) t.forEach((id, k) => (flipBy[id] = k < t.length - 1 ? [t[k + 1]] : []));
+  // Bitácora: la hoja de encima tapa toda la de abajo, menos 1-2 cartas libres de abajo que no quedan bajo ninguna
+  // carta de encima: esas se asoman por una escotilla y se juegan cuando quieras. La hoja se arranca al vaciarse.
+  // Con más hojas: a una carta la tapan todas las hojas de encima; a la de una escotilla, todas menos la de justo encima
+  // (se ve por su hueco en cuanto esa es la de encima).
+  let sheets = null, peek = [];
+  if (bitaOn) {
+    const sh = raw.sheet, n = Math.max(...sh) + 1;
+    sheets = Array.from({ length: n }, () => []);
+    sh.forEach((k, i) => sheets[k].push(i));
+    const rp = mulberry32(hash(g * 4651 + t * 59 + 17));
+    // Las escotillas que abrió bitaSheets (si alguna quedó tapada por su propia hoja, no cuenta).
+    peek = raw.peek.filter((i) => !coveredBy[i].some((j) => sh[j] === sh[i]));
+    for (let k = 1; k < n; k++) for (const i of sheets[k]) {
+      const above = sheets.slice(0, peek.includes(i) ? k - 1 : k).flat();
+      coveredBy[i] = [...new Set([...coveredBy[i], ...above])];
+    }
+  }
 
   const removed = new Array(n).fill(false);
   const order = [];
@@ -848,6 +932,8 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
   const mech = new Set(chooseMechanics(r, world, index, boss, n, ev, T).slice(0, holeOn ? 0 : respite ? 1 : T ? T.mechs[0] : 2));
   // Mesa enrollada y nebulosa sin bombas: su cuenta correría con la carta todavía escondida.
   if (scroll) mech.delete('bomb');
+  // Bitácora: nada con cuenta ni carta regalo escondida bajo la hoja.
+  if (bitaOn) for (const m of ['bomb', 'pack']) mech.delete(m);
   const tideOn = fresh && !secret && !respite && !scroll && tideKind(base);
 
   // Cometa: es un regalo, así que va aparte de las demás (no cuenta en el límite de 2 y sale con cualquiera).
@@ -857,7 +943,7 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
   // En el camino sin ayudas no es al azar: va donde lo pone extraPlan (1-4 por tramo de 30-35 niveles).
   const plan = fresh && !secret;
   const extraHere = (m, roll) => base === extraDebut(m) || (plan ? (roll(), extraPlanned(m, base)) : roll() < EXTRA_ODDS);
-  if (!scroll && n >= 8 && world >= MECH_INTRO.comet && extraHere('comet', rc)) mech.add('comet');
+  if (!scroll && !bitaOn && n >= 8 && world >= MECH_INTRO.comet && extraHere('comet', rc)) mech.add('comet');
   // Cohete turbo: el otro regalo, igual que el cometa pero con su propio sorteo.
   const rt = mulberry32(hash(g * 6007 + t * 37 + 5));
   // También en las mesas especiales (7 nov 2026, pedido del usuario: se juega como cualquier carta, no tiene cuenta).
@@ -901,10 +987,26 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
     if (!comet) mech.delete('comet');
   }
 
+  // Dominó y boleto triple (13 nov 2026, pedido del usuario): sorteo propio, como el boleto partido; en su mundo, en
+  // todos (solos en los 5 primeros). Cuentan en el límite de 2. No en la mesa que se voltea ni con agujero negro.
+  for (const [m, odds, seed] of [['domino', DOM_ODDS, 6763], ['triple', TRI_ODDS, 8237]]) {
+    const rr = mulberry32(hash(g * seed + t * 83 + 71));
+    if (n >= (m === 'triple' ? 12 : 10) && !flipOn && !holeOn && world >= MECH_INTRO[m] && (world === MECH_INTRO[m] || rr() < odds)) {
+      const keep = respite || (world === MECH_INTRO[m] && index < 5) ? 0 : 1;
+      const comet = mech.has('comet');
+      [...mech].filter((x) => x !== 'comet').slice(keep).forEach((x) => mech.delete(x));
+      mech.add(m);
+      if (!comet) mech.delete('comet');
+    }
+  }
+
+  // Raspadita: sola en los 5 primeros niveles de su mundo (se pone al final de buildLevel).
+  if (world === MECH_INTRO.scratch && index < 5) [...mech].filter((x) => x !== 'comet').forEach((x) => mech.delete(x));
+
   // Carta regalo: una carta especial (sin número) que se activa sola al quedar destapada del todo
   // y manda 2-5 cartas al final del mazo. Va tapada y en el primer 40% del orden de retirada.
   // Banda: sin candados, boletos ni carta regalo (se ponen antes que la banda y la dejarían sin vuelta).
-  if (banda) for (const m of ['lock', 'ticket', 'pack']) mech.delete(m);
+  if (banda) for (const m of ['lock', 'ticket', 'pack', 'domino', 'triple']) mech.delete(m);
   let packId = null;
   if (mech.has('pack')) {
     // (En la nebulosa, solo en los tramos que se ven al empezar: su momento de salir no depende de sus tapas.)
@@ -953,6 +1055,21 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
     }
     k += len;
   }
+  // Dominó: se entra por su número de la cadena y en el descarte queda el otro (dom), que salta de 3 a 10; el resto de
+  // esa cadena se corre lo mismo, así la referencia sigue desde ahí. Uno por cadena (y que no sea la última carta).
+  const doms = [];
+  if (mech.has('domino')) {
+    const rd = mulberry32(hash(g * 2953 + t * 97 + 19));
+    const opts = shuffle(rd, [...Array(np).keys()].filter((k) => chainEnd[k] > k));
+    const want = randInt(rd, 1, np >= 20 ? 2 : 1), used = new Set();
+    for (const k of opts) {
+      if (doms.length >= want || used.has(chainEnd[k])) continue;
+      const delta = randInt(rd, 3, 10);
+      for (let q = k + 1; q <= chainEnd[k]; q++) ranks[play[q]] = mod13(ranks[play[q]] + delta);
+      doms.push([play[k], mod13(ranks[play[k]] + delta)]);
+      used.add(chainEnd[k]);
+    }
+  }
   const known = ranks.filter((x) => x != null);
 
   const card = (rank) => ({ rank, suit: randInt(r, 0, 3) });
@@ -977,7 +1094,9 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
 
   const cards = pos.map((p, i) => ({ id: i, ...p, rank: ranks[i], suit: randInt(r, 0, 3), coveredBy: coveredBy[i], ...(under && { under: under[i] }), ...(neb?.[i] && { neb: neb[i] }) }));
   for (const id of [...bombIds, ...cometIds]) delete cards[id].rank;
-  const SPECIAL = ['lock', 'key', 'pack', 'ice', 'alt', 'arrow', 'curtain', 'curtainKey', 'bomb', 'live', 'comet', 'turbo', 'half', 'ghost', 'coin', 'cham', 'ring', 'doorKey', 'belt', 'bolt', 'shield', 'vine', 'fire', 'sleep', 'rainbow', 'magnet'];
+  for (const [id, x] of doms) cards[id].dom = x;
+  if (flipOn) for (const c of cards) c.flipBy = flipBy[c.id];
+  const SPECIAL = ['lock', 'key', 'pack', 'ice', 'alt', 'arrow', 'curtain', 'curtainKey', 'bomb', 'live', 'comet', 'turbo', 'half', 'dom', 'tri', 'scr', 'ghost', 'coin', 'cham', 'ring', 'doorKey', 'belt', 'bolt', 'shield', 'vine', 'fire', 'sleep', 'rainbow', 'magnet'];
   const plain = (id) => SPECIAL.every((f) => cards[id][f] == null);
 
   // Boleto partido (1-2): la referencia juega primero la mitad de arriba (su número de la cadena) y la de abajo al final
@@ -1005,8 +1124,38 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
       tails[m] = id;
     }
   }
-  // Solución de referencia con las dos mitades de cada boleto.
-  const steps = play.flatMap((id, k) => [{ id, rank: ranks[id], k }, ...(tails[k] != null ? [{ id: tails[k], rank: cards[tails[k]].half, tail: true }] : [])]);
+  // Boleto triple (13 nov 2026): la referencia arranca el de arriba en su cadena, el de abajo al final de esa cadena
+  // (±1 de la última) y el de en medio al final de la cadena siguiente. Las cartas que tapa van después de todo eso.
+  const ttails = {};
+  if (mech.has('triple')) {
+    const rtp = mulberry32(hash(g * 3361 + t * 101 + 23));
+    const specials = [packId, ...bombIds, ...cometIds].filter((j) => j != null);
+    const opts = [];
+    for (let k = 0; k < np; k++) {
+      const id = play[k], m = chainEnd[k];
+      if (m + 1 >= np || !plain(id) || specials.some((j) => coveredBy[j].includes(id))) continue;
+      const m2 = chainEnd[m + 1];
+      if (tails[m] != null || tails[m2] != null || play.some((j, q) => q > k && q <= m2 && coveredBy[j].includes(id))) continue;
+      opts.push(k);
+    }
+    shuffle(rtp, opts);
+    const want = randInt(rtp, 1, np >= 24 ? 2 : 1);
+    let got = 0;
+    for (const k of opts) {
+      const m = chainEnd[k], m2 = chainEnd[m + 1];
+      if (got >= want || ttails[m] || ttails[m2]) continue;
+      const id = play[k];
+      let b = mod13(ranks[play[m]] + (rtp() < 0.5 ? 1 : -1));
+      if (b === ranks[id]) b = mod13(2 * ranks[play[m]] - b);
+      const mid = mod13(ranks[play[m2]] + (rtp() < 0.5 ? 1 : -1));
+      cards[id].tri = [mid, b];
+      ttails[m] = { id, rank: b, tail: 'tb' };
+      ttails[m2] = { id, rank: mid, tail: 'tm' };
+      got++;
+    }
+  }
+  // Solución de referencia con las dos mitades de cada boleto (y los talones del triple).
+  const steps = play.flatMap((id, k) => [{ id, rank: ranks[id], k }, ...(tails[k] != null ? [{ id: tails[k], rank: cards[tails[k]].half, tail: true }] : []), ...(ttails[k] ? [ttails[k]] : [])]);
 
   // Candados y llaves: la carta con candado no se puede jugar hasta retirar su llave.
   // La llave siempre va antes que el candado en la solución, así el nivel sigue siendo ganable.
@@ -1044,7 +1193,7 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
     for (const id of play) {
       while (!follows(top, ranks[id])) top = stock[si++];
       rem[id] = true;
-      top = cards[id];
+      top = cards[id].dom != null ? { rank: cards[id].dom } : cards[id];
       if (coveredBy[packId].every((j) => rem[j])) {
         at = si;
         break;
@@ -1080,8 +1229,8 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
       }
       if (!tail) (drew[k] = dn), (act[k] = a);
       seq.push({ id, k, tail, dn });
-      if (tail || cards[id].half == null) rem[id] = true;
-      top = { rank };
+      if (tail === true || tail === 'tm' || (!tail && cards[id].half == null && !cards[id].tri)) rem[id] = true;
+      top = { rank: !tail && cards[id].dom != null ? cards[id].dom : rank };
       a++;
       if (!packed && coveredBy[packId].every((j) => rem[j])) {
         stk.push(...cards[packId].pack);
@@ -1143,7 +1292,7 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
   // Flecha: solo donde la referencia juega justo después, sin robar, el número de arriba (o de abajo).
   if (mech.has('arrow')) {
     for (let t = randInt(r, 1, 2); t > 0; t--) {
-      const k = pickPlain(0, np - 1, (k) => drew[k + 1] === 0 && tails[k] == null);
+      const k = pickPlain(0, np - 1, (k) => drew[k + 1] === 0 && tails[k] == null && !ttails[k]);
       if (k == null) continue;
       const a = ranks[play[k]];
       const b = ranks[play[k + 1]];
@@ -1324,8 +1473,12 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
   const level = {
     g, world, index, d, template, boss, secret, event: !!ev, fresh, ...(respite && { respite }), ...(scroll && { scroll }), ...(tideOn && cards.some((c) => c.wet) && { tide: 1 }), ...(hole && { hole }), ...(vine && { vine }), ...(doors && { doors }), ...(belt && { belt }), ...(rocksOn && { rocks: { n: base === rocksFirst() ? 2 : 2 + (hash(g * 211 + 7) % 2) } }),
     ...(raw.names && { pieces: raw.names }),
-    ...(nebula && { neb: segments }),
+    ...((nebula || hangarOn) && { neb: segments }),
+    ...(hangarOn && { hangar: HANGAR_SHOW }),
+    ...(portalOn && { portal: 1 }),
+    ...(sheets && { sheets, peek }),
     ...(grav && { cols: segments }),
+    ...(flipOn && { flip: 1 }),
     // La banda ocupa solo su ventana (BELT_W lugares), acostada o parada.
     groups: [...groups.map(({ w, h }, gi) => (belt?.g === gi ? (belt.dir === 'h' ? { w: BELT_W * 1.08 - 0.08, h: 1.4 } : { w: 1, h: BELT_W * 1.55 - 0.15 }) : { w, h })), ...(doors || []).map((x) => ({ w: W, h: x.h }))],
     cards,
@@ -1333,7 +1486,7 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
     curtains,
     waste0,
     stock,
-    solution: steps.map((x) => x.id), // la carta regalo no está (se activa sola); el boleto partido va dos veces
+    solution: steps.map((x) => x.id), // la carta regalo no está (se activa sola); el boleto partido va dos veces y el triple tres
     meta: { spares, decoys, chains: starts.length, locks: keys.length, pack },
   };
   // Bomba y carta viva dependen de cuántas acciones haces, y en el juego los premios de racha añaden robos.
@@ -1343,7 +1496,12 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
   if (ev) level.rewardStep = 2;
   if (mech.has('ship')) level.ship = 1;
   // Primero el camino acertado (instantáneo); el solucionador solo si ese no llega a tiempo.
-  const check = () => (!level.ship && !level.tide && !level.hole && !level.belt && !level.rocks && !level.vine && !cards.some((c) => c.live || c.bomb || c.ghost)) || refLeft(level) >= 0 || !!solve(level, initState(level), 60000);
+  const check = () => (!level.flip && !level.ship && !level.tide && !level.hole && !level.belt && !level.rocks && !level.vine && !cards.some((c) => c.live || c.bomb || c.ghost)) || refLeft(level) >= 0 || !!solve(level, initState(level), 60000);
+  // Mesa que se voltea: si no se puede ganar, se queda como gravedad.
+  if (level.flip && !check()) {
+    delete level.flip;
+    for (const c of cards) delete c.flipBy;
+  }
   // La banda: si no se puede ganar, se para (queda como una fila de cartas sueltas).
   if (level.belt && !check()) {
     level.groups[level.belt.g] = { w: groups[level.belt.g].w, h: groups[level.belt.g].h };
@@ -1401,7 +1559,7 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
       const m = n >= 22 && rcs() < 0.4 ? 4 : 3, at = [];
       for (let i = 0; i + m <= seq.length; i++) {
         const run = seq.slice(i, i + m);
-        if (run.every((x, j) => !x.tail && cards[x.id].half == null && (!j || !x.dn))) at.push(i);
+        if (run.every((x, j) => !x.tail && cards[x.id].half == null && !cards[x.id].tri && (!j || !x.dn))) at.push(i);
       }
       if (at.length) {
         const i = pick(rcs, at);
@@ -1426,6 +1584,8 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
         const [id, r] = ok.splice(Math.floor(rsl() * ok.length), 1)[0];
         cards[id].sleep = 2 + Math.floor(rsl() * (Math.min(4, r) - 1));
       }
+      // Con mesas que la referencia no sigue (asteroides, marea…) sí puede estorbar: se comprueba y si no, se quita.
+      if (!(refLeft(level) >= 0 || solve(level, initState(level), 60000))) for (const c of cards) delete c.sleep;
     }
     // Arcoíris (13 nov 2026): al jugarlo, las 3 jugadas siguientes pueden ser ±2. Solo ayuda: no se comprueba.
     const rar = mulberry32(hash(g * 3767 + t * 97 + 67));
@@ -1444,6 +1604,25 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
         const c = cards[play[pick(rmg, ks)]];
         c.magnet = 1;
         if (!(refLeft(level) >= 0 || solve(level, initState(level), 60000))) delete c.magnet;
+      }
+    }
+  }
+  // Raspadita (13 nov 2026, pedido del usuario): una carta tapada al empezar, en la segunda parte de la referencia; su
+  // número no se ve y cada carta pegada a ella (c.scr, hasta 6) que juegas le abre una ventanita. Se juega normal: solo
+  // ayuda (y da monedas si te arriesgas antes de verla toda), así que no se comprueba. No en mesas que se recorren.
+  {
+    const rsc = mulberry32(hash(g * 5737 + t * 113 + 29));
+    if (!scroll && world >= MECH_INTRO.scratch && (world === MECH_INTRO.scratch || rsc() < SCR_ODDS)) {
+      // Pegadas = las de los lados (13 nov 2026: contando las que la tapan, al quedar libre ya se veía casi toda).
+      const side = (c) => cards.filter((x) => x.id !== c.id && x.group === c.group && x.door == null && !coveredBy[c.id].includes(x.id) && !x.coveredBy.includes(c.id) && Math.abs(x.x - c.x) < 1.45 && Math.abs(x.y - c.y) < 1.75).map((x) => x.id).slice(0, 4);
+      // Nunca sola (13 nov 2026, el usuario: como la punta de una pirámide no sirve): al menos 2 de los lados se juegan
+      // antes que ella en la referencia, para que de verdad se raspe.
+      const kOf = new Map(play.map((id, k) => [id, k]));
+      const ks = [];
+      for (let k = Math.floor(np * 0.3); k < np; k++) if (plain(play[k]) && coveredBy[play[k]].length && side(cards[play[k]]).filter((j) => kOf.get(j) < k).length >= 2) ks.push(play[k]);
+      if (ks.length) {
+        const c = cards[pick(rsc, ks)];
+        c.scr = side(c);
       }
     }
   }
@@ -1563,10 +1742,10 @@ export function festivalLevel(seed, k, world, n = FESTIVAL_PER_PLANET) {
 }
 
 // ---------- Mecánicas por mundo ----------
-export const MECHANICS = ['lock', 'pack', 'ice', 'double', 'arrow', 'curtain', 'bomb', 'live', 'ticket', 'comet', 'turbo', 'ghost', 'ship', 'coin', 'cham', 'bolt', 'cst', 'vine', 'magnet', 'rainbow', 'sleep'];
-const MECH_FIELD = { lock: 'lock', pack: 'pack', ice: 'ice', double: 'alt', arrow: 'arrow', curtain: 'curtain', bomb: 'bomb', live: 'live', ticket: 'half', comet: 'comet', turbo: 'turbo', ghost: 'ghost', ship: 'ship', coin: 'coin', cham: 'cham', bolt: 'bolt', cst: 'cst', vine: 'vine', magnet: 'magnet', rainbow: 'rainbow', sleep: 'sleep' };
+export const MECHANICS = ['lock', 'pack', 'ice', 'double', 'arrow', 'curtain', 'bomb', 'live', 'ticket', 'comet', 'turbo', 'ghost', 'ship', 'coin', 'cham', 'bolt', 'cst', 'vine', 'magnet', 'rainbow', 'sleep', 'domino', 'triple', 'scratch'];
+const MECH_FIELD = { lock: 'lock', pack: 'pack', ice: 'ice', double: 'alt', arrow: 'arrow', curtain: 'curtain', bomb: 'bomb', live: 'live', ticket: 'half', comet: 'comet', turbo: 'turbo', ghost: 'ghost', ship: 'ship', coin: 'coin', cham: 'cham', bolt: 'bolt', cst: 'cst', vine: 'vine', magnet: 'magnet', rainbow: 'rainbow', sleep: 'sleep', domino: 'dom', triple: 'tri', scratch: 'scr' };
 // Van con su sorteo, fuera de chooseMechanics (si entraran, cambiarían todos los niveles ya probados).
-const OWN_DRAW = ['ticket', 'ghost', 'ship', 'coin', 'cham', 'bolt', 'cst', 'vine', 'magnet', 'rainbow', 'sleep'];
+const OWN_DRAW = ['ticket', 'ghost', 'ship', 'coin', 'cham', 'bolt', 'cst', 'vine', 'magnet', 'rainbow', 'sleep', 'domino', 'triple', 'scratch'];
 // Mundo (índice desde 0) en el que se presenta cada una.
 // 8 nov 2026: corridas para que cada estreno quede a 10 niveles o más del anterior (antes lock 1, pack 2, ice 4, double 7,
 // arrow 11, curtain 15, bomb 19, live 24, ticket 20, comet 12, turbo 16, ghost 29, ship 34, coin 26, cham 32).
@@ -1574,9 +1753,10 @@ const OWN_DRAW = ['ticket', 'ghost', 'ship', 'coin', 'cham', 'bolt', 'cst', 'vin
 // del ROCAS_FROM).
 // 13 nov 2026: enredadera 52 (nivel 521, a 14 de los asteroides del 507), imán 54 (541), arcoíris 56 (561) y carta
 // dormida 58 (581).
-export const MECH_INTRO = { lock: 1, pack: 2, ice: 6, double: 12, arrow: 17, curtain: 22, bomb: 27, live: 33, ticket: 28, comet: 19, turbo: 24, ghost: 39, ship: 44, coin: 36, cham: 42, bolt: 47, cst: 49, vine: 52, magnet: 54, rainbow: 56, sleep: 58 };
+// 13 nov 2026: dominó 60 (601) y boleto triple 62 (621), con la mesa que se voltea en medio (611).
+export const MECH_INTRO = { lock: 1, pack: 2, ice: 6, double: 12, arrow: 17, curtain: 22, bomb: 27, live: 33, ticket: 28, comet: 19, turbo: 24, ghost: 39, ship: 44, coin: 36, cham: 42, bolt: 47, cst: 49, vine: 52, magnet: 54, rainbow: 56, sleep: 58, domino: 60, triple: 62, scratch: 63 };
 export const MECH_NAMES = {
-  lock: 'Candado', pack: 'Carta regalo', ice: 'Hielo', double: 'Carta doble', arrow: 'Flecha', curtain: 'Cortina', bomb: 'Bomba', live: 'Carta viva', ticket: 'Boleto partido', comet: 'Cometa', turbo: 'Cohete turbo', ghost: 'Fantasma', ship: 'Nave ladrona', coin: 'Carta moneda', cham: 'Camaleón', bolt: 'Rayo', cst: 'Constelación', vine: 'Enredadera', magnet: 'Imán', rainbow: 'Arcoíris', sleep: 'Carta dormida',
+  lock: 'Candado', pack: 'Carta regalo', ice: 'Hielo', double: 'Carta doble', arrow: 'Flecha', curtain: 'Cortina', bomb: 'Bomba', live: 'Carta viva', ticket: 'Boleto partido', comet: 'Cometa', turbo: 'Cohete turbo', ghost: 'Fantasma', ship: 'Nave ladrona', coin: 'Carta moneda', cham: 'Camaleón', bolt: 'Rayo', cst: 'Constelación', vine: 'Enredadera', magnet: 'Imán', rainbow: 'Arcoíris', sleep: 'Carta dormida', domino: 'Dominó', triple: 'Boleto triple', scratch: 'Raspadita',
 };
 // Cartas de regalo (cometa y cohete turbo): no entran al sorteo de mecánicas, van aparte (buildLevel).
 // En el camino sin ayudas cada una sale de 1 a 4 veces en cada tramo de 30-35 niveles (extraPlan, pedido 6 nov 2026).
@@ -1599,6 +1779,10 @@ export const BOLT_ODDS = 0.12, CST_ODDS = 0.12;
 export const VINE_ODDS = 0.12;
 // Imán, arcoíris y carta dormida (13 nov 2026): con su sorteo, al final de buildLevel como el rayo.
 export const MAGNET_ODDS = 0.1, RAINBOW_ODDS = 0.1, SLEEP_ODDS = 0.12;
+// Dominó y boleto triple (13 nov 2026): con su sorteo, como el boleto partido.
+export const DOM_ODDS = 0.12, TRI_ODDS = 0.1;
+// Raspadita (13 nov 2026): al final de buildLevel, como el imán.
+export const SCR_ODDS = 0.1;
 export const EXTRA_ODDS = 0.047;
 // Estreno: el primer nivel de su mundo que no es duro ni mesa especial.
 const debuts = {};
@@ -1663,7 +1847,7 @@ export function variantLevel(level, v) {
   const r = mulberry32(hash(level.g * 7919 + v));
   const k = randInt(r, 1, 12);
   const perm = shuffle(r, [0, 1, 2, 3]);
-  const map = (c) => (c.rank == null ? { ...c } : { ...c, rank: (c.rank + k) % 13, suit: perm[c.suit], ...(c.alt != null && { alt: (c.alt + k) % 13 }), ...(c.half != null && { half: (c.half + k) % 13 }) });
+  const map = (c) => (c.rank == null ? { ...c } : { ...c, rank: (c.rank + k) % 13, suit: perm[c.suit], ...(c.alt != null && { alt: (c.alt + k) % 13 }), ...(c.half != null && { half: (c.half + k) % 13 }), ...(c.dom != null && { dom: (c.dom + k) % 13 }), ...(c.tri && { tri: c.tri.map((x) => (x + k) % 13) }) });
   const mapCard = (c) => ({ ...map(c), ...(c.pack && { pack: c.pack.map(map) }) });
   return { ...level, variant: v, cards: level.cards.map(mapCard), stock: level.stock.map(map), waste0: map(level.waste0) };
 }

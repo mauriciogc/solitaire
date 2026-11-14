@@ -172,6 +172,10 @@ const SV = (b) => `<svg class="ico" viewBox="0 0 32 32" fill="none" stroke="#2a1
 const TABLE_ICONS = {
   mesa: SV('<rect x="3" y="9" width="20" height="16" rx="3" fill="#3fa0a8"/><rect x="21" y="6" width="8" height="22" rx="4" fill="#6fc6cc"/><path d="M25 9v16" stroke-width="1.4"/>'),
   gravedad: SV('<rect x="4" y="3" width="10" height="26" rx="3" fill="#c9bff0"/><rect x="18" y="3" width="10" height="26" rx="3" fill="#c9bff0"/><rect x="5.5" y="17" width="7" height="10" rx="1.6" fill="#fff"/><rect x="19.5" y="17" width="7" height="10" rx="1.6" fill="#fff"/><path d="M9 7v6l-2-2M9 13l2-2M23 7v6l-2-2M23 13l2-2" stroke-width="1.6" stroke-linecap="round"/>'),
+  hangar: SV('<rect x="3" y="5" width="18" height="22" rx="3" fill="#43378e"/><rect x="6" y="15" width="5" height="8" rx="1.2" fill="#fff"/><rect x="13" y="15" width="5" height="8" rx="1.2" fill="#fff"/><rect x="21" y="3" width="9" height="26" rx="2" fill="#9aa3c7"/><path d="M21 7h9M21 25h9" stroke="#ffd54a" stroke-width="3"/>'),
+  bitacora: SV('<rect x="5" y="4" width="22" height="25" rx="2.5" fill="#1d2a62"/><path d="M5 9h22" stroke="#9ff3ff" stroke-width="1.6"/><rect x="11" y="13" width="10" height="12" rx="3" fill="#fff" stroke="#9aa3c7" stroke-width="2.4"/>'),
+  portal: SV('<path d="M16 1v6" stroke-width="2"/><rect x="10" y="6" width="12" height="6" rx="2" fill="#ffc83d"/><path d="M13 12q-5 4-3 10M19 12q5 4 3 10" stroke="#c9d0ea" stroke-width="3" stroke-linecap="round"/><rect x="11" y="18" width="10" height="12" rx="2" fill="#fff"/>'),
+  voltea: SV('<rect x="5" y="4" width="22" height="24" rx="9" fill="#5b4bb8"/><rect x="10" y="9" width="5" height="7" rx="1.2" fill="#fff"/><rect x="17" y="16" width="5" height="7" rx="1.2" fill="#fff"/><path d="M27 9a12 12 0 0 1-4 15" stroke="#ffd54a" stroke-width="2.4" stroke-linecap="round"/>'),
   nebulosa: SV('<circle cx="16" cy="16" r="13" fill="#8a5cf0"/><path d="M16 16c0-3 4-3 4 0s-3 6-7 5-6-5-4-9 8-6 12-3" stroke="#fff" stroke-width="2" stroke-linecap="round"/>'),
   // Mesas sobre un tablero normal (8 nov 2026: faltaban en el recuento y en los filtros).
   banda: SV('<rect x="3" y="11" width="26" height="11" rx="3" fill="#5d5a7a"/><rect x="9" y="8" width="6" height="9" rx="1.4" fill="#fff"/><rect x="17" y="8" width="6" height="9" rx="1.4" fill="#fff"/><rect x="1" y="7" width="5" height="18" rx="2" fill="#ffb066"/><rect x="26" y="7" width="5" height="18" rx="2" fill="#ffb066"/>'),
@@ -181,23 +185,26 @@ const TABLE_ICONS = {
   marea: SV('<rect x="5" y="3" width="22" height="26" rx="3" fill="#fff6e6"/><path d="M5 18c4-3 7 3 11 0s7 3 11 0v8a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3z" fill="#4aa8de"/>'),
 };
 export const tableIcon = (t) => TABLE_ICONS[t] || '';
-const SCROLL_NAMES = { mesa: 'mesa enrollada', gravedad: 'gravedad', nebulosa: 'nebulosa' };
+const SCROLL_NAMES = { mesa: 'mesa enrollada', gravedad: 'gravedad', nebulosa: 'nebulosa', voltea: 'mesa que se voltea', hangar: 'hangar', bitacora: 'bitácora', portal: 'grúa de feria' };
 // Mesas que van sobre un tablero normal (no son tira): se filtran por su bandera del nivel.
+// Mesas que son gravedad por dentro (13 nov 2026): se filtran por su bandera.
+const colKind = (L) => (L.flip ? 'voltea' : L.portal ? 'portal' : L.hangar ? 'hangar' : null);
+const COL_TABLES = [['hangar', 'Hangar', SCROLL_FROM.hangar + 1], ['bitacora', 'Bitácora', SCROLL_FROM.bitacora + 1], ['portal', 'Grúa de feria', SCROLL_FROM.portal + 1], ['voltea', 'Mesa que se voltea', SCROLL_FROM.voltea + 1]];
 const OVERLAY_TABLES = [['marea', 'Marea', tideFirst() + 1, (L) => !!L.tide], ['hoyo', 'Agujero negro', holeFirst() + 1, (L) => !!L.hole], ['puertas', 'Puertas', doorsFirst() + 1, (L) => !!L.doors], ['banda', 'Banda transportadora', bandaFirst() + 1, (L) => !!L.belt], ['rocas', 'Asteroides', rocksFirst() + 1, (L) => !!L.rocks]];
 const PIECES = [['steps', 3], ['cross', 3], ['crown', 8], ['rosette', 13], ['sandwich', 16], ['tiltFan', 21]];
 // Nombres en español de formas y piezas (galería e Info).
-const TPL_NAMES = { pyramid: 'Pirámide', peaks: 'Picos', clusters: 'Grupitos', star: 'Estrella', layers: 'Capas', wall: 'Muro', towers: 'Torres', butterfly: 'Mariposa', diamond: 'Diamante', spiral: 'Espiral', mesa: 'Mesa enrollada', heart: 'Corazón', gravedad: 'Gravedad', scatter: 'Dispersas', nebulosa: 'Nebulosa', invPyramid: 'Pirámide invertida', hourglass: 'Reloj de arena' };
+const TPL_NAMES = { pyramid: 'Pirámide', peaks: 'Picos', clusters: 'Grupitos', star: 'Estrella', layers: 'Capas', wall: 'Muro', towers: 'Torres', butterfly: 'Mariposa', diamond: 'Diamante', spiral: 'Espiral', mesa: 'Mesa enrollada', heart: 'Corazón', gravedad: 'Gravedad', scatter: 'Dispersas', nebulosa: 'Nebulosa', invPyramid: 'Pirámide invertida', hourglass: 'Reloj de arena', bitacora: 'Bitácora' };
 const PIECE_NAMES = { steps: 'escalerita', cross: 'cruz', crown: 'corona', rosette: 'roseta', sandwich: 'sándwich', tiltFan: 'abanico inclinado' };
 // Filtro de tablero, en grupos: formas, mesas especiales y piezas (cada una con el nivel donde sale primero).
 const TPL_GROUPS = [
   ['Formas', [...TEMPLATES.filter(([t]) => !SCROLL_NAMES[t]).map(([t, n]) => [t, `${TPL_NAMES[t]} · ${n}`]), ['respiros', 'Respiros · 12']]],
-  ['Mesas especiales', [...TEMPLATES.filter(([t]) => SCROLL_NAMES[t]).map(([t, n]) => [t, `${TPL_NAMES[t]} · ${n}`]), ...OVERLAY_TABLES.map(([k, name, n]) => [`ov:${k}`, `${name} · ${n}`])]],
+  ['Mesas especiales', [...TEMPLATES.filter(([t]) => SCROLL_NAMES[t]).map(([t, n]) => [t, `${TPL_NAMES[t]} · ${n}`]), ...COL_TABLES.map(([k, name, n]) => [`cv:${k}`, `${name} · ${n}`]), ...OVERLAY_TABLES.map(([k, name, n]) => [`ov:${k}`, `${name} · ${n}`])]],
   ['Piezas', PIECES.map(([k, n]) => [`pz:${k}`, `${PIECE_NAMES[k]} · ${n}`])],
 ];
 // Cartas en el orden en que salen (nivel de estreno: el primero de su mundo; cometa y turbo, el primero normal).
 const mechDebut = (m) => (EXTRA.includes(m) ? extraDebut(m) : MECH_INTRO[m] * LEVELS_PER_WORLD) + 1;
 const MECH_ORDER = MECHANICS.slice().sort((a, b) => mechDebut(a) - mechDebut(b));
-const okTpl = (L, t) => t === 'todas' || (t === 'respiros' ? !!L.respite : t.startsWith('pz:') ? !!L.pieces?.includes(t.slice(3)) : t.startsWith('ov:') ? OVERLAY_TABLES.find(([k]) => k === t.slice(3))[3](L) : L.template === t);
+const okTpl = (L, t) => t === 'todas' || (t === 'respiros' ? !!L.respite : t.startsWith('pz:') ? !!L.pieces?.includes(t.slice(3)) : t.startsWith('ov:') ? OVERLAY_TABLES.find(([k]) => k === t.slice(3))[3](L) : t.startsWith('cv:') ? (t === 'cv:bitacora' ? !!L.sheets : colKind(L) === t.slice(3)) : t === 'gravedad' ? L.template === t && !colKind(L) : L.template === t);
 const tplName = (L) => (TPL_NAMES[L.template] || L.template) + (L.pieces ? ` + ${L.pieces.map((k) => PIECE_NAMES[k] || k).join(', ')}` : '');
 // Etiqueta según el % del bot casual: fácil ≥75, medio ≥50, difícil ≥25, muy difícil ≥14, extremo ≥6 y demasiado
 // extremo (los niveles duros del camino buscan 18, 10 y 3%, ver TIERS).
@@ -314,7 +321,7 @@ export function galleryScreen({ onPlay, onPlayLevel, onBack }) {
   // Tarjeta: el tablero grande con su número y lo que lo distingue encima; abajo forma, cartas y dificultad.
   // pickI: índice en la lista del mes/día (se juega el tablero tal cual); si no, el id del nivel.
   const tile = (L, pickI) => {
-    const badges = [L.boss && `<i class="gb gb-boss">${icon('crown')}Jefe</i>`, L.tier && `<i class="gb gb-tier gb-t${L.tier}">${TIERS[L.tier].name}</i>`, L.respite && '<i class="gb gb-rest">Respiro</i>', L.scroll && `<i class="gb gb-mesa">${tableIcon(L.scroll)}${TPL_NAMES[L.scroll]}</i>`, L.tide && `<i class="gb gb-mesa">${tableIcon('marea')}Marea</i>`].filter(Boolean).join('');
+    const badges = [L.boss && `<i class="gb gb-boss">${icon('crown')}Jefe</i>`, L.tier && `<i class="gb gb-tier gb-t${L.tier}">${TIERS[L.tier].name}</i>`, L.respite && '<i class="gb gb-rest">Respiro</i>', (L.scroll || L.sheets) && `<i class="gb gb-mesa">${tableIcon(colKind(L) || (L.sheets ? 'bitacora' : L.scroll))}${{ voltea: 'Se voltea', portal: 'Grúa', hangar: 'Hangar' }[colKind(L)] || (L.sheets ? 'Bitácora' : TPL_NAMES[L.scroll])}</i>`, L.tide && `<i class="gb gb-mesa">${tableIcon('marea')}Marea</i>`].filter(Boolean).join('');
     const inSet = pickI != null;
     const uses = !inSet && L.special != null ? [...(useBy[L.special]?.values() || [])] : [];
     const num = inSet ? L.k + 1 : L.special != null ? L.special + 1 : L.g + 1;
@@ -572,6 +579,13 @@ const devDo = (fns, onRefresh) => {
   if (no.length) toast(`Aún no se abren: ${no.join(', ')}`);
   onRefresh();
 };
+// Cuántas veces llegó la nave en los últimos 7 días y si hoy ya vino.
+function rescueSub() {
+  const log = (save.rescues || (save.rescueAt ? [save.rescueAt] : [])).filter((t) => Date.now() - t < 7 * 864e5);
+  const hoy = log.some((t) => new Date(t).toDateString() === new Date().toDateString());
+  return `${log.length}/3 esta semana${hoy ? ' · hoy ya vino' : log.length >= 3 ? ' · llena' : ' · lista'}`;
+}
+
 export function openDevMenu({ onGallery, onPlanets, onFestivals, onGoLevel, onRefresh, onRescue, card }) {
   const w = Math.min(Math.floor(save.next / LEVELS_PER_WORLD), save.open);
   const r = Math.floor(w / REGION);
@@ -845,10 +859,11 @@ export function openDevMenu({ onGallery, onPlanets, onFestivals, onGoLevel, onRe
       ...BET_AT.map(([m, g], i) => ({ l: `Ir al inicio de ×${m} (nivel ${g + 1})`, title: `Deja el camino en el nivel ${g + 1} sin ganar (gana lo de antes o borra lo de después) y su ventana sale sola`, fn: () => (goToLevel(g, i ? BET_AT[i - 1][0] : 1), toast(`Siguiente: nivel ${g + 1}, apuesta hasta ×${m}`), onRefresh()) })),
     ] },
     // Nave de rescate (11 nov 2026): verla ya, o quedarse sin nada para que llegue sola al volver al mapa.
-    { t: 'Nave de rescate', sub: save.rescueAt && Date.now() - save.rescueAt < 7 * 864e5 ? `usada · vuelve en ${Math.ceil((save.rescueAt + 7 * 864e5 - Date.now()) / 864e5)} días` : 'lista', items: [
+    // 13 nov 2026: hasta 3 veces en 7 días, una al día (save.rescues).
+    { t: 'Nave de rescate', sub: rescueSub(), items: [
       { l: 'Ver la nave', cls: 'gold', title: 'Llega la nave con sus 4 cápsulas (sí te da el premio)', fn: onRescue },
-      { l: 'Quedarme sin boletos ni monedas', title: 'Boletos y monedas en 0, el regalo de boletos sin listo y la nave lista: llega sola en el mapa', fn: () => ((save.tickets = 0), (save.coins = 0), (save.ticketAt = Date.now()), (save.rescueAt = 0), (save.run = null), persist(), onRefresh()) },
-      { l: 'Lista otra vez', title: 'Que pueda volver a llegar (una vez por semana)', fn: () => ((save.rescueAt = 0), persist(), onRefresh()) },
+      { l: 'Quedarme sin boletos ni monedas', title: 'Boletos y monedas en 0, el regalo de boletos sin listo y la nave lista: llega sola en el mapa', fn: () => ((save.tickets = 0), (save.coins = 0), (save.ticketAt = Date.now()), (save.rescues = []), (save.run = null), persist(), onRefresh()) },
+      { l: 'Lista otra vez', title: 'Que pueda volver a llegar (borra las veces de esta semana)', fn: () => ((save.rescues = []), delete save.rescueAt, persist(), onRefresh()) },
     ] },
     { t: 'Globos y burbujas', sub: ['globo', 'burbuja'].map(popTxt).join(' · '), items: [
       { l: 'A 1 globo del comodín', fn: () => popNear('globo') },

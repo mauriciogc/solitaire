@@ -3294,3 +3294,118 @@ p.met-sale { display: flex; align-items: center; justify-content: center; gap: 6
 .sleep-ov b { position: absolute; left: 50%; top: -14%; translate: -50% 0; width: 46%; aspect-ratio: 1; border-radius: 50%; display: grid; place-items: center; background: #5a6fd0; border: 2px solid var(--ink); box-shadow: inset 0 -3px 0 #3d50a8; color: #fff; font: 400 calc(var(--cw) * 0.28) / 1 'Lilita One'; }
 .sleep-ov b:empty { display: none; }
 @media (prefers-reduced-motion: reduce) { .board .card.rb-can::after, .board .card.mag-aim, .mag-on, .sleep-ov .zz i { animation: none; } .sleep-ov .zz i { opacity: 1; } }
+
+/* Perfil (13 nov 2026): credencial de piloto sobre tu fondo, con tu nave 3D; datos y tu última postal. */
+.prof.prof { display: flex; flex-direction: column; align-items: stretch; gap: 12px; text-align: left; }
+.prof-card { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 6px 14px; padding: 14px 10px 14px 16px; min-height: 132px; color: #fff; }
+.prof-card .who { align-items: flex-start; }
+.prof-card.pf-hero { display: grid; padding: 14px 10px 14px 16px; }
+.prof-card.pf-hero .avatar.huge { width: 88px; height: 88px; font-size: 44px; border-width: 4px; }
+.prof-card .who small { display: flex; align-items: center; gap: 5px; color: #e6e0ff; }
+.prof-card .who small .ico { width: 16px; height: 16px; }
+.prof-card .prof-av { animation: prof-float 3.6s ease-in-out infinite; }
+.prof-shine { position: absolute; inset: 0; z-index: 0; pointer-events: none; background: linear-gradient(115deg, transparent 35%, #ffffff38 48%, #ffffff10 54%, transparent 64%); translate: -110% 0; animation: prof-shine 1.5s 0.7s ease-out forwards; }
+.prof-ship { position: relative; width: 104px; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.prof-ship canvas { width: 96px; height: 96px; animation: prof-bob 3s ease-in-out infinite; }
+.prof-ship small { max-width: 104px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; font-weight: 800; background: #0b0730aa; border: 1.5px solid #ffffff40; border-radius: 99px; padding: 1px 8px; }
+.prof-pc { display: block; width: 100%; text-align: left; border-radius: 16px; }
+.prof-lbl { display: flex; align-items: center; gap: 6px; margin: 0 0 2px 6px; font-weight: 800; font-size: 13px; color: #7a6f9d; }
+.prof-lbl .ico { width: 18px; height: 18px; }
+@keyframes prof-shine { to { translate: 110% 0; } }
+@keyframes prof-bob { 50% { translate: 0 -6px; rotate: 3deg; } }
+@keyframes prof-float { 50% { translate: 0 -3px; } }
+@media (max-width: 520px) {
+  .prof-card.pf-hero { grid-template-columns: auto 1fr; padding: 12px 92px 12px 12px; }
+  .prof-card.pf-hero .avatar.huge { width: 72px; height: 72px; font-size: 36px; }
+  .prof-card .name b { font-size: 24px; }
+  .prof-card .who { align-items: flex-start; text-align: left; }
+  .prof-ship { position: absolute; right: 4px; top: 8px; width: 86px; }
+  .prof-ship canvas { width: 78px; height: 78px; }
+  .prof-ship small { max-width: 84px; font-size: 10px; }
+}
+@media (prefers-reduced-motion: reduce) { .prof-card .prof-av, .prof-ship canvas { animation: none; } .prof-shine { display: none; } }
+
+/* Dominó (13 nov 2026): dos números, uno arriba y otro abajo, con la rayita y el clavito dorado del dominó. */
+.front.domino { background: #fffaf0; box-shadow: inset 0 0 0 2px var(--ink), inset 0 calc(var(--cw) * -0.08) 0 #efe2c4, 2px 4px 0 #0b062a33, 4px 9px 12px #0b062a40; }
+.front .dm { position: absolute; left: 0; right: 0; height: 50%; display: flex; align-items: center; justify-content: center; gap: 4%; }
+.front .dm.a { top: 0; }
+.front .dm.b { bottom: 0; translate: 0 -3%; }
+.front .dm b { font: 400 calc(var(--cw) * 0.44) / 1 'Lilita One'; letter-spacing: -0.03em; }
+.front .dm .cs { position: static; width: calc(var(--cw) * 0.19); height: calc(var(--cw) * 0.19); flex: none; }
+.front .dm-line { position: absolute; left: 12%; right: 12%; top: 50%; height: calc(var(--cw) * 0.05); translate: 0 -50%; background: var(--ink); border-radius: 9px; pointer-events: none; }
+.front .dm-line::after { content: ''; position: absolute; left: 50%; top: 50%; width: calc(var(--cw) * 0.16); aspect-ratio: 1; translate: -50% -50%; border-radius: 50%; background: #ffc83d; border: 2px solid var(--ink); }
+/* Boleto triple: tres talones amarillos, del más clarito al más fuerte, con dos líneas picadas. */
+.front.triple { background: linear-gradient(#fff4c9 33.3%, #ffe9a6 33.3% 66.6%, #ffdc80 66.6%); box-shadow: inset 0 0 0 2px var(--ink), 2px 4px 0 #0b062a33, 4px 9px 12px #0b062a40; }
+.front .ts { position: absolute; left: 0; right: 0; height: 33.4%; display: flex; align-items: center; justify-content: center; gap: 5%; }
+.front .ts.t0 { top: 0; }
+.front .ts.t1 { top: 33.3%; }
+.front .ts.t2 { top: 66.6%; }
+.front .ts b { font: 400 calc(var(--cw) * 0.34) / 1 'Lilita One'; letter-spacing: -0.03em; }
+.front .ts .cs { position: static; width: calc(var(--cw) * 0.16); height: calc(var(--cw) * 0.16); flex: none; }
+.front.triple .perf.p1 { background-position: 50% 33.3%; }
+.front.triple .perf.p2 { background-position: 50% 66.6%; }
+.front.triple .perf.p1::before, .front.triple .perf.p1::after { top: 33.3%; }
+.front.triple .perf.p2::before, .front.triple .perf.p2::after { top: 66.6%; }
+/* Mesa que se voltea: las columnas dentro de una cápsula con orilla de metal; a 1 jugada o robo de la vuelta, tiembla. */
+.flip-pod .board { border-radius: calc(var(--cw) * 0.3); background: radial-gradient(circle at 26% 12%, #ffffff1f, transparent 38%), #2d247099; box-shadow: 0 0 0 calc(var(--cw) * 0.07) #9aa3c7, 0 0 0 calc(var(--cw) * 0.11) var(--ink), inset 0 0 0 2px #ffffff26; }
+.flip-pod .board.flip-warn { animation: flip-warn .45s ease-in-out infinite; }
+@keyframes flip-warn { 25% { translate: -2px 1px; } 50% { translate: 2px -1px; } 75% { translate: -1px 1px; } }
+@media (prefers-reduced-motion: reduce) { .flip-pod .board.flip-warn { animation: none; } }
+
+/* Perfil (13 nov 2026, el usuario: no cabía en vertical, sobre todo con los marcos de colección): las fichas se
+   acomodan solas en las columnas que quepan y su texto nunca empuja la ventana. */
+.prof .stats { grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); gap: 8px; }
+.prof .stat { min-width: 0; padding: 7px 9px; gap: 7px; }
+.prof .stat > div { min-width: 0; }
+.prof .stat .ico { width: 28px; height: 28px; flex: none; }
+.prof .stat b { font-size: 19px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.prof .stat span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 520px) { .prof .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } .prof .stat .ico { width: 24px; height: 24px; } .prof .stat b { font-size: 17px; } }
+
+/* Raspadita (13 nov 2026): plata encima de la cara con ventanitas que se abren; boca abajo no se ve. */
+.scr-ov { position: absolute; inset: 0; z-index: 3; pointer-events: none; border-radius: inherit; overflow: hidden; transition: opacity .45s, transform .45s; }
+.scr-ov svg { width: 100%; height: 100%; display: block; }
+.card:not(.up) .scr-ov { display: none; }
+.scr-ov.done { opacity: 0; transform: scale(1.25) rotate(8deg); }
+/* Bitácora (13 nov 2026): hojas azul de noche con cuadrícula; la de encima con escotillas de orilla metálica. Sencillas
+   a propósito (el usuario: que acostado se vea bien). */
+.bita-page { position: absolute; pointer-events: none; }
+.bita-page.last { z-index: 0; border-radius: calc(var(--cw) * 0.24); background: repeating-linear-gradient(90deg, #ffffff10 0 1px, transparent 1px calc(var(--cw) * 0.5)), repeating-linear-gradient(0deg, #ffffff10 0 1px, transparent 1px calc(var(--cw) * 0.5)), #22326e; border: 2.5px solid var(--ink); }
+.bita-page.top { z-index: 4000; transition: transform .8s cubic-bezier(.5,0,.6,1), opacity .8s; transform-origin: 0 0; }
+.bita-page.top svg { display: block; overflow: visible; filter: drop-shadow(0 4px 0 #0b062a55); }
+.bita-page .bp { stroke: var(--ink); stroke-width: 2.5; }
+.bita-page .bh { fill: none; stroke: #9aa3c7; stroke-width: calc(var(--cw) * 0.07); }
+.bita-page.top.gone { transform: translate(18%, -70%) rotate(16deg); opacity: 0; }
+.bita-hdr { position: absolute; left: calc(var(--cw) * 0.24); top: calc(var(--cw) * 0.04); font: 400 calc(var(--cw) * 0.15) / 1 'Lilita One'; letter-spacing: .06em; color: #9ff3ff; opacity: .75; white-space: nowrap; }
+.bita-page.last .bita-hdr { color: #ffd54a; }
+/* Hangar: compuerta de metal con franjas y una luz; se abre un momento cuando sale otra columna. */
+.hangar { position: absolute; z-index: 950; pointer-events: none; border-radius: calc(var(--cw) * 0.18) 0 0 calc(var(--cw) * 0.18); border: 2.5px solid var(--ink); overflow: hidden; background: linear-gradient(90deg, #6c7393, #9aa3c7 45%, #5d6484); }
+.hangar::before, .hangar::after { content: ''; position: absolute; left: 0; right: 0; height: calc(var(--cw) * 0.38); background: repeating-linear-gradient(135deg, #ffd54a 0 calc(var(--cw) * 0.12), var(--ink) calc(var(--cw) * 0.12) calc(var(--cw) * 0.24)); }
+.hangar::before { top: 0; border-bottom: 2.5px solid var(--ink); }
+.hangar::after { bottom: 0; border-top: 2.5px solid var(--ink); }
+.hangar .hg-door { position: absolute; left: 12%; right: 12%; top: calc(var(--cw) * 0.62); bottom: calc(var(--cw) * 0.62); border: 2px solid var(--ink); border-radius: 5px; background: repeating-linear-gradient(0deg, #4b5170 0 calc(var(--cw) * 0.16), #3c4160 calc(var(--cw) * 0.16) calc(var(--cw) * 0.2)); transition: transform .4s cubic-bezier(.5,0,.4,1); }
+.hangar.open .hg-door { transform: translateY(-104%); }
+.hangar .hg-lamp { position: absolute; left: 50%; top: calc(var(--cw) * 0.44); width: calc(var(--cw) * 0.14); aspect-ratio: 1; translate: -50% 0; border-radius: 50%; background: #ff5f7e; border: 1.5px solid var(--ink); z-index: 1; }
+.hangar.open .hg-lamp { background: #5fd47a; box-shadow: 0 0 8px #5fd47a; }
+.hangar.empty { filter: saturate(.4) brightness(.8); }
+.hangar.empty .hg-lamp { background: #6c7393; }
+/* Grúa de feria (13 nov 2026; antes portales): cada riel con su garra arriba que agarra la carta que se juega; al
+   jugarla, la garra baja, cierra las pinzas y sube la columna. Se mece poquito. */
+.portal-mesa .g-rail::after { bottom: auto; top: 6px; opacity: 0; }
+.portal-mesa .g-rail { overflow: visible; z-index: auto; } /* así la garra queda encima de la carta que agarra */
+.g-claw { position: absolute; left: 50%; top: calc(var(--cw) * -0.02); width: calc(var(--cw) * 0.95); translate: -50% 0; z-index: 950; transform-origin: 50% 0; animation: g-claw-sway 3.2s ease-in-out infinite; }
+.g-claw svg { display: block; width: 100%; overflow: visible; }
+.g-claw .cl-l, .g-claw .cl-r { transform-box: fill-box; transition: rotate .2s; }
+.g-claw .cl-l { transform-origin: 100% 0; }
+.g-claw .cl-r { transform-origin: 0 0; }
+.g-claw.grab { animation: g-claw-grab .7s cubic-bezier(.4,0,.3,1); }
+.g-claw.grab .cl-l { animation: g-claw-pinch-l .7s ease-in-out; }
+.g-claw.grab .cl-r { animation: g-claw-pinch-r .7s ease-in-out; }
+@keyframes g-claw-sway { 50% { rotate: 2.5deg; } }
+@keyframes g-claw-grab { 0% { translate: -50% 0; } 40% { translate: -50% calc(var(--cw) * 0.45); } 100% { translate: -50% 0; } }
+@keyframes g-claw-pinch-l { 0%, 25% { rotate: 22deg; } 45%, 100% { rotate: 0deg; } }
+@keyframes g-claw-pinch-r { 0%, 25% { rotate: -22deg; } 45%, 100% { rotate: 0deg; } }
+@media (prefers-reduced-motion: reduce) { .g-claw, .g-claw.grab, .g-claw.grab :is(.cl-l, .cl-r) { animation: none; } }
+/* Cómo jugar: el dibujo de las mesas que no tienen ilustración propia. */
+.step .tbl-ill { display: grid; place-items: center; }
+.step .tbl-ill .ico { width: 64px; height: 64px; }

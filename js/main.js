@@ -1,7 +1,7 @@
 import { save, prefs, persist, resetProfile, deleteProfile, renameProfile, exportCode, readCode, loadProfile, setDev } from './storage.js';
 import { UNLOCK, EVENTS, FESTIVALS, COLLECTIONS, evSoon, isOn, nextEvent, daysToNextCol, plusCols, STREAK_GOALS, STREAK_STEP, streakGoal, nextIndex, dailyStreak, streakTheme, streakReady, streakHot, streakWin, streakLose, streakPendToFeats, msToMidnight, col, colLeft, colWin, colOffers, colBuy, ev, evLeft, evTicketLeft, evTicketPrice, evBuyTicket, evPrize, evEnter, evWin, evLose, evAlbum, festAlbum, EVENT_PLANETS, EVENT_PER_PLANET, EVENT_LEVELS, festival, festivalLeft, festivalSoon, soonLeft, evPrePrice, evPreOwned, evPreBuy, nextFestival, festEnter, festWin, festLose, festShape, festPrice, festPaid, festBuy, festPre, FEST_PRE, FEST_ENTRY, EV_FIRST } from './events.js';
 import { WORLD_COUNT, LEVELS_PER_WORLD, TOTAL_LEVELS, worldInfo, generateLevel, variantLevel, MECH_INTRO, MECH_NAMES, MECHANICS, EXTRA, extraDebut, SCROLL_FROM, tideFirst, holeFirst, doorsFirst, bandaFirst, rocksFirst, secretId, isSecret, eventLevel, festivalLevel } from './levels.js';
-import { Game, faceHTML, backHTML, TIPS, TABLE_TEXT, MECH_KINDS, ART } from './game.js';
+import { Game, faceHTML, backHTML, TIPS, TABLE_TEXT, MECH_KINDS, ART, scrSVG } from './game.js';
 import { maxBet, betFee, betSteps, BET_STEPS, HELPS, DAILY_PATH, dailyState, dailyPieces, DAILY_SHIELD_MAX, starsNeeded, TICKET_PRICE, ticketCost, ticketRefund, coinsFor, bossChest, rollChest, CONST_PRIZE, openCost, boosted, secretCoins, rollSecret, openSurprise, MET_OFF, metShopPrice } from './economy.js';
 import { track, missions, missionDef, missionDone, missionsAllDone, autoClaim, ACHIEVEMENTS, ACHIEVEMENT_PRIZES, ACHIEVEMENT_MEDAL, ACHIEVEMENT_TOP, achievementGot, achievementProgress, achievementsVisible } from './missions.js';
 import { pauseOffscreen, openModal, toast, updateCoins, money, esc, reduced, wait, flyToWallet, spendFromWallet, sparkle, confetti, starsHTML, warp, buzz, balloons, lootBubbles, floatBubbles, streakWarnHTML, popPrize, popBalloon, countPop, HEADS, betLoseHTML, shownCoins } from './ui.js';
@@ -1036,6 +1036,9 @@ function mechCard(m, x = 0) {
   if (m === 'bomb') return `<div class="card bomb-card up" style="left:${x}px"><div class="inner"><div class="face front"></div></div><span class="bomb-face">${icon('bomb')}<b>3</b></span></div>`;
   if (m === 'live') return mini(x, 'K', 's', { live: 1 });
   if (m === 'ticket') return `<div class="card up" style="left:${x}px">${faceHTML({ rank: 4, half: 9, suit: 1 })}</div>`;
+  if (m === 'scratch') return mini(x, '8', 'c', { marks: `<span class="scr-ov">${scrSVG(`demo${x}`, 2)}</span>` });
+  if (m === 'domino') return `<div class="card up" style="left:${x}px">${faceHTML({ rank: 4, dom: 9, suit: 0 })}</div>`;
+  if (m === 'triple') return `<div class="card up" style="left:${x}px">${faceHTML({ rank: 6, tri: [11, 2], suit: 2 })}</div>`;
   if (m === 'turbo') return mini(x, '7', 'h', { turbo: true });
   if (m === 'coin') return mini(x, '5', 'd', { coin: 20 });
   if (m === 'ship') return `<div class="card up ship-demo" style="left:${x}px">${faceHTML({ rank: 6, suit: 2 })}<span class="ship-mark">${icon('nave')}</span></div>`;
@@ -1066,6 +1069,10 @@ const ROAD_TABLES = [
   ['mesa', 'Mesa enrollada', 'Limpia las cartas del principio y la mesa avanza: salen más cartas del rollo.'],
   ['gravedad', 'Gravedad', 'Solo juegas la carta de abajo de cada columna. Al quitarla, la columna cae.'],
   ['nebulosa', 'Nebulosa', 'Solo ves 3 grupos. Vacía cualquiera y de la nebulosa sale otro.'],
+  ['hangar', 'Hangar', ''],
+  ['bitacora', 'Bitácora', ''],
+  ['portal', 'Grúa de feria', ''],
+  ['voltea', 'Mesa que se voltea', 'Columnas dentro de una cápsula: solo juegas la de abajo. Cada 5 jugadas o robos da media vuelta.'],
 ];
 function roadItems() {
   const t = streakTheme();
@@ -1417,8 +1424,10 @@ function openShort(g, bet, cost, fee, base) {
 // Si en la galaxia o el planeta ya no te alcanza para el siguiente nivel (sin boletos, sin monedas para comprarlos y
 // sin el regalo de boletos listo) y no hay partida a medias, llega una nave y suelta 4 cápsulas: escoges una. Todas
 // traen 1 comodín, 3 deshacer y 1 ver cartas 3 s; lo que cambia son los boletos: de los que pide el nivel a 50% más.
-// Al abrir la tuya se abren las otras (en gris) para que veas qué había. Una vez cada RESCUE_EVERY.
-const RESCUE_EVERY = 7 * 864e5;
+// 13 nov 2026 (el usuario): hasta RESCUE_WEEK veces en 7 días y nunca dos el mismo día; cada cápsula trae además
+// monedas (RESCUE_COINS, hasta 500), más en la que trae más boletos.
+const RESCUE_WEEK = 3;
+const RESCUE_COINS = [200, 300, 400, 500];
 const RESCUE_ITEMS = { wild: 1, undo: 3, helps: { ver3: 1 } };
 const RESCUE_HUES = [['#ff9c5b', '#e2753a'], ['#5fd4c4', '#2fa79a'], ['#ff6f8e', '#e0496b'], ['#a785ff', '#8a5cf0']];
 const rescueNeed = () => {
@@ -1427,11 +1436,17 @@ const rescueNeed = () => {
   const need = ticketCost(g);
   return save.tickets < need && save.coins < (need - save.tickets) * TICKET_PRICE ? need : 0;
 };
-const rescueDue = () => !!rescueNeed() && Date.now() - (save.rescueAt || 0) >= RESCUE_EVERY;
-// Boletos de cada cápsula: de need a need × 1.5 (redondeado arriba), revueltos.
+// Las veces que llegó en los últimos 7 días (antes se guardaba solo la última, save.rescueAt).
+const rescueLog = () => (save.rescues ||= save.rescueAt ? [save.rescueAt] : []).filter((t) => Date.now() - t < 7 * 864e5);
+const rescueReady = () => {
+  const log = rescueLog();
+  return log.length < RESCUE_WEEK && !log.some((t) => new Date(t).toDateString() === new Date().toDateString());
+};
+const rescueDue = () => !!rescueNeed() && rescueReady();
+// Cada cápsula: boletos de need a need × 1.5 (redondeado arriba) y sus monedas; revueltas.
 const rescueBoxes = (need) => {
   const top = Math.ceil(need * 1.5);
-  return [0, 1, 2, 3].map((k) => need + Math.round((k * (top - need)) / 3)).sort(() => Math.random() - 0.5);
+  return [0, 1, 2, 3].map((k) => ({ tickets: need + Math.round((k * (top - need)) / 3), coins: RESCUE_COINS[k] })).sort(() => Math.random() - 0.5);
 };
 // 12 nov 2026 (el usuario: sin ventana y con más producción): se oscurece la pantalla y la nave cruza despacio echando
 // humo; al pasar suelta las cápsulas, que bajan con paracaídas a su lugar (2×2 parado, en fila acostado). Al tocar una:
@@ -1527,14 +1542,16 @@ async function playRescue(need = rescueNeed() || ticketCost(Math.min(save.next |
       const c = e.target.closest('.rs-cap');
       if (!c || picked || c.disabled) return;
       picked = true;
-      const i = caps.indexOf(c), p = { tickets: boxes[i], ...RESCUE_ITEMS };
+      const i = caps.indexOf(c), p = { ...boxes[i], ...RESCUE_ITEMS };
       caps.forEach((x) => ((x.disabled = true), x.classList.remove('sway')));
       // Ya es tuyo (si cierras la app a la mitad, no se pierde).
       save.tickets += p.tickets;
+      save.coins += p.coins;
       save.wild += p.wild;
       save.undo += p.undo;
       for (const [k, n] of Object.entries(p.helps)) save.helps[k] = (save.helps[k] || 0) + n;
-      save.rescueAt = Date.now();
+      save.rescues = [...rescueLog(), Date.now()];
+      delete save.rescueAt;
       persist();
       buzz(15);
       anim(title, [{ opacity: 1 }, { opacity: 0, translate: '0 -30px' }], { duration: 300 });
@@ -1546,9 +1563,10 @@ async function playRescue(need = rescueNeed() || ticketCost(Math.min(save.next |
       const r = c.querySelector('.rs-pod').getBoundingClientRect(), at = { x: r.left + r.width / 2, y: r.top + r.height / 3 };
       sparkle(at, 30);
       if (!fast) confetti(60);
-      // Todos sus premios salen en burbujas para tronarlas; los boletos además vuelan al monedero.
+      // Todos sus premios salen en burbujas para tronarlas; los boletos y las monedas además vuelan al monedero.
       floatBubbles(prizeIcons(p), at);
       wait(fast ? 0 : 500).then(() => flyToWallet('tickets', at, p.tickets));
+      wait(fast ? 0 : 750).then(() => flyToWallet('coins', at, p.coins));
       // Las demás pierden el paracaídas y se caen dando vueltas.
       caps.filter((x) => x !== c).forEach((x, k) => {
         anim(x.querySelector('.rs-chute'), [{ translate: '0 0', opacity: 1 }, { translate: '0 -90px', opacity: 0 }], { duration: 500, delay: 250 + k * 120 });
@@ -4488,34 +4506,40 @@ function openWorldGate(w, onCancel, prior = null) {
 
 // ---------- Perfil ----------
 // Se abre tocando tu avatar (arriba a la derecha) o desde Ajustes. Dentro del tablero el avatar solo se ve.
+// Perfil (13 nov 2026, el usuario: más dinámico y con temática): arriba tu credencial de piloto sobre tu fondo del
+// universo, con tu avatar, nombre, título y tu nave 3D volando a un lado; luego tus datos (los números suben al
+// abrir) y tu última postal con tu marco (al tocarla, el álbum).
+// Escondido, para probar en el iPhone: 8 toques seguidos al título («Perfil») muestran los botones de pruebas
+// (vista de dificultad y modo dev). Otros 8 los esconden y apagan los dos. Antes estaban en Ajustes.
 function openProfile() {
   const worlds = Math.min(currentWorld(), worldOf(save.next));
   // Postales = jefes vencidos; secretos = niveles secretos ganados; tesoros = todo lo demás que tienes de la tienda y la colección.
-  let cards = 0;
-  for (let w = 0; w < WORLD_COUNT; w++) cards += hasCard(w) ? 1 : 0;
+  let cards = 0, lastW = -1;
+  for (let w = 0; w < WORLD_COUNT; w++) if (hasCard(w)) (cards++, (lastW = w));
   const secrets = Object.values(save.secret).filter(Boolean).length;
   const mine = (sec) => ITEMS[sec].filter((it) => owns(sec, it.k)).length;
   const things = SECTIONS.reduce((a, s) => a + (s.k === 'avatar' ? 0 : mine(s.k)), 0);
+  const trav = equipped('traveler'), travName = item('traveler', trav)?.name || '';
+  const stat = (ico, n, name) => `<div class="stat">${ico}<div><b data-n="${n}">${fmt(n)}</b><span>${name}</span></div></div>`;
   const pm = openModal({
     title: 'Perfil',
     color: 'blue',
     wide: true,
     cls: `mr-${equipped('ring')}`,
     body: `<div class="prof">
-      <button class="prof-av press" data-a="edit" aria-label="Editar tu jugador" title="Editar tu jugador">${avatarHTML(save, 'huge')}<span class="pen">${icon('pencil')}</span></button>
-      <div class="who"><div class="name"><b>${esc(save.name)}</b></div>
-        ${titleHTML()}
-        <small>Vas en ${levelName(Math.min(save.next, TOTAL_LEVELS - 1))}</small></div>
+      <div class="pf-hero prof-card space-${equipped('space')}"><div class="space"></div><i class="prof-shine"></i>
+        <button class="prof-av press" data-a="edit" aria-label="Editar tu jugador" title="Editar tu jugador">${avatarHTML(save, 'huge')}<span class="pen">${icon('pencil')}</span></button>
+        <div class="who"><div class="name"><b class="outl">${esc(save.name)}</b></div>
+          ${titleHTML()}
+          <small>${icon('flag')}Vas en ${levelName(Math.min(save.next, TOTAL_LEVELS - 1))}</small></div>
+        <div class="prof-ship" title="Tu nave: ${esc(travName)}"><canvas data-kind="${trav}"></canvas><small>${esc(travName)}</small></div>
+      </div>
       <div class="stats">
-        <div class="stat">${star(true)}<div><b>${fmt(totalStars())}</b><span>estrellas</span></div></div>
-        <div class="stat">${icon('planet')}<div><b>${worlds}</b><span>mundos</span></div></div>
-        <div class="stat">${icon('flag')}<div><b>${Math.min(save.next, TOTAL_LEVELS)}</b><span>niveles</span></div></div>
-        <div class="stat">${coin()}<div><b>${fmt(save.coins)}</b><span>monedas</span></div></div>
-        <div class="stat">${icon('album')}<div><b>${cards}</b><span>postales</span></div></div>
-        <div class="stat">${icon('starSecret')}<div><b>${secrets}</b><span>secretos</span></div></div>
-        <div class="stat">${icon('user')}<div><b>${mine('avatar')}</b><span>disfraces</span></div></div>
-        <div class="stat">${icon('bag')}<div><b>${things}</b><span>tesoros</span></div></div>
-      </div></div>${prefs.tools ? `<div class="rows tools prof-tools">${toolRows()}</div>` : ''}`,
+        ${stat(star(true), totalStars(), 'estrellas')}${stat(icon('planet'), worlds, 'mundos')}${stat(icon('flag'), Math.min(save.next, TOTAL_LEVELS), 'niveles')}${stat(coin(), save.coins, 'monedas')}
+        ${stat(icon('album'), cards, 'postales')}${stat(icon('starSecret'), secrets, 'secretos')}${stat(icon('disfraz'), mine('avatar'), 'disfraces')}${stat(icon('cofre'), things, 'tesoros')}
+      </div>
+      ${lastW >= 0 ? `<button class="prof-pc press" data-a="album"><span class="prof-lbl">${icon('album')}Tu última postal</span>${postcardHTML(lastW, worldStars(lastW), 'mini')}</button>` : ''}
+    </div><div class="rows tools prof-tools"${prefs.tools ? '' : ' hidden'}>${toolRows()}</div>`,
     buttons: [
       {
         label: 'Reiniciar perfil',
@@ -4538,11 +4562,46 @@ function openProfile() {
     document.getElementById('modal-root').replaceChildren();
     editProfile();
   }));
-  // Botones de pruebas (11 nov 2026, pedido del usuario): si ya están a la vista en Ajustes, también aquí.
+  pm.el.querySelector('[data-a="album"]')?.addEventListener('click', () => (document.getElementById('modal-root').replaceChildren(), openAlbum()));
+  // Tu nave en 3D, dando vueltas junto a tu credencial.
+  travShelf(pm.el.querySelector('.prof-ship'));
+  // Botones de pruebas: 8 toques seguidos al título.
   const pt = pm.el.querySelector('.prof-tools');
-  pt?.addEventListener('click', (e) => toolClick(e, pt));
-  // Las fichas de datos entran en cascada.
-  if (!reduced()) pm.el.querySelectorAll('.stat').forEach((el, i) => el.animate([{ opacity: 0, translate: '0 12px', scale: 0.9 }, { opacity: 1, translate: '0 0', scale: 1 }], { duration: 360, delay: 260 + i * 50, easing: 'cubic-bezier(0.34, 1.45, 0.64, 1)', fill: 'backwards' }));
+  pt.addEventListener('click', (e) => toolClick(e, pt));
+  let taps = 0, last = 0;
+  pm.el.querySelector('.mhead h2')?.addEventListener('click', (e) => {
+    taps = e.timeStamp - last < 1500 ? taps + 1 : 1;
+    last = e.timeStamp;
+    if (taps < 8) return;
+    taps = 0;
+    prefs.tools = !prefs.tools;
+    if (!prefs.tools) {
+      prefs.diffInfo = false;
+      if (prefs.dev) toggleDev();
+    }
+    persist();
+    pt.innerHTML = toolRows();
+    pt.hidden = !prefs.tools;
+    toast(prefs.tools ? 'Pruebas: a la vista' : 'Pruebas: escondidas y apagadas');
+  });
+  if (reduced()) return;
+  // La credencial entra girando un poco; las fichas de datos en cascada y sus números suben desde 0.
+  pm.el.querySelector('.prof-card').animate([{ opacity: 0, transform: 'perspective(600px) rotateX(18deg) translateY(16px) scale(0.94)' }, { opacity: 1, transform: 'perspective(600px) rotateX(-3deg) translateY(-2px) scale(1.01)', offset: 0.7 }, { opacity: 1, transform: 'none' }], { duration: 560, delay: 120, easing: 'ease-out', fill: 'backwards' });
+  pm.el.querySelector('.prof-ship').animate([{ opacity: 0, translate: '60px -30px', rotate: '20deg' }, { opacity: 1, translate: '0 0', rotate: '0deg' }], { duration: 700, delay: 420, easing: 'cubic-bezier(0.34, 1.3, 0.64, 1)', fill: 'backwards' });
+  pm.el.querySelectorAll('.stat').forEach((el, i) => el.animate([{ opacity: 0, translate: '0 12px', scale: 0.9 }, { opacity: 1, translate: '0 0', scale: 1 }], { duration: 360, delay: 360 + i * 50, easing: 'cubic-bezier(0.34, 1.45, 0.64, 1)', fill: 'backwards' }));
+  pm.el.querySelectorAll('.stat b[data-n]').forEach((b, i) => {
+    const n = +b.dataset.n, t0 = performance.now() + 380 + i * 50;
+    if (!n) return;
+    b.textContent = '0';
+    const step = (now) => {
+      if (!b.isConnected) return;
+      const k = Math.min(1, Math.max(0, (now - t0) / 800));
+      b.textContent = fmt(Math.round(n * (1 - (1 - k) ** 3)));
+      if (k < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  });
+  pm.el.querySelector('.prof-pc')?.animate([{ opacity: 0, translate: '0 20px', rotate: '-3deg' }, { opacity: 1, translate: '0 0', rotate: '0deg' }], { duration: 480, delay: 780, easing: 'cubic-bezier(0.34, 1.45, 0.64, 1)', fill: 'backwards' });
 }
 
 // Formulario de jugador (crear o editar): nombre, avatar (inicial o personaje), color, marco, título, viajero,
@@ -4878,7 +4937,6 @@ function openSettings(then) {
       ${game ? '' : `<button class="row" data-a="gift">${icon('gift')}<b>Códigos<span>Canjea un código de regalo</span></b>${icon('chev')}</button>`}
       ${game ? '' : `<button class="row" data-a="backup">${icon('backup')}<b>Respaldo<span>Guarda tu avance con un código</span></b>${icon('chev')}</button>`}
       ${installPrompt ? `<button class="row" data-a="install"><img class="ico app-ico" src="icon.svg" alt=""><b>Instalar app<span>Pantalla completa y sin conexión</span></b>${icon('chev')}</button>` : ''}
-      <div class="rows tools"${prefs.tools ? '' : ' hidden'}>${toolRows()}</div>
     </div>`,
   });
   m.el.addEventListener('click', (e) => {
@@ -4889,28 +4947,8 @@ function openSettings(then) {
     if (a === 'gift') { m.el.remove(); openGiftCode(() => openSettings(then)); }
     if (a === 'install') installApp().then((ok) => ok && m.el.remove());
   });
-  // Escondido, para probar en el iPhone: 8 toques seguidos al título muestran los botones de pruebas (dificultad
-  // y modo dev). Otros 8 los esconden y apagan los dos.
-  const tools = m.el.querySelector('.tools'), paintTools = () => (tools.innerHTML = toolRows());
-  let taps = 0, last = 0;
-  m.el.querySelector('.mhead h2').addEventListener('click', (e) => {
-    taps = e.timeStamp - last < 1500 ? taps + 1 : 1;
-    last = e.timeStamp;
-    if (taps < 8) return;
-    taps = 0;
-    prefs.tools = !prefs.tools;
-    if (!prefs.tools) {
-      prefs.diffInfo = false;
-      if (prefs.dev) toggleDev();
-    }
-    persist();
-    paintTools();
-    tools.hidden = !prefs.tools;
-    toast(prefs.tools ? 'Pruebas: a la vista' : 'Pruebas: escondidas y apagadas');
-  });
-  tools.addEventListener('click', (e) => toolClick(e, tools));
 }
-// Tocar un botón de pruebas (en Ajustes o en el perfil): lo prende o apaga y repinta los botones.
+// Tocar un botón de pruebas (en el perfil): lo prende o apaga y repinta los botones.
 function toolClick(e, box) {
   const a = e.target.closest('[data-a]')?.dataset.a;
   if (a === 't-diff') {
@@ -4921,12 +4959,12 @@ function toolClick(e, box) {
   if (a === 't-dev') toggleDev();
   if (box.isConnected) box.innerHTML = toolRows();
 }
-// Botones de pruebas en Ajustes (8 toques al título): cada uno dice si está prendido.
+// Botones de pruebas en el perfil (8 toques al título): cada uno dice si está prendido.
 const toolRows = () => [['t-diff', 'flame', 'Vista de dificultad', 'El tablero dice qué tan difícil es el nivel', prefs.diffInfo], ['t-dev', 'gear', 'Modo dev', 'Botones de pruebas en el mapa y el tablero', prefs.dev]]
   .map(([a, ico, name, sub, on]) => `<button class="row${on ? ' ok' : ''}" data-a="${a}">${icon(ico)}<b>${name}<span>${sub}</span></b><em>${on ? 'Desactivar' : 'Activar'}</em></button>`).join('');
 
 // ---------- Dificultad escondida ----------
-// Con la vista de dificultad prendida (botones de pruebas en Ajustes: 8 toques al título), el tablero dice en una esquina qué tan
+// Con la vista de dificultad prendida (botones de pruebas del perfil: 8 toques al título), el tablero dice en una esquina qué tan
 // difícil es el nivel, como en el modo dev: % que gana el bot casual y su etiqueta. Para probar en el iPhone sin dev.
 function diffTag(g, level) {
   if (!prefs.diffInfo || !g?.el) return;
@@ -5186,6 +5224,10 @@ function openHelp(tab = 'basico', then) {
         <div class="step" data-u="mesa"><div class="ill"><span class="h-rug"></span>${mini(2, '4', 'c')}${mini(40, '5', 'h')}<span class="h-roll"></span></div><p><b>Mesa enrollada:</b> ${TABLE_TEXT.mesa.join(' ')}</p></div>
         <div class="step" data-u="nebulosa"><div class="ill">${mini(0, '9', 's')}${mini(34, '10', 'd')}<span class="h-neb"></span></div><p><b>Nebulosa:</b> ${TABLE_TEXT.nebulosa.join(' ')}</p></div>
         <div class="step" data-u="gravedad"><div class="ill"><span class="h-rail" style="left:10px"></span><span class="h-rail" style="left:58px"></span>${helpBack(14, 'top:0px')}${mini(14, '8', 'c', {}, 'h-low')}${helpBack(62, 'top:0px')}${mini(62, 'J', 'h', {}, 'h-low')}</div><p><b>Gravedad:</b> ${TABLE_TEXT.gravedad.join(' ')}</p></div>
+        <div class="step" data-u="hangar"><div class="ill tbl-ill">${tableIcon('hangar')}</div><p><b>Hangar:</b> ${TABLE_TEXT.hangar.join(' ')}</p></div>
+        <div class="step" data-u="bitacora"><div class="ill tbl-ill">${tableIcon('bitacora')}</div><p><b>Bitácora:</b> ${TABLE_TEXT.bitacora.join(' ')}</p></div>
+        <div class="step" data-u="portal"><div class="ill tbl-ill">${tableIcon('portal')}</div><p><b>Grúa de feria:</b> ${TABLE_TEXT.portal.join(' ')}</p></div>
+        <div class="step" data-u="voltea"><div class="ill tbl-ill">${tableIcon('voltea')}</div><p><b>Mesa que se voltea:</b> ${TABLE_TEXT.voltea.join(' ')}</p></div>
         <div class="step" data-u="marea"><div class="ill">${mini(10, '7', 's')}${mini(48, '8', 'h')}<span class="h-tide"></span></div><p><b>Marea:</b> ${TABLE_TEXT.marea.join(' ')}</p></div>
         <div class="step" data-u="hoyo"><div class="ill">${mini(6, '4', 'd')}${mini(44, '9', 's')}<span class="h-hole"></span></div><p><b>Agujero negro:</b> ${TABLE_TEXT.hoyo.join(' ')}</p></div>
         <div class="step" data-u="rocas"><div class="ill">${mini(10, '7', 's')}${mini(48, '8', 'h', { marks: `<span class="rock-ov">${icon('asteroide')}<b class="outl">3</b></span>` })}</div><p><b>Asteroides:</b> ${TABLE_TEXT.rocas.join(' ')}</p></div>
@@ -5327,7 +5369,7 @@ function boot() {
   setTimeout(() => (window.requestIdleCallback ? requestIdleCallback(loadAvatars, { timeout: 1200 }) : loadAvatars()), 700);
 })();
 
-// Modo dev: botones de pruebas en Ajustes, 8 toques seguidos al título (ver openSettings).
+// Modo dev: botones de pruebas en el perfil, 8 toques seguidos al título (ver openProfile).
 function toggleDev() {
   setDev(!prefs.dev);
   toast(prefs.dev ? 'Modo dev: lo que hagas es de prueba' : 'Modo dev apagado: tu partida volvió');
