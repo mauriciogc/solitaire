@@ -55,6 +55,18 @@ export const flake = (x, y, r, c = '#bfe8ff', w = 2.2) => {
   const arms = [0, 60, 120, 180, 240, 300].map((a) => `<g transform="rotate(${a} ${x} ${y})"><path d="M${x} ${y}v${-r}M${x} ${y - r * 0.62}l${-r * 0.28} ${-r * 0.24}M${x} ${y - r * 0.62}l${r * 0.28} ${-r * 0.24}M${x} ${y - r * 0.3}l${-r * 0.2} ${-r * 0.18}M${x} ${y - r * 0.3}l${r * 0.2} ${-r * 0.18}"/></g>`).join('');
   return `<g fill="none" stroke-linecap="round" stroke-linejoin="round"><g stroke="${K}" stroke-width="${w + 2.4}">${arms}</g><g stroke="${c}" stroke-width="${w}">${arms}</g></g><circle cx="${x}" cy="${y}" r="${r * 0.18}" fill="#fff" stroke="${K}" stroke-width="${w * 0.8}"/>`;
 };
+// Tito, el astronauta (14 nov 2026, el usuario mandó de ejemplo uno chibi): casco grande con visor oscuro y brillos,
+// traje blanco con su cajita al pecho, brazos abiertos y mochila. viewBox 64 × 72.
+const SUIT = '#ffffff', SUIT2 = '#d9def0';
+const limb = (d) => `<path d="${d}" fill="none" stroke="${K}" stroke-width="12" stroke-linecap="round"/><path d="${d}" fill="none" stroke="${SUIT}" stroke-width="7.6" stroke-linecap="round"/>`;
+export const ASTRO_ART = `<rect x="15" y="31" width="34" height="22" rx="6" fill="${SUIT2}" stroke="${K}" stroke-width="2.4"/>`
+  + limb('M22 43L8 34') + limb('M42 43L56 34') + limb('M27.5 57L26 66') + limb('M36.5 57L38 66')
+  + `<path d="M21.5 67h8M34.5 67h8" stroke="${K}" stroke-width="2" stroke-linecap="round"/>`
+  + `<rect x="20" y="36" width="24" height="23" rx="9" fill="${SUIT}" stroke="${K}" stroke-width="2.4"/><path d="M21 51h22" stroke="${SUIT2}" stroke-width="3.4"/>`
+  + `<rect x="26" y="42" width="12" height="8" rx="2.4" fill="${SUIT}" stroke="${K}" stroke-width="1.8"/><circle cx="35" cy="46" r="1.9" fill="#36a6ff" stroke="${K}" stroke-width="1"/>`
+  + `<rect x="10" y="19" width="6" height="11" rx="3" fill="${SUIT2}" stroke="${K}" stroke-width="2"/><rect x="48" y="19" width="6" height="11" rx="3" fill="${SUIT2}" stroke="${K}" stroke-width="2"/>`
+  + `<circle cx="32" cy="23" r="18.5" fill="${SUIT}" stroke="${K}" stroke-width="2.6"/><path d="M19 13q6-7 15-7.5" fill="none" stroke="${SUIT2}" stroke-width="2.4" stroke-linecap="round"/>`
+  + `<ellipse cx="32" cy="25" rx="13.5" ry="11.5" fill="#2a2350" stroke="${K}" stroke-width="2"/><ellipse cx="38.5" cy="20.5" rx="3.6" ry="3" fill="#fff" opacity=".75"/><circle cx="41.5" cy="27" r="1.7" fill="#fff" opacity=".6"/>`;
 const ICONS = {
   // Ayudas del mazo de ayudas: reloj de arena, ver cartas y llave maestra.
   // Botón de ayudas de la bandeja (8 nov 2026): un destello grande y dos chicos.
@@ -351,6 +363,12 @@ const ICONS = {
   crown: () => tshape('M4 26 3 8l7 6 6-9 6 9 7-6-1 18z', '#ffc83d', '#ec9a17', '<circle cx="16" cy="18" r="2.6" fill="#ff5f7e"/>', 2.2),
   trophy: () => tshape('M9 5h14v6a7 7 0 0 1-14 0z', '#ffc83d', '#ec9a17', '', 2.2) + `<path d="M9 7H5a4 4 0 0 0 4 6M23 7h4a4 4 0 0 1-4 6" fill="none" stroke="${K}" stroke-width="2.2"/>` + tshape('M13 18h6l1 5h-8z', '#ffc83d', '#ec9a17', '', 2) + tshape('M9 23h14v4H9z', '#9a5a32', '#7a4024', '', 2),
   // Imán (13 nov 2026): herradura roja con puntas plateadas.
+  // Telescopio (14 nov 2026): tubo morado en su tripié, con lente dorada.
+  telescopio: () => `<path d="M14 19l-5 10M16 19l1 10M18 18l6 10" fill="none" stroke="${K}" stroke-width="2.4" stroke-linecap="round"/>`
+    + tshape('M4 16l18-9 3 6-18 9z', '#8a5cf0', '#6c3fd4', `<path d="M8 15l12-6" stroke="#b9a2ff" stroke-width="1.6" stroke-linecap="round"/>`, 2.2)
+    + tshape('M21 6l6-3 4 7-6 3z', '#ffc83d', '#ec9a17', '', 2.2) + tshape('M2 17l3-1.5 2.4 4.6-3 1.5z', '#ffc83d', '#ec9a17', '', 2) + `<circle cx="15" cy="18" r="2.4" fill="#fff6e6" stroke="${K}" stroke-width="1.8"/>`,
+  // Astronauta (14 nov 2026): Tito, el mismo de la bandeja (ASTRO_ART), en chiquito.
+  astronauta: () => `<g transform="translate(1.6 0) scale(0.45)">${ASTRO_ART}</g>`,
   iman: () => tshape('M6 4h7v12a3 3 0 0 0 6 0V4h7v12a10 10 0 0 1-20 0z', '#ff5f7e', '#d63d5f', `<path d="M9 17a7 7 0 0 0 4.5 6" fill="none" stroke="#ffd0da" stroke-width="2" stroke-linecap="round"/>`, 2.2) + tshape('M6 4h7v5H6zM19 4h7v5h-7z', '#eef0f8', '#c4c9dc', '', 2),
   // Arcoíris (13 nov 2026): cuatro arcos de color y dos nubes.
   arcoiris: () => ['#ff5f7e', '#ffd54a', '#5fd47a', '#5ab0ff'].map((c, i) => `<path d="M${4 + i * 3} 24a${12 - i * 3} ${12 - i * 3} 0 0 1 ${24 - i * 6} 0" fill="none" stroke="${K}" stroke-width="5.2"/><path d="M${4 + i * 3} 24a${12 - i * 3} ${12 - i * 3} 0 0 1 ${24 - i * 6} 0" fill="none" stroke="${c}" stroke-width="2.8"/>`).join('')
@@ -686,6 +704,8 @@ export const BACKS = {
   hllave: { a: '#8a5cf0', b: '#6c3fd4', dots: '#efe6ff', art: () => `<g transform="translate(17 37) scale(2.06)">${ICONS.llaveMaestra()}</g>` },
   hlaser: { a: '#ff7aa0', b: '#e8507e', dots: '#ffe6ee', art: () => `<g transform="translate(17 37) scale(2.06)">${ICONS.laser()}</g>` },
   hescudo: { a: '#5fc7e8', b: '#3a8fc8', dots: '#e6fbff', art: () => `<g transform="translate(17 37) scale(2.06)">${ICONS.escudito()}</g>` },
+  htele: { a: '#8a7cf0', b: '#6a5ad4', dots: '#efeaff', art: () => `<g transform="translate(17 37) scale(2.06)">${ICONS.telescopio()}</g>` },
+  hastro: { a: '#3a4a9a', b: '#2a3680', dots: '#e6ecff', art: () => `<g transform="translate(17 37) scale(2.06)">${ICONS.astronauta()}</g>` },
   himan: { a: '#ff7a8e', b: '#e8506a', dots: '#ffe6ea', art: () => `<g transform="translate(17 37) scale(2.06)">${ICONS.iman()}</g>` },
   // Mazo de ayudas (botón de la bandeja): genérico, turquesa con un destello mágico (no es el comodín).
   ayudas: { a: '#2fb4b0', b: '#1f9490', dots: '#e6fffb',

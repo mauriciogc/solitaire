@@ -2,7 +2,7 @@ import { save, prefs, persist, resetProfile, deleteProfile, renameProfile, expor
 import { UNLOCK, EVENTS, FESTIVALS, COLLECTIONS, evSoon, isOn, nextEvent, daysToNextCol, plusCols, STREAK_GOALS, STREAK_STEP, streakGoal, nextIndex, dailyStreak, streakTheme, streakReady, streakHot, streakWin, streakLose, streakPendToFeats, msToMidnight, col, colLeft, colWin, colOffers, colBuy, ev, evLeft, evTicketLeft, evTicketPrice, evBuyTicket, evPrize, evEnter, evWin, evLose, evAlbum, festAlbum, EVENT_PLANETS, EVENT_PER_PLANET, EVENT_LEVELS, festival, festivalLeft, festivalSoon, soonLeft, evPrePrice, evPreOwned, evPreBuy, nextFestival, festEnter, festWin, festLose, festShape, festPrice, festPaid, festBuy, festPre, FEST_PRE, FEST_ENTRY, EV_FIRST } from './events.js';
 import { WORLD_COUNT, LEVELS_PER_WORLD, TOTAL_LEVELS, worldInfo, generateLevel, variantLevel, MECH_INTRO, MECH_NAMES, MECHANICS, EXTRA, extraDebut, SCROLL_FROM, tideFirst, holeFirst, doorsFirst, bandaFirst, rocksFirst, secretId, isSecret, eventLevel, festivalLevel } from './levels.js';
 import { Game, faceHTML, backHTML, TIPS, TABLE_TEXT, MECH_KINDS, ART, scrSVG } from './game.js';
-import { maxBet, betFee, betSteps, BET_STEPS, HELPS, DAILY_PATH, dailyState, dailyPieces, DAILY_SHIELD_MAX, starsNeeded, TICKET_PRICE, ticketCost, ticketRefund, coinsFor, bossChest, rollChest, CONST_PRIZE, openCost, boosted, secretCoins, rollSecret, openSurprise, MET_OFF, metShopPrice } from './economy.js';
+import { maxBet, betFee, betSteps, BET_STEPS, HELPS, DAILY_PATH, dailyState, dailyPieces, DAILY_SHIELD_MAX, starsNeeded, TICKET_PRICE, ticketCost, ticketRefund, coinsFor, bossChest, rollChest, CONST_PRIZE, CONST_OPEN, openCost, constStart, openFree, boosted, secretCoins, rollSecret, openSurprise, MET_OFF, metShopPrice } from './economy.js';
 import { track, missions, missionDef, missionDone, missionsAllDone, autoClaim, ACHIEVEMENTS, ACHIEVEMENT_PRIZES, ACHIEVEMENT_MEDAL, ACHIEVEMENT_TOP, achievementGot, achievementProgress, achievementsVisible } from './missions.js';
 import { pauseOffscreen, openModal, toast, updateCoins, money, esc, reduced, wait, flyToWallet, spendFromWallet, sparkle, confetti, starsHTML, warp, buzz, balloons, lootBubbles, floatBubbles, streakWarnHTML, popPrize, popBalloon, countPop, HEADS, betLoseHTML, shownCoins } from './ui.js';
 import { icon, iconURL, iconInner, star, coin, miniPlanet, avatarHTML, AVATAR_COLORS, kidOf, KID_SKINS, KID_HAIRS, KID_STYLES, cardBackURL, setDeck, lockIcon, curtainIcon, chestBody, chestLid, boxBody, boxLid, capChute, capBody, capLid, vineSVG } from './art.js';
@@ -531,11 +531,11 @@ async function revealSecret(galaxy, w) {
 // paid: ya aceptó pagar en la ventana (el primer mundo de cada constelación cuesta monedas).
 async function playUnlock(w, paid = false) {
   // El primer mundo de una constelación pide el boleto de constelación (no el dorado) y monedas.
-  const cost = openCost(w), tk = cost ? 'cgold' : 'gold';
+  const cost = openCost(w), isConst = constStart(w), tk = isConst ? 'cgold' : 'gold';
   const okStars = starsBefore(w) >= starsNeeded(w), okGold = save[tk] > 0, okCoins = save.coins >= cost;
   // Constelación nueva (8 nov 2026): se paga, se sale a las constelaciones, se ve cómo se abre la nueva y se entra
   // directo a su planeta 1 (antes se entraba con el título todavía con candado).
-  if (cost && paid && okStars && okGold && okCoins) {
+  if (isConst && paid && okStars && okGold && okCoins) {
     const r = regionOf(w), was = regionData(r);
     save[tk]--;
     save.coins -= cost;
@@ -546,12 +546,12 @@ async function playUnlock(w, paid = false) {
   }
   const galaxy = map?.galaxy;
   if (!galaxy || map.region !== regionOf(w)) {
-    if (okStars && okGold && okCoins && (!cost || paid)) return showMap({ unlock: w, paid });
+    if (okStars && okGold && okCoins && (!isConst || paid)) return showMap({ unlock: w, paid });
     if (galaxy?.sel) await galaxy.zoomOut();
     return openWorldGate(w);
   }
   if (galaxy.sel) await galaxy.zoomOut();
-  if (!(okStars && okGold && okCoins) || (cost && !paid)) return openWorldGate(w);
+  if (!(okStars && okGold && okCoins) || (isConst && !paid)) return openWorldGate(w);
   save[tk]--;
   save.coins -= cost;
   save.open = w;
@@ -1041,6 +1041,7 @@ function mechCard(m, x = 0) {
   if (m === 'triple') return `<div class="card up" style="left:${x}px">${faceHTML({ rank: 6, tri: [11, 2], suit: 2 })}</div>`;
   if (m === 'turbo') return mini(x, '7', 'h', { turbo: true });
   if (m === 'coin') return mini(x, '5', 'd', { coin: 20 });
+  if (m === 'astro') return `<div class="card up ship-demo" style="left:${x}px">${faceHTML({ rank: 3, suit: 1 })}<span class="ship-mark">${icon('astronauta')}</span></div>`;
   if (m === 'ship') return `<div class="card up ship-demo" style="left:${x}px">${faceHTML({ rank: 6, suit: 2 })}<span class="ship-mark">${icon('nave')}</span></div>`;
   if (m === 'ghost') return mini(x, '8', 'h', { ghost: 1 }, 'ghost-demo');
   if (m === 'cham') return mini(x, '7', 'c', { cham: 1 }, 'cham-demo');
@@ -1048,6 +1049,8 @@ function mechCard(m, x = 0) {
   if (m === 'cst') return mini(x, 'J', 'd', { cst: 1 });
   if (m === 'vine') return mini(x, '9', 's', { marks: `<span class="vine-ov">${vineSVG()}</span>` }, 'vined vine-demo');
   if (m === 'magnet') return mini(x, '4', 'h', { magnet: 1 });
+  if (m === 'scope') return mini(x, '9', 'c', { scope: 1 });
+  if (m === 'twin') return mini(x, '5', 'h', { twin: 1 });
   if (m === 'rainbow') return mini(x, '6', 'c', { rainbow: 1 });
   if (m === 'sleep') return mini(x, '8', 'd', { marks: `<span class="sleep-ov"><i class="sl-cap">${icon('dormida')}</i><span class="zz"><i>z</i><i>z</i><i>z</i></span><b>3</b></span>` }, 'asleep');
   if (m === 'comet') return `<div class="card comet-card up" style="left:${x}px"><div class="inner"><div class="face front"></div></div><span class="comet-face">${icon('comet')}<b>4</b><em>+3</em></span></div>`;
@@ -1103,7 +1106,8 @@ function roadItems() {
     { id: 'hoyo', n: holeFirst() + 1, name: 'Agujero negro', text: 'Cada 4 jugadas o robos se traga todas sus cartas y las escupe con los números revueltos.' },
     { id: 'nave', n: MECH_INTRO.ship * LEVELS_PER_WORLD + 1, name: 'Nave ladrona', text: '' },
     { id: 'rocas', n: rocksFirst() + 1, name: 'Asteroides', text: '' },
-  ].map((x) => ({ ...x, k: 'mesa', pic: x.id === 'nave' ? icon('nave') : tableIcon(x.id), text: TABLE_TEXT[x.id] ? TABLE_TEXT[x.id].join(' ') : x.text }));
+    { id: 'astro', n: MECH_INTRO.astro * LEVELS_PER_WORLD + 1, name: 'Astronauta', text: '' },
+  ].map((x) => ({ ...x, k: 'mesa', pic: x.id === 'nave' ? icon('nave') : x.id === 'astro' ? icon('astronauta') : tableIcon(x.id), text: TABLE_TEXT[x.id] ? TABLE_TEXT[x.id].join(' ') : x.text }));
   // Pasaporte y secretos (12 nov 2026): los sellos y premios ganados, en el nivel en que ibas; el siguiente sello, en el
   // nivel en que llegaría ganando un nivel nuevo por nivel (se mueve si ganas eventos o secretos).
   const P = save.pass || {}, PA = P.at || { s: [], x: [] }, ns = (P.s || 0) + 1;
@@ -1114,8 +1118,14 @@ function roadItems() {
     ...(ns <= PASS_MAX ? [stampStop(ns, Math.min(TOTAL_LEVELS, roadAt() + passGoal(ns) - passCount()))] : []),
     ...Array.from({ length: P.x || 0 }, (_, i) => ({ id: `secreto${i + 1}`, n: PA.x[i] || roadAt(), k: 'ev', name: `${secretGoal(i + 1)} niveles secretos`, pic: icon('starSecret'), text: `Ganaste ${secretGoal(i + 1)} niveles secretos: ${passWhat(secretPrize(i + 1))}.` })),
   ];
+  // Ayudas que se venden después de conocer su carta o su mesa (14 nov 2026, pedido del usuario): van con las cartas.
+  const helpStop = (id, m, back, name, text) => ({ id, n: MECH_INTRO[m] * LEVELS_PER_WORLD + 1, k: 'card', kind: 'Ayuda nueva', name, pic: `<span class="rd-card"><span class="rd-help" style="background-image:${cardBackURL(back)}"></span></span>`, text });
+  const helps = [
+    helpStop('ayuda-tele', 'scope', 'htele', 'Telescopio (ayuda)', 'Lo compras en tus ayudas: deja ver todas las cartas del tablero 5 turnos.'),
+    helpStop('ayuda-astro', 'astro', 'hastro', 'Astronauta (ayuda)', 'Lo compras en tus ayudas: llega a tu nivel y te guarda una carta.'),
+  ];
   const order = Object.keys(ROAD_KINDS);
-  return [...evs, ...bets, ...cards, ...tables, ...pass].sort((a, b) => a.n - b.n || order.indexOf(a.k) - order.indexOf(b.k));
+  return [...evs, ...bets, ...cards, ...helps, ...tables, ...pass].sort((a, b) => a.n - b.n || order.indexOf(a.k) - order.indexOf(b.k));
 }
 // Nivel en que vas (el siguiente por jugar) y cuántas paradas ya alcanzaste (siempre son las primeras de la lista).
 const roadAt = () => Math.min((save.next || 0) + 1, TOTAL_LEVELS);
@@ -1139,7 +1149,7 @@ function openRoad() {
   const leftLabel = (x) => (left(x) === 1 ? 'falta 1' : `faltan ${fmtLvl(left(x))}`);
   const row = (x, i) => {
     const on = i < got;
-    const more = on ? `<span class="rd-more"><span><em class="rd-kind">${ROAD_KINDS[x.k]}</em> ${x.text}</span></span>` : '';
+    const more = on ? `<span class="rd-more"><span><em class="rd-kind">${x.kind || ROAD_KINDS[x.k]}</em> ${x.text}</span></span>` : '';
     return `<li class="rd k-${x.k}${on ? ' got' : ' lock'}${x === next ? ' next' : ''}${on && i >= seen ? ' fresh' : ''}" data-k="${x.k}" style="--d:${i % 6}">
       <button class="rd-box"${on ? ' aria-expanded="false"' : ''}>
         <span class="rd-pic">${on ? x.pic : '<b class="rd-q">?</b>'}</span>
@@ -4480,9 +4490,10 @@ function openWorldGate(w, onCancel, prior = null) {
   const have = starsBefore(w);
   const okStars = have >= need;
   // Primer mundo de una constelación: pide el boleto de constelación (no el dorado) y monedas (openCost).
-  const cost = openCost(w), okCoins = save.coins >= cost;
-  const tk = cost ? 'cgold' : 'gold', okGold = prior == null && save[tk] > 0;
-  const info = worldInfo(w), isConst = !!cost;
+  // Las primeras constelaciones (openFree): el precio tachado y «Gratis».
+  const cost = openCost(w), okCoins = save.coins >= cost, free = openFree(w);
+  const isConst = constStart(w), tk = isConst ? 'cgold' : 'gold', okGold = prior == null && save[tk] > 0;
+  const info = worldInfo(w), was = `<s class="was">${money(CONST_OPEN)}</s>`;
   openModal({
     title: isConst ? regionName(regionOf(w)) : `Mundo ${w + 1}`,
     color: 'gold',
@@ -4490,13 +4501,14 @@ function openWorldGate(w, onCancel, prior = null) {
     body: `<div class="gate">${miniPlanet(BIOMES[biomeKey(info.place)].emblem, 'gate-pl')}<b>${isConst ? `Constelación ${regionOf(w) + 1} · ` : ''}${esc(info.name)}</b>
       <div class="rows">
         ${prior != null ? `<div class="row">${icon('lock')}<b>Constelación anterior<span>Termina ${esc(regionName(prior))} y vence a su último jefe</span></b><em>${icon('lock')}</em></div>` : ''}
-        <div class="row ${okGold ? 'ok' : ''}">${cost ? `${icon('constTicket')}<b>Boleto de constelación<span>Lo da el último jefe de la constelación</span></b>` : `${icon('gold')}<b>Boleto dorado<span>Lo da el jefe del mundo anterior</span></b>`}${okGold ? icon('check') : '<em>0/1</em>'}</div>
+        <div class="row ${okGold ? 'ok' : ''}">${isConst ? `${icon('constTicket')}<b>Boleto de constelación<span>Lo da el último jefe de la constelación</span></b>` : `${icon('gold')}<b>Boleto dorado<span>Lo da el jefe del mundo anterior</span></b>`}${okGold ? icon('check') : '<em>0/1</em>'}</div>
         <div class="row ${okStars ? 'ok' : ''}">${star(true)}<b>Estrellas<span>${okStars ? '¡Listo!' : `Te faltan ${need - have}: repite niveles (es gratis)`}</span></b>${okStars ? icon('check') : `<em>${have}/${need}</em>`}</div>
-        ${cost ? `<div class="row ${okCoins ? 'ok' : ''}">${coin()}<b>Monedas<span>${okCoins ? 'Nueva constelación' : `Te faltan ${money(cost - save.coins)}`}</span></b>${okCoins ? `<em>${money(cost)}</em>` : `<em>${money(save.coins)}/${money(cost)}</em>`}</div>` : ''}
+        ${cost ? `<div class="row ${okCoins ? 'ok' : ''}">${coin()}<b>Monedas<span>${okCoins ? 'Nueva constelación' : `Te faltan ${money(cost - save.coins)}`}</span></b>${okCoins ? `<em>${money(cost)}</em>` : `<em>${money(save.coins)}/${money(cost)}</em>`}</div>`  : ''}
+        ${free ? `<div class="row ok">${coin()}<b>Monedas<span>¡Esta constelación va por nuestra cuenta!</span></b><em>${was} Gratis</em></div>` : ''}
       </div></div>`,
     buttons: [
       {
-        label: `${icon(tk === 'cgold' ? 'constTicket' : 'gold')} Abrir${cost ? ` · ${coin()} ${money(cost)}` : ''}`,
+        label: `${icon(tk === 'cgold' ? 'constTicket' : 'gold')} Abrir${cost ? ` · ${coin()} ${money(cost)}` : free ? ` · ${coin()} ${was} Gratis` : ''}`,
         disabled: prior != null || !(okStars && okGold && okCoins),
         onClick: () => playUnlock(w, true),
       },
@@ -5207,6 +5219,8 @@ function openHelp(tab = 'basico', then) {
         <div class="step" data-u="rocas"><div class="ill c"><span class="help-card" style="background-image:${cardBackURL('hlaser')}"></span></div><p><b>Láser:</b> rompe todas las piedras de los asteroides.</p></div>
         <div class="step" data-u="ship"><div class="ill c"><span class="help-card" style="background-image:${cardBackURL('hescudo')}"></span></div><p><b>Escudo:</b> la nave ladrona ya no te roba en todo el nivel.</p></div>
         <div class="step" data-u="magnet"><div class="ill c"><span class="help-card" style="background-image:${cardBackURL('himan')}"></span></div><p><b>Imán:</b> tu siguiente robo saca del mazo la carta que más te sirve, sin cortar tu racha, y la carta que conviene jugar tiembla.</p></div>
+        <div class="step" data-u="scope"><div class="ill c"><span class="help-card" style="background-image:${cardBackURL('htele')}"></span></div><p><b>Telescopio:</b> deja ver todas las cartas del tablero 5 turnos.</p></div>
+        <div class="step" data-u="astro"><div class="ill c"><span class="help-card" style="background-image:${cardBackURL('hastro')}"></span></div><p><b>Astronauta:</b> llega a tu nivel y te guarda una carta libre. Cuando conecte, la manda al descarte.</p></div>
         <div class="step"><div class="ill c"><span class="help-btn">${icon('undo')}</span></div><p><b>Deshacer:</b> regresa tu última jugada o la carta que robaste.</p></div>
         <div class="step"><div class="ill c"><span class="help-five"><b>+5</b></span></div><p>¿Se acabó el mazo? Toca el <b>+5</b> para comprar 5 cartas. Con ellas te llevas solo 1 estrella.</p></div>
         <h3 class="help-h">Estrellas y boletos</h3>
@@ -5230,6 +5244,7 @@ function openHelp(tab = 'basico', then) {
         <div class="step" data-u="voltea"><div class="ill tbl-ill">${tableIcon('voltea')}</div><p><b>Mesa que se voltea:</b> ${TABLE_TEXT.voltea.join(' ')}</p></div>
         <div class="step" data-u="marea"><div class="ill">${mini(10, '7', 's')}${mini(48, '8', 'h')}<span class="h-tide"></span></div><p><b>Marea:</b> ${TABLE_TEXT.marea.join(' ')}</p></div>
         <div class="step" data-u="hoyo"><div class="ill">${mini(6, '4', 'd')}${mini(44, '9', 's')}<span class="h-hole"></span></div><p><b>Agujero negro:</b> ${TABLE_TEXT.hoyo.join(' ')}</p></div>
+        <div class="step" data-u="astro"><div class="ill c"><span class="help-btn">${icon('astronauta')}</span></div><p><b>Astronauta:</b> ${TABLE_TEXT.astro.join(' ')}</p></div>
         <div class="step" data-u="rocas"><div class="ill">${mini(10, '7', 's')}${mini(48, '8', 'h', { marks: `<span class="rock-ov">${icon('asteroide')}<b class="outl">3</b></span>` })}</div><p><b>Asteroides:</b> ${TABLE_TEXT.rocas.join(' ')}</p></div>
         <div class="step" data-u="puertas"><div class="ill"><span class="h-door"><i></i><i></i></span>${mini(56, '6', 'h', { doorKey: 1 })}</div><p><b>Puertas:</b> ${TABLE_TEXT.puertas.join(' ')}</p></div>
         <div class="step" data-u="banda"><div class="ill"><span class="h-belt"><i></i></span>${mini(24, 'K', 'c', {}, 'h-belt-c')}${mini(58, '2', 'h', {}, 'h-belt-c')}</div><p><b>Banda transportadora:</b> ${TABLE_TEXT.banda.join(' ')}</p></div>

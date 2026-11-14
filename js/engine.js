@@ -52,6 +52,14 @@
 //             lo apaga porque el descarte cambia)
 //   sleep     carta dormida (2-4): no se juega hasta que la racha llegue a `sleep`; entonces despierta y se queda
 //             despierta (s.awake = ids)
+//   twin      cartas gemelas (14 nov 2026): id de su pareja (atadas con un lazo). Al jugar una, la otra sale de donde
+//             esté (aunque esté tapada) y cae al descarte encima: se sigue desde ella. Suma su punto de racha
+//   scope     telescopio (14 nov 2026): al jugarlo se ven todas las cartas del tablero SCOPE_TURNS acciones (s.scope =
+//             las que quedan; solo es para ver: no cambia qué se puede jugar). La ayuda Telescopio da SCOPE_HELP
+//
+// Astronauta (14 nov 2026): level.astro (o la ayuda, s.astroOn). Guarda una carta libre (hold: sale del tablero, no es
+// jugada ni robo) y luego la mandas al descarte cuando conecte (astroSend: es una jugada). Después se va (s.astroGone).
+// s.hold = id de la carta que guarda y s.holdRank su número. Mientras guarde una, no se gana.
 //
 // Mesas del nivel: level.rocks = { n } cinturón de asteroides (10 nov 2026, ver dropRocks).
 import { hash } from './rng.js';
@@ -63,6 +71,7 @@ export const CLOCK_TURNS = 3; // turnos que congela el reloj de arena
 
 // Una acción (jugar o robar) avanza el reloj de las cuentas (bomba, cometa, carta viva), salvo con el reloj de arena.
 function tick(s) {
+  if (s.scope > 0) s.scope--;
   if (s.freeze > 0) s.freeze--;
   else s.actions++;
 }
@@ -104,6 +113,11 @@ export const useLaser = (s0) => ({ ...cloneState(s0), rock: {} });
 export const useShield = (s0) => ({ ...cloneState(s0), shield: true });
 // Ayuda imán (13 nov 2026): lo mismo que jugar la carta imán.
 export const useMagnet = (s0) => ({ ...cloneState(s0), magnet: true });
+// Telescopio (14 nov 2026): la carta deja ver todo SCOPE_TURNS acciones; la ayuda, SCOPE_HELP.
+export const SCOPE_TURNS = 3, SCOPE_HELP = 5;
+export const useScope = (s0) => ({ ...cloneState(s0), scope: Math.max(s0.scope || 0, SCOPE_HELP) });
+// Ayuda Astronauta (14 nov 2026): llega al nivel para guardarte una carta.
+export const useAstro = (s0) => ({ ...cloneState(s0), astroOn: true, astroGone: false });
 
 export function initState(level, extra = {}) {
   return {
@@ -129,7 +143,7 @@ export function initState(level, extra = {}) {
 }
 
 // (Partidas guardadas antes del boleto partido no traen cut.)
-export const cloneState = (s) => ({ ...s, rem: s.rem.slice(), stock: s.stock.slice(), boom: s.boom.slice(), cut: (s.cut || []).slice(), ...(s.awake && { awake: s.awake.slice() }), ...(s.open && { open: s.open.slice() }), ...(s.lift && { lift: s.lift.slice() }), ...(s.rock && { rock: { ...s.rock } }) });
+export const cloneState = (s) => ({ ...s, rem: s.rem.slice(), stock: s.stock.slice(), boom: s.boom.slice(), cut: (s.cut || []).slice(), ...(s.awake && { awake: s.awake.slice() }), ...(s.open && { open: s.open.slice() }), ...(s.lift && { lift: s.lift.slice() }), ...(s.rock && { rock: { ...s.rock } }), ...(s.scrGone && { scrGone: s.scrGone.slice() }) });
 
 // Mitad del boleto partido que ya se jugó (0 = está entero, 1 = la de arriba, 2 = la de abajo).
 export const cutOf = (c, s) => (c.half != null && s.cut?.[c.id]) || 0;
@@ -160,13 +174,15 @@ export const triPick = (c, s, want = null) => {
 // Raspadita (13 nov 2026, pedido del usuario): su número no se ve; cada carta pegada a ella (c.scr) que juegas le abre
 // una de sus SCR_WIN ventanitas. Si la juegas antes de verla toda, da monedas: entre más ventanitas cerradas, más
 // (SCR_PAY). Si la tocas y no conecta (sin verla toda), cuenta como un robo: se corta la racha (miss).
+// 14 nov 2026 (el usuario): al fallarle además se destapa (s.scrGone) y ya no da monedas; no se deshace.
 export const SCR_WIN = 4;
 export const SCR_PAY = [0, 10, 30, 60];
 // Ventanitas abiertas: en proporción a las pegadas que ya jugaste (con todas, se ve completa).
-export const scrOpen = (c, s) => (c.scr ? Math.floor((SCR_WIN * c.scr.filter((j) => s.rem[j]).length) / c.scr.length) : SCR_WIN);
+export const scrOpen = (c, s) => (c.scr && !s.scrGone?.includes(c.id) ? Math.floor((SCR_WIN * c.scr.filter((j) => s.rem[j]).length) / c.scr.length) : SCR_WIN);
 export const scrPay = (c, s) => SCR_PAY[Math.min(3, SCR_WIN - scrOpen(c, s))];
-export function miss(level, s0) {
+export function miss(level, s0, id) {
   const s = cloneState(s0);
+  if (id != null) s.scrGone = [...(s.scrGone || []), id];
   s.streak = 0;
   s.turbo = 0;
   tick(s);
@@ -353,7 +369,7 @@ export const refStep = (c, s) => (c.half != null && !cutOf(c, s) ? { rank: c.ran
 export const refReady = (level, c, s, w = refStep(c, s)) => (w.rank != null ? playRank(level, c, s) === w.rank : w.low != null ? isOpen(level, c, s) && triPick(c, s, w.low) === w.low : playRank(level, c, s) != null);
 
 export const legal = (level, s) => level.cards.filter((c) => playRank(level, c, s) != null);
-export const won = (s, level) => s.rem.every((r, i) => r || (level?.cards[i].door != null && !s.open?.[level.cards[i].door]));
+export const won = (s, level) => s.hold == null && s.rem.every((r, i) => r || (level?.cards[i].door != null && !s.open?.[level.cards[i].door]));
 
 // ---------- Premios de racha ----------
 // Racha 6: +1 carta útil al mazo · 13: un comodín al mazo · 18 y 23: +1 carta útil · 30: escoba (barre toda la capa
@@ -539,6 +555,8 @@ export function play(level, s0, id, low = false) {
   if (c.magnet) s.magnet = true;
   s.plays++;
   tick(s);
+  // Telescopio: se ven todas las cartas las siguientes SCOPE_TURNS acciones.
+  if (c.scope) s.scope = Math.max(s.scope || 0, SCOPE_TURNS);
   s.streak++;
   // Carta llave: una llave más en la mano.
   if (c.doorKey) s.keys = (s.keys || 0) + 1;
@@ -549,6 +567,15 @@ export function play(level, s0, id, low = false) {
   const boosted = s0.turbo > 0;
   if (boosted) s.streak++;
   s.turbo = c.turbo ? TURBO : boosted ? s0.turbo - 1 : 0;
+  // Gemelas: la pareja sale de donde esté y cae al descarte encima (suma su punto; su premio va en wishes).
+  const twin = c.twin != null && !s.rem[c.twin] && !split && !tri?.left ? c.twin : null;
+  if (twin != null) {
+    const t = level.cards[twin];
+    s.rem[twin] = true;
+    s.top = { rank: t.rank, suit: t.suit };
+    s.plays++;
+    s.streak++;
+  }
   const act = activate(level, s);
   const { packs, defused, wished } = act;
   const reward = applyReward(level, s, at);
@@ -579,7 +606,7 @@ export function play(level, s0, id, low = false) {
     s.rem[b] = true;
     s.stock.push({ rank: rankOf(x, s), suit: x.suit, ...(x.alt != null && { alt: x.alt }), ...(x.arrow && { arrow: x.arrow }) });
   }
-  return { s, ev: { t: 'play', id, rank: r, packs, defused, reward, boost, boom, wished, wishes, gone, ...(c.turbo && { turbo: true }), ...(split && { split }), ...(tri && { tri }), ...(exit != null && { exit }), ...(shipBack && { shipBack }), ...(c.doorKey && { key: true }), ...(cst && { cst }), ...(rockOff.length && { rockOff }), ...(bolted.length && { bolted }), ...(burnt && { burnt }) } };
+  return { s, ev: { t: 'play', id, rank: r, packs, defused, reward, boost, boom, wished, wishes, gone, ...(c.turbo && { turbo: true }), ...(twin != null && { twin }), ...(split && { split }), ...(tri && { tri }), ...(exit != null && { exit }), ...(shipBack && { shipBack }), ...(c.doorKey && { key: true }), ...(cst && { cst }), ...(rockOff.length && { rockOff }), ...(bolted.length && { bolted }), ...(burnt && { burnt }) } };
 }
 
 // Abrir la puerta d con una llave. No es jugada ni robo: no mueve la racha ni las cuentas, salvo su premio
@@ -602,6 +629,35 @@ export function openDoor(level, s0, d) {
   } else if (prize === 'turbo') s.turbo = TURBO;
   wakeUp(level, s);
   return { s, ev: { t: 'door', d, prize, wishes, from: s0.streak } };
+}
+
+// ---------- Astronauta (14 nov 2026) ----------
+// Está si el nivel lo trae o usaste la ayuda, y hasta que manda su carta. Guarda solo cartas libres de un número fijo
+// (ni boletos, dominó, gemelas, cartas vivas, fantasmas, camaleón, agujero negro ni raspadita). Las de la enredadera sí,
+// si todavía no las tapa (14 nov 2026, el usuario: «¿por qué no deja las otras?»); la de constelación también.
+export const astroHere = (level, s) => !!(level.astro || s.astroOn) && !s.astroGone;
+export const canHold = (level, c, s) => astroHere(level, s) && s.hold == null && c.rank != null && isOpen(level, c, s) && !special(c) && c.half == null && !c.tri && c.dom == null && c.twin == null && !c.live && !c.ghost && !c.cham && !c.ring && !c.scr && !c.doorKey && !c.coin;
+// Guardar: la carta sale del tablero (destapa lo de abajo). No es jugada ni robo: no toca racha ni cuentas.
+export function hold(level, s0, id) {
+  const c = level.cards[id];
+  if (!canHold(level, c, s0)) return null;
+  const s = cloneState(s0);
+  s.rem[id] = true;
+  s.hold = id;
+  s.holdRank = rankOf(c, s0);
+  return { s, ev: { t: 'hold', id } };
+}
+// Mandarla al descarte cuando conecta: es una jugada normal de esa carta (vuelve un instante a su lugar, que ya está
+// libre) y el astronauta se va.
+export const canSend = (s) => s.hold != null && follows(s.top, s.holdRank);
+export function astroSend(level, s0) {
+  if (!canSend(s0)) return null;
+  const id = s0.hold, s1 = { ...cloneState(s0), hold: null, holdRank: null, astroGone: true };
+  s1.rem[id] = false;
+  // En las manos de Tito la enredadera ya no la alcanza: se juega como si no tuviera.
+  const lv = level.cards[id].vine == null ? level : { ...level, cards: level.cards.map((x) => (x.id === id ? { ...x, vine: undefined } : x)) };
+  const { s, ev } = play(lv, s1, id);
+  return { s, ev: { ...ev, t: 'send' } };
 }
 
 // Constelación: on = la carta es estrellita. Devuelve 'on' (sumó), 'done' (las juntó todas), 'lost' (se apagó) o null.

@@ -6,7 +6,7 @@ export const TICKET_PRICE = 250;
 // Boosters: el comodín, el pack de 3 deshacer y +5 cartas suben con el avance, en los mismos escalones que los boletos
 // (1, 2 o 3 boletos por nivel). Subidos el 7 nov 2026 (antes 250/350/450, 50/75/100 y 100/150/200): el usuario
 // gastaba +5 "a granel" y le seguían sobrando monedas; que duela.
-const TIERS = { wild: [500, 650, 800], undo: [150, 200, 250], extra: [300, 400, 500], reloj: [300, 400, 500], ver2: [150, 200, 250], ver3: [250, 325, 400], llave: [2000, 2500, 3000], laser: [250, 325, 400], escudo: [250, 325, 400], iman: [700, 910, 1120] };
+const TIERS = { wild: [500, 650, 800], undo: [150, 200, 250], extra: [300, 400, 500], reloj: [300, 400, 500], ver2: [150, 200, 250], ver3: [250, 325, 400], llave: [2000, 2500, 3000], tele: [2000, 2500, 3000], astro: [1700, 2125, 2550], laser: [250, 325, 400], escudo: [250, 325, 400], iman: [700, 910, 1120] };
 // Mazo de ayudas (7 nov 2026): la carta dorada del tablero abre el comodín y estas. save.helps = clave -> cuántas.
 // Las que no tienen precio solo se ganan (ver 4 y 5 s; la de 5 casi solo en eventos). La llave maestra es cara a propósito.
 export const HELPS = {
@@ -22,6 +22,10 @@ export const HELPS = {
   escudo: { name: 'Escudo', ico: 'escudito', text: 'La <b>nave ladrona</b> ya no te roba en <b>todo el nivel</b>.' },
   // 13 nov 2026 (pedido del usuario): el imán también se compra, 40% más caro que el comodín. Igual que la carta imán:
   // tu siguiente robo jala la que más sirve sin cortar la racha y la carta que conviene jugar tiembla.
+  // 14 nov 2026 (pedido del usuario): el telescopio vale lo de la llave y deja ver todo 5 turnos (la carta, 3).
+  tele: { name: 'Telescopio', ico: 'telescopio', text: 'Deja ver <b>todas</b> las cartas del tablero durante <b>5 turnos</b>.' },
+  // 14 nov 2026 (pedido del usuario): el astronauta sale en algunos niveles y luego se vende, 15% más barato que la llave.
+  astro: { name: 'Astronauta', ico: 'astronauta', text: 'Llega a tu nivel y te <b>guarda una carta</b> libre. Cuando conecte, la manda al descarte.' },
   iman: { name: 'Imán', ico: 'iman', text: 'Tu <b>siguiente robo</b> saca del mazo la carta que <b>más te sirve</b>, sin cortar tu racha, y te enseña cuál jugar.' },
 };
 export const buyable = (k) => !!TIERS[k];
@@ -143,7 +147,12 @@ export function starsNeeded(w) {
 // además del boleto dorado y las estrellas, CONST_OPEN monedas.
 export const CONST_PRIZE = { coins: 2000, wild: 1, undo: 1 };
 export const CONST_OPEN = 1000;
-export const openCost = (w) => (w > 0 && w % (LEVELS_PER_WORLD) === 0 ? CONST_OPEN : 0);
+// Primer mundo de una constelación (pide el boleto de constelación).
+export const constStart = (w) => w > 0 && w % LEVELS_PER_WORLD === 0;
+// 14 nov 2026 (el usuario): las primeras CONST_FREE constelaciones se abren gratis (el precio sale tachado).
+export const CONST_FREE = 5;
+export const openFree = (w) => constStart(w) && w / LEVELS_PER_WORLD < CONST_FREE;
+export const openCost = (w) => (constStart(w) && !openFree(w) ? CONST_OPEN : 0);
 
 // ---------- Cofre del jefe ----------
 // Al ganar el jefe por primera vez: premio según el % de estrellas del mundo (tope 100% = 30/30).

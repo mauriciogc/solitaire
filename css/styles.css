@@ -2976,8 +2976,9 @@ p.met-sale { display: flex; align-items: center; justify-content: center; gap: 6
 .feat .ft-medals { display: flex; gap: 6px; margin-top: 4px; }
 .feat .ft-medals .medal { width: 18px; height: 18px; }
 .feat .ft-num { position: absolute; right: -14px; bottom: -6px; min-width: 46px; padding: 0 6px; border-radius: 16px; background: #ff8a3d; border: 3px solid var(--ink); color: #fff; font: 400 24px/36px 'Lilita One'; }
-.feat .ft-prize { display: flex; justify-content: center; gap: 10px; min-height: 44px; margin-top: 8px; }
-.feat .ft-chip { display: flex; align-items: center; gap: 5px; padding: 4px 12px 5px 6px; border-radius: 99px; background: #fff3c4; border: 2.5px solid var(--ink); opacity: 0; transition: opacity .3s, scale .3s; }
+/* 14 nov 2026 (el usuario: con muchos premios se salían de la tarjeta): bajan de renglón. */
+.feat .ft-prize { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; max-width: 100%; min-height: 44px; margin-top: 8px; }
+.feat .ft-chip { display: flex; align-items: center; max-width: 100%; min-width: 0; gap: 5px; padding: 4px 12px 5px 6px; border-radius: 99px; background: #fff3c4; border: 2.5px solid var(--ink); opacity: 0; transition: opacity .3s, scale .3s; }
 .feat .ft-chip.on { opacity: 1; }
 .feat .ft-chip .ico { width: 30px; height: 30px; }
 .feat .ft-chip b { font: 400 24px 'Lilita One'; color: #ffd75a; font-variant-numeric: tabular-nums; }
@@ -3097,7 +3098,7 @@ p.met-sale { display: flex; align-items: center; justify-content: center; gap: 6
 .feat:is(.ft-pase, .ft-secreto):not(.num-on) .ft-num { opacity: 0; }
 .feat.ft-secreto .ft-num { background: #6c3fd4; }
 .feat.ft-pase .ft-num { background: #4aa8de; }
-.feat .ft-chip.ft-ex b { font-size: 17px; color: #fff; }
+.feat .ft-chip.ft-ex b { font-size: 17px; color: #fff; line-height: 1.1; overflow-wrap: anywhere; }
 .feat .ft-chip.ft-ex .ico { width: 26px; height: 26px; }
 
 /* Lluvia de estrellas (11 nov 2026): lo mismo que la de meteoritos, en violeta y dorado. */
@@ -3367,6 +3368,8 @@ p.met-sale { display: flex; align-items: center; justify-content: center; gap: 6
 .scr-ov svg { width: 100%; height: 100%; display: block; }
 .card:not(.up) .scr-ov { display: none; }
 .scr-ov.done { opacity: 0; transform: scale(1.25) rotate(8deg); }
+/* Raspadita a la que le fallaste (14 nov 2026): la plata se cae de la carta. */
+.scr-ov.lost { opacity: 0; transform: translateY(70%) rotate(-14deg); transition: opacity .5s .15s, transform .6s cubic-bezier(.5, 0, .9, .6); }
 /* Bitácora (13 nov 2026): hojas azul de noche con cuadrícula; la de encima con escotillas de orilla metálica. Sencillas
    a propósito (el usuario: que acostado se vea bien). */
 .bita-page { position: absolute; pointer-events: none; }
@@ -3393,19 +3396,64 @@ p.met-sale { display: flex; align-items: center; justify-content: center; gap: 6
    jugarla, la garra baja, cierra las pinzas y sube la columna. Se mece poquito. */
 .portal-mesa .g-rail::after { bottom: auto; top: 6px; opacity: 0; }
 .portal-mesa .g-rail { overflow: visible; z-index: auto; } /* así la garra queda encima de la carta que agarra */
-.g-claw { position: absolute; left: 50%; top: calc(var(--cw) * -0.02); width: calc(var(--cw) * 0.95); translate: -50% 0; z-index: 950; transform-origin: 50% 0; animation: g-claw-sway 3.2s ease-in-out infinite; }
+.g-claw { position: absolute; left: 50%; top: calc(var(--cw) * -0.24); width: calc(var(--cw) * 0.95); translate: -50% 0; z-index: 950; transform-origin: 50% 0; animation: g-claw-sway 3.2s ease-in-out infinite; }
 .g-claw svg { display: block; width: 100%; overflow: visible; }
+/* Pinza de atrás (14 nov 2026): esperando va adelante como la otra (si no, la carta la tapaba); solo al agarrar pasa
+   detrás de la carta (900) y encima de las demás de la columna. */
+.g-claw.rear.grab { z-index: 850; }
 .g-claw .cl-l, .g-claw .cl-r { transform-box: fill-box; transition: rotate .2s; }
-.g-claw .cl-l { transform-origin: 100% 0; }
-.g-claw .cl-r { transform-origin: 0 0; }
+/* 14 nov 2026 (el usuario): en reposo la garra espera vacía y abierta, arriba de la carta; solo baja al jugarla. */
+.g-claw .cl-l { transform-origin: 100% 0; rotate: 22deg; }
+.g-claw .cl-r { transform-origin: 0 0; rotate: -22deg; }
 .g-claw.grab { animation: g-claw-grab .7s cubic-bezier(.4,0,.3,1); }
 .g-claw.grab .cl-l { animation: g-claw-pinch-l .7s ease-in-out; }
 .g-claw.grab .cl-r { animation: g-claw-pinch-r .7s ease-in-out; }
 @keyframes g-claw-sway { 50% { rotate: 2.5deg; } }
-@keyframes g-claw-grab { 0% { translate: -50% 0; } 40% { translate: -50% calc(var(--cw) * 0.45); } 100% { translate: -50% 0; } }
-@keyframes g-claw-pinch-l { 0%, 25% { rotate: 22deg; } 45%, 100% { rotate: 0deg; } }
-@keyframes g-claw-pinch-r { 0%, 25% { rotate: -22deg; } 45%, 100% { rotate: 0deg; } }
+@keyframes g-claw-grab { 0% { translate: -50% 0; } 40% { translate: -50% calc(var(--cw) * 0.55); } 100% { translate: -50% 0; } }
+@keyframes g-claw-pinch-l { 0%, 35% { rotate: 22deg; } 45%, 100% { rotate: 0deg; } }
+@keyframes g-claw-pinch-r { 0%, 35% { rotate: -22deg; } 45%, 100% { rotate: 0deg; } }
 @media (prefers-reduced-motion: reduce) { .g-claw, .g-claw.grab, .g-claw.grab :is(.cl-l, .cl-r) { animation: none; } }
 /* Cómo jugar: el dibujo de las mesas que no tienen ilustración propia. */
 .step .tbl-ill { display: grid; place-items: center; }
 .step .tbl-ill .ico { width: 64px; height: 64px; }
+/* Constelación gratis (14 nov 2026): el precio de antes tachado junto a «Gratis». */
+s.was { text-decoration: line-through 2px #ff5f7e; opacity: .7; margin-right: .2em; }
+
+/* ---------- Gemelas, telescopio y astronauta (14 nov 2026) ---------- */
+/* Gemelas: ojal abajo al centro (perforación) con su nudo y un cabito, del color de la pareja (--tc). */
+.twin-eye { position: absolute; left: 50%; bottom: 5%; width: calc(var(--cw) * 0.2); aspect-ratio: 1; translate: -50% 0; z-index: 3; pointer-events: none; border-radius: 50%; background: radial-gradient(circle, #1b1440 0 34%, var(--tc) 35% 70%, var(--ink) 71%); box-shadow: 0 1px 0 #0b062a55; }
+.twin-eye b { position: absolute; left: 50%; top: 62%; width: 40%; aspect-ratio: 1; translate: -50% 0; border-radius: 50%; background: var(--tc); border: 1.5px solid var(--ink); }
+.twin-eye b::after { content: ''; position: absolute; left: 60%; top: 70%; width: 2px; height: calc(var(--cw) * 0.1); background: var(--tc); border-radius: 2px; rotate: -30deg; transform-origin: 50% 0; box-shadow: 0 0 0 1px var(--ink); }
+/* Telescopio: boca abajo, orilla lila con su telescopio; mientras deja ver, las tapadas se ven con orilla lila. */
+.back .tb-ico.mk-scope { background: #ece8ff; box-shadow: inset 0 -3px 0 #b9aef0; }
+.board .card.scope-see { filter: saturate(.85); }
+.board .card.scope-see .front { box-shadow: inset 0 0 0 3px #8a7cf0, 2px 4px 0 #0b062a33; }
+.board .card.scope-see .front::after { content: ''; position: absolute; inset: 0; border-radius: inherit; background: #8a7cf01f; pointer-events: none; }
+/* Tito, el astronauta (14 nov 2026): flota aparte (fuera de la bandeja, para no mover botones; astroPlace escoge el
+   lugar libre). Con carta, la carga enfrente; cuando conecta, brilla. Vuela por las cartas (astroFly). */
+.astro { position: absolute; z-index: 60; width: 58px; aspect-ratio: 1 / 1.12; padding: 0; background: none; border: 0; cursor: pointer; touch-action: manipulation; filter: drop-shadow(0 4px 0 #0b062a44); }
+.astro[hidden] { display: none; }
+/* Su planeta (14 nov 2026): fijo junto a deshacer; Tito se para en él y de ahí sale volando. */
+.astro-base { position: absolute; z-index: 59; aspect-ratio: 1; pointer-events: none; filter: drop-shadow(0 3px 0 #0b062a44); }
+.astro-base[hidden] { display: none; }
+.astro-base .ico { width: 100%; height: 100%; display: block; }
+.astro-me { position: absolute; inset: 0; animation: astro-float 2.8s ease-in-out infinite; }
+.astro-me > svg { width: 100%; height: 100%; display: block; overflow: visible; }
+.astro-hold { position: absolute; left: 50%; top: 44%; translate: -50% 0; --cw: calc(var(--aw, 58px) * 0.42); width: var(--cw); height: calc(var(--cw) * 1.4); pointer-events: none; rotate: -8deg; }
+.astro-hold:empty { display: none; }
+.astro-hold .card { left: 0; top: 0; }
+.astro.ready .astro-me { filter: drop-shadow(0 0 6px #7ef0ff) drop-shadow(0 0 3px #7ef0ff); }
+.astro.picking .astro-me { filter: drop-shadow(0 0 6px var(--gold)) drop-shadow(0 0 3px var(--gold)); animation: astro-wave .7s ease-in-out infinite; }
+.board .card.astro-can { box-shadow: 0 0 0 4px var(--gold), 0 0 18px #ffc83d99; border-radius: calc(var(--cw) * 0.14); animation: astro-can .9s ease-in-out infinite; }
+@keyframes astro-float { 0%, 100% { translate: 0 0; rotate: -3deg; } 50% { translate: 0 -5px; rotate: 3deg; } }
+@keyframes astro-wave { 50% { translate: 0 -6px; scale: 1.06; } }
+@keyframes astro-can { 50% { translate: 0 -3px; } }
+@media (prefers-reduced-motion: reduce) { .astro-me, .board .card.astro-can { animation: none; } }
+.rd-help { position: absolute; inset: 0; border-radius: 4px; background: center / cover; rotate: -6deg; box-shadow: 0 2px 0 #0b062a44; }
+/* Hilos de las gemelas: de ojal a ojal, colgando (paintTwins), por detrás de las cartas (primero en el tablero, z 0). */
+.twin-threads { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; z-index: 0; }
+.twin-threads path { fill: none; stroke-width: 2.6; stroke-linecap: round; }
+.twin-threads path.tt-ink { stroke: var(--ink); stroke-width: 5; opacity: .85; }
+/* Tito saluda al terminar las ventanas del nivel: brilla y brinca. */
+.astro.hello .astro-me { filter: drop-shadow(0 0 8px #7ef0ff) drop-shadow(0 0 4px #fff); animation: astro-hello .8s ease-in-out 4; }
+@keyframes astro-hello { 0%, 100% { translate: 0 0; rotate: 0deg; } 30% { translate: 0 -12px; rotate: -10deg; } 60% { translate: 0 -4px; rotate: 10deg; } }

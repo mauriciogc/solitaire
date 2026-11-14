@@ -4,7 +4,7 @@ import { worldInfo, packGroups, MECH_NAMES, LEVELS_PER_WORLD, scrollStrip, scrol
 import * as E from './engine.js';
 import { price, EV_MARKUP, round5, HELPS, buyable } from './economy.js';
 import { helpOff } from './meteor.js';
-import { cardBackURL, icon, star, coin, lockIcon, keyIcon, arrowIcon, curtainIcon, suitSVG, avatarHTML, vineSVG, sproutSVG } from './art.js';
+import { cardBackURL, icon, star, coin, lockIcon, keyIcon, arrowIcon, curtainIcon, suitSVG, avatarHTML, vineSVG, sproutSVG, ASTRO_ART } from './art.js';
 import { tableHTML } from './biomes.js';
 import { Coach } from './coach.js';
 import { track, missionDef } from './missions.js';
@@ -22,9 +22,9 @@ const FLY_EASE = 'cubic-bezier(0.33, 0.6, 0.35, 1)';
 export const MECH_KINDS = [
   ['Se abren después', ['lock', 'curtain', 'ice', 'vine', 'sleep']],
   ['Cambian con los turnos', ['live', 'ghost', 'cham']],
-  ['Reglas al jugar', ['double', 'arrow', 'ticket', 'domino', 'triple']],
+  ['Reglas al jugar', ['double', 'arrow', 'ticket', 'domino', 'triple', 'twin']],
   ['No se juegan', ['pack', 'bomb', 'comet']],
-  ['Te ayudan', ['coin', 'turbo', 'bolt', 'cst', 'magnet', 'rainbow', 'scratch']],
+  ['Te ayudan', ['coin', 'turbo', 'bolt', 'cst', 'magnet', 'rainbow', 'scratch', 'scope']],
 ];
 // Dibujos que viven en main.js y dev.js (la carta de ejemplo y el icono de cada mesa): main.js los pone al arrancar.
 export const ART = { mechCard: () => '', tableIcon: () => '' };
@@ -38,7 +38,7 @@ export const TIPS = {
   double: 'Vale <b>dos números</b>: juégala con cualquiera y sigue desde cualquiera.',
   arrow: 'Después de jugarla, la siguiente tiene que ser <b>uno más (↑)</b> o <b>uno menos (↓)</b>.',
   ticket: 'Tiene <b>dos mitades</b>: juega una y la otra se queda para después.',
-  scratch: 'No se ve su número: cada carta que juegas <b>pegada a ella</b> le abre una ventanita. Si te arriesgas a jugarla antes de verla toda y le atinas, te da <b>monedas</b>. Si no conecta, se corta tu racha.',
+  scratch: 'No se ve su número: cada carta que juegas <b>pegada a ella</b> le abre una ventanita. Si te arriesgas a jugarla antes de verla toda y le atinas, te da <b>monedas</b>. Si no conecta, se destapa: pierdes sus monedas y se corta tu racha.',
   domino: 'Tiene <b>dos números</b>: entra por cualquiera y en el descarte se queda <b>el otro</b>.',
   triple: 'Tiene <b>3 talones</b>: arranca el de una <b>punta</b> cuando encaje. El de en medio sale cuando ya quedó en la orilla.',
   pack: 'No se juega: <b>destápala</b> y mete cartas extra a tu mazo.',
@@ -51,6 +51,9 @@ export const TIPS = {
   magnet: 'Se juega normal y tu <b>siguiente robo</b> saca del mazo la carta que <b>más te sirve</b>, sin cortar tu racha. La carta que conviene jugar <b>tiembla</b>.',
   rainbow: 'Se juega normal y tus <b>3 jugadas siguientes</b> pueden saltar <b>dos</b> (del 6 al 8). Las que puedes jugar se pintan <b>de colores</b>. Si robas, se apaga.',
   sleep: 'Está <b>dormida</b>: despierta cuando llevas su número de cartas <b>seguidas</b> sin robar. Si robas antes, vuelve a empezar.',
+  // 14 nov 2026 (pedido del usuario): sin cuenta a la vista; el texto dice cuántos turnos.
+  scope: 'Se juega normal y por <b>3 turnos</b> se ven <b>todas</b> las cartas del tablero, también las tapadas. Planea por dónde ir.',
+  twin: 'Van atadas con un <b>lazo</b>. Al jugar una, la otra sale de donde esté, aunque esté tapada, y cae al <b>descarte</b>: sigues desde ella.',
   vine: 'No se juega mientras la tape la <b>enredadera</b>, que <b>crece</b> cada 5 jugadas o robos. Juega la carta de <b>fuego</b> y las quema todas.',
 };
 // La ayuda que sirve contra cada carta (11 nov 2026, pedido del usuario): sale con su carta en la ventana de la primera
@@ -58,6 +61,7 @@ export const TIPS = {
 export const TIP_HELP = {
   // 13 nov 2026 (pedido del usuario): la carta imán presenta también la ayuda imán, como la mesa de asteroides al láser.
   magnet: ['iman', 'himan', '<b>Imán:</b> también lo compras en tus ayudas, para usarlo cuando quieras.'],
+  scope: ['tele', 'htele', '<b>Telescopio:</b> también lo compras en tus ayudas y deja ver todo <b>5 turnos</b>.'],
   lock: ['llave', 'hllave', '<b>Llave maestra:</b> abre todos los candados y cortinas.'],
   curtain: ['llave', 'hllave', '<b>Llave maestra:</b> abre todos los candados y cortinas.'],
   comet: ['reloj', 'hreloj', '<b>Reloj de arena:</b> congela 3 turnos todo lo que cuenta.'],
@@ -66,7 +70,7 @@ export const TIP_HELP = {
   ghost: ['reloj', 'hreloj', '<b>Reloj de arena:</b> congela 3 turnos todo lo que cuenta.'],
   vine: ['reloj', 'hreloj', '<b>Reloj de arena:</b> congela 3 turnos todo lo que cuenta.'],
 };
-const MECH_FIELD = { lock: 'lock', pack: 'pack', ice: 'ice', double: 'alt', arrow: 'arrow', curtain: 'curtain', bomb: 'bomb', live: 'live', ticket: 'half', comet: 'comet', turbo: 'turbo', ghost: 'ghost', ship: 'ship', coin: 'coin', cham: 'cham', bolt: 'bolt', cst: 'cst', vine: 'vine', magnet: 'magnet', rainbow: 'rainbow', sleep: 'sleep', domino: 'dom', triple: 'tri', scratch: 'scr' };
+const MECH_FIELD = { lock: 'lock', pack: 'pack', ice: 'ice', double: 'alt', arrow: 'arrow', curtain: 'curtain', bomb: 'bomb', live: 'live', ticket: 'half', comet: 'comet', turbo: 'turbo', ghost: 'ghost', ship: 'ship', coin: 'coin', cham: 'cham', bolt: 'bolt', cst: 'cst', vine: 'vine', magnet: 'magnet', rainbow: 'rainbow', sleep: 'sleep', domino: 'dom', triple: 'tri', scratch: 'scr', scope: 'scope', twin: 'twin' };
 // Constelación (10 nov 2026, pedido del usuario): al juntarla, CST_HELP de las veces una ayuda y si no monedas, de 50 a
 // 200 (casi siempre de las bajas: el promedio queda en ~100, unas 2 veces lo que paga un nivel ahí).
 const CST_HELP = 0.15;
@@ -135,10 +139,15 @@ export function faceHTML(c, rank = c.rank) {
   const badge = c.lock != null ? `<span class="lk-badge">${lockIcon(LOCK_HUES[c.lock])}</span>` : c.key != null ? `<span class="lk-badge">${keyIcon(LOCK_HUES[c.key])}</span>` : '';
   // 11 nov 2026 (pedido del usuario: igual que el cohete turbo): rayo, fantasma y llave de puerta llevan su dibujo
   // arriba a la derecha, en el lugar del palo; la constelación, su estrellita abajo a la derecha, dentro de la carta.
-  const mk = c.bolt ? 'rayo' : c.fire ? 'flame' : c.magnet ? 'iman' : c.rainbow ? 'arcoiris' : c.ghost ? 'ghost' : c.doorKey ? 'llavePuerta' : null;
+  const mk = c.bolt ? 'rayo' : c.fire ? 'flame' : c.magnet ? 'iman' : c.scope ? 'telescopio' : c.rainbow ? 'arcoiris' : c.ghost ? 'ghost' : c.doorKey ? 'llavePuerta' : null;
   const suit = c.key != null ? '' : c.coin ? `<span class="cs coin-cs">${icon('monedas')}</span>` : mk ? `<span class="cs mk-cs">${icon(mk)}</span>` : `<span class="${cs}">${s}</span>`;
-  return `<div class="face front${red}${kind}"${tint}>${corner}${suit}${badge}<span class="big${r === '10' ? ' ten' : ''}${SIXNINE(r)}">${r}</span>${arrow}${c.cst ? `<span class="cst-mk">${icon('star')}</span>` : ''}${c.cham ? `${CHAM_FACE('cham-eyes')}<span class="cham-ov">${CHAM_FACE('cham-face')}</span>` : ''}</div>`;
+  return `<div class="face front${red}${kind}"${tint}>${corner}${suit}${badge}<span class="big${r === '10' ? ' ten' : ''}${SIXNINE(r)}">${r}</span>${arrow}${c.cst ? `<span class="cst-mk">${icon('star')}</span>` : ''}${c.cham ? `${CHAM_FACE('cham-eyes')}<span class="cham-ov">${CHAM_FACE('cham-face')}</span>` : ''}${c.twin != null ? twinEye(c) : ''}</div>`;
 }
+// Gemelas (14 nov 2026; el usuario: «una perforación abajo al centro y ahí su nodo con la otra, más delgada»): un ojal
+// abajo al centro con su nudo, del color de la pareja (hay hasta 3), de frente y boca abajo.
+export const TWIN_COLORS = ['#ff6fb0', '#36c2ff', '#ffb020'];
+const twinColor = (c) => TWIN_COLORS[(c.twinC || 0) % TWIN_COLORS.length];
+const twinEye = (c) => `<i class="twin-eye" style="--tc:${twinColor(c)}"><b></b></i>`;
 // Ayuda en una ventana de presentación (11 nov 2026): su carta y, al lado, para qué sirve, en su propio renglón.
 // small: nota chiquita abajo (11 nov 2026, el usuario: «agrupar las ayudas en pequeño, o una nota»).
 const helpTip = (back, text, small = false) => `<div class="help-tip${small ? ' small' : ''}"><span class="help-tip-card" style="background-image:${cardBackURL(back)}"></span><p>${text}</p></div>`;
@@ -159,11 +168,13 @@ export const TABLE_TEXT = {
   // 13 nov 2026 (pedido del usuario): sin cuenta a la vista; un temblor avisa justo antes de la vuelta.
   hangar: ['Las columnas salen de un <b>hangar</b>.', 'Solo juegas la de <b>abajo</b>. Cuando vacías una columna, las demás se recorren y del hangar sale otra.'],
   bitacora: ['Hojas de <b>bitácora</b> encimadas.', 'Por las <b>escotillas</b> se ven cartas de la hoja de abajo: esas se juegan cuando quieras. Vacía la hoja de encima y se arranca.'],
-  portal: ['Unas <b>grúas de feria</b> jalan las columnas hacia arriba.', 'Solo juegas la carta que agarra la <b>garra</b>; al quitarla, la garra baja y sube la columna.'],
+  portal: ['Unas <b>grúas de feria</b> jalan las columnas hacia arriba.', 'Solo juegas la carta de hasta arriba: al tocarla, la <b>garra</b> baja, la agarra y se la lleva. Luego sube la columna.'],
+  // Astronauta (14 nov 2026, pedido del usuario: «no carta, un ayudante»): como la nave, va como mesa.
+  astro: ['Aquí te acompaña <b>Tito</b>, un astronauta.', 'Tócalo y luego toca una carta libre: vuela por ella y te la <b>guarda</b>. Cuando conecte, tócalo otra vez y la <b>lleva al descarte</b>. Después se va.'],
   voltea: ['Las cartas van en <b>columnas</b> dentro de una cápsula.', 'Solo juegas la de <b>abajo</b>. Cada <b>5 jugadas o robos</b> la cápsula da <b>media vuelta</b>. Cuando tiembla, ¡cuidado!'],
 };
-const TABLE_NAME = { nave: 'Nave ladrona', mesa: 'Mesa enrollada', gravedad: 'Gravedad', nebulosa: 'Nebulosa', marea: 'Marea', puertas: 'Puertas', banda: 'Banda transportadora', hoyo: 'Agujero negro', rocas: 'Asteroides', voltea: 'Mesa que se voltea', hangar: 'Hangar', bitacora: 'Bitácora', portal: 'Grúa de feria' };
-const TABLE_HELP = { rocas: helpTip('hlaser', '<b>Láser:</b> rompe todas las piedras.', true), nave: helpTip('hescudo', '<b>Escudo:</b> la nave ya no te roba en todo el nivel.', true) };
+const TABLE_NAME = { nave: 'Nave ladrona', mesa: 'Mesa enrollada', gravedad: 'Gravedad', nebulosa: 'Nebulosa', marea: 'Marea', puertas: 'Puertas', banda: 'Banda transportadora', hoyo: 'Agujero negro', rocas: 'Asteroides', voltea: 'Mesa que se voltea', hangar: 'Hangar', bitacora: 'Bitácora', portal: 'Grúa de feria', astro: 'Astronauta' };
+const TABLE_HELP = { rocas: helpTip('hlaser', '<b>Láser:</b> rompe todas las piedras.', true), nave: helpTip('hescudo', '<b>Escudo:</b> la nave ya no te roba en todo el nivel.', true), astro: helpTip('hastro', '<b>Astronauta:</b> después también lo compras en tus ayudas.', true) };
 // Ventana con el formato de las cartas (11 nov 2026): dibujo a la izquierda y, al lado, su nombre y su texto.
 const tipCard = (pic, name, text, cls = '') => `<div class="tip-card"><span class="tip-pic${cls}">${pic}</span><p><b>${name}</b>${text}</p></div>`;
 const helpPic = (back) => `<span class="help-tip-card" style="background-image:${cardBackURL(back)}"></span>`;
@@ -171,7 +182,7 @@ const helpPic = (back) => `<span class="help-tip-card" style="background-image:$
 export const TABLE_INTRO = {
   // Mismo formato que las cartas: su icono (el de Tu camino; la nave, su nave), su nombre y su texto; la ayuda abajo.
   // body es un getter: el icono viene de dev.js (ART).
-  ...Object.fromEntries(Object.entries(TABLE_TEXT).map(([k, [a, b]]) => [k, { title: `Nuevo: ${TABLE_NAME[k].toLowerCase()}`, color: 'blue', get body() { return tipCard(k === 'nave' ? icon('nave') : ART.tableIcon(k), TABLE_NAME[k], `${a} ${b}`, ' tip-ico') + (TABLE_HELP[k] || ''); } }])),
+  ...Object.fromEntries(Object.entries(TABLE_TEXT).map(([k, [a, b]]) => [k, { title: `Nuevo: ${TABLE_NAME[k].toLowerCase()}`, color: 'blue', get body() { return tipCard(k === 'nave' ? icon('nave') : k === 'astro' ? icon('astronauta') : ART.tableIcon(k), TABLE_NAME[k], `${a} ${b}`, ' tip-ico') + (TABLE_HELP[k] || ''); } }])),
   // Mini guía de ayudas (11 nov 2026, pedido del usuario): una vez, en el nivel 2. Qué son, cuáles hay y dónde están.
   ayudas: { title: 'Nuevo: ayudas', color: 'blue', get body() { return `${tipCard(icon('ayudas'), 'Ayudas', 'Cartas que te sacan de apuros. Están en el <b>botón dorado</b> de abajo: toca una para usarla y abajo de cada una compras <b>+1</b>.', ' tip-ico')}<div class="help-list">${[['comodin', '<b>Comodín:</b> vale cualquier número.'], ['hreloj', '<b>Reloj de arena:</b> congela 3 turnos todo lo que cuenta.'], ['hver', '<b>Ver cartas:</b> voltea las cartas tapadas unos segundos.'], ['hllave', '<b>Llave maestra:</b> abre todos los candados y cortinas.']].map(([b, t]) => helpTip(b, t, true)).join('')}</div><p class="note">Solo salen las que sirven en cada nivel.</p>`; } },
   // Ver cartas: una vez, en un tablero grande.
@@ -246,6 +257,7 @@ const BACK_MARK = (c) =>
   : c.bolt ? ['#7a6ae8', 'tb-ico mk-bolt', icon('rayo')]
   : c.fire ? ['#ff6a3d', 'tb-ico mk-fire', icon('flame')]
   : c.magnet ? ['#ff5f7e', 'tb-ico mk-magnet', icon('iman')]
+  : c.scope ? ['#8a7cf0', 'tb-ico mk-scope', icon('telescopio')]
   : c.rainbow ? ['#5ab0ff', 'tb-ico mk-rainbow', icon('arcoiris')]
   : c.cst ? ['#ffc83d', 'tb-ico mk-cst', icon('star')]
   : c.ghost ? ['#b9aef0', 'tb-ico mk-ghost', icon('ghost')]
@@ -255,13 +267,18 @@ const BACK_MARK = (c) =>
   : null;
 export const backHTML = (c) => {
   const m = BACK_MARK(c);
-  return `<div class="face back${c.rainbow ? ' rb-back' : ''}"${m ? ` style="--back:${cardBackURL(undefined, m[0])}${c.lock != null ? `;--kh:${LOCK_HUES[c.lock]}` : ''}"` : ''}>${c.curtain != null ? '<i class="drape l"></i><i class="drape r"></i><i class="valance"></i>' : ''}${m ? `<span class="${m[1]}">${m[2]}</span>` : ''}${c.half != null ? '<i class="perf"></i>' : ''}</div>`;
+  return `<div class="face back${c.rainbow ? ' rb-back' : ''}"${m ? ` style="--back:${cardBackURL(undefined, m[0])}${c.lock != null ? `;--kh:${LOCK_HUES[c.lock]}` : ''}"` : ''}>${c.curtain != null ? '<i class="drape l"></i><i class="drape r"></i><i class="valance"></i>' : ''}${m ? `<span class="${m[1]}">${m[2]}</span>` : ''}${c.half != null ? '<i class="perf"></i>' : ''}${c.twin != null ? twinEye(c) : ''}</div>`;
 };
 const inner = (c) => `<div class="inner">${faceHTML(c)}${backHTML(c)}</div>`;
 // Marcas que se ven aunque la carta esté boca abajo, para poder planear.
 // Raspadita (13 nov 2026): plata con SCR_WIN ventanitas redondas que se abren con cada carta pegada que juegas.
 // Grúa de feria (13 nov 2026, el usuario escogió la grúa en lugar del portal): la garra de cada columna.
-const CLAW = `<i class="g-claw"><svg viewBox="0 0 60 64"><path d="M30 -60V14" stroke="#2a1f5c" stroke-width="3"/><rect x="17" y="10" width="26" height="14" rx="4" fill="#ffc83d" stroke="#2a1f5c" stroke-width="2.6"/><circle cx="30" cy="17" r="3" fill="#ff5f7e" stroke="#2a1f5c" stroke-width="1.6"/><g class="cl-l"><path d="M24 24Q12 34 15 50Q17 56 22 55" fill="none" stroke="#2a1f5c" stroke-width="7" stroke-linecap="round"/><path d="M24 24Q12 34 15 50Q17 56 22 55" fill="none" stroke="#c9d0ea" stroke-width="3.6" stroke-linecap="round"/></g><g class="cl-r"><path d="M36 24Q48 34 45 50Q43 56 38 55" fill="none" stroke="#2a1f5c" stroke-width="7" stroke-linecap="round"/><path d="M36 24Q48 34 45 50Q43 56 38 55" fill="none" stroke="#c9d0ea" stroke-width="3.6" stroke-linecap="round"/></g></svg></i>`;
+// Lo que tarda la garra en bajar, agarrar y subir (g-claw-grab en el CSS).
+const CLAW_MS = 700;
+const CLAW_FRONT = `<i class="g-claw"><svg viewBox="0 0 60 64"><path d="M30 -60V14" stroke="#2a1f5c" stroke-width="3"/><rect x="17" y="10" width="26" height="14" rx="4" fill="#ffc83d" stroke="#2a1f5c" stroke-width="2.6"/><circle cx="30" cy="17" r="3" fill="#ff5f7e" stroke="#2a1f5c" stroke-width="1.6"/><g class="cl-l"><path d="M24 24Q12 34 15 50Q17 56 22 55" fill="none" stroke="#2a1f5c" stroke-width="7" stroke-linecap="round"/><path d="M24 24Q12 34 15 50Q17 56 22 55" fill="none" stroke="#c9d0ea" stroke-width="3.6" stroke-linecap="round"/></g></svg></i>`;
+// 14 nov 2026 (el usuario: más realismo): la pinza derecha va aparte, detrás de la carta que agarra (z-index en el CSS).
+// Es la izquierda en espejo (la de antes, girada con CSS, quedaba encimada en la izquierda y no se veía).
+const CLAW = `<i class="g-claw rear"><svg viewBox="0 0 60 64"><g transform="translate(60 0) scale(-1 1)"><g class="cl-l"><path d="M24 24Q12 34 15 50Q17 56 22 55" fill="none" stroke="#2a1f5c" stroke-width="7" stroke-linecap="round"/><path d="M24 24Q12 34 15 50Q17 56 22 55" fill="none" stroke="#c9d0ea" stroke-width="3.6" stroke-linecap="round"/></g></g></svg></i>${CLAW_FRONT}`;
 const SCR_ICO = '<svg class="ico" viewBox="0 0 32 32"><rect x="6" y="3" width="20" height="26" rx="4" fill="#d6dbe8" stroke="#2a1f5c" stroke-width="2.4"/><path d="M10 8l12 0M10 24l7 0" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/><text x="16" y="21" text-anchor="middle" font-family="Lilita One" font-size="13" fill="#7a8299">?</text></svg>';
 const SCR_SPOTS = [[66, 34, 15], [32, 98, 15], [52, 66, 16], [70, 112, 14]];
 export const scrSVG = (id, open = 0) => `<svg viewBox="0 0 100 140" preserveAspectRatio="none"><defs><linearGradient id="sg${id}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#cfd5e4"/><stop offset=".35" stop-color="#f3f5fb"/><stop offset=".6" stop-color="#a9b1c7"/><stop offset="1" stop-color="#dfe3ee"/></linearGradient><mask id="sm${id}"><rect width="100" height="140" fill="#fff"/>${SCR_SPOTS.map(([x, y, r], k) => `<circle class="h" cx="${x}" cy="${y}" r="${k < open ? r : 0}" data-r="${r}" fill="#000"/>`).join('')}</mask></defs><g mask="url(#sm${id})"><rect x="4" y="4" width="92" height="132" rx="9" fill="url(#sg${id})"/><path d="M14 22l14-7M72 128l14-7M18 120l8-5" stroke="#fff" stroke-width="3" stroke-linecap="round"/><text x="50" y="82" text-anchor="middle" font-family="Lilita One" font-size="34" fill="#8a92aa">?</text></g></svg>`;
@@ -529,6 +546,22 @@ export class Game {
         buttons: [{ label: '¡Entendido!', cls: 'green' }],
       });
     }
+    // Astronauta (14 nov 2026): se presenta como mesa, la primera vez que llega.
+    if (this.level.astro && !save.seen.astro) {
+      save.seen.astro = true;
+      persist();
+      this.modalOpen = true;
+      return openModal({
+        ...TABLE_INTRO.astro,
+        closable: false,
+        onClose: () => {
+          this.modalOpen = false;
+          if (!reduced()) this.astroEl?.animate([{ scale: 1 }, { scale: 1.25, rotate: '-8deg' }, { scale: 1 }], { duration: 500, iterations: 3 });
+          setTimeout(() => this.tips(), 300);
+        },
+        buttons: [{ label: '¡Entendido!', cls: 'green' }],
+      });
+    }
     const next = (this.level.meta.mechs || []).find((m) => TIPS[m] && !save.seen[m]);
     // Escudo (11 nov 2026: ayuda, ya no carta): se presenta una vez, en un nivel con nave que no sea el primero (ahí
     // ya sale la nave).
@@ -566,7 +599,7 @@ export class Game {
       this.shipTold = true;
       this.shipBanner();
     }
-    if (!next) return;
+    if (!next) return this.astroHello();
     save.seen[next] = true;
     persist();
     const c = this.cards.find((x) => !x.removed && x.el && x[MECH_FIELD[next]] != null);
@@ -654,7 +687,9 @@ export class Game {
         <div class="stock" data-a="draw" role="button" aria-label="Mazo"></div>
         <div class="pile waste"></div>
         <button class="tool tb wild-card" data-a="wild" aria-label="Ayudas" title="Ayudas">${icon('ayudas')}<b class="badge" data-n="wild"></b></button>
-      </footer>`;
+      </footer>
+      <i class="astro-base" hidden>${icon('planet')}</i>
+      <button class="astro" data-a="astro" aria-label="Tito, el astronauta" title="Tito, el astronauta" hidden><span class="astro-me"><svg viewBox="0 0 64 72" aria-hidden="true">${ASTRO_ART}</svg><span class="astro-hold"></span></span></button>`;
     this.boardEl = el.querySelector('.board');
     this.wrapEl = el.querySelector('.board-wrap');
     // Mesa enrollada: encima de la mesa del planeta va una alfombra de su color (--rug) que se desenrolla.
@@ -690,6 +725,8 @@ export class Game {
     }
     this.stockEl = el.querySelector('.stock');
     this.wasteEl = el.querySelector('.waste');
+    this.astroEl = el.querySelector('.astro');
+    this.astroBase = el.querySelector('.astro-base');
     this.streakEl = el.querySelector('.streak');
     this.comboEl = el.querySelector('.combo');
     // Cartas y mazo responden al apoyar el dedo, no al soltarlo.
@@ -707,6 +744,7 @@ export class Game {
       const actions = {
         undo: () => this.undo(),
         wild: () => this.openHelps(),
+        astro: () => this.tapAstro(),
         end: () => this.endLevel(),
       };
       actions[a]?.();
@@ -834,6 +872,9 @@ export class Game {
   layout() {
     const r = this.wrapEl.getBoundingClientRect();
     if (!r.width) return;
+    // Tito se acomoda otra vez cuando cambia el tamaño (después de que se acomoda el tablero).
+    if (this.astroEl && !this.astroEl.hidden) requestAnimationFrame(() => this.astroPlace());
+    requestAnimationFrame(() => this.paintTwins());
     this.wrapSize = `${Math.round(r.width)}x${Math.round(r.height)}`;
     if (this.level.scroll === 'mesa') return this.layoutScroll(r);
     if (this.level.scroll === 'gravedad') return this.layoutGrav(r);
@@ -1588,6 +1629,8 @@ export class Game {
   // Al quitar la de abajo, la columna cae un lugar y rebota al llegar; al deshacer, sube de regreso.
   gravUpdate() {
     const u = this.u;
+    // Grúa: la columna espera a que la garra suba la carta jugada.
+    const hold = Math.max(0, (this.clawHold || 0) - performance.now());
     let fell = 0;
     // Hangar (13 nov 2026, el usuario: salían las cartas antes de abrirse): primero se abre la compuerta y luego sale la
     // columna nueva (las de a la vista se recorren al momento).
@@ -1606,7 +1649,6 @@ export class Game {
       const p = c.gPos;
       this.placeGrav(c);
       const dy = (p.y - c.gPos.y) * u, dx = ((p.x ?? c.gPos.x) - c.gPos.x) * u;
-      if (this.level.portal && dy > 0.5) (this.clawCols ||= new Set()).add(c.group);
       if (reduced() || (Math.abs(dy) < 0.5 && Math.abs(dx) < 0.5)) continue;
       // Hangar: las columnas se recorren de lado (y la nueva sale de la compuerta).
       if (Math.abs(dx) >= 0.5) {
@@ -1625,15 +1667,9 @@ export class Game {
           ],
           { duration: 470 + c.gPos.k * 30, delay: Math.min(c.gPos.k, 3) * 25 },
         );
-      } else c.el.animate([{ translate: `0 ${dy}px` }, { translate: '0 0' }], { duration: 420, easing: 'cubic-bezier(.3,1.2,.5,1)' });
+      } else c.el.animate([{ translate: `0 ${dy}px` }, { translate: '0 0' }], { duration: 420, delay: hold, easing: 'cubic-bezier(.3,1.2,.5,1)', fill: 'backwards' });
     }
     if (fell) setTimeout(() => buzz(8), 300);
-    // Grúa: la garra de la columna que subió baja, la agarra y la jala.
-    if (this.level.portal && !reduced()) for (const j of this.clawCols || []) {
-      const cl = this.railEls[j]?.querySelector('.g-claw');
-      if (cl) cl.classList.remove('grab'), void cl.offsetWidth, cl.classList.add('grab');
-    }
-    this.clawCols = null;
     this.paintGrav();
   }
 
@@ -1827,6 +1863,8 @@ export class Game {
       // 11 nov 2026 (pedido del usuario): a 1 robo de que caigan piedras, las cartas tiemblan (como con el agujero negro).
       this.boardEl.classList.toggle('hole-pull', E.rockLeft(st) === 1 && !(st.freeze > 0));
     }
+    this.paintAstro();
+    this.paintTwins();
     // Imán esperando tu robo: el imán pegado al mazo.
     {
       const b = this.stockEl.querySelector('.mag-on');
@@ -1854,7 +1892,10 @@ export class Game {
     for (const c of this.cards) {
       if (c.removed || !c.el) continue;
       const el = c.el;
-      if (!this.dealing) el.classList.toggle('up', this.shownUp(c));
+      // Telescopio: las tapadas se ven (con orilla de telescopio) mientras dure; solo es para ver.
+      const see = st.scope > 0 && !this.dealing && !this.shownUp(c);
+      if (!this.dealing) el.classList.toggle('up', this.shownUp(c) || see);
+      el.classList.toggle('scope-see', see);
       el.classList.toggle('rb-can', !!rbCan?.has(c.id));
       // Rayo: la carta liberada va por encima de las que la tapaban.
       const lifted = !!st.lift?.includes(c.id);
@@ -2030,7 +2071,7 @@ export class Game {
   }
 
   renderWaste() {
-    const top = this.st.top;
+    const top = this.wasteShow || this.st.top;
     // El cohete turbo ya despegó de la esquina: en el descarte se ve con su número.
     // Arcoíris (13 nov 2026, pedido del usuario: sin el ±2 ni las bolitas): el descarte lleva una orilla de colores, un
     // color por cada jugada ±2 que queda; cada jugada le quita uno.
@@ -2144,6 +2185,7 @@ export class Game {
     const c = this.cards[id];
     if (!c || c.removed) return;
     const { level, st } = this;
+    if (this.astroPick) return this.pickHold(c);
     if (c.pack || c.bomb || c.comet) {
       buzz();
       if (c.pack) this.tell('pack', 'Destápala por completo y te regala cartas');
@@ -2165,16 +2207,17 @@ export class Game {
     this.play(c, !!e && this.lowHalf(c, e));
   }
 
-  // Raspadita: te arriesgaste y no conectaba. Tiembla y cuenta como un robo (se corta la racha); se deshace.
+  // Raspadita: te arriesgaste y no conectaba. Tiembla, cuenta como un robo (se corta la racha) y se destapa: se le cae
+  // la plata y ya no da monedas (14 nov 2026, el usuario). No se deshace.
   scrMiss(c) {
     const before = this.st;
-    const { s, ev } = E.miss(this.level, before);
+    const { s, ev } = E.miss(this.level, before, c.id);
     this.history.push({ t: 'miss', before, ev, best: this.best, bonus: this.bonus, lock: true });
     this.st = s;
     this.sync();
     buzz(30);
     this.shake(c.el);
-    this.showStreak('¡No era! Se corta tu racha');
+    this.showStreak('¡No era! Sin monedas y sin racha');
     this.showCombo();
     this.refresh();
     this.save();
@@ -2185,6 +2228,8 @@ export class Game {
   paintScr(c) {
     const n = E.scrOpen(c, this.st), ov = c.el.querySelector('.scr-ov');
     if (!ov) return;
+    // Le fallaste: la plata se cae entera (sin ventanitas ni brillos).
+    if (this.st.scrGone?.includes(c.id)) return ov.classList.add('lost');
     const was = +(ov.dataset.n || 0);
     ov.dataset.n = n;
     ov.querySelectorAll('circle.h').forEach((h, k) => {
@@ -2289,10 +2334,268 @@ export class Game {
     this.flewFrom = c.el ? center(c.el.getBoundingClientRect()) : null;
     // Vuela de centro a centro dando una vuelta y se asienta al caer.
     // Boleto partido: la primera vez solo se va la mitad jugada; la otra se queda.
+    // Gemelas: primero cae la jugada (el descarte la enseña) y luego el lazo jala a la otra.
+    const aEl = c.el;
+    if (ev.twin != null) this.wasteShow = { rank: ev.rank, suit: c.suit };
     if (ev.split) this.splitTicket(c, ev);
     else if (ev.tri?.left) this.tearStub(c, ev);
     else this.flyToWaste(c, ev, E.cutOf(c, before), ev.tri?.stub);
+    if (ev.twin != null) this.pullTwin(aEl, this.cards[ev.twin]);
     this.afterPlay(before, ev, burnRects);
+  }
+
+  // ---------- Astronauta (14 nov 2026, pedido del usuario) ----------
+  // Va en la bandeja desde que empieza el nivel (o desde que usas la ayuda). Tocarlo sin carta: escoges una carta libre
+  // y te la guarda (sale del tablero y destapa lo de abajo). Tocarlo con carta: si conecta, la manda al descarte (es
+  // una jugada) y se va volando; si no, tiembla.
+  paintAstro() {
+    const el = this.astroEl, { level, st } = this;
+    if (!el || this.astroFlying) return;
+    const on = E.astroHere(level, st) || st.hold != null;
+    if (!on && this.astroLeaving) return; // se está yendo volando: se esconde al terminar
+    if (el.hidden === on) {
+      el.hidden = !on;
+      this.astroBase.hidden = !on;
+      if (on) this.astroPlace();
+      if (on && !this.dealing && !reduced()) this.astroBase.animate([{ scale: 0, rotate: '-90deg' }, { scale: 1.15, offset: 0.7 }, { scale: 1, rotate: '0deg' }], { duration: 500, easing: 'ease-out' });
+      if (on && !this.dealing && !reduced()) el.animate([{ translate: '0 -80px', scale: 0.4, opacity: 0 }, { translate: '0 4px', scale: 1.1, opacity: 1, offset: 0.7 }, { translate: '0 0', scale: 1 }], { duration: 700, easing: 'ease-out' });
+    }
+    if (on) this.astroPlace();
+    const box = el.querySelector('.astro-hold'), id = st.hold;
+    if (String(id ?? '') !== (box.dataset.id || '')) {
+      box.dataset.id = id ?? '';
+      box.innerHTML = id != null ? `<div class="card up">${inner({ ...this.level.cards[id], rank: st.holdRank })}</div>` : '';
+    }
+    el.classList.toggle('holding', id != null);
+    el.classList.toggle('ready', id != null && E.canSend(st));
+    if (!on) this.astroPickOff();
+  }
+  // Dónde espera Tito (14 nov 2026, el usuario: «a un lado del deshacer, con un planeta fijo y de ahí que se mueva»):
+  // un planetita junto a deshacer (sin mover la bandeja: va encima, en el hueco libre) y Tito parado en él. Acostado y en
+  // PC a la derecha de deshacer; parado, a la izquierda si cabe, si no, encima de deshacer.
+  astroPlace() {
+    const el = this.astroEl, base = this.astroBase, box = this.el.getBoundingClientRect();
+    const R = (q) => this.el.querySelector(q)?.getBoundingClientRect();
+    const un = R('.undo-btn');
+    if (!un || !box.width) return;
+    const side = window.matchMedia('(orientation: landscape) and (max-height: 500px)').matches;
+    const p = side ? 36 : 40, w = side ? 44 : 50, h = w * 1.12;
+    const fits = ([x, y]) => x >= box.left + 2 && x + p <= box.right - 2 && y >= box.top && y + p <= box.bottom - 2;
+    // Acostado, un poco más abajo que deshacer (14 nov 2026, el usuario: que Tito no toque el mazo).
+    const low = side ? Math.min(box.bottom - p - 4, un.bottom - p * 0.4) : un.bottom - p;
+    const right = [un.right + 8, low], left = [un.left - p - 8, low], top = [un.left + (un.width - p) / 2, un.top - p - 2];
+    const busy = ['.stock', '.waste', '.wild-card'].map(R).filter(Boolean);
+    const hit = (x, y, ww, hh) => busy.some((r) => x < r.right && x + ww > r.left && y < r.bottom && y + hh > r.top);
+    // Libre el planeta y también Tito parado en él.
+    const free = ([x, y]) => fits([x, y]) && !hit(x, y, p, p) && !hit(x + p / 2 - w / 2, y - h * 0.82, w, h * 0.82);
+    const [bx, by] = [...(side || box.width > box.height ? [right, left] : [left, right]), top].find(free) || top;
+    base.style.cssText = `left:${bx - box.left}px;top:${by - box.top}px;width:${p}px`;
+    el.style.width = `${w}px`;
+    el.style.setProperty('--aw', `${w}px`);
+    el.style.left = `${bx + p / 2 - w / 2 - box.left}px`;
+    el.style.top = `${by - h * 0.82 - box.top}px`;
+  }
+  // Tito vuela de su lugar al centro de rect (con las manos a la altura de la carta).
+  astroFly(to, ms = 450) {
+    const a = this.astroEl.getBoundingClientRect(), [ax, ay] = center(a), [bx, by] = center(to);
+    const dx = bx - ax, dy = by - ay - a.height * 0.15;
+    this.astroAt = `${dx}px ${dy}px`;
+    return this.astroEl.animate([{ translate: '0 0', rotate: '0deg' }, { translate: `${dx * 0.5}px ${dy * 0.5 - 30}px`, rotate: `${dx > 0 ? 12 : -12}deg`, offset: 0.5 }, { translate: this.astroAt, rotate: '0deg' }], { duration: ms, easing: 'cubic-bezier(.4,0,.3,1)', fill: 'forwards' }).finished;
+  }
+  // De regreso a su lugar.
+  astroHome(ms = 450) {
+    const from = this.astroAt || '0 0';
+    this.astroAt = null;
+    this.astroEl.getAnimations().forEach((x) => x.cancel());
+    return this.astroEl.animate([{ translate: from }, { translate: '0 0' }], { duration: ms, easing: 'cubic-bezier(.4,0,.3,1)' }).finished;
+  }
+  // Al terminar las ventanas del nivel (14 nov 2026, pedido del usuario): Tito brilla y saluda para que lo veas.
+  astroHello() {
+    const el = this.astroEl;
+    if (!el || el.hidden || this.astroGreeted) return;
+    this.astroGreeted = true;
+    el.classList.add('hello');
+    setTimeout(() => el.classList.remove('hello'), 3200);
+    if (!save.seen.astroHi) {
+      save.seen.astroHi = true;
+      persist();
+      toast(`${icon('astronauta')} ¡Hola! Soy Tito: tócame y te traigo una carta`);
+    }
+  }
+  tapAstro() {
+    if (this.coach || this.dealing) return;
+    const { level, st } = this;
+    if (st.hold != null) {
+      if (E.canSend(st)) return this.sendHeld();
+      buzz();
+      this.shake(this.astroEl);
+      return toast(`${icon('astronauta')} Tito espera: su carta todavía no conecta con el descarte`);
+    }
+    if (this.astroPick) return this.astroPickOff();
+    const can = this.cards.filter((c) => !c.removed && c.el && E.canHold(level, c, st));
+    if (!can.length) return toast(`${icon('astronauta')} Ahorita no hay carta libre que Tito pueda traer`);
+    this.astroPick = true;
+    this.astroEl.classList.add('picking');
+    can.forEach((c) => c.el.classList.add('astro-can'));
+    toast(`${icon('astronauta')} Toca la carta que quieres que Tito vaya a traer`);
+  }
+  astroPickOff() {
+    if (!this.astroPick) return;
+    this.astroPick = false;
+    this.astroEl?.classList.remove('picking');
+    this.boardEl.querySelectorAll('.astro-can').forEach((e) => e.classList.remove('astro-can'));
+  }
+  // Tito vuela por la carta, la agarra (se encoge a sus manos) y regresa con ella.
+  async pickHold(c) {
+    const r = E.hold(this.level, this.st, c.id);
+    this.astroPickOff();
+    if (!r) {
+      buzz();
+      return this.shake(c.el);
+    }
+    const a = this.astroEl.getBoundingClientRect();
+    this.history.push({ t: 'hold', before: this.st, ev: r.ev, best: this.best, bonus: this.bonus, astroRect: a });
+    this.st = r.s;
+    this.sync();
+    const el = c.el;
+    c.el = null;
+    this.busy = true;
+    this.astroFlying = true;
+    if (el && !reduced()) {
+      el.getAnimations().forEach((x) => x.cancel());
+      el.classList.add('up');
+      el.style.zIndex = 9990;
+      const to = el.getBoundingClientRect();
+      await this.astroFly(to);
+      buzz(12);
+      // La agarra: se encoge hacia sus manos.
+      await el.animate([{ scale: 1 }, { scale: 0.42, translate: `0 ${-to.height * 0.12}px`, rotate: '-8deg' }], { duration: 220, easing: 'ease-in', fill: 'forwards' }).finished;
+    }
+    el?.remove();
+    this.astroFlying = false;
+    this.paintAstro();
+    this.refresh();
+    if (!reduced()) await this.astroHome();
+    this.busy = false;
+    this.save();
+  }
+  // Tito lleva su carta al descarte (es una jugada), la suelta y se va volando.
+  async sendHeld() {
+    const before = this.st, r = E.astroSend(this.level, before);
+    if (!r) return;
+    const { s, ev } = r, c = this.cards[ev.id];
+    const burnRects = this.burnRects(ev.boom);
+    this.history.push({ t: 'send', before, ev, best: this.best, bonus: this.bonus });
+    this.busy = true;
+    this.astroFlying = true;
+    const w = this.wasteEl.getBoundingClientRect();
+    if (!reduced()) await this.astroFly(w, 420);
+    const hold = this.astroEl.querySelector('.astro-hold');
+    hold.innerHTML = '';
+    hold.dataset.id = '';
+    this.st = s;
+    this.sync();
+    this.best = Math.max(this.best, s.streak);
+    this.bonus += s.streak;
+    this.flewFrom = center(w);
+    if (ev.twin != null) this.wasteShow = { rank: ev.rank, suit: c.suit };
+    this.landWaste();
+    buzz(12);
+    if (ev.twin != null) this.pullTwin(null, this.cards[ev.twin]);
+    toast(`${icon('astronauta')} ¡Ahí va! Tito se despide`);
+    this.busy = false;
+    // Se va volando hacia arriba (y se esconde al terminar).
+    this.astroLeaving = true;
+    this.astroFlying = false;
+    const from = this.astroAt || '0 0';
+    this.astroAt = null;
+    this.astroEl.getAnimations().forEach((x) => x.cancel());
+    const out = reduced() ? Promise.resolve() : this.astroEl.animate([{ translate: from, rotate: '0deg' }, { translate: '40px -110vh', rotate: '25deg' }], { duration: 900, delay: 150, easing: 'cubic-bezier(.5,0,.8,.5)', fill: 'both' }).finished;
+    out.then(() => {
+      this.astroLeaving = false;
+      this.astroEl.getAnimations().forEach((x) => x.cancel());
+      this.paintAstro();
+    });
+    this.afterPlay(before, ev, burnRects);
+  }
+
+  // Gemelas (14 nov 2026, pedido del usuario): el lazo sale de donde estaba la jugada hasta la otra, la jala (tiembla y
+  // se suelta de su lugar) y la otra vuela al descarte, encima.
+  // Gemelas al jugar una (14 nov 2026, el usuario: «baja al descarte y de ahí se ve cómo el lazo jala a la otra; el
+  // lazo nunca se corta»): el mismo hilo que colgaba sigue atado a la jugada mientras cae (aEl; con el astronauta, ya
+  // está en el descarte), luego se tensa desde el descarte, la otra tiembla, se suelta y vuela con el hilo siguiéndola.
+  // Siempre por detrás de las cartas (va en la capa de los hilos).
+  pullTwin(aEl, b) {
+    const el = b.el;
+    if (!el) return (this.wasteShow = null);
+    b.el = null;
+    el.getAnimations().forEach((a) => a.cancel());
+    el.classList.add('up');
+    el.style.zIndex = 9998;
+    const pull = { color: twinColor(b), from: () => (aEl?.isConnected ? aEl : this.wasteEl.firstElementChild || this.wasteEl), to: () => el, tight: false };
+    const land = () => {
+      this.wasteShow = null;
+      const w = this.wasteEl.getBoundingClientRect(), [wx, wy] = center(w), [bx, by] = center(el.getBoundingClientRect());
+      el.style.rotate = '0deg';
+      toss(el, { r0: b.rot }, { x1: wx - bx, y1: wy - by, s1: w.width / this.u }, 360).then(() => {
+        this.twinPulls = (this.twinPulls || []).filter((p) => p !== pull);
+        this.drawTwins();
+        el.remove();
+        this.landWaste();
+        buzz(12);
+      });
+    };
+    if (reduced()) return land();
+    (this.twinPulls ||= []).push(pull);
+    this.twinLoop();
+    setTimeout(() => {
+      pull.tight = true;
+      el.animate([{ translate: '0 0' }, { translate: '-4px -3px' }, { translate: '4px -6px' }, { translate: '0 -10px' }], { duration: 300, easing: 'ease-in-out' });
+      buzz(8);
+    }, FLY_MS + 160);
+    setTimeout(land, FLY_MS + 480);
+  }
+  // Mientras haya hilos jalando, se redibujan en cada cuadro.
+  twinLoop() {
+    if (this.twinRaf) return;
+    const step = () => {
+      this.drawTwins();
+      this.twinRaf = this.twinPulls?.length ? requestAnimationFrame(step) : 0;
+    };
+    this.twinRaf = requestAnimationFrame(step);
+  }
+
+  // Hilos de las gemelas (14 nov 2026, el usuario: «que se vean conectadas, por detrás»): de ojal a ojal, colgando, del
+  // color de la pareja, en una capa debajo de las cartas (se ven por detrás y donde no hay carta). Se quitan cuando la
+  // pareja se juega (el hilo de la jugada sigue en twinPulls).
+  paintTwins() {
+    if (!this.cards.some((c) => c.twin != null)) return;
+    const u = this.u, out = [];
+    if (!this.dealing) for (const a of this.cards) {
+      const b = this.cards[a.twin];
+      if (a.twin == null || a.id > b.id || a.removed || b.removed || !a.el || !b.el) continue;
+      const eye = (c) => [c.el.offsetLeft + u / 2, c.el.offsetTop + u * 1.4 * 0.88];
+      out.push(this.twinPath(eye(a), eye(b), twinColor(a), false));
+    }
+    this.twinRest = out.join('');
+    this.drawTwins();
+  }
+  twinPath([ax, ay], [bx, by], color, tight) {
+    // Cuelga un poco por debajo de las cartas (14 nov 2026, el usuario: «abajo, que cuelgue poquito»).
+    const sag = Math.max(ay, by) + this.u * 0.75 + Math.hypot(bx - ax, by - ay) * 0.12;
+    const d = tight ? `M${ax.toFixed(1)} ${ay.toFixed(1)}L${bx.toFixed(1)} ${by.toFixed(1)}` : `M${ax.toFixed(1)} ${ay.toFixed(1)}Q${((ax + bx) / 2).toFixed(1)} ${sag.toFixed(1)} ${bx.toFixed(1)} ${by.toFixed(1)}`;
+    return `<path class="tt-ink" d="${d}"/><path d="${d}" style="stroke:${color}"/>`;
+  }
+  drawTwins() {
+    let svg = this.twinSvg;
+    if (!svg?.isConnected) {
+      svg = this.twinSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svg.classList.add('twin-threads');
+      this.boardEl.prepend(svg);
+    }
+    const br = this.boardEl.getBoundingClientRect();
+    const eye = (e) => { const r = e.getBoundingClientRect(); return [r.left + r.width / 2 - br.left, r.top + r.height * 0.88 - br.top]; };
+    svg.innerHTML = (this.twinRest || '') + (this.twinPulls || []).map((p) => this.twinPath(eye(p.from()), eye(p.to()), p.color, p.tight)).join('');
   }
 
   // cut: del boleto partido, la mitad que ya se había jugado (la que queda se vuelve carta entera en el aire).
@@ -2305,18 +2608,32 @@ export class Game {
     el.getAnimations().forEach((a) => a.cancel());
     if (this.stripEl) this.boardEl.append(el); // sale de la tira: el corte del rollo no la tapa al volar
     const [ax, ay] = center(el.getBoundingClientRect());
-    const b = this.wasteEl.getBoundingClientRect();
-    const [bx, by] = center(b);
-    el.classList.add('up', 'flying');
-    el.style.zIndex = 9999;
     el.style.rotate = '0deg';
-    // Última mitad de un boleto: en el aire se vuelve una carta entera con su número.
-    if (cut) this.becomeCard(el, { rank: ev.rank, suit: c.suit }, cut);
-    else if (stub != null) this.becomeStub(el, { rank: ev.rank, suit: c.suit }, stub);
-    else if (ev.exit != null) this.becomeExit(el, { rank: ev.exit, suit: c.suit });
-    toss(el, { r0: c.rot }, { x1: bx - ax, y1: by - ay, s1: b.width / this.u }, 360).then(() => {
-      el.remove();
-      this.landWaste();
+    const fly = (y0 = 0) => {
+      const b = this.wasteEl.getBoundingClientRect();
+      const [bx, by] = center(b);
+      el.classList.add('up', 'flying');
+      el.style.zIndex = 9999;
+      // Última mitad de un boleto: en el aire se vuelve una carta entera con su número.
+      if (cut) this.becomeCard(el, { rank: ev.rank, suit: c.suit }, cut);
+      else if (stub != null) this.becomeStub(el, { rank: ev.rank, suit: c.suit }, stub);
+      else if (ev.exit != null) this.becomeExit(el, { rank: ev.exit, suit: c.suit });
+      toss(el, { r0: c.rot, y0 }, { x1: bx - ax, y1: by - ay, s1: b.width / this.u }, 360).then(() => {
+        el.remove();
+        this.landWaste();
+      });
+    };
+    // Grúa de feria (14 nov 2026, el usuario): primero baja la garra, la agarra y la sube; luego vuela al descarte. La
+    // columna sube después, sola (gravUpdate espera a clawHold). En reposo la garra está vacía y abierta.
+    const claws = this.level.portal && !reduced() ? [...(this.railEls?.[c.group]?.querySelectorAll('.g-claw') || [])] : [];
+    if (!claws.length) return fly();
+    claws.forEach((cl) => (cl.classList.remove('grab'), void cl.offsetWidth, cl.classList.add('grab')));
+    this.clawHold = performance.now() + CLAW_MS;
+    el.style.zIndex = 949; // entre las dos pinzas (850 y 950) mientras la sube
+    const up = -this.u * 0.55; // lo mismo que baja la garra (g-claw-grab)
+    el.animate([{ translate: '0 0' }, { translate: '0 0', offset: 0.4 }, { translate: `0 ${up}px` }], { duration: CLAW_MS, easing: 'cubic-bezier(.4,0,.3,1)', fill: 'forwards' }).finished.then(() => {
+      el.getAnimations().forEach((a) => a.cancel());
+      fly(up);
     });
   }
 
@@ -2459,6 +2776,7 @@ export class Game {
     const pc = this.level.cards[ev.id];
     if (pc?.magnet) toast(`${icon('iman')} ¡Imán! Tu siguiente robo te sirve`);
     if (pc?.rainbow) toast(`${icon('arcoiris')} ¡Arcoíris! 3 jugadas pueden saltar dos`);
+    if (pc?.scope) toast(`${icon('telescopio')} ¡Telescopio! Ves todas las cartas ${E.SCOPE_TURNS} turnos`);
     // Raspadita jugada antes de verla toda: monedas (entre menos se veía, más). Deshacer las quita.
     if (pc?.scr) {
       const pay = E.scrPay(pc, before);
@@ -3057,6 +3375,7 @@ export class Game {
     // y se regresa para cobrar las monedas).
     if (this.history[this.history.length - 1].lock) return toast('Lo que raspa la raspadita no se puede deshacer');
     this.magnetAimOff();
+    this.clawHold = 0;
     const inf = this.opts.dev?.infinite;
     if (save.undo <= 0 && !inf) return save.coins < this.priceOf('undo') ? this.noWayOut('undo') : this.offerBuy('undo');
     if (!inf) save.undo--;
@@ -3106,6 +3425,16 @@ export class Game {
       if (ev.split) this.unsplitTicket(this.cards[ev.id], ev, wasteRect);
       else if (ev.tri?.left) this.untearStub(this.cards[ev.id], ev, wasteRect);
       else this.returnToBoard(this.cards[ev.id], wasteRect);
+      // Gemelas: la otra también regresa a su lugar.
+      if (ev.twin != null) setTimeout(() => this.returnToBoard(this.cards[ev.twin], wasteRect), reduced() ? 0 : 120);
+    } else if (h.t === 'hold') {
+      // Astronauta: la carta que guardó regresa a su lugar.
+      this.returnToBoard(this.cards[ev.id], h.astroRect || wasteRect);
+    } else if (h.t === 'send') {
+      // La carta vuelve a las manos del astronauta (refresh lo pinta) y él regresa.
+      const cc = this.cards[ev.id];
+      if (cc.coin) (save.coins = Math.max(0, save.coins - cc.coin)), updateCoins();
+      if (ev.twin != null) setTimeout(() => this.returnToBoard(this.cards[ev.twin], wasteRect), reduced() ? 0 : 120);
     } else if (h.t === 'draw') {
       this.returnToStock(ev.card, wasteRect);
       // La nave se había llevado una carta en ese robo: la regresa a su lugar (debajo de la que vuelve arriba).
@@ -3156,16 +3485,24 @@ export class Game {
       iman: this.stock.length > 0 && !st.magnet && (!!save.seen.magnet || save.helps.iman > 0),
       llave: this.cards.some((c) => left(c) && ((c.lock != null && !E.lockOpen(level, c, st)) || (c.curtain != null && !E.curtainOpen(level, c, st)))),
       ver: this.cards.some((c) => left(c) && !this.shownUp(c)),
+      // Telescopio y astronauta (14 nov 2026): se venden cuando ya los conoces (niveles 71 y 141) o si tienes alguno.
+      tele: this.cards.some((c) => left(c) && !this.shownUp(c)) && !(st.scope > 0) && (!!save.seen.scope || save.helps.tele > 0),
+      astro: this.astroTable() && !E.astroHere(level, st) && st.hold == null && (!!save.seen.astro || save.helps.astro > 0),
     };
     // 13 nov 2026 (pedido del usuario): de la más barata a la más cara; las que no se compran (ver 4 y 5 s), al final.
     const cost = (k) => (k === 'wild' || buyable(k) ? this.priceOf(k) : Infinity);
-    return ['wild', 'iman', 'reloj', 'laser', 'escudo', 'ver2', 'ver3', 'ver4', 'ver5', 'llave'].filter((k) => k === 'wild' || ((buyable(k) || (save.helps[k] || 0) > 0) && useful[HELPS[k].secs ? 'ver' : k])).sort((a, b) => cost(a) - cost(b));
+    return ['wild', 'iman', 'reloj', 'laser', 'escudo', 'ver2', 'ver3', 'ver4', 'ver5', 'astro', 'tele', 'llave'].filter((k) => k === 'wild' || ((buyable(k) || (save.helps[k] || 0) > 0) && useful[HELPS[k].secs ? 'ver' : k])).sort((a, b) => cost(a) - cost(b));
   }
   helpName(k) {
-    return k === 'wild' ? 'Comodín' : HELPS[k].secs ? `Ver ${HELPS[k].secs} s` : k === 'reloj' ? 'Reloj' : k === 'laser' ? 'Láser' : k === 'escudo' ? 'Escudo' : k === 'iman' ? 'Imán' : 'Llave';
+    return k === 'wild' ? 'Comodín' : HELPS[k].secs ? `Ver ${HELPS[k].secs} s` : k === 'reloj' ? 'Reloj' : k === 'laser' ? 'Láser' : k === 'escudo' ? 'Escudo' : k === 'iman' ? 'Imán' : k === 'tele' ? 'Telescopio' : k === 'astro' ? 'Astronauta' : 'Llave';
+  }
+  // El astronauta solo cabe en mesas normales (como cuando sale en el nivel).
+  astroTable() {
+    const L = this.level;
+    return !L.scroll && !L.tide && !L.belt && !L.doors && !L.hole && !L.rocks && !L.neb;
   }
   helpBack(k) {
-    return cardBackURL(k === 'wild' ? 'comodin' : k === 'reloj' ? 'hreloj' : k === 'llave' ? 'hllave' : k === 'laser' ? 'hlaser' : k === 'escudo' ? 'hescudo' : k === 'iman' ? 'himan' : 'hver');
+    return cardBackURL(k === 'wild' ? 'comodin' : k === 'reloj' ? 'hreloj' : k === 'llave' ? 'hllave' : k === 'laser' ? 'hlaser' : k === 'escudo' ? 'hescudo' : k === 'iman' ? 'himan' : k === 'tele' ? 'htele' : k === 'astro' ? 'hastro' : 'hver');
   }
   helpHave(k) {
     return k === 'wild' ? save.wild : save.helps[k] || 0;
@@ -3295,7 +3632,9 @@ export class Game {
     if (k === 'iman') return !this.stock.length ? 'Ya no hay cartas en el mazo' : st.magnet ? 'Ya tienes un imán esperando tu robo' : null;
     if (k === 'escudo') return !level.ship ? 'Aquí no pasa la nave ladrona' : st.shield ? 'Ya tienes el escudo puesto' : null;
     if (k === 'llave' && !this.cards.some((c) => left(c) && ((c.lock != null && !E.lockOpen(level, c, st)) || (c.curtain != null && !E.curtainOpen(level, c, st))))) return 'No hay candados ni cortinas cerrados';
-    if (HELPS[k].secs && !this.cards.some((c) => left(c) && !this.shownUp(c))) return 'Ya ves todas las cartas';
+    if ((HELPS[k].secs || k === 'tele') && !this.cards.some((c) => left(c) && !this.shownUp(c))) return 'Ya ves todas las cartas';
+    if (k === 'tele' && st.scope > 0) return 'Ya estás viendo todas las cartas';
+    if (k === 'astro') return !this.astroTable() ? 'El astronauta no cabe en esta mesa' : E.astroHere(level, st) || st.hold != null ? 'El astronauta ya está aquí' : null;
     return null;
   }
   // from: la carta del panel (sale volando de ahí al tablero, crece, gira y se deshace en chispas antes de hacer efecto).
@@ -3314,10 +3653,10 @@ export class Game {
     if (HELPS[k].secs) return this.peekAll(HELPS[k].secs);
     const st = this.st;
     this.history.push({ t: 'help', k, before: st, best: this.best, bonus: this.bonus });
-    this.st = k === 'reloj' ? E.useClock(st) : k === 'laser' ? E.useLaser(st) : k === 'escudo' ? E.useShield(st) : k === 'iman' ? E.useMagnet(st) : E.useMaster(st);
+    this.st = k === 'reloj' ? E.useClock(st) : k === 'laser' ? E.useLaser(st) : k === 'escudo' ? E.useShield(st) : k === 'iman' ? E.useMagnet(st) : k === 'tele' ? E.useScope(st) : k === 'astro' ? E.useAstro(st) : E.useMaster(st);
     if (k === 'laser') this.laserHit = true;
     // (El escudo trae su propio aviso: shieldFx, con la burbuja sobre el mazo.)
-    if (k !== 'escudo') toast(k === 'iman' ? `${icon('iman')} ¡Imán! Tu siguiente robo te sirve` : k === 'reloj' ? `${icon('arena')} ¡Todo congelado ${E.CLOCK_TURNS} turnos!` : k === 'laser' ? `${icon('laser')} ¡Piedras rotas!` : `${icon('llaveMaestra')} ¡Candados y cortinas abiertos!`);
+    if (k !== 'escudo') toast(k === 'tele' ? `${icon('telescopio')} ¡Ves todas las cartas ${E.SCOPE_HELP} turnos!` : k === 'astro' ? `${icon('astronauta')} ¡Llegó Tito! Tócalo para que te guarde una carta` : k === 'iman' ? `${icon('iman')} ¡Imán! Tu siguiente robo te sirve` : k === 'reloj' ? `${icon('arena')} ¡Todo congelado ${E.CLOCK_TURNS} turnos!` : k === 'laser' ? `${icon('laser')} ¡Piedras rotas!` : `${icon('llaveMaestra')} ¡Candados y cortinas abiertos!`);
     this.refresh();
     if (k === 'escudo') this.shieldFx();
     this.updateCounts();
@@ -3394,6 +3733,9 @@ export class Game {
   }
 
   hasMove() {
+    // Astronauta: mandar la que guarda, o guardar una para destapar lo de abajo, también es salida.
+    const { level, st } = this;
+    if (E.canSend(st) || (E.astroHere(level, st) && st.hold == null && level.cards.some((c) => !st.rem[c.id] && E.canHold(level, c, st)))) return true;
     return this.playable().length > 0;
   }
 

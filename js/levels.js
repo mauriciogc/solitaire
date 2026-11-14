@@ -1000,8 +1000,8 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
     }
   }
 
-  // Raspadita: sola en los 5 primeros niveles de su mundo (se pone al final de buildLevel).
-  if (world === MECH_INTRO.scratch && index < 5) [...mech].filter((x) => x !== 'comet').forEach((x) => mech.delete(x));
+  // Raspadita, telescopio y gemelas: solas en los 5 primeros niveles de su mundo (se ponen al final de buildLevel).
+  if ((world === MECH_INTRO.scratch || world === MECH_INTRO.scope || world === MECH_INTRO.twin) && index < 5) [...mech].filter((x) => x !== 'comet').forEach((x) => mech.delete(x));
 
   // Carta regalo: una carta especial (sin número) que se activa sola al quedar destapada del todo
   // y manda 2-5 cartas al final del mazo. Va tapada y en el primer 40% del orden de retirada.
@@ -1096,7 +1096,7 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
   for (const id of [...bombIds, ...cometIds]) delete cards[id].rank;
   for (const [id, x] of doms) cards[id].dom = x;
   if (flipOn) for (const c of cards) c.flipBy = flipBy[c.id];
-  const SPECIAL = ['lock', 'key', 'pack', 'ice', 'alt', 'arrow', 'curtain', 'curtainKey', 'bomb', 'live', 'comet', 'turbo', 'half', 'dom', 'tri', 'scr', 'ghost', 'coin', 'cham', 'ring', 'doorKey', 'belt', 'bolt', 'shield', 'vine', 'fire', 'sleep', 'rainbow', 'magnet'];
+  const SPECIAL = ['lock', 'key', 'pack', 'ice', 'alt', 'arrow', 'curtain', 'curtainKey', 'bomb', 'live', 'comet', 'turbo', 'half', 'dom', 'tri', 'scr', 'ghost', 'coin', 'cham', 'ring', 'doorKey', 'belt', 'bolt', 'shield', 'vine', 'fire', 'sleep', 'rainbow', 'magnet', 'twin', 'scope'];
   const plain = (id) => SPECIAL.every((f) => cards[id][f] == null);
 
   // Boleto partido (1-2): la referencia juega primero la mitad de arriba (su número de la cadena) y la de abajo al final
@@ -1552,6 +1552,41 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
       }
     }
     // (El escudo ya no es carta: desde el 11 nov 2026 es una ayuda que se compra, ver HELPS en economy.js.)
+    // Telescopio (14 nov 2026, pedido del usuario): al jugarlo se ven todas las cartas 3 turnos. Solo deja ver: no se
+    // comprueba. En la primera mitad de la referencia, para que sirva.
+    const rsp = mulberry32(hash(g * 6151 + t * 109 + 83));
+    if (world >= MECH_INTRO.scope && (world === MECH_INTRO.scope || rsp() < SCOPE_ODDS)) {
+      const ks = [];
+      for (let k = 0; k < Math.ceil(np * 0.5); k++) if (plain(play[k])) ks.push(k);
+      if (ks.length) cards[play[pick(rsp, ks)]].scope = 1;
+    }
+    // Gemelas (14 nov 2026, pedido del usuario): dos cartas atadas con un lazo; al jugar una, la otra sale de donde
+    // esté y cae al descarte. La segunda va más adelante en la referencia (casi siempre tapada al jugar la primera).
+    // Cambia el camino: se comprueba cada pareja (hasta 3 intentos) y si ninguna se gana, sin gemelas.
+    // 14 nov 2026 (el usuario: «podríamos poner más de una»): de 1 a 3 parejas según el tamaño, cada una de su color
+    // (c.twinC); la pareja se reconoce por el color.
+    const rtw = mulberry32(hash(g * 5381 + t * 113 + 89));
+    if (world >= MECH_INTRO.twin && (world === MECH_INTRO.twin || rtw() < TWIN_ODDS)) {
+      const ok = (k) => plain(play[k]) && !cards[play[k]].cst;
+      const want = 1 + Math.floor(rtw() * (n >= 30 ? 3 : n >= 20 ? 2 : 1));
+      for (let pc = 0, tries = 0; pc < want && tries < 3 * want; tries++) {
+        const as = [], k0 = Math.floor(np * 0.15);
+        for (let k = k0; k < Math.ceil(np * 0.6); k++) if (ok(k)) as.push(k);
+        if (!as.length) break;
+        const ka = pick(rtw, as), bs = [];
+        for (let k = ka + 2; k < np; k++) if (ok(k)) bs.push(k);
+        if (!bs.length) continue;
+        const a = cards[play[ka]], b = cards[play[pick(rtw, bs)]];
+        (a.twin = b.id), (b.twin = a.id), (a.twinC = b.twinC = pc);
+        // En los duros (T) el camino acertado tiene que seguir ganando (pickLevel lo pide); en los demás basta que se gane.
+        if (refLeft(level) >= 0 || (!T && solve(level, initState(level), 60000))) pc++;
+        else delete a.twin, delete b.twin, delete a.twinC, delete b.twinC;
+      }
+    }
+    // Astronauta (14 nov 2026, pedido del usuario): llega al nivel para guardarte una carta. Solo ayuda (el
+    // solucionador no lo usa): no se comprueba. Solo en mesas normales.
+    const ras = mulberry32(hash(g * 4919 + t * 127 + 97));
+    if (world >= MECH_INTRO.astro && !level.tide && !level.belt && !level.doors && !level.hole && !level.rocks && !level.neb && (world === MECH_INTRO.astro || ras() < ASTRO_ODDS)) level.astro = 1;
     // Constelación: 3 (o 4) cartas que la referencia juega una tras otra sin robar. Pueden traer otra mecánica (hielo,
     // candado…), menos el boleto partido (se juega en dos veces).
     const rcs = mulberry32(hash(g * 3301 + t * 73 + 47));
@@ -1613,8 +1648,10 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
   {
     const rsc = mulberry32(hash(g * 5737 + t * 113 + 29));
     if (!scroll && world >= MECH_INTRO.scratch && (world === MECH_INTRO.scratch || rsc() < SCR_ODDS)) {
-      // Pegadas = las de los lados (13 nov 2026: contando las que la tapan, al quedar libre ya se veía casi toda).
-      const side = (c) => cards.filter((x) => x.id !== c.id && x.group === c.group && x.door == null && !coveredBy[c.id].includes(x.id) && !x.coveredBy.includes(c.id) && Math.abs(x.x - c.x) < 1.45 && Math.abs(x.y - c.y) < 1.75).map((x) => x.id).slice(0, 4);
+      // Pegadas = las de los lados (13 nov 2026: contando las que la tapan, al quedar libre ya se veía casi toda). Solo las
+      // de verdad junto a ella, a menos de 1.2 de centro a centro (14 nov 2026: contaba las de dos filas abajo y la punta
+      // de una pirámide salía «raspada» sin nada a los lados).
+      const side = (c) => cards.filter((x) => x.id !== c.id && x.group === c.group && x.door == null && !coveredBy[c.id].includes(x.id) && !x.coveredBy.includes(c.id) && Math.hypot(x.x - c.x, x.y - c.y) < 1.2).map((x) => x.id).slice(0, 4);
       // Nunca sola (13 nov 2026, el usuario: como la punta de una pirámide no sirve): al menos 2 de los lados se juegan
       // antes que ella en la referencia, para que de verdad se raspe.
       const kOf = new Map(play.map((id, k) => [id, k]));
@@ -1626,7 +1663,7 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
       }
     }
   }
-  level.meta.mechs = MECHANICS.filter((m) => cards.some((c) => c[MECH_FIELD[m]] != null) || (m === 'turbo' && stock.some((c) => c.turbo)) || (m === 'ship' && level.ship));
+  level.meta.mechs = MECHANICS.filter((m) => cards.some((c) => c[MECH_FIELD[m]] != null) || (m === 'turbo' && stock.some((c) => c.turbo)) || (m === 'ship' && level.ship) || (m === 'astro' && level.astro));
   return level;
 }
 
@@ -1742,10 +1779,10 @@ export function festivalLevel(seed, k, world, n = FESTIVAL_PER_PLANET) {
 }
 
 // ---------- Mecánicas por mundo ----------
-export const MECHANICS = ['lock', 'pack', 'ice', 'double', 'arrow', 'curtain', 'bomb', 'live', 'ticket', 'comet', 'turbo', 'ghost', 'ship', 'coin', 'cham', 'bolt', 'cst', 'vine', 'magnet', 'rainbow', 'sleep', 'domino', 'triple', 'scratch'];
-const MECH_FIELD = { lock: 'lock', pack: 'pack', ice: 'ice', double: 'alt', arrow: 'arrow', curtain: 'curtain', bomb: 'bomb', live: 'live', ticket: 'half', comet: 'comet', turbo: 'turbo', ghost: 'ghost', ship: 'ship', coin: 'coin', cham: 'cham', bolt: 'bolt', cst: 'cst', vine: 'vine', magnet: 'magnet', rainbow: 'rainbow', sleep: 'sleep', domino: 'dom', triple: 'tri', scratch: 'scr' };
+export const MECHANICS = ['lock', 'pack', 'ice', 'double', 'arrow', 'curtain', 'bomb', 'live', 'ticket', 'comet', 'turbo', 'ghost', 'ship', 'coin', 'cham', 'bolt', 'cst', 'vine', 'magnet', 'rainbow', 'sleep', 'domino', 'triple', 'scratch', 'scope', 'twin', 'astro'];
+const MECH_FIELD = { lock: 'lock', pack: 'pack', ice: 'ice', double: 'alt', arrow: 'arrow', curtain: 'curtain', bomb: 'bomb', live: 'live', ticket: 'half', comet: 'comet', turbo: 'turbo', ghost: 'ghost', ship: 'ship', coin: 'coin', cham: 'cham', bolt: 'bolt', cst: 'cst', vine: 'vine', magnet: 'magnet', rainbow: 'rainbow', sleep: 'sleep', domino: 'dom', triple: 'tri', scratch: 'scr', scope: 'scope', twin: 'twin', astro: 'astro' };
 // Van con su sorteo, fuera de chooseMechanics (si entraran, cambiarían todos los niveles ya probados).
-const OWN_DRAW = ['ticket', 'ghost', 'ship', 'coin', 'cham', 'bolt', 'cst', 'vine', 'magnet', 'rainbow', 'sleep', 'domino', 'triple', 'scratch'];
+const OWN_DRAW = ['ticket', 'ghost', 'ship', 'coin', 'cham', 'bolt', 'cst', 'vine', 'magnet', 'rainbow', 'sleep', 'domino', 'triple', 'scratch', 'scope', 'twin', 'astro'];
 // Mundo (índice desde 0) en el que se presenta cada una.
 // 8 nov 2026: corridas para que cada estreno quede a 10 niveles o más del anterior (antes lock 1, pack 2, ice 4, double 7,
 // arrow 11, curtain 15, bomb 19, live 24, ticket 20, comet 12, turbo 16, ghost 29, ship 34, coin 26, cham 32).
@@ -1754,9 +1791,11 @@ const OWN_DRAW = ['ticket', 'ghost', 'ship', 'coin', 'cham', 'bolt', 'cst', 'vin
 // 13 nov 2026: enredadera 52 (nivel 521, a 14 de los asteroides del 507), imán 54 (541), arcoíris 56 (561) y carta
 // dormida 58 (581).
 // 13 nov 2026: dominó 60 (601) y boleto triple 62 (621), con la mesa que se voltea en medio (611).
-export const MECH_INTRO = { lock: 1, pack: 2, ice: 6, double: 12, arrow: 17, curtain: 22, bomb: 27, live: 33, ticket: 28, comet: 19, turbo: 24, ghost: 39, ship: 44, coin: 36, cham: 42, bolt: 47, cst: 49, vine: 52, magnet: 54, rainbow: 56, sleep: 58, domino: 60, triple: 62, scratch: 63 };
+// 14 nov 2026 (el usuario: «entre 71 y 91 no hay cartas nuevas»): telescopio 7 (71, con los logros) y gemelas 8 (81,
+// con los meteoros); el astronauta 14 (141, el usuario: entre 110 y 160).
+export const MECH_INTRO = { lock: 1, pack: 2, ice: 6, double: 12, arrow: 17, curtain: 22, bomb: 27, live: 33, ticket: 28, comet: 19, turbo: 24, ghost: 39, ship: 44, coin: 36, cham: 42, bolt: 47, cst: 49, vine: 52, magnet: 54, rainbow: 56, sleep: 58, domino: 60, triple: 62, scratch: 63, scope: 7, twin: 8, astro: 14 };
 export const MECH_NAMES = {
-  lock: 'Candado', pack: 'Carta regalo', ice: 'Hielo', double: 'Carta doble', arrow: 'Flecha', curtain: 'Cortina', bomb: 'Bomba', live: 'Carta viva', ticket: 'Boleto partido', comet: 'Cometa', turbo: 'Cohete turbo', ghost: 'Fantasma', ship: 'Nave ladrona', coin: 'Carta moneda', cham: 'Camaleón', bolt: 'Rayo', cst: 'Constelación', vine: 'Enredadera', magnet: 'Imán', rainbow: 'Arcoíris', sleep: 'Carta dormida', domino: 'Dominó', triple: 'Boleto triple', scratch: 'Raspadita',
+  lock: 'Candado', pack: 'Carta regalo', ice: 'Hielo', double: 'Carta doble', arrow: 'Flecha', curtain: 'Cortina', bomb: 'Bomba', live: 'Carta viva', ticket: 'Boleto partido', comet: 'Cometa', turbo: 'Cohete turbo', ghost: 'Fantasma', ship: 'Nave ladrona', coin: 'Carta moneda', cham: 'Camaleón', bolt: 'Rayo', cst: 'Constelación', vine: 'Enredadera', magnet: 'Imán', rainbow: 'Arcoíris', sleep: 'Carta dormida', domino: 'Dominó', triple: 'Boleto triple', scratch: 'Raspadita', scope: 'Telescopio', twin: 'Cartas gemelas', astro: 'Astronauta',
 };
 // Cartas de regalo (cometa y cohete turbo): no entran al sorteo de mecánicas, van aparte (buildLevel).
 // En el camino sin ayudas cada una sale de 1 a 4 veces en cada tramo de 30-35 niveles (extraPlan, pedido 6 nov 2026).
@@ -1783,6 +1822,8 @@ export const MAGNET_ODDS = 0.1, RAINBOW_ODDS = 0.1, SLEEP_ODDS = 0.12;
 export const DOM_ODDS = 0.12, TRI_ODDS = 0.1;
 // Raspadita (13 nov 2026): al final de buildLevel, como el imán.
 export const SCR_ODDS = 0.1;
+// Telescopio, gemelas y astronauta (14 nov 2026): al final de buildLevel, con su sorteo.
+export const SCOPE_ODDS = 0.1, TWIN_ODDS = 0.12, ASTRO_ODDS = 0.1;
 export const EXTRA_ODDS = 0.047;
 // Estreno: el primer nivel de su mundo que no es duro ni mesa especial.
 const debuts = {};
