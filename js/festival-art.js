@@ -1,5 +1,5 @@
-// Festividades nuevas (10 nov 2026, pedido del usuario): fiestas de México (nivel 389: Bandera, Equinoccio y Posadas) y
-// de América (nivel 461). Aquí sus dibujos (iconos, marcos del avatar, reversos y avatares 2D), con el mismo trazo que
+// Festividades nuevas (10 nov 2026, pedido del usuario): fiestas de México (nivel 281: Bandera, Equinoccio y Posadas) y
+// de América (nivel 331). Aquí sus dibujos (iconos, marcos del avatar, reversos y avatares 2D), con el mismo trazo que
 // art.js y set-art.js, y sus datos: colores del fondo del espacio, la postal y el título, y lo que va a la tienda
 // (fiestaCSS y fiestaItems, como setCSS en sets.js). Las naves van en festival-travelers.js y los disfraces 3D en
 // js/costumes/i.js, con la misma clave. Lo que se juega (fechas, planetas, premios) está en FIESTAS de events.js.

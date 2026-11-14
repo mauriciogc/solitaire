@@ -9,6 +9,7 @@ import { FESTIVALS } from './events.js';
 import { festivalItems, festivalTitleIcons } from './festival-art.js';
 import { passItems } from './passport.js';
 import { starItems } from './starshower.js';
+import { rainItems } from './rains.js';
 
 // Las secciones van en 3 grupos para que las pestañas quepan en un teléfono.
 export const GROUPS = [
@@ -457,6 +458,9 @@ export const ITEMS = {
   // Exclusivos de la lluvia de estrellas (12 nov 2026, starshower.js): premio de 3★ mientras cae.
   const si = starItems();
   for (const sec in si) ITEMS[sec].push(...si[sec]);
+  // Exclusivos de las lluvias de cometas, aurora y cristales (14 nov 2026, rains.js).
+  const ri = rainItems();
+  for (const sec in ri) ITEMS[sec].push(...ri[sec]);
   // Colecciones de personaje (sets.js): cada pieza cuesta según su avatar y se abre en el mismo mundo que él.
   for (const { sec, ...it } of setItems()) {
     const av = ITEMS.avatar.find((x) => x.k === it.set), base = av.price || 300;
@@ -475,6 +479,8 @@ const ONE_NAME = {
 for (const it of ITEMS.avatar) if (FESTIVALS.some((f) => f.grp && f.key === it.ev)) ONE_NAME[it.k] = it.name;
 // El del pasaporte cambia con niño / niña (12 nov 2026).
 ONE_NAME.viajerogalactico = 'Explorador galáctico/Exploradora galáctica';
+ONE_NAME.auroral = 'Guardián de la aurora/Guardiana de la aurora';
+ONE_NAME.cristalino = 'Mago de cristal/Maga de cristal';
 for (const it of ITEMS.avatar) {
   const n = ONE_NAME[it.k];
   if (!n) continue;
@@ -577,6 +583,7 @@ Object.assign(TITLE_ICO, festivalTitleIcons(FESTIVALS));
 TITLE_ICO.cazasecretos = 'starSecret';
 TITLE_ICO.trotamundos = 'pasaporte';
 TITLE_ICO.pidedeseo = 'starFall';
+TITLE_ICO.luzdelnorte = 'aurora';
 export const titleName = (k = equipped('title')) => item('title', k).name;
 export const titleIcon = (k) => icon(TITLE_ICO[k] || 'star');
 export const titleHTML = (k = equipped('title'), cls = '', tag = 'span', attrs = '') =>

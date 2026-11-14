@@ -402,6 +402,16 @@ const ICONS = {
   starDot: () => `<path d="${starPath(16, 16.5, 12.5, 5.7)}" fill="#ec9a17" stroke="${K}" stroke-width="2.4" stroke-linejoin="round"/><path d="${starPath(15.4, 15.6, 10.4, 4.7)}" fill="#ffd23d"/><circle cx="12.6" cy="12.6" r="1.8" fill="#fff8d6"/>`,
   meteoro: () => tshape('M6.5 15.5Q15 6 30 2Q23.5 13 17 25.5z', '#ff9c3d', '#ff6a2e', '<path d="M11 16.5Q18 9.5 26.5 5.5Q21.5 13.5 17 21.5z" fill="#ffd85a"/>', 2)
     + tshape(CIRCLE(12, 21, 7.6), '#a493bd', '#7a6a9e', '<circle cx="9.4" cy="19.6" r="1.9" fill="#7a6a9e"/><circle cx="14.6" cy="24" r="1.3" fill="#7a6a9e"/><circle cx="14.4" cy="17.6" r="1" fill="#7a6a9e"/><path d="M7.4 18.4a5 5 0 0 1 3-3.2" stroke="#e4dcf2" stroke-width="1.6" fill="none" stroke-linecap="round"/>', 2.2),
+  // Lluvias nuevas (14 nov 2026). Cometa de la suerte: como el meteorito, la cabeza abajo a la izquierda y la cola
+  // azul hacia arriba a la derecha (cae igual); la cabeza es un boletito dorado (da boletos).
+  cometaLluvia: () => `<g transform="rotate(180 16 16)">${tshape('M3 29 14.4 12.4l7.4 7z', '#8fd8ff', '#5fb6e8', '<path d="M6.4 26.6 15 15.4l3.4 3.2z" fill="#e4f7ff"/><path d="M4 23.6 9.6 16M9.8 28.4l5.6-6.2" stroke="#c9f0ff" stroke-width="1.4" stroke-linecap="round"/>', 2)}</g>`
+    + `<g transform="translate(-9 7) rotate(-24 21 12)">${tshape('M13.6 6h14.8v4a2 2 0 0 0 0 4v4H13.6v-4a2 2 0 0 0 0-4z', '#ffd85a', '#ffb02e', '<path d="M18.6 6.6v10.8" stroke="#c98a1a" stroke-width="1.2" stroke-dasharray="1.6 1.4"/><path d="M23.4 9.4l.9 1.8 2 .3-1.4 1.4.3 2-1.8-.9-1.8.9.3-2-1.4-1.4 2-.3z" fill="#fff6c8"/>', 2)}</g>`,
+  // Aurora: cielo de noche con dos cortinas de luz (verde y violeta) que ondean y una estrellita.
+  aurora: () => tshape('M3 8a5 5 0 0 1 5-5h16a5 5 0 0 1 5 5v16a5 5 0 0 1-5 5H8a5 5 0 0 1-5-5z', '#1d2a5a', '#14204a', '<path d="M3 21q6-12 13-8t13-6v6q-6 5-13 2T3 27z" fill="#5ff0b0" opacity=".9"/><path d="M3 15q7-9 14-5t12-4v4q-6 3-12 1T3 19z" fill="#a785ff" opacity=".85"/><path d="M5 20q5-7 11-4" stroke="#d6fff0" stroke-width="1.2" fill="none" stroke-linecap="round"/>', 2.2)
+    + `<path d="${starPath(23.5, 21.5, 2.6, 1.1)}" fill="#fff6c8"/><circle cx="9" cy="8" r="1" fill="#fff"/><circle cx="19" cy="6.6" r=".8" fill="#fff"/>`,
+  // Cristal: gema de cristal turquesa con caras más claras y un brillo.
+  cristal: () => tshape('M9.4 4h13.2l6 7.6L16 29 3.4 11.6z', '#5fe6f0', '#2fb6c8', '<path d="M3.4 11.6h25.2M9.4 4 12.6 11.6 16 29M22.6 4l-3.2 7.6L16 29M12.6 11.6 16 4l3.4 7.6" stroke="#1f8ea0" stroke-width="1.1" fill="none" stroke-linejoin="round"/><path d="M9.4 4h6.6l-3.4 7.6H3.4z" fill="#b8fbff"/><path d="M12.6 11.6h6.8L16 29z" fill="#8ff2f8"/>', 2)
+    + `<path d="M7.6 8.4 9.8 6.4" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/><path d="${starPath(26.5, 4.5, 2.6, 1)}" fill="#fff"/>`,
   comet: () => tshape('M2.5 29.5 14 10.5l9 8.5z', '#8fd8ff', '#5fb6e8', '<path d="M6 27 15.5 14.5l3.5 3.2z" fill="#e4f7ff"/>', 2)
     + tshape(starPath(19.5, 13, 9, 4.2), '#ffd85a', '#ffb02e', '<circle cx="18" cy="11.5" r="1.6" fill="#fff6c8"/>', 2.2),
   album: () => tshape('M5 7a2 2 0 0 1 2-2h18a2 2 0 0 1 2 2v18a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2z', '#4aa8de', '#2f86c0', '', 2.2) + tshape('M9 9h14v10H9z', '#fff6e6', '#ecdcc0', '<path d="M9 17l4-4 3 3 2-2 5 5v0H9z" fill="#5ad68c"/><circle cx="19" cy="12" r="1.8" fill="#ffc83d"/>', 1.8) + `<path d="M10 23h8" stroke="${K}" stroke-width="2" stroke-linecap="round"/>`,
@@ -726,6 +736,9 @@ BACKS.secreto = { a: '#2a1f66', b: '#140a30', dots: '#d6c4ff', art: () => `<g tr
 BACKS.deseo = { a: '#3a2a99', b: '#1d1550', dots: '#ffe58a', art: () => `<g transform="translate(12 30) scale(2.4)">${ICONS.starFall()}</g>${[[20, 26, 0.45], [70, 100, 0.5], [66, 24, 0.35]].map(([x, y, k]) => `<g transform="translate(${x} ${y}) scale(${k})">${ICONS.starDot()}</g>`).join('')}` };
 // Reverso del pasaporte (12 nov 2026, sello de los 3,500): azul de pasaporte con la libreta grande y dos sellitos.
 BACKS.pasaporte = { a: '#3a4fc0', b: '#1e2a7a', dots: '#ffd85a', art: () => `<g transform="translate(14 34) scale(2.25)">${ICONS.pasaporte()}</g><g transform="translate(58 18) rotate(14 8 8) scale(.55)">${ICONS.planet()}</g><g transform="translate(20 92) rotate(-12 8 8) scale(.55)">${ICONS.rocket()}</g>` };
+// Reverso de la lluvia de cometas (14 nov 2026, su exclusivo): azul de noche con el cometa de la suerte grande y
+// boletitos que caen alrededor.
+BACKS.cometasuerte = { a: '#2f6ac0', b: '#163a7a', dots: '#c9f0ff', art: () => `<g transform="translate(12 32) scale(2.4)">${ICONS.cometaLluvia()}</g>${[[18, 22, 0.42, -20], [68, 104, 0.48, 16], [70, 20, 0.36, 30]].map(([x, y, k, r]) => `<g transform="translate(${x} ${y}) rotate(${r} 16 16) scale(${k})">${ICONS.ticket()}</g>`).join('')}` };
 // Reversos de las temáticas (themes.js): su color, puntitos claros y su dibujo grande al centro.
 for (const t of THEMES) BACKS[themeKey(t)] ??= { a: t.main, b: t.dark, dots: t.light, art: () => `<g transform="translate(18 38) scale(2)">${(ICONS[t.ico] || ICONS.star)()}</g>` };
 const backCache = {};
@@ -771,7 +784,7 @@ export const AVATARS = Object.fromEntries([
   'perrito', 'tortuga', 'abeja', 'dragoncito', 'fantasma', 'estrella', 'cangrejo', 'topo', 'ardilla', 'osito', 'triceratops', 'robodog',
   'tamalito', 'taquito', 'arbolito', 'pinatita', 'clavelito', 'bigoton', 'atigrado', 'dalmata', 'audifonos', 'bichito', 'bufoncito', 'uvita',
   'pulpopintor', 'ranita', 'mapache', 'chaneque', 'xologuia', 'lloronita', 'catrinita', 'revolucionario', 'xolo', 'reno', 'reymago', 'cupido',
-  'catarina', 'foca', 'chihuahua', 'gatobruja', 'custodio', 'viajerogalactico', 'meteorin', 'loro', 'sirena', 'vampiro',
+  'catarina', 'foca', 'chihuahua', 'gatobruja', 'custodio', 'viajerogalactico', 'meteorin', 'loro', 'sirena', 'vampiro', 'auroral', 'cristalino',
 ].map((k) => [k, 1]));
 const initial = (p) => ((p.name || '?').trim().charAt(0).toUpperCase() || '?').replace(/[&<>"']/g, '');
 const avColor = (p) => AVATAR_COLORS[(p.avatar || 0) % AVATAR_COLORS.length];
@@ -971,6 +984,9 @@ RINGS.sellos = () => band(55, '#4aa8de', 7) + `<circle cx="70" cy="70" r="55" fi
 // Estrellas fugaces (lluvia de estrellas): banda violeta y 6 estrellas fugaces que titilan, como si cayeran alrededor.
 RINGS.fugaces = () => band(55, '#3a2a99', 7) + `<circle cx="70" cy="70" r="55" fill="none" stroke="#ffb3d9" stroke-width="2" stroke-dasharray="2 8" stroke-linecap="round"/>`
   + Array.from({ length: 6 }, (_, i) => { const d = i * 60 - 60, [x, y] = at(d, 56), k = i % 2 ? 0.5 : 0.66; return `<g class="r-tw" style="animation-delay:${(i * 0.35).toFixed(2)}s"><g transform="translate(${(x - 16 * k).toFixed(1)} ${(y - 16 * k).toFixed(1)}) scale(${k})">${ICONS.starFall()}</g></g>`; }).join('');
+// Corona de cristales (lluvia de cristales, 14 nov 2026): banda turquesa con 8 cristales que giran despacio y brillan.
+RINGS.cristales = () => band(55, '#2fb6c8', 7) + `<circle cx="70" cy="70" r="55" fill="none" stroke="#d6fdff" stroke-width="2" stroke-dasharray="2 7" stroke-linecap="round"/>`
+  + `<g class="r-spin">${Array.from({ length: 8 }, (_, i) => { const d = i * 45 - 90, [x, y] = at(d, 56), k = i % 2 ? 0.44 : 0.6; return `<g class="r-tw" style="animation-delay:${(i * 0.3).toFixed(1)}s"><g transform="translate(${(x - 16 * k).toFixed(1)} ${(y - 16 * k).toFixed(1)}) scale(${k})">${ICONS.cristal()}</g></g>`; }).join('')}</g>`;
 // Constelación secreta: banda violeta noche con estrellas moradas que titilan y puntitos de luz entre ellas.
 RINGS.secreto = () => band(55, '#3a1f7a', 8) + `<circle cx="70" cy="70" r="55" fill="none" stroke="#d6c4ff" stroke-width="2" stroke-dasharray="1 7" stroke-linecap="round"/>`
   + Array.from({ length: 8 }, (_, i) => { const [x, y] = at(i * 45 - 90, 55), k = i % 2 ? 0.44 : 0.62; return `<g class="r-tw" style="animation-delay:${(i * 0.3).toFixed(1)}s"><g transform="translate(${(x - 16 * k).toFixed(1)} ${(y - 16 * k).toFixed(1)}) scale(${k})">${ICONS.starSecret()}</g></g>`; }).join('');

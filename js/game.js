@@ -678,7 +678,7 @@ export class Game {
       <header class="hud">
         <button class="tb hbtn" data-a="exit" aria-label="Pausa" title="Pausa">${icon('pause')}</button>
         <div class="hud-mid"><div class="combo info"></div></div>
-        <div class="hud-r">${level.doors ? `<div class="pill info key-pill" aria-label="Llaves" title="Llaves: abre la puerta que quieras">${icon('door')}<b>0</b></div>` : ''}${this.opts.bet > 1 ? `<div class="pill info bet-pill b${this.opts.bet}" aria-label="Apuesta ×${this.opts.bet}" title="Apuesta: premios y ayudas ×${this.opts.bet}">×${this.opts.bet}</div>` : ''}${this.opts.racha ? `<div class="pill info racha-pill ${this.opts.racha.hot ? 'hot' : ''}" aria-label="Racha">${this.opts.racha.hot ? `<span class="fire">${icon('flame')}</span>` : ''}${icon(this.opts.racha.ico)}<span>${this.opts.racha.n}</span></div>` : ''}<div class="pill info${this.opts.meteor ? ` met-pill sh-${this.opts.meteor.kind}` : ''}">${coin()}<span data-coins>${money(shownCoins())}</span>${this.opts.meteor ? `<i class="x2">×${this.opts.meteor.x}</i><small class="met-clock"></small>` : ''}</div>${avatarHTML(save, 'hud-av')}</div>
+        <div class="hud-r">${level.doors ? `<div class="pill info key-pill" aria-label="Llaves" title="Llaves: abre la puerta que quieras">${icon('door')}<b>0</b></div>` : ''}${this.opts.bet > 1 ? `<div class="pill info bet-pill b${this.opts.bet}" aria-label="Apuesta ×${this.opts.bet}" title="Apuesta: premios y ayudas ×${this.opts.bet}">×${this.opts.bet}</div>` : ''}${this.opts.racha ? `<div class="pill info racha-pill ${this.opts.racha.hot ? 'hot' : ''}" aria-label="Racha">${this.opts.racha.hot ? `<span class="fire">${icon('flame')}</span>` : ''}${icon(this.opts.racha.ico)}<span>${this.opts.racha.n}</span></div>` : ''}<div class="pill info${this.opts.meteor ? ` met-pill sh-${this.opts.meteor.kind}` : ''}">${coin()}<span data-coins>${money(shownCoins())}</span>${this.opts.meteor ? `<i class="x2">${this.opts.meteor.x > 1 ? `×${this.opts.meteor.x}` : icon(this.opts.meteor.ico)}</i><small class="met-clock"></small>` : ''}</div>${avatarHTML(save, 'hud-av')}</div>
       </header>
       <div class="board-wrap"><div class="board"></div><div class="streak"></div></div>
       <footer class="tray">
@@ -3481,11 +3481,11 @@ export class Game {
       reloj: this.cards.some((c) => left(c) && (c.bomb || c.comet || c.live || c.ghost || c.cham || c.ring || c.belt)) || !!level.rocks || E.vineLeft(level, st) != null,
       laser: !!level.rocks,
       escudo: !!level.ship && !st.shield,
-      // El imán se vende cuando ya conoces la carta imán (nivel 541).
+      // El imán se vende cuando ya conoces la carta imán (nivel 531).
       iman: this.stock.length > 0 && !st.magnet && (!!save.seen.magnet || save.helps.iman > 0),
       llave: this.cards.some((c) => left(c) && ((c.lock != null && !E.lockOpen(level, c, st)) || (c.curtain != null && !E.curtainOpen(level, c, st)))),
       ver: this.cards.some((c) => left(c) && !this.shownUp(c)),
-      // Telescopio y astronauta (14 nov 2026): se venden cuando ya los conoces (niveles 71 y 141) o si tienes alguno.
+      // Telescopio y astronauta (14 nov 2026): se venden cuando ya los conoces (niveles 81 y 171) o si tienes alguno.
       tele: this.cards.some((c) => left(c) && !this.shownUp(c)) && !(st.scope > 0) && (!!save.seen.scope || save.helps.tele > 0),
       astro: this.astroTable() && !E.astroHere(level, st) && st.hold == null && (!!save.seen.astro || save.helps.astro > 0),
     };

@@ -73,18 +73,20 @@ export function price(kind, g, prog = g) {
 }
 // ---------- Apuesta (8 nov 2026, propuesta del usuario; 9 nov: desde la constelación 2 y hasta ×10) ----------
 // En niveles nuevos del camino se puede apostar: ×2 desde la constelación 2 (nivel 101, antes del evento del mes, para
-// no encimar avisos), ×3 desde la 3, ×5 desde la 4 y ×10 desde la 5 (siempre se puede jugar ×1; BET_STEPS son las que se pueden escoger). Cuesta boletos × apuesta y una cuota chica
+// no encimar avisos), ×3 desde la 3, ×5 desde la 4 y ×10 desde la 5 (14 nov 2026, pedido del usuario: ×7 desde la 5,
+// ×10 desde la 6, ×13 desde la 7 y ×15 desde la 8) (siempre se puede jugar ×1; BET_STEPS son las que se pueden escoger). Cuesta boletos × apuesta y una cuota chica
 // (9 nov 2026, pedido del usuario: BET_FEE monedas por cada punto extra: ×2 = 10, ×3 = 20, ×5 = 40, ×10 = 90;
+// ×7 = 60, ×13 = 120, ×15 = 140;
 // × el boleto de entrada de ese nivel, que sube de 1 a 3 muy adelante). Ganando, todo lo que da el nivel × apuesta: monedas, boletos,
 // fichas, y monedas, comodines y deshacer del cofre del jefe y de la lluvia de meteoritos. Perdiendo se pierde lo
 // apostado. Las ayudas de ese nivel cuestan × apuesta. Las estrellas no se multiplican. Nunca en los eventos.
-export const BET_STEPS = [1, 2, 3, 5, 10], BET_FROM = 1, BET_FEE = 10;
+export const BET_STEPS = [1, 2, 3, 5, 7, 10, 13, 15], BET_FROM = 1, BET_FEE = 10;
 export const BET_MAX = BET_STEPS[BET_STEPS.length - 1];
 export const maxBet = (g) => BET_STEPS[Math.max(0, Math.min(BET_STEPS.length - 1, Math.floor(g / (LEVELS_PER_WORLD * 10)) - BET_FROM + 1))];
 export const betSteps = (g) => BET_STEPS.filter((m) => m <= maxBet(g));
 // Jefes (9 nov 2026): su cofre trae comodines y deshacer, así que la cuota es más alta: ×2 = 200, ×3 = 400, ×5 = 800,
-// ×10 = 1600 (× el boleto de entrada).
-export const BET_BOSS_FEE = { 2: 200, 3: 400, 5: 800, 10: 1600 };
+// ×7 = 1200, ×10 = 1600, ×13 = 2000, ×15 = 2400 (× el boleto de entrada).
+export const BET_BOSS_FEE = { 2: 200, 3: 400, 5: 800, 7: 1200, 10: 1600, 13: 2000, 15: 2400 };
 export const betFee = (g, m) => (m < 2 ? 0 : (g % LEVELS_PER_WORLD === LEVELS_PER_WORLD - 1 ? BET_BOSS_FEE[m] : BET_FEE * (m - 1)) * ticketCost(g));
 // Dentro del nivel, las ayudas cuestan distinto según dónde se juega: en el evento del mes y en las festividades,
 // 15% más caras (comodín, deshacer y +5); durante la lluvia de meteoritos, comodín y deshacer 30% menos (se ve como

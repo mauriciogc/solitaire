@@ -5,14 +5,17 @@
 // exclusivo en los primeros 11.
 // Secretos: el primer premio a los 10 y luego cada 50 hasta los 500 (11 premios): monedas y, en los primeros 8, un
 // exclusivo.
+// 14 nov 2026 (pedido del usuario): un sello nuevo a los 100 (solo 1,000 monedas); los demás en los mismos niveles
+// (200, 500, 1,000… 6,000; 14 sellos). Secretos: un premio nuevo a los 5 (solo 1,000 monedas); los demás igual (10, 50, 100… 500).
+// Los premios de antes se recorren un lugar (el sello 2 da lo que daba el 1).
 // Se cobran solos al cumplirse (como los logros: van a save.feats y se festejan en la portada).
 import { save } from './storage.js';
 
-export const PASS_MAX = 13, SECRET_MAX = 11;
-// Niveles distintos que pide el sello n (desde 1): 200, 500, 1,000, 1,500… 6,000.
-export const passGoal = (n) => (n <= 1 ? 200 : (n - 1) * 500);
-// Secretos que pide el premio m (desde 1): 10, 50, 100… 500.
-export const secretGoal = (m) => (m <= 1 ? 10 : (m - 1) * 50);
+export const PASS_MAX = 14, SECRET_MAX = 12;
+// Niveles distintos que pide el sello n (desde 1): 100, 200, 500, 1,000… 6,000.
+export const passGoal = (n) => (n <= 1 ? 100 : n === 2 ? 200 : (n - 2) * 500);
+// Secretos que pide el premio m (desde 1): 5, 10, 50, 100… 500.
+export const secretGoal = (m) => (m <= 1 ? 5 : m === 2 ? 10 : (m - 2) * 50);
 // Marcos del pasaporte: [clave, nombre, fondo, banda, icono, adorno].
 export const PASS_FRAMES = [
   ['pase1', 'Sello explorador', '#e6f2ff', '#4aa8de', 'planet', 'flag'],
@@ -26,6 +29,8 @@ export const PASS_FRAMES = [
 export const PASS_EXTRA = [['title', 'trotamundos'], ['space', 'pasaporte'], ['back', 'pasaporte'], ['traveler', 'pasaporte'], ['avatar', 'viajerogalactico'], ['ring', 'sellos']];
 // Sello n (desde 1): monedas 1,000, 1,500, 2,000… con tope de 6,000 y su exclusivo si hay.
 export const passPrize = (n) => {
+  if (n <= 1) return { coins: 1000 };
+  n--;
   const item = PASS_FRAMES[n - 1] ? ['frame', PASS_FRAMES[n - 1][0]] : PASS_EXTRA[n - 1 - PASS_FRAMES.length];
   return { coins: Math.min(6000, 500 + 500 * n), ...(item && { item }) };
 };
@@ -43,7 +48,9 @@ export const SECRET_PRIZES = [
   { coins: 8000 },
   { coins: 10000 },
 ];
-export const secretPrize = (m) => SECRET_PRIZES[m - 1] || { coins: 5000 };
+export const secretPrize = (m) => (m <= 1 ? { coins: 1000 } : SECRET_PRIZES[m - 2] || { coins: 5000 });
+// Color e icono del sello n en el pasaporte: el de su marco (el 1, de gancho, como el 2).
+export const passFrameOf = (n) => PASS_FRAMES[Math.max(0, n - 2)] || PASS_FRAMES.at(-1);
 
 // save.devPass / save.devSec: lo que suma el modo dev para probar (llegar al siguiente sello o premio).
 export const secretCount = () => Object.values(save.secret || {}).filter((s) => s > 0).length + (save.devSec || 0);
@@ -56,7 +63,16 @@ export const secretSteps = () => reached(secretCount(), secretGoal, SECRET_MAX);
 // Cobra lo que ya se cumplió y lo deja en la cola de festejos q. save.pass = { s: sellos cobrados, x: premios de
 // secretos, at: { s: [], x: [] } el nivel en que iba al ganar cada uno (para Tu camino) }.
 export function passClaim(q) {
-  const p = (save.pass ||= { s: 0, x: 0 });
+  const p = (save.pass ||= { s: 0, x: 0, v: 2 });
+  // Partidas de antes del 14 nov 2026: lo cobrado se recorre un lugar (el sello de 100 y el premio de 5 cuentan como
+  // cobrados si ya tenía el primero, sin darlos otra vez).
+  if (!p.v) {
+    const at0 = p.at || { s: [], x: [] };
+    if (p.s > 0) (p.s++, at0.s.unshift(at0.s[0]));
+    if (p.x > 0) (p.x++, at0.x.unshift(at0.x[0]));
+    p.at = at0;
+    p.v = 2;
+  }
   const at = (p.at ||= { s: [], x: [] }), lvl = Math.max(1, save.next || 0);
   const give = (pr) => {
     save.coins += pr.coins || 0;

@@ -15,9 +15,11 @@ import { EVENT_LEVELS, EVENT_PER_PLANET, EVENT_PLANETS, FESTIVAL_LEVELS, FESTIVA
 // fiesta: festividades de 24 h (ver más abajo).
 // 8 nov 2026: separados a 10 niveles o más de las cartas y mesas que estrenan (antes racha 20, mis 30, logros 40, col 50,
 // mes 80, col2 100, fiesta 120, col3 150, fiesta2 200). Los números de los comentarios de abajo son los de antes.
-// 10 nov 2026 (pedido del usuario): fiesta3 = fiestas mexicanas nuevas (se ven en el nivel 389), fiesta4 = fiestas de
-// América (nivel 461).
-export const UNLOCK = { racha: 30, mis: 40, logros: 70, col: 90, mes: 130, col2: 159, fiesta: 180, col3: 230, fiesta2: 290, fiesta3: 388, fiesta4: 460 };
+// 10 nov 2026 (pedido del usuario): fiesta3 = fiestas mexicanas nuevas, fiesta4 = fiestas de América (niveles en UNLOCK).
+// 14 nov 2026 (pedido del usuario, calendario nuevo): logros 51; colecciones cada 50 desde el 91 (91, 141, 191); evento
+// del mes 131; festividades cada 50 desde el 181 (de un día 181, leyendas 231, México 281, América 331; Europa 381 y
+// Oriente 431 cuando existan).
+export const UNLOCK = { racha: 30, mis: 40, logros: 50, col: 90, mes: 130, col2: 140, fiesta: 180, col3: 190, fiesta2: 230, fiesta3: 280, fiesta4: 330 };
 export const isOn = (k) => (save.next || 0) >= UNLOCK[k];
 
 // En estrellas (7 nov 2026: llegaba a 30 victorias sin problema porque contaba cualquiera): cada victoria suma sus
@@ -605,7 +607,7 @@ export const FESTIVALS = [
     ex: [{ space: 'bromas', frame: 'inocente' }, { ring: 'cascabeles', back: 'arlequin' }, { avatar: 'bufoncito', title: 'bromista', traveler: 'sorpresa' }] },
 ];
 // ---------- Festividades nuevas (10 nov 2026, pedido del usuario) ----------
-// grp 3: fiestas mexicanas (nivel 389). grp 4: fiestas de América (nivel 461). zone: dónde se celebra (lo dice la
+// grp 3: fiestas mexicanas (nivel 281). grp 4: fiestas de América (nivel 331). zone: dónde se celebra (lo dice la
 // entrada: «Celebrando en …»). Las de varios días van como el Nahual (4 planetas de 4).
 FESTIVALS.push(
   { key: 'bandera', name: 'Día de la Bandera', date: (y) => new Date(y, 1, 24), grp: 3, ready: true, zone: 'México',

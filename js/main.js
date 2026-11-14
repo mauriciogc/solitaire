@@ -9,16 +9,17 @@ import { icon, iconURL, iconInner, star, coin, miniPlanet, avatarHTML, AVATAR_CO
 import { GROUPS, SECTIONS, ITEMS, shopItems, groupOf, owns, equipped, equip, buy, item, lockedUntil, titleHTML, titleIcon, sell, sellable, sellPrice } from './shop.js';
 import { BIOMES, biomeKey, EVENT_BIOMES, tableHTML } from './biomes.js';
 import { redeem } from './codes.js';
-import { meteor, metWin, metCoins, helpOff, MET_FROM, STAR_FROM, SHOWERS } from './meteor.js';
+import { meteor, metWin, metCoins, helpOff, MET_FROM, STAR_FROM, SHOWERS, NEW_RAINS } from './meteor.js';
+import { rainCSS } from './rains.js';
 import { dev, gallery, attachDevBar, galleryScreen, openDevMenu, planetGal, planetsScreen, casualRate, rateTag, tableIcon } from './dev.js';
 import { themeCSS } from './themes.js';
 import { setCSS, SETS, setOf, setItems, SET_DEAL } from './sets.js';
 import { festivalCSS } from './festival-art.js';
 import { mulberry32, hash } from './rng.js';
 import { starCSS } from './starshower.js';
-import { PASS_MAX, secretGoal, PASS_FRAMES, passGoal, passPrize, secretPrize, passCount, secretCount, passCSS } from './passport.js';
+import { PASS_MAX, secretGoal, passFrameOf, passGoal, passPrize, secretPrize, passCount, secretCount, passCSS } from './passport.js';
 // Caras, fondos y marcos de las temáticas de la tienda (themes.js): su CSS se arma de su paleta.
-document.head.append(Object.assign(document.createElement('style'), { textContent: themeCSS(iconURL) + setCSS(iconURL, iconInner) + festivalCSS(FESTIVALS, iconInner) + passCSS(iconInner) + starCSS(iconInner) + `.go.met.sh-star::before { background-image: ${iconURL('starFall', 1)}; }` }));
+document.head.append(Object.assign(document.createElement('style'), { textContent: themeCSS(iconURL) + setCSS(iconURL, iconInner) + festivalCSS(FESTIVALS, iconInner) + passCSS(iconInner) + starCSS(iconInner) + rainCSS(iconInner) + `.go.met.sh-star::before { background-image: ${iconURL('starFall', 1)}; }` }));
 
 document.documentElement.classList.toggle('dev-on', !!prefs.dev);
 // Reversos de los premios de racha (carta regalo violeta y comodín dorado), para todo el documento:
@@ -206,9 +207,15 @@ const betFreeN = () => save.betFreeN ?? (save.betFree || save.betGift ? 2 : 1);
 const betGiftNow = (g) => betOk(g) && maxBet(g) > betFreeN();
 // Lo que se paga al entrar con la apuesta m: boletos × apuesta y una cuota en monedas. Con la lluvia de meteoritos los
 // boletos cuestan la mitad (la cuota no); full: lo de siempre, para enseñarlo tachado.
+// La lluvia que rebaja la tienda y los boletos de la apuesta (meteoritos y estrellas; las nuevas no).
+const saleRain = () => { const m = meteor(); return m?.K.shop ? m : null; };
+// Lluvia de cometas (14 nov 2026): mientras cae, la entrada a un nivel nuevo no gasta boletos (la cuota sí).
+const cometNow = () => meteor()?.K.kind === 'comet';
+// Lluvia de cristales: la ayuda que dio el nivel (comodín y deshacer van aparte, en su burbuja).
+const giftHelps = (met) => (met?.gift && !['wild', 'undo'].includes(met.gift) ? { [met.gift]: 1 } : undefined);
 const betPay = (g, m) => {
-  const full = ticketCost(g) * m, met = m > 1 && !!meteor();
-  return { tk: met ? Math.ceil(full / 2) : full, full, met, fee: betFee(g, m) };
+  const full = ticketCost(g) * m, met = m > 1 && !!saleRain();
+  return { tk: cometNow() ? 0 : met ? Math.ceil(full / 2) : full, full, met, fee: betFee(g, m) };
 };
 // La apuesta que lleva el Jugar del camino (etiqueta ×N; si toca la gratis, esa), y repintarla sin redibujar.
 const betShown = () => (!betOk(save.next) ? 1 : betGiftNow(save.next) ? maxBet(save.next) : betNow(save.next));
@@ -228,7 +235,7 @@ const betStarts = () => BET_STEPS.slice(1).map((m) => { let g = 0; while (g < TO
 // Lo que da el nivel al ganarlo con 3★, cada cosa con su número (n) o solo su ×N: monedas, la devolución de boletos,
 // fichas de la colección y el cofre del jefe (la lluvia va en las monedas: tachado y ×2).
 const betLoot = (g) => [
-  { ico: coin(), n: boosted(coinsFor(g, 3, 0), save.coins, g), met: meteor()?.K.x || 0 },
+  { ico: coin(), n: boosted(coinsFor(g, 3, 0), save.coins, g), met: meteor()?.K.x > 1 ? meteor().K.x : 0 },
   { ico: icon('ticket'), n: ticketRefund(g) },
   col() && { ico: icon(col().token), n: 3 },
   g % LEVELS_PER_WORLD === LEVELS_PER_WORLD - 1 && { ico: icon('cofre') },
@@ -1085,6 +1092,9 @@ function roadItems() {
     ['logros', UNLOCK.logros, 'Logros', 'trophy', 'Todo suma para siempre: bronce, plata, oro, platino y diamante.'],
     ['meteoro', MET_FROM, 'Lluvia de meteoritos', 'meteoro', 'Cae sin aviso 30 minutos: doble de monedas y un premio sorpresa.'],
     ['estrellas', STAR_FROM, 'Lluvia de estrellas', 'starFall', 'Cae sin aviso 15 minutos: triple de monedas y hasta 3 premios.'],
+    ['cometas', SHOWERS.comet.from, 'Lluvia de cometas', 'cometaLluvia', 'Cae sin aviso 20 minutos: niveles sin gastar boletos, 1 boleto más por victoria y un premio sorpresa.'],
+    ['aurora', SHOWERS.aurora.from, 'Aurora', 'aurora', 'Sale sin aviso 20 minutos: doble de fichas de colección y hasta 2 premios.'],
+    ['cristales', SHOWERS.crystal.from, 'Lluvia de cristales', 'cristal', 'Cae sin aviso 10 minutos: ayudas al ganar y un premio sorpresa.'],
     ['col', UNLOCK.col, 'Colecciones', 'concha', 'Junta fichas con tus estrellas y cámbialas por exclusivos.'],
     ['mes', UNLOCK.mes, 'Eventos del mes', 'planet', 'Cada mes un evento con sus planetas y premios que solo salen ahí.'],
     ['col2', UNLOCK.col2, 'Más colecciones', 'fosil', 'Llegan colecciones nuevas y hay colección 3 semanas al mes.'],
@@ -1368,7 +1378,7 @@ function enterLevel(g, chosen = false) {
   const base = entryCost(g), bet = betOk(g) ? betNow(g) : 1;
   // Sin costo (modo dev con boletos infinitos): entra igual con su apuesta.
   if (!base) return startLevel(g, { bet });
-  const { tk: cost, fee } = bet > 1 ? betPay(g, bet) : { tk: base, fee: 0 };
+  const { tk: cost, fee } = bet > 1 ? betPay(g, bet) : { tk: cometNow() ? 0 : base, fee: 0 };
   if (save.tickets >= cost && save.coins >= fee) {
     if (entering) return;
     entering = true;
@@ -1693,7 +1703,7 @@ function startLevel(g, { resume = false, free = false, anim = 'up', bet = 1, pai
         const coins = metCoins(boosted(secretCoins(coinsFor(boss, stars, prev)), save.coins, boss), met);
         const bonus = stars >= 3 && prev < 3 ? rollSecret() : {};
         const wild = bonus.wild || 0, undo = bonus.undo || 0;
-        const tokenCount = colWin(stars, prev);
+        const tokenCount = colWin(stars, prev, met?.col || 1);
         save.secret[w] = Math.max(prev, stars);
         save.coins += coins;
         save.wild += wild;
@@ -1702,7 +1712,7 @@ function startLevel(g, { resume = false, free = false, anim = 'up', bet = 1, pai
         persist();
         updateCoins();
         // Primera vez con 3 estrellas: la postal del mundo gana el sello secreto (se celebra al continuar).
-        return { coins, tickets: 0, prev, wild: wild + (met?.prize?.wild || 0), undo: undo + (met?.prize?.undo || 0), met, counted: true, first: !prev, racha: dailyStreak, replay: !free, seal: stars >= 3 && prev < 3, col: tokenCount ? { n: tokenCount, ico: col().token } : null };
+        return { coins, tickets: met?.prize?.tickets || 0, prev, wild: wild + (met?.prize?.wild || 0) + (met?.gift === 'wild' ? 1 : 0), undo: undo + (met?.prize?.undo || 0) + (met?.gift === 'undo' ? 1 : 0), helps: giftHelps(met), met, counted: true, first: !prev, racha: dailyStreak, replay: !free, seal: stars >= 3 && prev < 3, col: tokenCount ? { n: tokenCount, ico: col().token } : null };
       }
       // En modo dev se puede saltar a cualquier nivel: solo cuenta si ya estaba desbloqueado.
       if (g > save.next) return { coins: 0, tickets: 0, prev: 0, replay: !free };
@@ -1712,12 +1722,13 @@ function startLevel(g, { resume = false, free = false, anim = 'up', bet = 1, pai
       // Apuesta: todo × apuesta (monedas, boletos, fichas, cofre y el premio de la lluvia de meteoritos).
       const coins = metCoins(boosted(coinsFor(g, stars, prev), save.coins, g), met) * mult;
       // La primera victoria devuelve los boletos que cuesta el nivel.
-      const tickets = prev ? 0 : ticketRefund(g) * mult;
+      // Lluvia de cometas: además, sus boletos de más (no se multiplican con la apuesta).
+      const tickets = (prev ? 0 : ticketRefund(g) * mult) + (met?.tk || 0);
       // El jefe da el boleto dorado para abrir el mundo siguiente (solo la primera vez).
       // El del último mundo de cada constelación da el boleto de constelación (abre la siguiente; 8 nov 2026).
       const bossTk = !prev && level.boss && w + 1 < WORLD_COUNT ? 1 : 0;
       const gold = w % 10 === 9 ? 0 : bossTk, cgold = w % 10 === 9 ? bossTk : 0;
-      const tokenCount = colWin(stars, prev, mult);
+      const tokenCount = colWin(stars, prev, mult * (met?.col || 1));
       save.stars[g] = Math.max(prev, stars);
       save.coins += coins;
       save.tickets += tickets;
@@ -1749,7 +1760,8 @@ function startLevel(g, { resume = false, free = false, anim = 'up', bet = 1, pai
       persist();
       updateCoins();
       // Repetir desde la victoria salta el festejo del mapa: no se ofrece si toca abrir el mundo siguiente.
-      return { bet: mult, coins, tickets, prev, gold, cgold, chest, wild: mw, undo: mu, met, worldStars: worldStars(w), counted: true, first: !prev, racha: dailyStreak, replay: !free && !chest, col: tokenCount ? { n: tokenCount, ico: col().token } : null };
+      // Los boletos del premio de la lluvia ya los guardó metWin: aquí solo se enseñan.
+      return { bet: mult, coins, tickets: tickets + (met?.prize?.tickets || 0), prev, gold, cgold, chest, wild: mw + (met?.gift === 'wild' ? 1 : 0), undo: mu + (met?.gift === 'undo' ? 1 : 0), helps: giftHelps(met), met, worldStars: worldStars(w), counted: true, first: !prev, racha: dailyStreak, replay: !free && !chest, col: tokenCount ? { n: tokenCount, ico: col().token } : null };
     },
   });
   // El tablero sube y la pantalla anterior se queda atrás.
@@ -1839,6 +1851,9 @@ const ORIGINS = [
   { k: 'codigo', name: 'Tesoro escondido · con código', ico: 'cofre' },
   { k: 'meteoro', name: 'Lluvia de meteoritos', ico: 'meteoro' },
   { k: 'estrellas', name: 'Lluvia de estrellas', ico: 'starFall' },
+  { k: 'cometas', name: 'Lluvia de cometas', ico: 'cometaLluvia' },
+  { k: 'aurora', name: 'Aurora', ico: 'aurora' },
+  { k: 'cristales', name: 'Lluvia de cristales', ico: 'cristal' },
   { k: 'logro', name: 'Logros', ico: 'trophy' },
   { k: 'pasaporte', name: 'Pasaporte', ico: 'pasaporte' },
   { k: 'secretos', name: 'Niveles secretos', ico: 'starSecret' },
@@ -1849,6 +1864,7 @@ function exFrom(it) {
   if (it.code) return { g: 'codigo', ico: 'cofre', name: 'Código de regalo' };
   if (it.met) return { g: 'meteoro', ico: 'meteoro', name: 'Lluvia de meteoritos' };
   if (it.star) return { g: 'estrellas', ico: 'starFall', name: 'Lluvia de estrellas' };
+  if (it.rain) return { g: it.ev, ico: SHOWERS[it.rain].ico, name: SHOWERS[it.rain].name };
   if (it.logro) return { g: 'logro', ico: 'trophy', name: 'Logros' };
   if (it.pase) return { g: 'pasaporte', ico: 'pasaporte', name: 'Pasaporte' };
   if (it.secreto) return { g: 'secretos', ico: 'starSecret', name: 'Niveles secretos' };
@@ -1890,7 +1906,7 @@ const setPieces = (av) => [{ sec: 'avatar', k: av }, ...setItems().filter((x) =>
 // Los descuentos se suman: el de la lluvia de meteoritos (si cae) en cada pieza y luego el del paquete. full = lo
 // que costaría sin ningún descuento (es lo que va tachado).
 function setDealOf(av, pieces = setPieces(av)) {
-  const met = meteor(), cost = (it) => metShopPrice(it.price, met);
+  const met = saleRain(), cost = (it) => metShopPrice(it.price, met);
   const rest = pieces.filter((p) => !owns(p.sec, p.k)), full = rest.reduce((n, p) => n + p.it.price, 0);
   return { rest, full, met, pay: Math.round((rest.reduce((n, p) => n + cost(p.it), 0) * (1 - SET_DEAL)) / 5) * 5, lock: rest.map((p) => lockedUntil(p.sec, p.k)).find(Boolean), n: pieces.length };
 }
@@ -1910,7 +1926,7 @@ function openShop(tab = 'avatar') {
     cls: 'shop-modal',
     body: `<div class="shead"><div class="sgroups">${SHOP_GROUPS.map((g) => `<button class="sgroup" data-group="${g.k}">${icon(g.ico)}<span>${g.name}</span></button>`).join('')}</div>
       <div class="stabs"></div>
-      ${meteor() ? `<p class="met-sale">${icon(meteor().K.ico)}${meteor().K.name}: <b>−${Math.round(meteor().K.shop * 100)}%</b> en toda la tienda</p>` : ''}</div><div class="sgrid"></div>`,
+      ${saleRain() ? `<p class="met-sale">${icon(saleRain().K.ico)}${saleRain().K.name}: <b>−${Math.round(saleRain().K.shop * 100)}%</b> en toda la tienda</p>` : ''}</div><div class="sgrid"></div>`,
     onClose: () => {
       closeShelf();
       // El viajero vive en la escena 3D: al cambiarlo se vuelve a armar el mapa.
@@ -1921,7 +1937,7 @@ function openShop(tab = 'avatar') {
   m.el.querySelector('.mhead').insertAdjacentHTML('afterbegin', `<span class="smoney">${coin()}<b data-shop-coins>${fmt(save.coins)}</b></span>`);
   const grid = m.el.querySelector('.sgrid'), tabs = m.el.querySelector('.stabs');
   // Lluvia de meteoritos: 10% menos en toda la tienda (se ve el precio tachado).
-  const cost = (it) => metShopPrice(it.price, meteor());
+  const cost = (it) => metShopPrice(it.price, saleRain());
   const card = (sec, it) => {
     const own = owns(sec, it.k), on = inUse(sec, it.k), lock = lockedUntil(sec, it.k);
     const foot = on ? `<span class="s-on">${icon('check')}En uso</span>`
@@ -2126,7 +2142,7 @@ function openSetSheet(av, after = () => {}) {
 }
 function setSheet(host, av, { back, backLabel, changed }) {
   const pieces = setPieces(av);
-  const cost = (it) => metShopPrice(it.price, meteor());
+  const cost = (it) => metShopPrice(it.price, saleRain());
   const LBL = { avatar: 'Disfraz', ring: 'Marco', title: 'Título', traveler: 'Nave', back: 'Reverso', face: 'Cara', space: 'Espacio', frame: 'Postal' };
   const pic = ({ sec, k }) => sec === 'traveler' ? `<canvas class="trav-prev" data-kind="${k}"></canvas>` : sec === 'title' ? titleHTML(k) : sec === 'ring' ? avatarHTML({ ...save, look: 'char', char: av, ring: k }) : shopPreview(sec, k);
   const state = ({ sec, k, it }) => {
@@ -2410,7 +2426,7 @@ function openMis() {
 // Hasta abajo de los logros (12 nov 2026): los sellos del pasaporte y los premios de secretos que ya ganaste (los que
 // faltan no se ven). Cada uno con su sello de color, lo que pidió y lo que dio.
 const passWhat = (p) => `${p.item ? `${GIFT_KIND[p.item[0]]} <b>${esc(item(...p.item).name)}</b> · ` : ''}${coin()}${money(p.coins)}`;
-const passStampHTML = (i) => { const F = PASS_FRAMES[i - 1] || PASS_FRAMES.at(-1); return `<span class="ps-stamp on" style="--pc:${F[3]}">${icon(F[4])}</span>`; };
+const passStampHTML = (i) => { const F = passFrameOf(i); return `<span class="ps-stamp on" style="--pc:${F[3]}">${icon(F[4])}</span>`; };
 function passTrophies() {
   const s = save.pass?.s || 0, x = save.pass?.x || 0;
   const rows = (n, f) => Array.from({ length: n }, (_, i) => f(i + 1)).join('');
@@ -3110,7 +3126,8 @@ const mmss = (ms) => { const s = Math.ceil(ms / 1000); return `${Math.floor(s / 
 const METS = [[78, 4, 1, 0], [52, -6, 0.7, 1.3], [96, 18, 0.85, 2.1], [64, 26, 0.6, 3.4], [88, -2, 1.1, 4.6], [38, 8, 0.75, 5.5], [70, 40, 0.65, 6.8]];
 // Se truenan al tocarlos (cuentan para el premio de meteoros, ver countPop) y no vuelven hasta su siguiente pasada.
 // Lluvia de estrellas: estrellas fugaces en lugar de meteoritos (12 nov 2026: cuentan aparte, con su premio y su logro).
-const metSky = () => { const m = meteor(); return m ? `<div class="met-sky sh-${m.K.kind}" aria-hidden="true">${METS.map(([x, y, s, d]) => `<i style="left:${x}%;top:${y}%;--s:${s};animation-delay:${d}s">${icon(m.K.sky)}</i>`).join('')}</div>` : ''; };
+// La aurora no trae nada que tronar (sky: null).
+const metSky = () => { const m = meteor(); return m?.K.sky ? `<div class="met-sky sh-${m.K.kind}" aria-hidden="true">${METS.map(([x, y, s, d]) => `<i style="left:${x}%;top:${y}%;--s:${s};animation-delay:${d}s">${icon(m.K.sky)}</i>`).join('')}</div>` : ''; };
 document.addEventListener('pointerdown', (e) => {
   const m = e.target.closest?.('.met-sky i');
   if (!m || m.classList.contains('popped')) return;
@@ -3126,13 +3143,38 @@ document.addEventListener('pointerdown', (e) => {
   m.addEventListener('animationiteration', () => m.classList.remove('popped'), { once: true });
   popBalloon(f, ['#ffd85a', '#ff8a3d']);
   sparkle(at, 10);
-  countPop(meteor()?.K.kind === 'star' ? 'estrella' : 'meteoro', at);
+  const K0 = meteor()?.K;
+  countPop(K0?.pop || (K0?.kind === 'star' ? 'estrella' : 'meteoro'), at);
 }, true);
 // Aviso de cada lluvia: un meteorito cae, truena y se dice lo que da. La primera vez en la vida, con sus reglas.
 // La de estrellas (11 nov 2026) usa la misma ventana con sus números: monedas ×3, hasta 3 premios, más descuento.
+// Lluvias nuevas (14 nov 2026): cada una con lo suyo (RAIN_RULES); la primera vez en la vida, además, cuándo cae.
+// Mismo formato que meteoritos y estrellas (14 nov 2026, el usuario): lo que da, el premio de 3★ y, la primera vez,
+// cuándo cae.
+const RAIN_RULES = {
+  comet: () => [
+    [icon('ticket'), 'Los niveles nuevos <b>no gastan boletos</b> y cada uno que ganes te da <b>1 boleto más</b>.'],
+    [star(true), 'Gana un nivel con <b>3 estrellas</b> y te cae un <b>premio sorpresa</b> (uno por lluvia).'],
+  ],
+  aurora: () => [
+    [icon(col()?.token || 'concha'), 'Las <b>fichas de la colección</b> de cada nivel que ganes valen <b>el doble</b>.'],
+    [star(true), 'Cada nivel que ganes con <b>3 estrellas</b> te da un <b>premio sorpresa</b> (hasta 2 por aurora).'],
+  ],
+  crystal: () => [
+    [icon('gift'), 'Los niveles que ganes te pueden dar una <b>ayuda</b>: comodín, deshacer, imán, telescopio o reloj.'],
+    [star(true), 'Gana un nivel con <b>3 estrellas</b> y te cae un <b>premio sorpresa</b> (uno por lluvia).'],
+  ],
+};
+const RAIN_WHEN = {
+  comet: 'Cae <b>sin aviso</b>, una vez por semana y solo <b>20 minutos</b>. ¡Si la ves, juega!',
+  aurora: 'Sale <b>sin aviso</b>, una vez por semana y solo <b>20 minutos</b>, cuando hay colección. ¡Si la ves, juega!',
+  crystal: 'Cae <b>sin aviso</b>, una vez cada dos semanas y solo <b>10 minutos</b>. ¡Si la ves, juega ya!',
+};
+const rainSeen = (k) => (k === 'star' ? save.starSeen : k === 'met' ? save.metSeen : save.rainSeen?.[k]);
 function openMetIntro() {
   const K = meteor()?.K || SHOWERS.met, star3 = K.kind === 'star';
-  const first = star3 ? !save.starSeen : !save.metSeen;
+  const first = !rainSeen(K.kind);
+  const fresh = RAIN_RULES[K.kind];
   return new Promise((done) => {
     const m = openModal({
       title: `¡${K.name}!`,
@@ -3141,18 +3183,19 @@ function openMetIntro() {
       cls: `ev-intro met-intro sh-${K.kind}`,
       body: `<div class="evi-hero met-hero"><div class="rays"></div><span class="met-fall">${icon(K.ico, 0, 0, 'big')}</span></div>
         <p class="lead">¡Está cayendo ahora! Te quedan <b class="met-clock">${mmss(meteor()?.left() || 0)}</b> para aprovecharla.</p>
-        <ul class="evi-rules">
+        <ul class="evi-rules">${fresh ? `${fresh(K).map(([ic, t]) => `<li>${ic}<span>${t}</span></li>`).join('')}${first ? `<li>${icon(K.ico)}<span>${RAIN_WHEN[K.kind]}</span></li>` : ''}</ul>` : `
           <li>${coin()}<span>Las monedas de cada nivel que ganes valen <b>${star3 ? 'el triple' : 'el doble'}</b>.</span></li>
           <li>${star(true)}<span>${star3 ? 'Cada nivel que ganes con <b>3 estrellas</b> te da un <b>premio sorpresa</b> (hasta 3 por lluvia).' : 'Gana un nivel con <b>3 estrellas</b> y te cae un <b>premio sorpresa</b> (uno por lluvia).'}</span></li>
           <li>${icon('bag')}<span>Tienda <b>−${Math.round(K.shop * 100)}%</b>; ${star3 ? `comodín <b>−${Math.round(helpOff(K, 'wild') * 100)}%</b>, deshacer y ayudas <b>−${Math.round(helpOff(K, 'undo') * 100)}%</b> y +5 cartas <b>−${Math.round(helpOff(K, 'extra') * 100)}%</b>` : `comodín y deshacer <b>−${Math.round(helpOff(K, 'wild') * 100)}%</b>`}.</span></li>
           ${maxBet(save.next || 0) > 1 ? `<li>${icon('ticket')}<span>¿Apuestas? Los boletos de tu <b>×${betShown() > 1 ? betShown() : maxBet(save.next || 0)}</b> cuestan <b>la mitad</b>.</span></li>` : ''}
           ${first ? `<li>${icon(K.ico)}<span>${star3 ? 'Cae <b>sin aviso</b>, unas veces por semana y solo <b>15 minutos</b>. ¡Si la ves, juega ya!' : 'Cae <b>sin aviso</b>, unas veces por semana, a cualquier hora. ¡Si la ves, juega!'}</span></li>` : ''}
-        </ul>`,
+        </ul>`}`,
       buttons: [{ label: '¡A jugar!', cls: 'gold wide' }],
       onClose: () => {
         const mt = meteor();
         if (mt) mt.state.intro = true;
         if (star3) save.starSeen = true;
+        else if (fresh) (save.rainSeen ||= {})[K.kind] = true;
         else save.metSeen = true;
         persist();
         done();
@@ -3182,7 +3225,7 @@ function openMetPrize(items, kind = 'met') {
       closable: false,
       cls: 'gift-prize',
       body: `<div class="gift-box"><div class="gbox"><span class="lid">${boxLid()}</span><span class="body">${boxBody()}</span></div></div>
-        <p class="note">Exclusivo de la lluvia de ${kind === 'star' ? 'estrellas' : 'meteoritos'}: es tuyo para siempre. Póntelo desde tu perfil.</p>`,
+        <p class="note">Exclusivo de la ${(SHOWERS[kind] || SHOWERS.met).name.toLowerCase()}: es tuyo para siempre. Póntelo desde tu perfil.</p>`,
       buttons: [{ label: 'Continuar', cls: 'green wide', onClick: () => { closeShelf(); done(); } }],
     });
     boxBubbles(m, items.map((it) => giftBubble(it.sec, it.k)));
@@ -3278,7 +3321,7 @@ function featHTML(fs) {
 const EX_WORD = { frame: 'Postal exclusiva', title: 'Título exclusivo', space: 'Fondo exclusivo', back: 'Reverso exclusivo', avatar: 'Disfraz exclusivo', ring: 'Marco exclusivo', face: 'Caras exclusivas', traveler: 'Viajero exclusivo' };
 async function passScene(back, f) {
   if (reduced()) return;
-  const sec = f.t === 'secreto', F = PASS_FRAMES[f.n - 1] || PASS_FRAMES.at(-1);
+  const sec = f.t === 'secreto', F = passFrameOf(f.n);
   const ico = sec ? 'starSecret' : F[4], pc = sec ? '#8a5cf0' : F[3];
   const what = f.item ? `${EX_WORD[f.item[0]]}: <b>${esc(item(...f.item).name)}</b>` : `<b>${money(f.coins)}</b> monedas`;
   const el = h(`<div class="pp-scene${sec ? ' sec' : ''}" style="--pc:${pc}">
@@ -3488,9 +3531,11 @@ async function notices() {
     if (!(await calm(gen))) return;
     if (rescueDue()) await openRescue();
   }
-  for (const k of ['racha', 'mis', 'logros', 'meteoro', 'col', 'apuesta', 'mes', 'col2', 'fiesta', 'col3', 'estrellas', 'fiesta2', 'fiesta3', 'fiesta4']) {
+  for (const k of ['racha', 'mis', 'logros', 'meteoro', 'col', 'apuesta', 'estrellas', 'mes', 'col2', 'cometas', 'fiesta', 'col3', 'aurora', 'fiesta2', 'cristales', 'fiesta3', 'fiesta4']) {
     // La lluvia: solo si nunca se ha visto una (quien ya la vio caer no necesita la ventana). La apuesta: nivel 101.
-    if (!(k === 'meteoro' ? (save.next || 0) >= MET_FROM && !save.metSeen : k === 'estrellas' ? (save.next || 0) >= STAR_FROM && !save.starSeen : k === 'apuesta' ? maxBet(save.next) > 1 : isOn(k)) || save.intro?.[k]) continue;
+    // Las lluvias nuevas (14 nov 2026), igual: al llegar a su nivel, si todavía no ha visto caer una.
+    const rk = RAIN_KEY[k];
+    if (!(k === 'meteoro' ? (save.next || 0) >= MET_FROM && !save.metSeen : k === 'estrellas' ? (save.next || 0) >= STAR_FROM && !save.starSeen : rk ? (save.next || 0) >= SHOWERS[rk].from && !rainSeen(rk) : k === 'apuesta' ? maxBet(save.next) > 1 : isOn(k)) || save.intro?.[k]) continue;
     if (!(await calm(gen))) return;
     await openUnlock(k);
     if (k === 'apuesta') {
@@ -3596,7 +3641,35 @@ const colList = (cs) => cs.map((x) => [x.token, x.name, '']);
 const evList = () => Object.keys(EVENTS).map(Number).sort((a, b) => a - b).filter((m) => EVENTS[m].ready).map((m) => [EVENTS[m].ico, EVENTS[m].name, MONTHS_LONG[m]]);
 const MONTHS_LONG = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 const ulList = (list) => (list?.length ? `<ul class="ul-list">${list.map(([ico, name, sub]) => `<li>${icon(ico)}<span><b>${name}</b>${sub ? `<small>${sub}</small>` : ''}</span></li>`).join('')}</ul>` : '');
+const RAIN_KEY = { cometas: 'comet', aurora: 'aurora', cristales: 'crystal' };
 const UNLOCK_INFO = {
+  cometas: () => ({
+    title: '¡Nueva: Lluvia de cometas!', ico: 'cometaLluvia', color: 'blue', hero: icon('cometaLluvia', 0, 0, 'big'),
+    lead: ulLead(SHOWERS.comet.from + 1, 'la lluvia de cometas', 'De vez en cuando caen cometas sobre tu mapa y traen boletos.'),
+    rules: [
+      ['reloj', 'Una vez por semana, <b>20 minutos</b>, a cualquier hora y <b>sin aviso</b>.'],
+      ['gift', 'Mientras cae, los niveles nuevos <b>no gastan boletos</b>, cada victoria da <b>1 boleto más</b> y tu primer nivel con 3★ trae un <b>premio sorpresa</b>.'],
+      ['flag', 'Si la ves caer, ¡no la dejes pasar!'],
+    ],
+  }),
+  aurora: () => ({
+    title: '¡Nueva: Aurora!', ico: 'aurora', color: 'green', hero: icon('aurora', 0, 0, 'big'),
+    lead: ulLead(SHOWERS.aurora.from + 1, 'la aurora', 'De vez en cuando se pinta el cielo de colores y tu colección avanza más.'),
+    rules: [
+      ['reloj', 'Una vez por semana, <b>20 minutos</b>, a cualquier hora y <b>sin aviso</b>, cuando hay colección.'],
+      ['gift', 'Mientras sale, las <b>fichas de la colección valen el doble</b> y hasta <b>2 premios sorpresa</b>: uno por cada nivel con 3★.'],
+      ['flag', 'Si la ves en el cielo, ¡no la dejes pasar!'],
+    ],
+  }),
+  cristales: () => ({
+    title: '¡Nueva: Lluvia de cristales!', ico: 'cristal', color: 'blue', hero: icon('cristal', 0, 0, 'big'),
+    lead: ulLead(SHOWERS.crystal.from + 1, 'la lluvia de cristales', 'De vez en cuando caen cristales sobre tu mapa y traen ayudas.'),
+    rules: [
+      ['reloj', 'Una vez cada dos semanas, solo <b>10 minutos</b>, a cualquier hora y <b>sin aviso</b>.'],
+      ['gift', 'Mientras cae, los niveles que ganes te pueden dar una <b>ayuda</b> y tu primer nivel con 3★ trae un <b>premio sorpresa</b>.'],
+      ['flag', 'Es la más rara: si la ves caer, ¡no la dejes pasar!'],
+    ],
+  }),
   estrellas: () => ({
     title: '¡Nueva: Lluvia de estrellas!', ico: 'starFall', color: 'violet', hero: icon('starFall', 0, 0, 'big'),
     lead: ulLead(STAR_FROM + 1, 'la lluvia de estrellas', 'Más corta que la de meteoritos y da mucho más.'),
@@ -3741,7 +3814,7 @@ function evHeroIcons(main, list = Object.keys(EVENTS).map(Number).sort((a, b) =>
   return [at(-1), at(0), at(1)].map((x, k) => icon(x, 0, 0, k === 1 ? 'main' : '')).join('');
 }
 async function openUnlock(k) {
-  const sel = k === 'meteoro' || k === 'estrellas' || k.startsWith('apuesta') ? null : `.side.r [data-a="${{ racha: 'racha', mis: 'mis', logros: 'logros', col: 'col', mes: 'evento', col2: 'col', col3: 'col', fiesta: 'fiesta', fiesta2: 'fiesta', fiesta3: 'fiesta', fiesta4: 'fiesta' }[k]}"]`;
+  const sel = k === 'meteoro' || k === 'estrellas' || RAIN_KEY[k] || k.startsWith('apuesta') ? null : `.side.r [data-a="${{ racha: 'racha', mis: 'mis', logros: 'logros', col: 'col', mes: 'evento', col2: 'col', col3: 'col', fiesta: 'fiesta', fiesta2: 'fiesta', fiesta3: 'fiesta', fiesta4: 'fiesta' }[k]}"]`;
   if (sel) openGroup('r', 'open');
   const btn = sel && document.querySelector(sel);
   revealed.add(k);
@@ -4201,7 +4274,7 @@ function openEvPostcard(x) {
 // Sellos del pasaporte y de secretos que ya ganaste (12 nov 2026): van en todas las postales en grande, encima del
 // planeta. Se pueden ocultar (save.pcPass === false) y la foto sale igual que como los dejaste.
 const passSeals = () => [
-  ...Array.from({ length: save.pass?.s || 0 }, (_, i) => { const F = PASS_FRAMES[i] || PASS_FRAMES.at(-1); return { ico: F[4], pc: F[3], n: i + 1 }; }),
+  ...Array.from({ length: save.pass?.s || 0 }, (_, i) => { const F = passFrameOf(i + 1); return { ico: F[4], pc: F[3], n: i + 1 }; }),
   ...Array.from({ length: save.pass?.x || 0 }, (_, i) => ({ ico: 'starSecret', pc: '#8a5cf0', n: secretGoal(i + 1) })),
 ];
 // 12 nov 2026 (el usuario: «más aleatorios, que se vean como sellos»): cada sello cae en su lugar, con su giro, su
@@ -5229,6 +5302,9 @@ function openHelp(tab = 'basico', then) {
         <h3 class="help-h">Para ganar más</h3>
         <div class="step" data-u="meteoro"><div class="ill c">${icon('meteoro')}</div><p><b>Lluvia de meteoritos:</b> cae sin aviso por 30 minutos. Las monedas valen <b>el doble</b> y con 3 estrellas te cae un <b>premio sorpresa</b>.</p></div>
         <div class="step" data-u="estrellas"><div class="ill c">${icon('starFall')}</div><p><b>Lluvia de estrellas:</b> cae sin aviso por 15 minutos. Las monedas valen <b>el triple</b> y cada nivel con 3 estrellas te da un <b>premio sorpresa</b> (hasta 3).</p></div>
+        <div class="step" data-u="cometas"><div class="ill c">${icon('cometaLluvia')}</div><p><b>Lluvia de cometas:</b> cae sin aviso por 20 minutos. Los niveles nuevos <b>no gastan boletos</b>, cada victoria da <b>1 boleto más</b> y tu primer nivel con 3 estrellas te da un <b>premio sorpresa</b>.</p></div>
+        <div class="step" data-u="aurora"><div class="ill c">${icon('aurora')}</div><p><b>Aurora:</b> sale sin aviso por 20 minutos cuando hay colección. Las <b>fichas valen el doble</b> y cada nivel con 3 estrellas te da un <b>premio sorpresa</b> (hasta 2).</p></div>
+        <div class="step" data-u="cristales"><div class="ill c">${icon('cristal')}</div><p><b>Lluvia de cristales:</b> cae sin aviso por 10 minutos, la más rara. Los niveles que ganes te pueden dar una <b>ayuda</b> y tu primer nivel con 3 estrellas te da un <b>premio sorpresa</b>.</p></div>
         <div class="step" data-u="apuesta2"><div class="ill c"><i class="go-bet dbet b2">×2</i><i class="go-bet dbet b10">×10</i></div><p><b>Apuesta:</b> al tocar <b>Jugar</b> escoge tu ×N. Si ganas, <b>todo</b> lo que da el nivel se multiplica por ese número.</p></div>
       </div>`
       : t === 'mesas'

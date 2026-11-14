@@ -450,22 +450,25 @@ const RESPITE_MIN = 10;
 // encimado se separó y lo de después se corrió lo mismo (antes mesa 39, gravedad 69, nebulosa 99, plegable 139).
 // 13 nov 2026: mesa que se voltea (columnas como la gravedad que dan media vuelta) en el nivel 611.
 // 13 nov 2026 (pedido del usuario): hangar 201 y bitácora 311 (entre el 170 y el 331 no había mesa) y portales 551.
-export const SCROLL_FROM = { mesa: 50, gravedad: 109, nebulosa: 149, hangar: 200, bitacora: 310, portal: 550, voltea: 610 };
+// 14 nov 2026 (pedido del usuario, calendario nuevo): una mesa cada 50 niveles (51, 101, … 601) y dos cartas en medio
+// (a +20 y +30 de la mesa): enrollada 51, gravedad 101, nebulosa 151, hangar 201, bitácora 251, marea 301, agujero
+// negro 351, puertas 401, banda 451, asteroides 501, grúa 551 y la que se voltea 601.
+export const SCROLL_FROM = { mesa: 50, gravedad: 100, nebulosa: 150, hangar: 200, bitacora: 250, portal: 550, voltea: 600 };
 // Marea (7 nov 2026): el agua sube desde abajo cada 3 robos y baja cada 3 jugadas; lo que queda bajo el agua no se
 // juega. Desde el nivel MAREA_FROM + 1, ~1 de cada 10 normales del camino (sin otra mesa, respiro ni ayudas).
-export const TIDE_FROM = 340; // antes 239 (ver SCROLL_FROM)
+export const TIDE_FROM = 300; // antes 340 (ver SCROLL_FROM)
 // Estreno: el primero desde MAREA_FROM que no es otra mesa, duro ni respiro.
 let tideDebut = null;
 export const tideFirst = () => {
   if (tideDebut == null) for (tideDebut = TIDE_FROM; cardDebut(tideDebut) || exFold(tideDebut) || scrollKind(tideDebut) || hardHelp(tideDebut) || isRespite(tideDebut); tideDebut++);
   return tideDebut;
 };
-export const tideKind = (g) => (exFoldKind(g) ? exFoldKind(g) === 'tide' : !cardDebut(g) && (g === tideFirst() || (g > tideFirst() && !((hash(g * 3571 + 61) >>> 5) % 10))));
+export const tideKind = (g) => (exFoldKind(g) ? exFoldKind(g) === 'tide' : !cardDebut(g) && (g === tideFirst() || (g > tideFirst() && !ovDebut(g) && !((hash(g * 3571 + 61) >>> 5) % 10))));
 // Agujero negro (8 nov 2026): mesa sobre un tablero normal, como la marea (nunca juntas). Atrapa casi todo un grupo
 // (9 nov 2026; antes 3-4 cartas marcadas) y cada HOLE_EVERY jugadas o robos les revuelve los números (ver rankOf en engine.js). Desde HOYO_FROM + 1 (a más de
 // 10 niveles de la carta moneda), se intenta en ~1 de cada 5 normales del camino sin otra mesa, respiro ni ayudas
 // (se queda en ~1 de cada 3 de esos: en los demás no hay cartas vecinas o no se podría ganar).
-export const HOLE_FROM = 373;
+export const HOLE_FROM = 350; // antes 373
 let holeDebut = null;
 export const holeFirst = () => {
   if (holeDebut == null) for (holeDebut = HOLE_FROM; cardDebut(holeDebut) || exFold(holeDebut) || scrollKind(holeDebut) || hardHelp(holeDebut) || isRespite(holeDebut) || tideKind(holeDebut); holeDebut++);
@@ -475,33 +478,33 @@ export const holeFirst = () => {
 // pila de 3 a 5 cartas detrás. Hay menos llaves que puertas (2 puertas: 1 llave; 3: 1 o 2): cada carta llave del
 // tablero da una llave y el jugador escoge qué puerta abrir. Al abrirse, su premio se activa (moneda, cometa o cohete) y
 // sus cartas salen al tablero: unas pilas ayudan (números seguidos) y otras estorban. Si no la abre, no cuentan.
-export const DOORS_FROM = 404;
+export const DOORS_FROM = 400; // antes 404
 let doorsDebut = null;
 export const doorsFirst = () => {
   if (doorsDebut == null) for (doorsDebut = DOORS_FROM; cardDebut(doorsDebut) || exFold(doorsDebut) || scrollKind(doorsDebut) || hardHelp(doorsDebut) || isRespite(doorsDebut) || tideKind(doorsDebut) || holeKind(doorsDebut); doorsDebut++);
   return doorsDebut;
 };
-export const doorsKind = (g) => (exFoldKind(g) ? exFoldKind(g) === 'doors' : !cardDebut(g) && !tideKind(g) && !holeKind(g) && (g === doorsFirst() || (g > doorsFirst() && !((hash(g * 6151 + 113) >>> 4) % 10))));
+export const doorsKind = (g) => (exFoldKind(g) ? exFoldKind(g) === 'doors' : !cardDebut(g) && !tideKind(g) && !holeKind(g) && (g === doorsFirst() || (g > doorsFirst() && !ovDebut(g) && !((hash(g * 6151 + 113) >>> 4) % 10))));
 // Banda transportadora (8 nov 2026): una fila de cartas da vueltas dentro de una máquina; solo se ven BELT_W a la vez
 // y avanza un lugar con cada jugada o robo (ver beltShown en engine.js). Va junto a un tablero normal.
-export const BANDA_FROM = 455;
+export const BANDA_FROM = 450; // antes 455
 let bandaDebut = null;
 export const bandaFirst = () => {
   if (bandaDebut == null) for (bandaDebut = BANDA_FROM; cardDebut(bandaDebut) || exFold(bandaDebut) || scrollKind(bandaDebut) || hardHelp(bandaDebut) || isRespite(bandaDebut) || tideKind(bandaDebut) || holeKind(bandaDebut) || doorsKind(bandaDebut); bandaDebut++);
   return bandaDebut;
 };
-export const bandaKind = (g) => (exFoldKind(g) ? exFoldKind(g) === 'banda' : !cardDebut(g) && !tideKind(g) && !holeKind(g) && !doorsKind(g) && (g === bandaFirst() || (g > bandaFirst() && !((hash(g * 2477 + 71) >>> 5) % 6))));
+export const bandaKind = (g) => (exFoldKind(g) ? exFoldKind(g) === 'banda' : !cardDebut(g) && !tideKind(g) && !holeKind(g) && !doorsKind(g) && (g === bandaFirst() || (g > bandaFirst() && !ovDebut(g) && !((hash(g * 2477 + 71) >>> 5) % 6))));
 // Cinturón de asteroides (10 nov 2026, pedido del usuario): mesa sobre un tablero normal, nunca con otra. Cada
 // ROCK_EVERY robos caen 2 o 3 piedras que tapan cartas libres por unas jugadas (ver dropRocks en engine.js). Desde
 // ROCAS_FROM, ~1 de cada 6 normales que no traen otra mesa.
-export const ROCKS_FROM = 505;
+export const ROCKS_FROM = 500; // antes 505
 let rocksDebut = null;
 export const rocksFirst = () => {
   if (rocksDebut == null) for (rocksDebut = ROCKS_FROM; cardDebut(rocksDebut) || exFold(rocksDebut) || scrollKind(rocksDebut) || hardHelp(rocksDebut) || isRespite(rocksDebut) || tideKind(rocksDebut) || holeKind(rocksDebut) || doorsKind(rocksDebut) || bandaKind(rocksDebut); rocksDebut++);
   return rocksDebut;
 };
-export const rocksKind = (g) => (exFoldKind(g) ? exFoldKind(g) === 'rocks' : !cardDebut(g) && !tideKind(g) && !holeKind(g) && !doorsKind(g) && !bandaKind(g) && (g === rocksFirst() || (g > rocksFirst() && !((hash(g * 5303 + 89) >>> 5) % 6))));
-export const holeKind = (g) => (exFoldKind(g) ? exFoldKind(g) === 'hole' : !cardDebut(g) && !tideKind(g) && (g === holeFirst() || (g > holeFirst() && !((hash(g * 4241 + 97) >>> 6) % 5))));
+export const rocksKind = (g) => (exFoldKind(g) ? exFoldKind(g) === 'rocks' : !cardDebut(g) && !tideKind(g) && !holeKind(g) && !doorsKind(g) && !bandaKind(g) && (g === rocksFirst() || (g > rocksFirst() && !ovDebut(g) && !((hash(g * 5303 + 89) >>> 5) % 6))));
+export const holeKind = (g) => (exFoldKind(g) ? exFoldKind(g) === 'hole' : !cardDebut(g) && !tideKind(g) && (g === holeFirst() || (g > holeFirst() && !ovDebut(g) && !((hash(g * 4241 + 97) >>> 6) % 5))));
 export const GRAV_SHOWN = 2; // cartas boca arriba en cada columna
 export const HOLE_MAX = 99; // cartas que atrapa el agujero negro, como mucho (10 nov 2026: todas; antes 12)
 export const HOLE_TAKE = 1; // parte que se traga y revuelve en cada vuelta (10 nov 2026: todas; antes 0.4)
@@ -518,14 +521,18 @@ const cardDebut = (g) => g % LEVELS_PER_WORLD === 0 && MECHANICS.some((m) => !EX
 // mantel doblado que la iba a cambiar). El usuario pidió que salgan más las mesas especiales que ya están abiertas
 // (salían poco comparadas con la plegable): desde la marea, cada uno lleva una de las que ya se estrenaron (marea,
 // agujero negro, puertas, banda o asteroides), escogida por nivel; antes, enrollada, gravedad o nebulosa.
-const exFold = (g) => g >= 208 && g < TOTAL_LEVELS && !cardDebut(g) && !((hash(g * 3571 + 211) >>> 7) % 12);
+// 14 nov 2026 (calendario nuevo): los estrenos de las mesas que van sobre un tablero normal y de las cartas de regalo
+// caen justo en el primer nivel de su mundo (301, 401…; 221, 271): ahí no sale otra mesa al azar.
+const ovDebut = (g) => g === TIDE_FROM || g === HOLE_FROM || g === DOORS_FROM || g === BANDA_FROM || g === ROCKS_FROM;
+const reserved = (g) => ovDebut(g) || EXTRA.some((m) => MECH_INTRO[m] * LEVELS_PER_WORLD === g);
+const exFold = (g) => g >= 208 && g < TOTAL_LEVELS && !cardDebut(g) && !reserved(g) && !((hash(g * 3571 + 211) >>> 7) % 12);
 const exFoldKind = (g) => {
   if (!exFold(g) || g < TIDE_FROM) return null;
   const open = [['tide', tideFirst], ['hole', holeFirst], ['doors', doorsFirst], ['banda', bandaFirst], ['rocks', rocksFirst]].filter(([, first]) => g > first());
   return open.length ? open[hash(g * 787 + 43) % open.length][0] : null;
 };
 export function scrollKind(g) {
-  if (g >= TOTAL_LEVELS || cardDebut(g)) return null;
+  if (g >= TOTAL_LEVELS || cardDebut(g) || reserved(g)) return null;
   // Cada una se presenta justo en su nivel de inicio; después sale al azar.
   for (const k in SCROLL_FROM) if (g === SCROLL_FROM[k]) return k;
   if (g >= SCROLL_FROM.mesa && !(hash(g * 31 + 7) % 12)) return 'mesa';
@@ -1793,7 +1800,11 @@ const OWN_DRAW = ['ticket', 'ghost', 'ship', 'coin', 'cham', 'bolt', 'cst', 'vin
 // 13 nov 2026: dominó 60 (601) y boleto triple 62 (621), con la mesa que se voltea en medio (611).
 // 14 nov 2026 (el usuario: «entre 71 y 91 no hay cartas nuevas»): telescopio 7 (71, con los logros) y gemelas 8 (81,
 // con los meteoros); el astronauta 14 (141, el usuario: entre 110 y 160).
-export const MECH_INTRO = { lock: 1, pack: 2, ice: 6, double: 12, arrow: 17, curtain: 22, bomb: 27, live: 33, ticket: 28, comet: 19, turbo: 24, ghost: 39, ship: 44, coin: 36, cham: 42, bolt: 47, cst: 49, vine: 52, magnet: 54, rainbow: 56, sleep: 58, domino: 60, triple: 62, scratch: 63, scope: 7, twin: 8, astro: 14 };
+// 14 nov 2026 (pedido del usuario, calendario nuevo; ver SCROLL_FROM): dos cartas entre cada mesa, a +20 y +30: hielo 71,
+// telescopio 81, gemelas 121, doble 131, astronauta 171, flecha 181, cometa 221, cortina 231, turbo 271, bomba 281,
+// boleto partido 321, viva 331, moneda 371, fantasma 381, camaleón 421, nave 431, rayo 471, constelación 481,
+// enredadera 521, imán 531, arcoíris 571, dormida 581, dominó 621, triple 631 y raspadita 651. Antes: { lock: 1, pack: 2, ice: 6, double: 12, arrow: 17, curtain: 22, bomb: 27, live: 33, ticket: 28, comet: 19, turbo: 24, ghost: 39, ship: 44, coin: 36, cham: 42, bolt: 47, cst: 49, vine: 52, magnet: 54, rainbow: 56, sleep: 58, domino: 60, triple: 62, scratch: 63, scope: 7, twin: 8, astro: 14 };
+export const MECH_INTRO = { lock: 1, pack: 2, ice: 7, scope: 8, twin: 12, double: 13, astro: 17, arrow: 18, comet: 22, curtain: 23, turbo: 27, bomb: 28, ticket: 32, live: 33, coin: 37, ghost: 38, cham: 42, ship: 43, bolt: 47, cst: 48, vine: 52, magnet: 53, rainbow: 57, sleep: 58, domino: 62, triple: 63, scratch: 65 };
 export const MECH_NAMES = {
   lock: 'Candado', pack: 'Carta regalo', ice: 'Hielo', double: 'Carta doble', arrow: 'Flecha', curtain: 'Cortina', bomb: 'Bomba', live: 'Carta viva', ticket: 'Boleto partido', comet: 'Cometa', turbo: 'Cohete turbo', ghost: 'Fantasma', ship: 'Nave ladrona', coin: 'Carta moneda', cham: 'Camaleón', bolt: 'Rayo', cst: 'Constelación', vine: 'Enredadera', magnet: 'Imán', rainbow: 'Arcoíris', sleep: 'Carta dormida', domino: 'Dominó', triple: 'Boleto triple', scratch: 'Raspadita', scope: 'Telescopio', twin: 'Cartas gemelas', astro: 'Astronauta',
 };

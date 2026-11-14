@@ -180,13 +180,13 @@ export const ACHIEVEMENTS = [
   { id: 'balloons', k: 'globo', name: 'Globero', ico: 'globo', steps: [50, 250, 800, 1600, 3000], text: (n) => `Truena ${fmtN(n)} globos` },
   { id: 'meteors', k: 'meteoro', name: 'Cazameteoros', ico: 'meteoro', steps: [25, 100, 300, 700, 1500], text: (n) => `Truena ${fmtN(n)} meteoros en el cielo` },
   // 12 nov 2026 (el usuario): las estrellas fugaces de la lluvia de estrellas, desde que cae (STAR_FROM en meteor.js).
-  { id: 'shootingstars', k: 'estrella', from: 250, name: 'Pide deseos', ico: 'starFall', steps: [25, 100, 300, 700, 1500], text: (n) => `Truena ${fmtN(n)} estrellas fugaces en el cielo` },
+  { id: 'shootingstars', k: 'estrella', from: 120, name: 'Pide deseos', ico: 'starFall', steps: [25, 100, 300, 700, 1500], text: (n) => `Truena ${fmtN(n)} estrellas fugaces en el cielo` },
   { id: 'missions', k: 'missions', name: 'Cumplidor', ico: 'check', steps: [30, 150, 365, 700, 1200], text: (n) => `Completa ${fmtN(n)} misiones del día`, title: 'cumplidor' },
   { id: 'events', k: 'event', name: 'Fiestero', ico: 'calavera', steps: [15, 75, 200, 400, 750], text: (n) => `Gana ${n} niveles de eventos` },
-  // 10 nov 2026 (pedido del usuario): uno por cada apuesta (×2, ×3, ×5, ×10), niveles ganados apostando eso. Cada uno
+  // 10 nov 2026 (pedido del usuario): uno por cada apuesta (×2, ×3, ×5, ×10; 14 nov: también ×7, ×13 y ×15), niveles ganados apostando eso. Cada uno
   // sale cuando ya se puede apostar tanto. Sus metas van tal cual (raw: sin LOGRO_UP). Antes era uno solo, «Apostador»,
   // de apuestas seguidas (betrow) con cualquier ×N.
-  ...[[2, [20, 40, 80, 150, 300]], [3, [15, 30, 60, 120, 240]], [5, [10, 20, 40, 80, 160]], [10, [5, 10, 20, 40, 80]]].map(([m, steps]) =>
+  ...[[2, [20, 40, 80, 150, 300]], [3, [15, 30, 60, 120, 240]], [5, [10, 20, 40, 80, 160]], [7, [8, 15, 30, 60, 120]], [10, [5, 10, 20, 40, 80]], [13, [4, 8, 15, 30, 60]], [15, [3, 6, 12, 25, 50]]].map(([m, steps]) =>
     ({ id: `bet${m}`, k: `bet${m}`, bet: m, raw: true, name: `Apostador ×${m}`, ico: 'coin', steps, text: (n) => `Gana ${fmtN(n)} niveles apostando ×${m}` })),
   { id: 'secrets', k: 'secret', name: 'Explorador secreto', ico: 'starSecret', steps: [5, 25, 100, 250, 520], text: (n) => `Gana ${n} niveles secretos`, title: 'explorador_secreto' },
 ];

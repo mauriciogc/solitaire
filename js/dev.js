@@ -13,8 +13,8 @@ import { peek } from './galaxy.js';
 import { EVENTS, COLLECTIONS, FESTIVALS, festivalDays } from './events.js';
 import { ITEMS, SECTIONS, owns, lockedUntil } from './shop.js';
 import { PASS_MAX, SECRET_MAX, secretGoal, passGoal, passPrize, secretPrize, passCount, secretCount } from './passport.js';
-import { meteor, nextShowers, metItems, MET_FROM, STAR_FROM, metPrizes } from './meteor.js';
-import { BET_STEPS, maxBet } from './economy.js';
+import { meteor, nextShowers, metItems, MET_FROM, STAR_FROM, metPrizes, SHOWERS, NEW_RAINS } from './meteor.js';
+import { BET_STEPS, BET_BOSS_FEE, BET_FEE, maxBet } from './economy.js';
 import { KINDS, TREASURE, makeLot, makeCode, rewardName, lotText, usedHere, lotNonces } from './codes.js';
 // Darte los exclusivos del pasaporte (kind 'pase') o de los secretos ('secreto'), sin cobrar sus premios.
 function passGive(kind) {
@@ -185,6 +185,7 @@ const TABLE_ICONS = {
   marea: SV('<rect x="5" y="3" width="22" height="26" rx="3" fill="#fff6e6"/><path d="M5 18c4-3 7 3 11 0s7 3 11 0v8a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3z" fill="#4aa8de"/>'),
 };
 export const tableIcon = (t) => TABLE_ICONS[t] || '';
+const RAIN_NOTE = { comet: '1 vez por semana, 20 minutos sin aviso: jugar no gasta boletos y cada victoria da 1 boleto más.', aurora: '1 vez por semana, 20 minutos sin aviso y solo con colección abierta: fichas ×2 y hasta 2 premios.', crystal: '1 vez cada dos semanas, 10 minutos sin aviso: cada nivel ganado puede dar una ayuda al azar (3★ 70%, 2★ 47%, 1★ 23%; el jugador no lo ve).' };
 const SCROLL_NAMES = { mesa: 'mesa enrollada', gravedad: 'gravedad', nebulosa: 'nebulosa', voltea: 'mesa que se voltea', hangar: 'hangar', bitacora: 'bitácora', portal: 'grúa de feria' };
 // Mesas que van sobre un tablero normal (no son tira): se filtran por su bandera del nivel.
 // Mesas que son gravedad por dentro (13 nov 2026): se filtran por su bandera.
@@ -626,8 +627,8 @@ export function openDevMenu({ onGallery, onPlanets, onFestivals, onGoLevel, onRe
   const MONTHS_ABBR = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
   const evs = Object.entries(EVENTS).filter(([, e]) => e.ready).sort((a, b) => a[0] - b[0]);
   const fis = FESTIVALS.filter((f) => f.ready), y = new Date().getFullYear();
-  const origin = (it) => (!it.ev ? 'tienda' : it.code ? 'codigo' : it.met ? 'meteoro' : it.star ? 'estrellas' : it.logro ? 'logro' : it.pase ? 'pasaporte' : it.secreto ? 'secretos' : FESTIVALS.some((f) => f.key === it.ev) ? 'fiesta' : Object.values(EVENTS).some((e) => e.key === it.ev) ? 'mes' : 'col');
-  const ORIGINS_DEV = [['tienda', 'De la tienda', 'bag'], ['col', 'Colecciones', 'concha'], ['mes', 'Evento del mes', 'planet'], ['fiesta', 'Festividades', 'flame'], ['codigo', 'Códigos de regalo', 'cofre'], ['meteoro', 'Lluvia de meteoritos', 'meteoro'], ['estrellas', 'Lluvia de estrellas', 'starFall'], ['logro', 'Logros', 'trophy'], ['pasaporte', 'Pasaporte', 'pasaporte'], ['secretos', 'Niveles secretos', 'starSecret']];
+  const origin = (it) => (!it.ev ? 'tienda' : it.code ? 'codigo' : it.met ? 'meteoro' : it.star ? 'estrellas' : it.rain ? it.ev : it.logro ? 'logro' : it.pase ? 'pasaporte' : it.secreto ? 'secretos' : FESTIVALS.some((f) => f.key === it.ev) ? 'fiesta' : Object.values(EVENTS).some((e) => e.key === it.ev) ? 'mes' : 'col');
+  const ORIGINS_DEV = [['tienda', 'De la tienda', 'bag'], ['col', 'Colecciones', 'concha'], ['mes', 'Evento del mes', 'planet'], ['fiesta', 'Festividades', 'flame'], ['codigo', 'Códigos de regalo', 'cofre'], ['meteoro', 'Lluvia de meteoritos', 'meteoro'], ['estrellas', 'Lluvia de estrellas', 'starFall'], ['cometas', 'Lluvia de cometas', 'cometaLluvia'], ['aurora', 'Aurora', 'aurora'], ['cristales', 'Lluvia de cristales', 'cristal'], ['logro', 'Logros', 'trophy'], ['pasaporte', 'Pasaporte', 'pasaporte'], ['secretos', 'Niveles secretos', 'starSecret']];
   const cnt = (sec, o) => ITEMS[sec].filter((it) => origin(it) === o).length;
   const mine = (sec, o) => ITEMS[sec].filter((it) => origin(it) === o && owns(sec, it.k)).length;
   const sum = (f) => SECTIONS.reduce((n, { k }) => n + f(k), 0);
@@ -650,6 +651,8 @@ export function openDevMenu({ onGallery, onPlanets, onFestivals, onGoLevel, onRe
     // Las próximas lluvias del horario: iguales en todos los teléfonos, a la misma hora de cada uno.
     ['Lluvia de meteoritos', MET_FROM, 'meteoro', nextShowers(6).map((x) => ['meteoro', when(x), until(x), '']), '2 o 3 veces por semana, 30 minutos a cualquier hora, sin aviso. Es igual en todos los teléfonos.'],
     ['Lluvia de estrellas', STAR_FROM, 'starFall', nextShowers(6, true).map((x) => ['starFall', when(x), until(x), '']), '2 o 3 veces por semana, 15 minutos sin aviso, en días sin lluvia de meteoritos: monedas ×3 y hasta 3 premios (con sus 5 exclusivos). Igual en todos los teléfonos.'],
+    // Lluvias nuevas (14 nov 2026): cometas, aurora y cristales.
+    ...NEW_RAINS.map((k) => [SHOWERS[k].name, SHOWERS[k].from, SHOWERS[k].ico, nextShowers(6, false, k).map((x) => [SHOWERS[k].ico, when(x), until(x), '']), RAIN_NOTE[k]]),
     ['Colecciones', UNLOCK.col, 'concha', colsOf(0), 'Se turnan: 2 semanas al mes (la del 1.er y la del 3.er lunes)'],
     ['Eventos del mes', UNLOCK.mes, 'planet', evs.map(([m, e]) => [e.ico, e.name, MONTHS_ABBR[m], `m:${m}`])],
     ['Colecciones nuevas y 3.ª semana', UNLOCK.col2, 'fosil', colsOf(true), 'Se suman a las de antes y se turnan: 3 semanas al mes'],
@@ -665,7 +668,7 @@ export function openDevMenu({ onGallery, onPlanets, onFestivals, onGoLevel, onRe
     ...MECH_ORDER.map((m) => ({ n: mechDebut(m), k: 'card', name: MECH_NAMES[m], pic: `<span class="dmc">${card(m)}</span>` })),
     ...Object.entries(SCROLL_FROM).map(([t, g]) => ({ n: g + 1, k: 'mesa', name: SCROLL_NAMES[t], pic: tableIcon(t) })),
     ...OVERLAY_TABLES.map(([k, name, n]) => ({ n, k: 'mesa', name: name.toLowerCase(), pic: tableIcon(k) })),
-    ...BET_AT.map(([m, g], i) => ({ n: g + 1, k: 'ev', name: `Apuesta hasta ×${m}`, pic: `<i class="go-bet dbet b${m}">×${m}</i>`, note: `${i ? `Sale su presentación "¡Subiste a ×${m}!"` : 'Sale la presentación "¡Nuevo: Apuestas!" con sus reglas (antes del evento del mes)'}. Su primera partida va forzada a ×${m} y gratis; cuota ${10 * (m - 1)} monedas, en jefes ${{ 2: 200, 3: 400, 5: 800, 10: 1600 }[m]} (× el boleto de entrada); con lluvia de meteoritos, los boletos a mitad.` })),
+    ...BET_AT.map(([m, g], i) => ({ n: g + 1, k: 'ev', name: `Apuesta hasta ×${m}`, pic: `<i class="go-bet dbet b${m}">×${m}</i>`, note: `${i ? `Sale su presentación "¡Subiste a ×${m}!"` : 'Sale la presentación "¡Nuevo: Apuestas!" con sus reglas (antes del evento del mes)'}. Su primera partida va forzada a ×${m} y gratis; cuota ${BET_FEE * (m - 1)} monedas, en jefes ${BET_BOSS_FEE[m]} (× el boleto de entrada); con lluvia de meteoritos, los boletos a mitad.` })),
   ].sort((a, b) => a.n - b.n || Object.keys(KINDS).indexOf(a.k) - Object.keys(KINDS).indexOf(b.k));
   // Choques: dos ventanas de desbloqueo (eventos) en el mismo nivel salen una tras otra. Se marcan en rojo.
   const evAt = {};
@@ -820,7 +823,7 @@ export function openDevMenu({ onGallery, onPlanets, onFestivals, onGoLevel, onRe
         festOn && { l: 'Ganar todo hasta el último jefe', title: 'Gana los niveles que faltan (con sus premios) y te deja en el jefe del último planeta', fn: () => ((festival().state.run = null), winTo(festival, festEnter, festWin, FL - 1)) },
         festOn && { l: 'Empezar de cero', fn: () => ((save.fi = null), persist(), onRefresh()) },
         { l: 'Ver el paquete de festividades', cls: 'gold', title: 'Leyendas, fiestas de México y de América: cada una con su mesa y sus 7 exclusivos (solo para ver, no te da nada)', fn: onFestivals },
-        { l: 'Ver el aviso de Festividades', title: 'La ventana que sale al desbloquearlas (nivel 120), con 3 iconos', fn: () => (save.intro && delete save.intro.fiesta, persist(), onRefresh()) },
+        { l: 'Ver el aviso de Festividades', title: `La ventana que sale al desbloquearlas (nivel ${UNLOCK.fiesta + 1}), con 3 iconos`, fn: () => (save.intro && delete save.intro.fiesta, persist(), onRefresh()) },
         { l: 'Ver el aviso de Leyendas', title: `La ventana que sale al llegar al nivel ${UNLOCK.fiesta2}, con las festividades nuevas`, fn: () => (save.intro && delete save.intro.fiesta2, persist(), onRefresh()) },
         { l: 'Ver el aviso de Fiestas de México', title: `La ventana que sale al llegar al nivel ${UNLOCK.fiesta3 + 1}`, fn: () => (save.intro && delete save.intro.fiesta3, persist(), onRefresh()) },
         { l: 'Ver el aviso de Fiestas de América', title: `La ventana que sale al llegar al nivel ${UNLOCK.fiesta4 + 1}`, fn: () => (save.intro && delete save.intro.fiesta4, persist(), onRefresh()) },
@@ -834,7 +837,7 @@ export function openDevMenu({ onGallery, onPlanets, onFestivals, onGoLevel, onRe
     // Lluvias (12 nov 2026, el usuario: juntas): meteoritos y estrellas, cada una con sus botones en el mismo orden.
     { t: 'Lluvias', items: [], parts: [
       { k: 'met', h: 'Lluvia de meteoritos', ico: 'meteoro', sub: `${metOn ? `cayendo · quedan ${Math.ceil(metNow.left() / 6e4)} min · premio ${metNow.state.prize ? 'ya dado' : 'pendiente'}` : 'no está cayendo'}${(save.next || 0) >= MET_FROM ? '' : ` · te cae desde el nivel ${MET_FROM}`}`, items: [
-        !metNow && { l: 'Hacerla caer', cls: 'gold', title: 'Empieza una lluvia de 30 minutos ahora (aunque no hayas llegado a su nivel)', fn: () => ((save.devMet = Date.now()), (save.devStar = 0), persist(), onRefresh()) },
+        !metNow && { l: 'Hacerla caer', cls: 'gold', title: 'Empieza una lluvia de 30 minutos ahora (aunque no hayas llegado a su nivel)', fn: () => ((save.devMet = Date.now()), (save.devStar = 0), (save.devRain = null), persist(), onRefresh()) },
         metOn && { l: 'Terminarla', fn: () => { if (save.devMet) save.devMet = 0; else save.devMetOff = metNow.id; persist(); onRefresh(); } },
         metOn && { l: 'Premio otra vez', title: 'El siguiente nivel con 3★ vuelve a dar el premio de esta lluvia', fn: () => ((metNow.state.prize = false), persist(), toast('El premio vuelve a estar pendiente')) },
         metOn && { l: 'Siguiente premio: exclusivo', title: 'El siguiente nivel con 3★ da uno de los exclusivos de meteoro que te faltan (con su ventana)', fn: () => { if (!metItems().some((x) => !owns(x.sec, x.k))) return toast('Ya tienes los 5 exclusivos'); metNow.state.prize = false; save.devMetItem = 1; persist(); toast('Gana un nivel con 3★: te cae un exclusivo'); } },
@@ -844,7 +847,7 @@ export function openDevMenu({ onGallery, onPlanets, onFestivals, onGoLevel, onRe
         { l: 'Darme sus exclusivos', title: 'Meteorín, Cazaestrellas, Lluvia de estrellas, Meteoro y Cielo de meteoros: para verlos en tu perfil y en la tienda', fn: () => { metItems().forEach((x) => (save.owned[`${x.sec}:${x.k}`] = 1)); persist(); toast('Ya tienes los 5 exclusivos de meteoro'); } },
       ] },
       { k: 'star', h: 'Lluvia de estrellas', ico: 'starFall', sub: `${starOn ? `cayendo · quedan ${Math.ceil(metNow.left() / 6e4)} min · premios ${metPrizes(metNow.state)} de 3` : `próxima: ${new Date(nextShowers(1, true)[0].at - (save.devDay || 0) * 864e5).toLocaleString('es-MX', { weekday: 'short', hour: '2-digit', minute: '2-digit' })}`}${(save.next || 0) >= STAR_FROM ? '' : ` · te cae desde el nivel ${STAR_FROM + 1}`}`, items: [
-        !metNow && { l: 'Hacerla caer', cls: 'gold', title: 'Empieza una lluvia de estrellas de 15 minutos ahora (aunque no hayas llegado a su nivel)', fn: () => ((save.devStar = Date.now()), (save.devMet = 0), persist(), onRefresh()) },
+        !metNow && { l: 'Hacerla caer', cls: 'gold', title: 'Empieza una lluvia de estrellas de 15 minutos ahora (aunque no hayas llegado a su nivel)', fn: () => ((save.devStar = Date.now()), (save.devMet = 0), (save.devRain = null), persist(), onRefresh()) },
         starOn && { l: 'Terminarla', fn: () => { if (save.devStar) save.devStar = 0; else save.devMetOff = metNow.id; persist(); onRefresh(); } },
         starOn && { l: 'Premios otra vez', title: 'Los siguientes 3 niveles con 3★ vuelven a dar premio', fn: () => ((metNow.state.prize = 0), persist(), toast('Los 3 premios vuelven a estar pendientes')) },
         starOn && { l: 'Siguiente premio: exclusivo', title: 'El siguiente nivel con 3★ da uno de los exclusivos de la lluvia de estrellas que te faltan (con su ventana)', fn: () => { if (!metItems('star').some((x) => !owns(x.sec, x.k))) return toast('Ya tienes los 5 exclusivos'); if (metPrizes(metNow.state) >= 3) metNow.state.prize = 2; save.devMetItem = 1; persist(); toast('Gana un nivel con 3★: te cae un exclusivo'); } },
@@ -853,6 +856,21 @@ export function openDevMenu({ onGallery, onPlanets, onFestivals, onGoLevel, onRe
         { l: 'Ver aviso de primera vez', title: 'Vuelven a salir la ventana de desbloqueo (al volver al mapa) y la explicación completa de la siguiente lluvia', fn: () => (delete save.starSeen, save.intro && delete save.intro.estrellas, persist(), toast('Saldrán la ventana de desbloqueo y el aviso completo')) },
         { l: 'Darme sus exclusivos', title: 'Pide un deseo, Deseo fugaz, Cielo de deseos, Lluvia dorada y Estrellas fugaces: para verlos en tu perfil y en la tienda', fn: () => { metItems('star').forEach((x) => (save.owned[`${x.sec}:${x.k}`] = 1)); persist(); toast('Ya tienes los 5 exclusivos de la lluvia de estrellas'); } },
       ] },
+      // Lluvias nuevas (14 nov 2026): los mismos botones para cada una.
+      ...NEW_RAINS.map((k) => {
+        const K = SHOWERS[k], on = metNow?.K.kind === k, nx = nextShowers(1, false, k)[0];
+        const UNL = { comet: 'cometas', aurora: 'aurora', crystal: 'cristales' }[k];
+        return { k, h: K.name, ico: K.ico, sub: `${on ? `cayendo · quedan ${Math.ceil(metNow.left() / 6e4)} min · premios ${metPrizes(metNow.state)} de ${K.prizes}` : nx ? `próxima: ${new Date(nx.at - (save.devDay || 0) * 864e5).toLocaleString('es-MX', { weekday: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}` : 'sin fecha'}${(save.next || 0) >= K.from ? '' : ` · te cae desde el nivel ${K.from}`}${k === 'aurora' && !colNow ? ' · solo con colección abierta' : ''}`, items: [
+          !metNow && { l: 'Hacerla caer', cls: 'gold', title: `Empieza una ${K.name.toLowerCase()} de ${K.min} minutos ahora (aunque no hayas llegado a su nivel)`, fn: () => ((save.devRain = { kind: k, at: Date.now() }), (save.devMet = 0), (save.devStar = 0), persist(), onRefresh()) },
+          on && { l: 'Terminarla', fn: () => { if (save.devRain) save.devRain = null; else save.devMetOff = metNow.id; persist(); onRefresh(); } },
+          on && { l: 'Premios otra vez', title: `Los siguientes niveles con 3★ vuelven a dar premio (${K.prizes})`, fn: () => ((metNow.state.prize = 0), persist(), toast('Los premios vuelven a estar pendientes')) },
+          on && { l: 'Siguiente premio: exclusivo', title: 'El siguiente nivel con 3★ da uno de sus exclusivos que te faltan (con su ventana)', fn: () => { if (!metItems(k).some((x) => !owns(x.sec, x.k))) return toast('Ya tienes sus 3 exclusivos'); if (metPrizes(metNow.state) >= K.prizes) metNow.state.prize = K.prizes - 1; save.devMetItem = 1; persist(); toast('Gana un nivel con 3★: te cae un exclusivo'); } },
+          on && { l: 'Ver su aviso', title: 'El aviso de esta lluvia al volver al mapa', fn: () => ((metNow.state.intro = false), persist(), onRefresh()) },
+          K.pop && { l: `A 1 ${K.pop} de las monedas`, title: `Los ${K.pop === 'cristal' ? 'cristales' : 'cometas'} cruzan el cielo del mapa durante la lluvia · ${popTxt(K.pop)}`, fn: () => popNear(K.pop) },
+          { l: 'Ver aviso de primera vez', title: 'Vuelven a salir la ventana de desbloqueo (al volver al mapa) y la explicación completa de la siguiente lluvia', fn: () => (save.rainSeen && delete save.rainSeen[k], save.intro && delete save.intro[UNL], persist(), toast('Saldrán la ventana de desbloqueo y el aviso completo')) },
+          { l: 'Darme sus exclusivos', title: metItems(k).map((x) => x.k).join(', '), fn: () => { metItems(k).forEach((x) => (save.owned[`${x.sec}:${x.k}`] = 1)); persist(); toast(`Ya tienes los exclusivos de la ${K.name.toLowerCase()}`); } },
+        ] };
+      }),
     ] },
     // Apuesta (9 nov 2026): brincar al nivel donde se abre cada ×N, para ver su ventana.
     { t: 'Apuesta', sub: `aquí hasta ×${maxBet(save.next)} · escogida ×${save.bet || 1} · gratis hasta ×${save.betFreeN ?? (save.betFree || save.betGift ? 2 : 1)}`, items: [
@@ -869,7 +887,7 @@ export function openDevMenu({ onGallery, onPlanets, onFestivals, onGoLevel, onRe
       { l: 'A 1 globo del comodín', fn: () => popNear('globo') },
       { l: 'A 1 burbuja de las monedas', title: 'Las burbujas salen de los premios al ganar cualquier nivel y del cofre del jefe', fn: () => popNear('burbuja') },
     ] },
-    // Una por festividad: mueve el reloj al día en que empieza (la de este año). Las de leyendas, solo desde el nivel 200.
+    // Una por festividad: mueve el reloj al día en que empieza (la de este año). Las de leyendas, solo desde UNLOCK.fiesta2.
   ].map((sec) => ({ ...sec, items: sec.items.filter(Boolean), parts: sec.parts?.map((p) => ({ ...p, items: p.items.filter(Boolean) })) }));
   const all = S.flatMap((sec) => [...sec.items, ...(sec.parts || []).flatMap((p) => p.items)]);
   const btns = (items) => `<div class="dbtns">${items.map((it) => `<button class="btn ${it.cls || 'ghost'}" data-i="${all.indexOf(it)}"${it.title ? ` title="${it.title}"` : ''}>${it.l}</button>`).join('')}</div>`;
