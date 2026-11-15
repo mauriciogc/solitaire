@@ -15,6 +15,7 @@ import { dev, gallery, attachDevBar, galleryScreen, openDevMenu, planetGal, plan
 import { themeCSS } from './themes.js';
 import { setCSS, SETS, setOf, setItems, SET_DEAL } from './sets.js';
 import { festivalCSS } from './festival-art.js';
+import { slotDue, openSlot } from './slot.js';
 import { mulberry32, hash } from './rng.js';
 import { starCSS } from './starshower.js';
 import { PASS_MAX, secretGoal, passFrameOf, passGoal, passPrize, secretPrize, passCount, secretCount, passCSS } from './passport.js';
@@ -838,7 +839,7 @@ function askKid() {
   kidAsking = true;
   const go = () => {
     if (!save.kidAsk) return (kidAsking = false);
-    if (document.querySelector('#modal-root .modal') || !document.querySelector('.screen.galaxy')) return setTimeout(go, 1500);
+    if (document.querySelector('#modal-root .modal, .slotx') || !document.querySelector('.screen.galaxy')) return setTimeout(go, 1500);
     kidAsking = false;
     delete save.kidAsk;
     persist();
@@ -2775,7 +2776,7 @@ function showEvent({ anim, after = null, start = null, kind = null } = {}) {
     <div class="space space-${e.ex[0].space}"></div><div class="g3d"></div><div class="glabels g-only"></div>
     <div class="g-only">
       <button class="hbtn tb press out-btn" data-a="back" aria-label="Volver al mapa" title="Mapa">${icon('prev')}</button>
-      <div class="wtitle info">${icon(e.ico, 0, 0, 'em')}<div><b>${e.name}</b><small>${e.zone ? `Celebrando en ${e.zone} · ` : ''}¡A jugar! Quedan <span data-evleft>${evDays()}</span></small></div><button class="ev-help tb press" data-a="ev-help" aria-label="Cómo funciona el evento" title="Cómo funciona">?</button></div>
+      <div class="wtitle info">${icon(e.ico, 0, 0, 'em')}<div><b>${e.name}</b><small class="ev-sub"><em>Quedan <span data-evleft>${evDays()}</span></em>${e.zone ? ` · ${e.zone}` : ''}</small></div><button class="ev-help tb press" data-a="ev-help" aria-label="Cómo funciona el evento" title="Cómo funciona">?</button></div>
     </div>
     <div class="p-only phud"></div>
     <div class="res">${EVS.tk ? evTicketPill(e) : ''}<div class="pill info" aria-label="Monedas">${coin()}<span data-coins>${money(shownCoins() - (after?.coins || 0))}</span></div>
@@ -3514,8 +3515,29 @@ const modalOpen = () => !!document.querySelector('#modal-root .modal-back');
 // Espera a que no haya ventanas, túnel ni animaciones del mapa; false si mientras tanto cambió la pantalla.
 async function calm(gen) {
   await wait(700);
-  while (gen === noticeGen && (modalOpen() || document.querySelector('.warp') || map?.galaxy?.busy || document.querySelector('.guide'))) await wait(250);
+  // .slotx: la tragamonedas no se puede saltar; nada sale encima de ella (14 nov 2026).
+  while (gen === noticeGen && (modalOpen() || document.querySelector('.warp, .guide, .slotx') || map?.galaxy?.busy)) await wait(250);
   return gen === noticeGen;
+}
+// La tirada y, al terminar, la compra de la primera edición (la otra, si es preventa, sale con su aviso).
+let slotBusy = false;
+async function slotRun() {
+  if (slotBusy) return;
+  slotBusy = true;
+  const eds = slotDue() ? await openSlot() : null, x = Array.isArray(eds) && eds[0];
+  slotBusy = false;
+  if (!x) return;
+  (save.preSeen ||= {})[x.id] = 1;
+  persist();
+  slotBuy(x);
+}
+// La ventana de compra de una edición que ya tiró en la tragamonedas: preventa o entrada de la festividad, preventa del
+// mes o su entrada.
+function slotBuy(x) {
+  if (x.buy === 'mesPre') return openEventNext();
+  if (x.buy === 'mes') return ev() && !ev().state.paid && openEntry('mes');
+  const f = [festival(), festivalSoon()].find((y) => y?.id === x.id);
+  if (f) openFestival(f, f === festival() ? 'fiesta' : 'fiesta-next');
 }
 async function notices() {
   const gen = ++noticeGen;
@@ -3577,6 +3599,12 @@ async function notices() {
     if (!(await calm(gen))) return;
     await openUnlock(`apuesta${mb}`);
     paintBetSticker();
+  }
+  // Tragamonedas galáctico (14 nov 2026): sale mientras haya tirada sin jalar; no se puede saltar. Va antes que la
+  // ventana de la preventa: primero las monedas y luego comprar la entrada.
+  if (slotDue()) {
+    if (!(await calm(gen))) return;
+    await slotRun();
   }
   // Preventa (9 nov 2026): cuando sale el botón del próximo evento (mes o festividad), su ventana avisa una vez.
   const pf = festivalSoon() || (festival()?.soon ? festival() : null), pe = evSoon();

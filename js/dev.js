@@ -6,6 +6,7 @@ import { streakWin, streakLose, dailyStreak, nextGoal, col, daysToNextCol, ev, d
 import { TIERS, generateLevel, hardHelp, festivalPick, festivalLevel, eventLevel, eventGroup, EVENT_WORLDS, packGroups, worldInfo, specials, specialGroup, SPECIAL_ID, TOTAL_LEVELS, LEVELS_PER_WORLD, MECH_NAMES, MECHANICS, MECH_INTRO, SCROLL_FROM, EXTRA, extraDebut, tideFirst, holeFirst, doorsFirst, bandaFirst, rocksFirst } from './levels.js';
 import { playCasual, solve, initState } from './engine.js';
 import { openModal, toast, updateCoins, popGoal } from './ui.js';
+import { openSlot } from './slot.js';
 import { mulberry32 } from './rng.js';
 import { icon, miniPlanet } from './art.js';
 import { tableHTML, BIOMES, biomeKey } from './biomes.js';
@@ -826,6 +827,12 @@ export function openDevMenu({ onGallery, onPlanets, onFestivals, onGoLevel, onRe
         festOn && { l: 'Siguiente planeta', fn: () => festSet({ k: Math.min(FL - 1, (Math.floor(festNow.state.k / FN) + 1) * FN) }) },
         festOn && { l: 'Ganar todo hasta el último jefe', title: 'Gana los niveles que faltan (con sus premios) y te deja en el jefe del último planeta', fn: () => ((festival().state.run = null), winTo(festival, festEnter, festWin, FL - 1)) },
         festOn && { l: 'Empezar de cero', fn: () => ((save.fi = null), persist(), onRefresh()) },
+        // Tragamonedas galáctico (14 nov 2026, js/slot.js): sale en la preventa y el día de la fiesta si traes menos del
+        // doble de la entrada; una tirada por edición.
+        { l: 'Tragamonedas otra vez', title: 'Borra las tiradas cobradas: vuelve a salir en el mapa (en preventa o el día de la fiesta, con menos del doble de la entrada)', fn: () => (delete save.spins, persist(), onRefresh()) },
+        { l: 'Abrir la tragamonedas', title: 'De prueba: no da monedas ni marca nada', fn: () => openSlot({ test: true }) },
+        { l: 'Ver el jackpot', title: 'De prueba: caen los 4 agujeros negros', fn: () => openSlot({ test: true, force: 'jackpot' }) },
+        { l: 'Quedarme con 300 monedas', title: 'Para que salga la tirada', fn: () => ((save.coins = 300), persist(), onRefresh()) },
         { l: 'Ver el paquete de festividades', cls: 'gold', title: 'Leyendas y fiestas de México, América, Europa y Oriente: cada una con su mesa y sus 7 exclusivos (solo para ver, no te da nada)', fn: onFestivals },
         { l: 'Ver el aviso de Festividades', title: `La ventana que sale al desbloquearlas (nivel ${UNLOCK.fiesta + 1}), con 3 iconos`, fn: () => (save.intro && delete save.intro.fiesta, persist(), onRefresh()) },
         { l: 'Ver el aviso de Leyendas', title: `La ventana que sale al llegar al nivel ${UNLOCK.fiesta2}, con las festividades nuevas`, fn: () => (save.intro && delete save.intro.fiesta2, persist(), onRefresh()) },
