@@ -1414,7 +1414,7 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
   // Carta moneda (1-3): al jugarla da monedas (10 + 2 por constelación, tope 60). No cambia las reglas: ganable igual.
   const rco = mulberry32(hash(g * 9293 + t * 53 + 17));
   if (n >= 8 && world >= MECH_INTRO.coin && (world === MECH_INTRO.coin || rco() < COIN_ODDS)) {
-    const coins = Math.min(60, 10 + 2 * Math.floor(base / (LEVELS_PER_WORLD * 10)));
+    const coins = Math.round(Math.min(60, 10 + 2 * Math.floor(base / (LEVELS_PER_WORLD * 10))) * 1.15);
     for (let k2 = randInt(rco, 1, 3); k2 > 0; k2--) {
       const k = pickPlain(0, np);
       if (k != null) cards[play[k]].coin = coins;

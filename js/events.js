@@ -4,7 +4,7 @@
 // de temática cada día confundía, porque la colección también tiene temáticas). Los premios se reclaman a mano:
 // los reclamados son tuyos; los que no, se pierden si la racha se reinicia o si pasa la medianoche.
 import { save, persist } from './storage.js';
-import { constUp } from './economy.js';
+import { constUp, COIN_UP, round5 } from './economy.js';
 import { EVENT_LEVELS, EVENT_PER_PLANET, EVENT_PLANETS, FESTIVAL_LEVELS, FESTIVAL_PER_PLANET, FESTIVAL_PLANETS } from './levels.js';
 
 // Los eventos se abren poco a poco, según los niveles ganados (save.next): primero la racha, luego la colección
@@ -27,19 +27,19 @@ export const isOn = (k) => (save.next || 0) >= UNLOCK[k];
 // estrellas. Primera fila: 15/30/60/90/150/240 (= 5, 10, 20, 30, 50 y 80 niveles con 3★). Luego una fila sin fin
 // cada 150 (150, 300, 450…): se turnan comodín y deshacer, con monedas que suben poco a poco.
 export const STREAK_GOALS = [
-  { n: 15, coins: 20 },
-  { n: 30, coins: 30 },
-  { n: 60, coins: 40, undo: 1 },
-  { n: 90, coins: 50 },
-  { n: 150, coins: 60 },
-  { n: 240, coins: 80, wild: 1 },
+  { n: 15, coins: 25 },
+  { n: 30, coins: 35 },
+  { n: 60, coins: 45, undo: 1 },
+  { n: 90, coins: 60 },
+  { n: 150, coins: 70 },
+  { n: 240, coins: 90, wild: 1 },
 ];
 export const STREAK_STEP = 150;
 // Premio i (índice global): los primeros son la fila de arriba; del 6 en adelante, la fila de 50 en 50.
 export function streakGoal(i) {
   if (i < STREAK_GOALS.length) return STREAK_GOALS[i];
   const j = i - STREAK_GOALS.length;
-  return { n: STREAK_STEP * (j + 1), coins: 100 + 20 * j, ...(j % 2 ? { undo: 1 } : { wild: 1 }) };
+  return { n: STREAK_STEP * (j + 1), coins: round5((100 + 20 * j) * COIN_UP), ...(j % 2 ? { undo: 1 } : { wild: 1 }) };
 }
 // Índice del primer premio que todavía no alcanza esa racha.
 export const goalIndex = (n) => (n < STREAK_GOALS[STREAK_GOALS.length - 1].n ? STREAK_GOALS.findIndex((g) => g.n > n) : STREAK_GOALS.length + Math.floor(n / STREAK_STEP));
@@ -320,8 +320,8 @@ export const EVENTS = {
 };
 // Monedas de los niveles 1-4 de cada planeta y lo que da el 5.º si ya tienes su exclusivo. Subidas 50% el
 // 6 nov 2026 (antes 20-40 y 300/600), cuando sus niveles duros dejaron de pedir ayudas.
-export const EV_COINS = [30, 40, 45, 55, 60];
-export const EV_REPEAT = [{ coins: 450 }, { undo: 3 }, { wild: 1 }, { wild: 2, coins: 450 }, { wild: 3, coins: 900 }];
+export const EV_COINS = [35, 45, 50, 65, 70];
+export const EV_REPEAT = [{ coins: 520 }, { undo: 3 }, { wild: 1 }, { wild: 2, coins: 520 }, { wild: 3, coins: 1035 }];
 // El boleto que se pierde vuelve a las 48 h (7 nov 2026: antes 24 h; así comprarlo tienta más).
 export const EV_TICKET_WAIT = 2 * DAY;
 // Boletos que se pagan (7 nov 2026): el primero del evento del mes 1,000 y los siguientes (si no quieres esperar las
@@ -768,8 +768,8 @@ FESTIVALS.push(
     ex: [{ space: 'nagaland', frame: 'chales' }, { ring: 'plumascalao', back: 'calaos' }, { avatar: 'calaito', title: 'tamborilero', traveler: 'calaovuela' }] },
 );
 // Subidas 50% el 6 nov 2026 (antes 20-50 y 300/200/400), como las del evento del mes.
-export const FEST_COINS = [30, 45, 60, 75];
-export const FEST_REPEAT = [{ coins: 450, undo: 2 }, { wild: 1, coins: 300 }, { wild: 2, coins: 600 }];
+export const FEST_COINS = [35, 50, 70, 85];
+export const FEST_REPEAT = [{ coins: 520, undo: 2 }, { wild: 1, coins: 345 }, { wild: 2, coins: 690 }];
 // Planetas (P), niveles por planeta (N) y niveles en total (L) de una festividad.
 export const festShape = (f) => { const P = f?.p || FESTIVAL_PLANETS, N = f?.n || FESTIVAL_PER_PLANET; return { P, N, L: P * N }; };
 const dayOf = (d) => Math.floor((d.getTime() - d.getTimezoneOffset() * 6e4) / DAY);

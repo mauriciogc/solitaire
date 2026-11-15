@@ -81,10 +81,10 @@ export const MISSIONS = [
   { id: 'coincards6', k: 'coincards', goals: [6, 8], tier: 2, mech: 'coin', ico: 'monedas', text: (n) => `Juega ${n} cartas moneda` },
   { id: 'turbo3', k: 'turbo', goals: [3], tier: 3, mech: 'turbo', ico: 'rocket', text: (n) => `Usa ${n} cohetes turbo` },
 ];
-const MISSION_COINS = [0, 60, 100, 150];
+const MISSION_COINS = [0, 70, 115, 175];
 // Cofre de las 3: monedas y, por probabilidad, un comodín (si no, 2 deshacer). 8 nov 2026: la probabilidad depende de
 // qué tan difíciles tocaron (suma de escalones, de 4 a 9): fáciles 21%, difíciles hasta 51%. Se dice en la ventana.
-export const MISSION_BONUS = { coins: 200, undo: 2 };
+export const MISSION_BONUS = { coins: 230, undo: 2 };
 export const missionWildOdds = (s = missions()) => Math.min(0.55, 0.15 + 0.06 * Math.max(0, s.list.reduce((n, x) => n + (missionDef(x.id)?.tier || 1), 0) - 3));
 
 const can = (m, evOn) => (!m.mech || (save.open || 0) >= MECH_INTRO[m.mech]) && (!m.ev || evOn);
@@ -206,7 +206,7 @@ const nice = (n) => {
 for (const l of ACHIEVEMENTS) if (!l.best && !l.raw) l.steps = l.steps.map(nice);
 // Premio de cada escalón (bronce → diamante).
 // 8 nov 2026: 10% menos monedas (el usuario: endurecer los logros, no dar más dinero). Antes 200/600/1,500/3,000/6,000.
-export const ACHIEVEMENT_PRIZES = [{ coins: 180 }, { coins: 540 }, { coins: 1350 }, { coins: 2700, wild: 1 }, { coins: 5400, wild: 2, undo: 3 }];
+export const ACHIEVEMENT_PRIZES = [{ coins: 205 }, { coins: 620 }, { coins: 1550 }, { coins: 3105, wild: 1 }, { coins: 6210, wild: 2, undo: 3 }];
 export const ACHIEVEMENT_COINS = ACHIEVEMENT_PRIZES.map((p) => p.coins);
 export const ACHIEVEMENT_MEDAL = ['Bronce', 'Plata', 'Oro', 'Platino', 'Diamante'];
 export const ACHIEVEMENT_TOP = ACHIEVEMENT_MEDAL.length;

@@ -1177,23 +1177,27 @@ const MODELS = {
       });
     } };
   },
-  // Nave de cristal (exclusivo de la lluvia de cristales, 14 nov 2026): una gema turquesa de cara clara que gira
-  // despacio, con dos cristalitos de ala a los lados, un brillo que le recorre las caras y chispas que se le quedan atrás.
+  // Nave de cristal (exclusivo de la lluvia de cristales, 14 nov 2026): una gema de cara clara que se mece, con dos
+  // cristalitos de ala a los lados, un brillo que le recorre las caras y chispas que se le quedan atrás. 15 nov 2026: lila
+  // y de 8 lados vista de frente, como el icono de la lluvia (antes un diamante turquesa).
   navecristal(part, toon) {
     const g = new THREE.Group(), body = new THREE.Group();
-    const gem = (r, h) => new THREE.OctahedronGeometry(r, 0).scale(1, h / r, 1);
-    const mat = toon({ color: '#5fe6f0', emissive: '#2fb6c8', emissiveIntensity: 0.2 });
-    const core = part(gem(0.2, 0.3), null, { ol: 0.07, mat });
-    core.add(part(gem(0.1, 0.16), '#d6fdff', { z: 0.06, ol: 0 }));
-    // Carita: ojitos en la cara de enfrente.
-    for (const x of [-0.05, 0.05]) core.add(part(new THREE.SphereGeometry(0.018, 10, 8), INK, { x, y: 0.03, z: 0.15, ol: 0 }));
+    // Gema de 8 lados: la cara chica (la mesa) mira al frente.
+    const oct = (r, d) => new THREE.CylinderGeometry(r * 0.62, r, d, 8).rotateY(Math.PI / 8).rotateX(Math.PI / 2);
+    const mat = toon({ color: '#c9a6ff', emissive: '#9467ee', emissiveIntensity: 0.2 });
+    const core = part(oct(0.22, 0.12), null, { ol: 0.07, mat });
+    core.add(part(new THREE.CylinderGeometry(0.135, 0.135, 0.01, 8).rotateY(Math.PI / 8).rotateX(Math.PI / 2), '#e6d6ff', { z: 0.062, ol: 0 }));
+    core.add(part(oct(0.22, 0.1).rotateY(Math.PI), '#9467ee', { z: -0.1, ol: 0.07 }));
+    // Carita: ojitos en la mesa.
+    for (const x of [-0.05, 0.05]) core.add(part(new THREE.SphereGeometry(0.018, 10, 8), INK, { x, y: 0.02, z: 0.07, ol: 0 }));
     body.add(core);
-    const wings = [-1, 1].map((sx) => { const w = part(gem(0.07, 0.12), '#8ff2f8', { x: sx * 0.27, y: -0.02, rz: sx * 0.6, ol: 0.1 }); body.add(w); return [w, sx]; });
-    const sparks = Array.from({ length: 6 }, (_, i) => { const m = new THREE.Mesh(new THREE.OctahedronGeometry(0.022, 0), glow(i % 2 ? '#ffffff' : '#8ff2f8', 0.9)); body.add(m); return m; });
+    const wings = [-1, 1].map((sx) => { const w = part(oct(0.075, 0.05), '#dcc4ff', { x: sx * 0.3, y: -0.02, rz: sx * 0.6, ol: 0.1 }); body.add(w); return [w, sx]; });
+    const sparks = Array.from({ length: 6 }, (_, i) => { const m = new THREE.Mesh(new THREE.OctahedronGeometry(0.022, 0), glow(i % 2 ? '#ffffff' : '#dcc4ff', 0.9)); body.add(m); return m; });
     g.add(body);
     return { obj: g, tick: (t) => {
       body.position.y = Math.sin(t * 2) * 0.05;
-      core.rotation.y = t * 0.9;
+      core.rotation.y = Math.sin(t * 0.9) * 0.5;
+      core.rotation.z = t * 0.4;
       mat.emissiveIntensity = 0.2 + Math.max(0, Math.sin(t * 2.6)) * 0.45;
       wings.forEach(([w, sx]) => (w.rotation.z = sx * (0.6 + Math.sin(t * 6) * 0.25)));
       sparks.forEach((m, i) => {

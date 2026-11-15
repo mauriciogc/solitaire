@@ -1,6 +1,9 @@
 // Economía: boletos de entrada y monedas por estrellas.
 import { difficulty, LEVELS_PER_WORLD } from './levels.js';
 
+// Premios de monedas ×1.15 (15 nov 2026, pedido del usuario: todos los premios de dinero un 15% más).
+export const COIN_UP = 1.15;
+
 // Precio de un boleto normal (7 nov 2026: antes 40; el usuario: "homologar todos los precios").
 export const TICKET_PRICE = 250;
 // Boosters: el comodín, el pack de 3 deshacer y +5 cartas suben con el avance, en los mismos escalones que los boletos
@@ -45,7 +48,7 @@ export const ticketRefund = ticketCost;
 export function levelReward(g) {
   const boss = g % LEVELS_PER_WORLD === LEVELS_PER_WORLD - 1;
   const c = Math.floor(g / (LEVELS_PER_WORLD * 10));
-  const base = Math.max(5, Math.round((20 + 35 * difficulty(g) + 0.4 * c) / 5) * 5);
+  const base = Math.max(5, Math.round(((20 + 35 * difficulty(g) + 0.4 * c) * COIN_UP) / 5) * 5);
   return boss ? Math.round((base * 1.5) / 5) * 5 : base;
 }
 // Ajuste por jugador (7 nov 2026): si va corto de monedas para lo que lleva, los niveles pagan más (×1.25, o ×1.5 si
@@ -100,7 +103,7 @@ export const metShopPrice = (p, met) => (met && p ? round5(p * (1 - (met.K?.shop
 // ---------- Regalo diario: camino de 28 días ----------
 // Premios modestos para que dure semanas. Si un día no se reclama, se vuelve al día 1 (salvo con escudo).
 // El día 7 de cada semana es el agujero de gusano: escupe premios sorpresa (`openSurprise`) y una pieza de planeta.
-const c = (coins) => ({ coins });
+const c = (coins) => ({ coins: round5(coins * COIN_UP) });
 export const DAILY_PATH = [
   c(20), c(25), { tickets: 1 }, c(30), c(30), c(40), { surprise: 1 },
   c(30), c(35), { tickets: 1 }, c(40), c(40), c(50), { surprise: 2 },
@@ -109,7 +112,7 @@ export const DAILY_PATH = [
 ];
 // Contenido de la caja sorpresa: monedas que crecen con la semana más 1 extra al azar (2 extras la semana 4).
 export function openSurprise(tier, r = Math.random) {
-  const p = { coins: 40 + tier * 20 + Math.floor(r() * 4) * 10 };
+  const p = { coins: round5((40 + tier * 20 + Math.floor(r() * 4) * 10) * COIN_UP) };
   const extras = [{ tickets: tier > 2 ? 2 : 1 }, { undo: 2 + Math.floor(tier / 2) }, { wild: 1 }];
   for (let k = tier >= 4 ? 2 : 1; k > 0; k--) Object.assign(p, extras.splice(Math.floor(r() * extras.length), 1)[0]);
   return p;
@@ -147,7 +150,12 @@ export function starsNeeded(w) {
 // ---------- Constelaciones (7 nov 2026) ----------
 // Terminar una constelación (el jefe del mundo 10 de cada una, primera vez) da CONST_PRIZE. Abrir la siguiente pide,
 // además del boleto dorado y las estrellas, CONST_OPEN monedas.
-export const CONST_PRIZE = { coins: 2000, wild: 1, undo: 1 };
+// Nave de rescate (main.js): hasta RESCUE_WEEK veces en 7 días; cada cápsula trae sus monedas (tope 500, el usuario).
+export const RESCUE_WEEK = 3;
+export const RESCUE_COINS = [200, 300, 400, 500];
+export const RESCUE_ITEMS = { wild: 1, undo: 3, helps: { ver3: 1 } };
+
+export const CONST_PRIZE = { coins: 2300, wild: 1, undo: 1 };
 export const CONST_OPEN = 1000;
 // Primer mundo de una constelación (pide el boleto de constelación).
 export const constStart = (w) => w > 0 && w % LEVELS_PER_WORLD === 0;
@@ -161,11 +169,11 @@ export const openCost = (w) => (constStart(w) && !openFree(w) ? CONST_OPEN : 0);
 // 7 nov 2026: las monedas salen al azar entre un mínimo y un máximo, y los comodines y deshacer por probabilidad
 // (odds); el comodín solo en el de oro. bossChest dice el sello (para la postal); rollChest sortea el premio al ganar.
 const CHEST = [
-  [1, { coins: [40, 80], undo: 2, wild: 1, odds: 0.5 }, 'oro'],
-  [0.9, { coins: [30, 60], undo: 2, odds: 0.5 }, 'plata'],
-  [0.75, { coins: [20, 45], undo: 1, odds: 0.5 }, 'bronce'],
-  [0.5, { coins: [15, 30], undo: 1, odds: 0.3 }, 'sello'],
-  [0, { coins: [5, 15] }, 'sello'],
+  [1, { coins: [45, 90], undo: 2, wild: 1, odds: 0.5 }, 'oro'],
+  [0.9, { coins: [35, 70], undo: 2, odds: 0.5 }, 'plata'],
+  [0.75, { coins: [25, 50], undo: 1, odds: 0.5 }, 'bronce'],
+  [0.5, { coins: [15, 35], undo: 1, odds: 0.3 }, 'sello'],
+  [0, { coins: [5, 20] }, 'sello'],
 ];
 const between = ([a, b], r) => Math.round((a + r() * (b - a)) / 5) * 5;
 const chance = (n = 0, odds = 0, r) => Array.from({ length: n }).reduce((k) => k + (r() < odds), 0);

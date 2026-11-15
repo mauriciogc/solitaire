@@ -5,6 +5,8 @@ export default (H) => {
   const { THREE, flat, shirt, starGeo, hoodCap, onCap, neckRing } = H;
   // Cristal: octaedro estirado (punta arriba y abajo).
   const gem = (r, h) => new THREE.OctahedronGeometry(r, 0).scale(1, h / r, 1);
+  // Gema de 8 lados con la mesa al frente (la de la lluvia de cristales, 15 nov 2026).
+  const oct = (r, d = r * 0.55) => new THREE.CylinderGeometry(r * 0.62, r, d, 8).rotateY(Math.PI / 8).rotateX(Math.PI / 2);
   return {
     // Guardián de la aurora: capucha azul noche con dos franjas de luz (verde y violeta) que cambian de color, capa
     // corta y una cortinita de aurora flotando sobre la cabeza que ondea.
@@ -44,39 +46,39 @@ export default (H) => {
         }];
       },
     },
-    // Mago de cristal: túnica turquesa con cuello claro, una corona de cristales sobre tu pelo que brillan uno tras
+    // Mago de cristal: túnica lila con cuello claro (15 nov 2026: lila y gemas de 8 lados, como la lluvia; antes turquesa), una corona de cristales sobre tu pelo que brillan uno tras
     // otro, un cristal en el pecho y otro grande que flota y gira a un lado.
     cristalino: {
-      name: 'Mago de cristal/Maga de cristal', moves: ['pensando', 'guino', 'saludo'], sleeve: '#2fb6c8',
+      name: 'Mago de cristal/Maga de cristal', moves: ['pensando', 'guino', 'saludo'], sleeve: '#7d52d8',
       build(part, head, torso, k, toon) {
-        const C = '#5fe6f0';
+        const C = '#c9a6ff';
         shirt(part, torso, this.sleeve, k.skin);
-        torso.add(neckRing(part, '#d6fdff', 0.03));
-        const chest = part(gem(0.035, 0.06), C, { y: -0.37, z: 0.215, ol: 0.15 });
+        torso.add(neckRing(part, '#ecdfff', 0.03));
+        const chest = part(oct(0.042), C, { y: -0.37, z: 0.215, ol: 0.15 });
         torso.add(chest);
         // Corona: se asienta sobre tu pelo (lo que sobresale arriba se esconde, como la del Rey Mago); aro claro con 5
         // cristales de frente y a los lados.
         for (const c of head.children) if (c.position.y > 0.2) c.visible = false;
         const crown = new THREE.Group(); crown.position.set(0, 0.2, -0.01); crown.rotation.x = -0.18;
-        crown.add(part(new THREE.TorusGeometry(0.2, 0.018, 8, 32), '#d6fdff', { rx: Math.PI / 2, ol: 0.1 }));
+        crown.add(part(new THREE.TorusGeometry(0.2, 0.018, 8, 32), '#ecdfff', { rx: Math.PI / 2, ol: 0.1 }));
         const shine = [];
         for (let i = 0; i < 5; i++) {
-          const a = Math.PI / 2 + (i - 2) * 0.62, mat = toon({ color: C, emissive: '#2fb6c8', emissiveIntensity: 0.15 });
-          const g = part(gem(0.03, i === 2 ? 0.09 : 0.065), null, { x: Math.cos(a) * 0.2, y: 0.05, z: Math.sin(a) * 0.2, ol: 0.12, mat });
+          const a = Math.PI / 2 + (i - 2) * 0.62, mat = toon({ color: C, emissive: '#9467ee', emissiveIntensity: 0.15 });
+          const g = part(oct(i === 2 ? 0.045 : 0.034), null, { x: Math.cos(a) * 0.2, y: 0.05, z: Math.sin(a) * 0.2, ol: 0.12, mat });
           crown.add(g); shine.push(mat);
         }
         head.add(crown);
         // El cristal grande que flota a un lado, con su brillo.
-        const big = part(gem(0.06, 0.11), C, { ol: 0.1 });
-        big.add(part(gem(0.03, 0.055), '#d6fdff', { z: 0.02, ol: 0 }));
+        const big = part(oct(0.08, 0.045), C, { ol: 0.1 });
+        big.add(part(oct(0.08, 0.04).rotateY(Math.PI), '#9467ee', { z: -0.04, ol: 0.1 }));
         const orb = new THREE.Group(); orb.add(big); orb.position.set(0.32, 0.12, 0.05); head.add(orb);
         const sp = part(starGeo(0.016, 0.007), null, { ol: 0, mat: flat('#ffffff') }); orb.add(sp);
         return [(f, t) => {
-          big.rotation.y = t * 1.4;
+          big.rotation.y = Math.sin(t * 1.4) * 0.6;
           orb.position.y = 0.12 + Math.sin(t * 2) * 0.02 + (f.laugh ? Math.abs(Math.sin(t * 12)) * 0.02 : 0);
           sp.position.set(Math.cos(t * 3) * 0.08, Math.sin(t * 3) * 0.08, 0.03);
           shine.forEach((m, i) => (m.emissiveIntensity = 0.15 + Math.max(0, Math.sin(t * 2.4 - i * 0.9)) * 0.5));
-          chest.rotation.y = t * 0.9;
+          chest.rotation.z = t * 0.6;
           crown.rotation.z = Math.sin(t * 1.3) * 0.03;
         }];
       },

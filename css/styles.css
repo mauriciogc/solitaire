@@ -2339,7 +2339,8 @@ p.met-sale { display: flex; align-items: center; justify-content: center; gap: 6
    suerte!» con rayos; la máquina con focos que parpadean y 4 ventanitas; a la derecha la palanca en su riel, que baja de
    arriba hacia abajo, con el globito «¡Jala!». Abajo el premio que cuenta. Jackpot: destellos y lluvia de monedas. */
 .slotx { position: absolute; inset: 0; z-index: 900; display: grid; place-items: center; overflow: hidden; padding: calc(58px + var(--st, 0px)) 12px calc(14px + var(--sb, 0px));
-  background: radial-gradient(circle at 50% 46%, #4a24a8, #160c40 58%, #05030f); }
+  /* 15 nov 2026 (el usuario): el mismo velo oscuro que la nave de rescate (.rs-back) y el pasaporte (.feat-back). */
+  background: radial-gradient(circle at 50% 45%, #2a1f6acc, #0b062aee 72%); }
 .sx-sky { position: absolute; inset: 0; pointer-events: none; opacity: .9;
   background-image: radial-gradient(1.6px 1.6px at 12% 18%, #fff, transparent), radial-gradient(1.2px 1.2px at 78% 12%, #fff, transparent), radial-gradient(2px 2px at 64% 74%, #ffe58a, transparent), radial-gradient(1.2px 1.2px at 30% 82%, #fff, transparent), radial-gradient(1.6px 1.6px at 88% 52%, #c9a6ff, transparent), radial-gradient(1.2px 1.2px at 8% 60%, #fff, transparent), radial-gradient(1.4px 1.4px at 46% 8%, #fff, transparent), radial-gradient(1.8px 1.8px at 92% 88%, #ffe58a, transparent);
   animation: sx-tw 3s ease-in-out infinite alternate; }
@@ -3123,6 +3124,9 @@ p.met-sale { display: flex; align-items: center; justify-content: center; gap: 6
 .devmenu .dpart { margin-top: 8px; padding: 6px 8px 8px; border-radius: 12px; background: #fff; border: 2px solid var(--dpc, #d9cdf7); border-left-width: 6px; }
 .devmenu .dpart h5 { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 6px; margin: 0 0 6px; font: 400 15px 'Lilita One'; color: var(--dpd, var(--ink)); }
 .devmenu .dpart h5 .ico { width: 20px; height: 20px; }
+.devmenu .dpart .dtags { display: inline-flex; gap: 4px; }
+.devmenu .dpart .dtag { display: inline-flex; align-items: center; gap: 3px; padding: 1px 7px 1px 3px; border-radius: 99px; background: #fff1dc; border: 1.5px solid #f0b06a; font: 700 11px 'Baloo 2', sans-serif; font-style: normal; color: #a4561c; }
+.devmenu .dpart .dtag .ico { width: 16px; height: 16px; }
 .devmenu .dpart h5 small { font: 700 12px 'Baloo 2', sans-serif; color: #6d6394; }
 .devmenu .dp-mis { --dpc: #5ad68c; --dpd: #2f9e5c; }
 .devmenu .dp-logro { --dpc: #ffc83d; --dpd: #b97a0a; }

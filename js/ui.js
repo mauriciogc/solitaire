@@ -369,7 +369,7 @@ export const streakWarnHTML = (n, pend, when) =>
 
 // Globos y burbujas truenados (save.pops). Se acumulan entre niveles. A los 100 globos regala 1 comodín y la cuenta
 // vuelve a 0; el siguiente pide 200, luego 400, 800 y vuelve a 100 (siempre 1 comodín). Las burbujas de premios (las de
-// cada victoria y las del cofre) igual pero desde 20 (20, 40… 640 y otra vez 20) y dan siempre 50 monedas (provisional:
+// cada victoria y las del cofre) igual pero desde 20 (20, 40… 640 y otra vez 20) y dan siempre 60 monedas (provisional:
 // fase de economía).
 // Premio por tronar: globos 1 comodín, burbujas 50 🪙, meteoros de la lluvia 100 🪙 el primero (`first`) y luego 50.
 // La meta se duplica en cada premio y el conteo vuelve a 0. Si la siguiente pasaría de POP_TOP, vuelve a empezar desde
@@ -377,7 +377,7 @@ export const streakWarnHTML = (n, pend, when) =>
 const POP_TOP = 1000;
 // cometa y cristal (14 nov 2026): los de las lluvias de cometas y de cristales, igual que los meteoros.
 // estrella (12 nov 2026): las estrellas fugaces de la lluvia de estrellas cuentan aparte, con las metas de los meteoros.
-const POPS = { globo: { from: 100 }, burbuja: { from: 20, coins: 50 }, meteoro: { from: 50, intro: 25, coins: 50, first: 100 }, estrella: { from: 50, intro: 25, coins: 50, first: 100 }, cometa: { from: 50, intro: 25, coins: 50, first: 100 }, cristal: { from: 50, intro: 25, coins: 50, first: 100 } };
+const POPS = { globo: { from: 100 }, burbuja: { from: 20, coins: 60 }, meteoro: { from: 50, intro: 25, coins: 60, first: 115 }, estrella: { from: 50, intro: 25, coins: 60, first: 115 }, cometa: { from: 50, intro: 25, coins: 60, first: 115 }, cristal: { from: 50, intro: 25, coins: 60, first: 115 } };
 export const popGoal = (kind, lvl) => {
   const { from, intro } = POPS[kind];
   if (intro && !lvl) return intro;

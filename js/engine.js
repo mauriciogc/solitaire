@@ -176,7 +176,7 @@ export const triPick = (c, s, want = null) => {
 // (SCR_PAY). Si la tocas y no conecta (sin verla toda), cuenta como un robo: se corta la racha (miss).
 // 14 nov 2026 (el usuario): al fallarle además se destapa (s.scrGone) y ya no da monedas; no se deshace.
 export const SCR_WIN = 4;
-export const SCR_PAY = [0, 10, 30, 60];
+export const SCR_PAY = [0, 12, 35, 70];
 // Ventanitas abiertas: en proporción a las pegadas que ya jugaste (con todas, se ve completa).
 export const scrOpen = (c, s) => (c.scr && !s.scrGone?.includes(c.id) ? Math.floor((SCR_WIN * c.scr.filter((j) => s.rem[j]).length) / c.scr.length) : SCR_WIN);
 export const scrPay = (c, s) => SCR_PAY[Math.min(3, SCR_WIN - scrOpen(c, s))];

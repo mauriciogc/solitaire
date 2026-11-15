@@ -331,6 +331,11 @@ const ICONS = {
   bag: () => tshape('M6 13h20v13a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2z', '#ffb066', '#e8853e')
     + tshape('M13 28v-6.5a3 3 0 0 1 6 0V28z', '#9a5a32', '#7a4024')
     + tshape('M4 12.5 6.5 5h19l2.5 7.5c0 2-1.4 3.2-3 3.2S22 14.5 22 12.5c0 2-1.4 3.2-3 3.2S16 14.5 16 12.5c0 2-1.4 3.2-3 3.2S10 14.5 10 12.5c0 2-1.4 3.2-3 3.2S4 14.5 4 12.5z', '#ff6f8e', '#e0496b', '<path d="M10 4v13M22 4v13" stroke="#fff6e6" stroke-width="6"/>'),
+  // Tragamonedas galáctico (15 nov 2026): para marcar en el modo dev los eventos que ya la traen.
+  tragamonedas: () => `<path d="M26.5 12v7.5h-2" fill="none" stroke="${K}" stroke-width="2" stroke-linecap="round"/><circle cx="26.5" cy="9.5" r="2.6" fill="#ff5a6e" stroke="${K}" stroke-width="1.8"/>`
+    + tshape('M3.5 8.5a3 3 0 0 1 3-3h15a3 3 0 0 1 3 3V27h-21z', '#ff9c3d', '#e2753a', '<path d="M3.5 23h21" stroke="#c95f2a" stroke-width="2"/>')
+    + `<rect x="6.5" y="10" width="15" height="9" rx="1.6" fill="#fff" stroke="${K}" stroke-width="1.8"/><path d="M11.5 10v9M16.5 10v9" stroke="${K}" stroke-width="1.3"/>`
+    + `<circle cx="9" cy="14.5" r="1.6" fill="#a37bff"/><circle cx="14" cy="14.5" r="1.6" fill="#a37bff"/><circle cx="19" cy="14.5" r="1.6" fill="#a37bff"/>`,
   gift: () => tshape('M6 14h20v12.5a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2z', '#47c27a', '#2f9e5c')
     + tshape('M4 10a1.5 1.5 0 0 1 1.5-1.5h21A1.5 1.5 0 0 1 28 10v4.2H4z', '#5ad68c', '#3fb873')
     + tshape('M14.3 8.5h3.4v20h-3.4z', '#ffc83d', '#ec9a17', '', 1.6)
@@ -410,7 +415,12 @@ const ICONS = {
   aurora: () => tshape('M3 8a5 5 0 0 1 5-5h16a5 5 0 0 1 5 5v16a5 5 0 0 1-5 5H8a5 5 0 0 1-5-5z', '#1d2a5a', '#14204a', '<path d="M3 21q6-12 13-8t13-6v6q-6 5-13 2T3 27z" fill="#5ff0b0" opacity=".9"/><path d="M3 15q7-9 14-5t12-4v4q-6 3-12 1T3 19z" fill="#a785ff" opacity=".85"/><path d="M5 20q5-7 11-4" stroke="#d6fff0" stroke-width="1.2" fill="none" stroke-linecap="round"/>', 2.2)
     + `<path d="${starPath(23.5, 21.5, 2.6, 1.1)}" fill="#fff6c8"/><circle cx="9" cy="8" r="1" fill="#fff"/><circle cx="19" cy="6.6" r=".8" fill="#fff"/>`,
   // Cristal: gema de cristal turquesa con caras más claras y un brillo.
-  cristal: () => tshape('M9.4 4h13.2l6 7.6L16 29 3.4 11.6z', '#5fe6f0', '#2fb6c8', '<path d="M3.4 11.6h25.2M9.4 4 12.6 11.6 16 29M22.6 4l-3.2 7.6L16 29M12.6 11.6 16 4l3.4 7.6" stroke="#1f8ea0" stroke-width="1.1" fill="none" stroke-linejoin="round"/><path d="M9.4 4h6.6l-3.4 7.6H3.4z" fill="#b8fbff"/><path d="M12.6 11.6h6.8L16 29z" fill="#8ff2f8"/>', 2)
+  // Lluvia de cristales (15 nov 2026, el usuario: el diamante se confundía con la ficha de gemas y el cuarzo se veía feo):
+  // gema lila de 8 lados vista de frente, como un rubí tallado, con su mesa al centro y las facetas a la orilla.
+  cristal: () => tshape('M11 3.5h10l7.5 7.5v10L21 28.5H11L3.5 21V11z', '#c9a6ff', '#9467ee',
+    '<path d="M12.8 9h6.4l3.8 3.8v6.4L19.2 23h-6.4L9 19.2v-6.4z" fill="#dcc4ff" stroke="#7d52d8" stroke-width="1.2" stroke-linejoin="round"/>'
+    + '<path d="M11 3.5l1.8 5.5M21 3.5l-1.8 5.5M28.5 11 23 12.8M28.5 21 23 19.2M21 28.5l-1.8-5.5M11 28.5l1.8-5.5M3.5 21 9 19.2M3.5 11 9 12.8" stroke="#7d52d8" stroke-width="1.1"/>'
+    + '<path d="M13.5 11.5l3-0.2M12 14l0.1-1.2" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/>', 2)
     + `<path d="M7.6 8.4 9.8 6.4" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/><path d="${starPath(26.5, 4.5, 2.6, 1)}" fill="#fff"/>`,
   comet: () => tshape('M2.5 29.5 14 10.5l9 8.5z', '#8fd8ff', '#5fb6e8', '<path d="M6 27 15.5 14.5l3.5 3.2z" fill="#e4f7ff"/>', 2)
     + tshape(starPath(19.5, 13, 9, 4.2), '#ffd85a', '#ffb02e', '<circle cx="18" cy="11.5" r="1.6" fill="#fff6c8"/>', 2.2),
@@ -984,8 +994,9 @@ RINGS.sellos = () => band(55, '#4aa8de', 7) + `<circle cx="70" cy="70" r="55" fi
 // Estrellas fugaces (lluvia de estrellas): banda violeta y 6 estrellas fugaces que titilan, como si cayeran alrededor.
 RINGS.fugaces = () => band(55, '#3a2a99', 7) + `<circle cx="70" cy="70" r="55" fill="none" stroke="#ffb3d9" stroke-width="2" stroke-dasharray="2 8" stroke-linecap="round"/>`
   + Array.from({ length: 6 }, (_, i) => { const d = i * 60 - 60, [x, y] = at(d, 56), k = i % 2 ? 0.5 : 0.66; return `<g class="r-tw" style="animation-delay:${(i * 0.35).toFixed(2)}s"><g transform="translate(${(x - 16 * k).toFixed(1)} ${(y - 16 * k).toFixed(1)}) scale(${k})">${ICONS.starFall()}</g></g>`; }).join('');
-// Corona de cristales (lluvia de cristales, 14 nov 2026): banda turquesa con 8 cristales que giran despacio y brillan.
-RINGS.cristales = () => band(55, '#2fb6c8', 7) + `<circle cx="70" cy="70" r="55" fill="none" stroke="#d6fdff" stroke-width="2" stroke-dasharray="2 7" stroke-linecap="round"/>`
+// Corona de cristales (lluvia de cristales, 14 nov 2026): banda con 8 cristales que giran despacio y brillan. 15 nov 2026:
+// lila, con la gema de 8 lados del icono (antes turquesa con diamantes).
+RINGS.cristales = () => band(55, '#7d52d8', 7) + `<circle cx="70" cy="70" r="55" fill="none" stroke="#ecdfff" stroke-width="2" stroke-dasharray="2 7" stroke-linecap="round"/>`
   + `<g class="r-spin">${Array.from({ length: 8 }, (_, i) => { const d = i * 45 - 90, [x, y] = at(d, 56), k = i % 2 ? 0.44 : 0.6; return `<g class="r-tw" style="animation-delay:${(i * 0.3).toFixed(1)}s"><g transform="translate(${(x - 16 * k).toFixed(1)} ${(y - 16 * k).toFixed(1)}) scale(${k})">${ICONS.cristal()}</g></g>`; }).join('')}</g>`;
 // Constelación secreta: banda violeta noche con estrellas moradas que titilan y puntitos de luz entre ellas.
 RINGS.secreto = () => band(55, '#3a1f7a', 8) + `<circle cx="70" cy="70" r="55" fill="none" stroke="#d6c4ff" stroke-width="2" stroke-dasharray="1 7" stroke-linecap="round"/>`

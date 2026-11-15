@@ -74,7 +74,7 @@ const MECH_FIELD = { lock: 'lock', pack: 'pack', ice: 'ice', double: 'alt', arro
 // Constelación (10 nov 2026, pedido del usuario): al juntarla, CST_HELP de las veces una ayuda y si no monedas, de 50 a
 // 200 (casi siempre de las bajas: el promedio queda en ~100, unas 2 veces lo que paga un nivel ahí).
 const CST_HELP = 0.15;
-const cstCoins = () => Math.round((50 + 150 * Math.random() ** 2) / 5) * 5;
+const cstCoins = () => Math.round(((50 + 150 * Math.random() ** 2) * 1.15) / 5) * 5;
 // La ayuda que puede tocar (el láser solo donde hay asteroides).
 const pickHelp = (level) => { const ks = ['reloj', 'ver2', 'ver3', ...(level.rocks ? ['laser', 'laser'] : []), ...(level.ship ? ['escudo'] : [])]; return ks[Math.floor(Math.random() * ks.length)]; };
 

@@ -15,7 +15,7 @@ import { EVENTS, COLLECTIONS, FESTIVALS, festivalDays } from './events.js';
 import { ITEMS, SECTIONS, owns, lockedUntil } from './shop.js';
 import { PASS_MAX, SECRET_MAX, secretGoal, passGoal, passPrize, secretPrize, passCount, secretCount } from './passport.js';
 import { meteor, nextShowers, metItems, MET_FROM, STAR_FROM, metPrizes, SHOWERS, NEW_RAINS } from './meteor.js';
-import { BET_STEPS, BET_BOSS_FEE, BET_FEE, maxBet } from './economy.js';
+import { BET_STEPS, BET_BOSS_FEE, BET_FEE, maxBet, RESCUE_WEEK, RESCUE_COINS, RESCUE_ITEMS, ticketCost, TICKET_PRICE } from './economy.js';
 import { KINDS, TREASURE, makeLot, makeCode, rewardName, lotText, usedHere, lotNonces } from './codes.js';
 // Darte los exclusivos del pasaporte (kind 'pase') o de los secretos ('secreto'), sin cobrar sus premios.
 function passGive(kind) {
@@ -585,7 +585,7 @@ const devDo = (fns, onRefresh) => {
 function rescueSub() {
   const log = (save.rescues || (save.rescueAt ? [save.rescueAt] : [])).filter((t) => Date.now() - t < 7 * 864e5);
   const hoy = log.some((t) => new Date(t).toDateString() === new Date().toDateString());
-  return `${log.length}/3 esta semana${hoy ? ' · hoy ya vino' : log.length >= 3 ? ' · llena' : ' · lista'}`;
+  return `${log.length}/${RESCUE_WEEK} esta semana${hoy ? ' · hoy ya vino' : log.length >= RESCUE_WEEK ? ' · llena' : ' · lista'}`;
 }
 
 export function openDevMenu({ onGallery, onPlanets, onFestivals, onGoLevel, onRefresh, onRescue, card }) {
@@ -696,10 +696,17 @@ export function openDevMenu({ onGallery, onPlanets, onFestivals, onGoLevel, onRe
     <p class="dline">Sale al entrar al juego o volver al mapa, en la <b>preventa</b> (3 días antes) y el <b>mero día</b> (festividad: su día; mes: del 1 al ${SLOT_MONTH_DAYS}), si no compró la entrada (traiga lo que traiga). Una tirada por edición; si hay dos abiertas, una sola <b>×2</b>. No se puede saltar y al terminar abre la compra.</p>
     <p class="dline">Tres escalones: si le <b>falta</b> para la entrada, lo que falta + ${SLOT_EXTRA[0]} a ${SLOT_EXTRA[1]} al azar (los planetas salen según el monto); si trae <b>hasta el doble</b>, la tabla normal; si trae <b>más del doble</b>, la tabla chica. El jackpot (${SLOT_PAY.at(-1)[1]}%) sale en todos.</p>
     <table class="dtable"><tr><th>Resultado</th><th>Hasta el doble</th><th>Más del doble</th><th>%</th></tr>${SLOT_PAY.map(([c, w], i) => `<tr><td class="dname">${SLOT_FACE[i]}</td><td>${c.toLocaleString('es-MX')}</td><td>${(SLOT_PAY_RICH[i]?.[0] ?? c).toLocaleString('es-MX')}</td><td>${w}%</td></tr>`).join('')}</table>`;
+  // Nave de rescate (15 nov 2026, el usuario: explicada como la tragamonedas).
+  const g0 = Math.min(save.next || 0, TOTAL_LEVELS - 1), need0 = ticketCost(g0), top0 = Math.ceil(need0 * 1.5);
+  const rescueTable = `<p class="dline"><b>Nave de rescate</b>: ${rescueSub()}.</p>
+    <p class="dline">Llega sola al entrar al juego o volver al mapa (galaxia o planeta) cuando <b>no te alcanza</b> para el siguiente nivel nuevo: menos boletos de los que pide, sin monedas para comprar los que faltan (${TICKET_PRICE} c/u), sin el regalo de boletos listo y sin partida a medias. Hasta <b>${RESCUE_WEEK} veces en 7 días</b> y nunca dos el mismo día.</p>
+    <p class="dline">Sin ventana: se oscurece, cruza la nave y suelta <b>4 cápsulas</b> en paracaídas; tocas una, se abre y sus premios salen en burbujas (ya sumados). Las demás se caen sin decir qué traían. Todas traen ${RESCUE_ITEMS.wild} comodín, ${RESCUE_ITEMS.undo} deshacer y 1 ver cartas 3 s; cambian los boletos (de los que pide el nivel a ×1.5) y las monedas: la de más boletos trae más.</p>
+    <table class="dtable"><tr><th>Cápsula</th><th>Boletos (aquí)</th><th>Monedas</th></tr>${RESCUE_COINS.map((c, k) => `<tr><td>${k + 1}</td><td>${need0 + Math.round((k * (top0 - need0)) / 3)}</td><td>${c.toLocaleString('es-MX')}</td></tr>`).join('')}</table>`;
   const countHTML = `<p class="dline ${clashes.length ? 'd-no' : 'd-yes'}">${clashes.length ? `<b>Choque:</b> en el nivel ${clashes.join(', ')} se abren dos cosas a la vez (en rojo).` : 'Sin choques: cada ventana de desbloqueo sale en su propio nivel.'}</p><table class="dtable dorder"><tr><th></th><th></th><th>Qué</th><th>Nivel</th><th>Mundo</th><th>Tú</th></tr>${rows.map(line).join('')}</table>
     <p class="dline"><b>Tienda: tienes ${sum((k) => ITEMS[k].filter((it) => owns(k, it.k)).length)} de ${Object.values(ITEMS).flat().length}</b> (tuyas / que hay)</p>
     <table class="dtable dshop"><tr><th>De dónde sale</th><th>Tienes</th><th>Faltan</th><th>Hay</th></tr>${ORIGINS_DEV.map(([o, name, ico]) => { const n = sum((k) => cnt(k, o)), y = sum((k) => mine(k, o)); return !n ? '' : `<tr class="dshop-g dacc" data-acc="s${o}"><td class="dname">${icon(ico)}${name}<span class="dchev">${icon('chev')}</span></td>${nums(y, n)}</tr>${SECTIONS.filter(({ k }) => cnt(k, o)).map(({ k, name: sn }) => `<tr class="dsub" data-of="s${o}" hidden><td class="dname">${icon(SEC_ICO[k])}${sn}</td>${nums(mine(k, o), cnt(k, o))}</tr>`).join('')}`; }).join('')}<tr class="dtot"><td><b>Total</b></td>${nums(sum((k) => ITEMS[k].filter((it) => owns(k, it.k)).length), Object.values(ITEMS).flat().length)}</tr></table>
     ${slotTable}
+    ${rescueTable}
     ${passTable}
     <p class="dline">De la tienda, ${shopLocked} siguen con candado por mundo; lo último se abre en el mundo ${lastNeed + 1} (nivel ${lastNeed * LEVELS_PER_WORLD + 1}).</p>`;
   // Secciones con título; cada botón dice en corto lo que hace (la explicación larga va en su title).
@@ -819,7 +826,7 @@ export function openDevMenu({ onGallery, onPlanets, onFestivals, onGoLevel, onRe
     ] },
     // Eventos (10 nov 2026): del mes, del día (festividad) y colección en un solo grupo, cada uno con su parte.
     { t: 'Eventos', items: [], parts: [
-      { k: 'mes', h: 'Evento del mes', ico: 'planet', sub: evNow ? `${evNow.name} · nivel ${Math.min(evNow.state.k + 1, EVENT_LEVELS)} de ${EVENT_LEVELS} · ${evNow.state.tk ? 'con boleto' : 'sin boleto'}` : 'no hay este mes', items: [
+      { k: 'mes', h: 'Evento del mes', ico: 'planet', tags: [['tragamonedas', 'Tragamonedas', 'Sale en la preventa y el mero día si no has comprado la entrada (una tirada por edición)']], sub: evNow ? `${evNow.name} · nivel ${Math.min(evNow.state.k + 1, EVENT_LEVELS)} de ${EVENT_LEVELS} · ${evNow.state.tk ? 'con boleto' : 'sin boleto'}` : 'no hay este mes', items: [
         { l: evNow ? 'Siguiente evento' : 'Ir al próximo', fn: () => ((save.devDay = (save.devDay || 0) + daysToNextEvent()), persist(), onRefresh()) },
         { l: 'Día antes del próximo', title: 'Mueve el reloj al último día del mes anterior: su botón sale gris con candado y la cuenta regresiva', fn: () => ((save.devDay = (save.devDay || 0) + daysToNextEvent() - 1), persist(), onRefresh()) },
         evNow && { l: 'Darme un boleto', title: 'Da el boleto sin esperar las 48 horas', fn: () => evSet({}) },
@@ -827,7 +834,7 @@ export function openDevMenu({ onGallery, onPlanets, onFestivals, onGoLevel, onRe
         evNow && { l: 'Siguiente planeta', fn: () => evSet({ k: Math.min(EVENT_LEVELS - 1, (Math.floor(evNow.state.k / EVENT_PER_PLANET) + 1) * EVENT_PER_PLANET) }) },
         evNow && { l: 'Ganar todo hasta el último jefe', title: 'Gana los niveles que faltan (con sus premios) y te deja en el jefe del último planeta', fn: () => (ev().state.tk = 1, ev().state.run = null, winTo(ev, evEnter, evWin, EVENT_LEVELS - 1)) },
       ] },
-      { k: 'dia', h: 'Festividad del día', ico: 'calavera', sub: `${festNow ? `${festNow.name} · ${festNow.soon ? (festNow.inDays > 1 ? `en ${festNow.inDays} días` : 'mañana') : `nivel ${Math.min(festNow.state.k + 1, FL)} de ${FL}`}` : festNext ? `próxima: ${festNext.name} en ${festNext.days} días` : 'ninguna lista'}${isOn('fiesta') ? '' : ` · se abre en el nivel ${UNLOCK.fiesta}`}`, items: [
+      { k: 'dia', h: 'Festividad del día', ico: 'calavera', tags: [['tragamonedas', 'Tragamonedas', 'Sale en la preventa y el mero día si no has comprado la entrada (una tirada por edición)']], sub: `${festNow ? `${festNow.name} · ${festNow.soon ? (festNow.inDays > 1 ? `en ${festNow.inDays} días` : 'mañana') : `nivel ${Math.min(festNow.state.k + 1, FL)} de ${FL}`}` : festNext ? `próxima: ${festNext.name} en ${festNext.days} días` : 'ninguna lista'}${isOn('fiesta') ? '' : ` · se abre en el nivel ${UNLOCK.fiesta}`}`, items: [
         festNext && festNext.days > 3 && { l: `3 días antes de: ${festNext.name}`, title: 'Mueve el reloj a 3 días de la siguiente fiesta: su botón sale gris con la cuenta regresiva', fn: () => toDay(festNext.days - 3) },
         festNow?.soon && { l: 'Empezarla', title: 'Mueve el reloj al día de la fiesta', fn: () => toDay(festNow.inDays) },
         festOn && { l: 'Ir al jefe del planeta', fn: () => festSet({ k: Math.min(FL - 1, Math.floor(festNow.state.k / FN) * FN + FN - 1) }) },
@@ -912,7 +919,9 @@ export function openDevMenu({ onGallery, onPlanets, onFestivals, onGoLevel, onRe
   const all = S.flatMap((sec) => [...sec.items, ...(sec.parts || []).flatMap((p) => p.items)]);
   const btns = (items) => `<div class="dbtns">${items.map((it) => `<button class="btn ${it.cls || 'ghost'}" data-i="${all.indexOf(it)}"${it.title ? ` title="${it.title}"` : ''}>${it.l}</button>`).join('')}</div>`;
   // parts: partes dentro de una sección, cada una con su icono, su color y sus botones.
-  const partHTML = (p) => `<div class="dpart dp-${p.k}"><h5>${icon(p.ico)}${p.h}${p.sub ? `<small>${p.sub}</small>` : ''}</h5>${btns(p.items)}</div>`;
+  // tags: lo que ya trae esa parte (15 nov 2026, el usuario: ver qué tiene cada evento e ir viendo qué más meterle).
+  const tagHTML = (t) => `<i class="dtag" title="${t[2] || t[1]}">${icon(t[0])}${t[1]}</i>`;
+  const partHTML = (p) => `<div class="dpart dp-${p.k}"><h5>${icon(p.ico)}${p.h}${p.tags ? `<span class="dtags">${p.tags.map(tagHTML).join('')}</span>` : ''}${p.sub ? `<small>${p.sub}</small>` : ''}</h5>${btns(p.items)}</div>`;
   const secHTML = (sec) => `<section class="dsec"><h4>${sec.t}${sec.sub ? `<small>${sec.sub}</small>` : ''}</h4>${sec.html || ''}${sec.items.length ? btns(sec.items) : ''}${(sec.parts || []).map(partHTML).join('')}</section>`;
   const m = openModal({
     title: 'Modo dev',

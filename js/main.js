@@ -2,7 +2,7 @@ import { save, prefs, persist, resetProfile, deleteProfile, renameProfile, expor
 import { UNLOCK, EVENTS, FESTIVALS, COLLECTIONS, evSoon, isOn, nextEvent, daysToNextCol, plusCols, STREAK_GOALS, STREAK_STEP, streakGoal, nextIndex, dailyStreak, streakTheme, streakReady, streakHot, streakWin, streakLose, streakPendToFeats, msToMidnight, col, colLeft, colWin, colOffers, colBuy, ev, evLeft, evTicketLeft, evTicketPrice, evBuyTicket, evPrize, evEnter, evWin, evLose, evAlbum, festAlbum, EVENT_PLANETS, EVENT_PER_PLANET, EVENT_LEVELS, festival, festivalLeft, festivalSoon, soonLeft, evPrePrice, evPreOwned, evPreBuy, nextFestival, festEnter, festWin, festLose, festShape, festPrice, festPaid, festBuy, festPre, FEST_PRE, FEST_ENTRY, EV_FIRST } from './events.js';
 import { WORLD_COUNT, LEVELS_PER_WORLD, TOTAL_LEVELS, worldInfo, generateLevel, variantLevel, MECH_INTRO, MECH_NAMES, MECHANICS, EXTRA, extraDebut, SCROLL_FROM, tideFirst, holeFirst, doorsFirst, bandaFirst, rocksFirst, secretId, isSecret, eventLevel, festivalLevel } from './levels.js';
 import { Game, faceHTML, backHTML, TIPS, TABLE_TEXT, MECH_KINDS, ART, scrSVG } from './game.js';
-import { maxBet, betFee, betSteps, BET_STEPS, HELPS, DAILY_PATH, dailyState, dailyPieces, DAILY_SHIELD_MAX, starsNeeded, TICKET_PRICE, ticketCost, ticketRefund, coinsFor, bossChest, rollChest, CONST_PRIZE, CONST_OPEN, openCost, constStart, openFree, boosted, secretCoins, rollSecret, openSurprise, MET_OFF, metShopPrice } from './economy.js';
+import { maxBet, betFee, betSteps, BET_STEPS, HELPS, DAILY_PATH, dailyState, dailyPieces, DAILY_SHIELD_MAX, starsNeeded, TICKET_PRICE, ticketCost, ticketRefund, coinsFor, bossChest, rollChest, CONST_PRIZE, CONST_OPEN, openCost, constStart, openFree, boosted, secretCoins, rollSecret, openSurprise, MET_OFF, metShopPrice, RESCUE_WEEK, RESCUE_COINS, RESCUE_ITEMS } from './economy.js';
 import { track, missions, missionDef, missionDone, missionsAllDone, autoClaim, ACHIEVEMENTS, ACHIEVEMENT_PRIZES, ACHIEVEMENT_MEDAL, ACHIEVEMENT_TOP, achievementGot, achievementProgress, achievementsVisible } from './missions.js';
 import { pauseOffscreen, openModal, toast, updateCoins, money, esc, reduced, wait, flyToWallet, spendFromWallet, sparkle, confetti, starsHTML, warp, buzz, balloons, lootBubbles, floatBubbles, streakWarnHTML, popPrize, popBalloon, countPop, HEADS, betLoseHTML, shownCoins } from './ui.js';
 import { icon, iconURL, iconInner, star, coin, miniPlanet, avatarHTML, AVATAR_COLORS, kidOf, KID_SKINS, KID_HAIRS, KID_STYLES, cardBackURL, setDeck, lockIcon, curtainIcon, chestBody, chestLid, boxBody, boxLid, capChute, capBody, capLid, vineSVG } from './art.js';
@@ -1451,9 +1451,6 @@ function openShort(g, bet, cost, fee, base) {
 // traen 1 comodín, 3 deshacer y 1 ver cartas 3 s; lo que cambia son los boletos: de los que pide el nivel a 50% más.
 // 13 nov 2026 (el usuario): hasta RESCUE_WEEK veces en 7 días y nunca dos el mismo día; cada cápsula trae además
 // monedas (RESCUE_COINS, hasta 500), más en la que trae más boletos.
-const RESCUE_WEEK = 3;
-const RESCUE_COINS = [200, 300, 400, 500];
-const RESCUE_ITEMS = { wild: 1, undo: 3, helps: { ver3: 1 } };
 const RESCUE_HUES = [['#ff9c5b', '#e2753a'], ['#5fd4c4', '#2fa79a'], ['#ff6f8e', '#e0496b'], ['#a785ff', '#8a5cf0']];
 const rescueNeed = () => {
   const g = save.next || 0;

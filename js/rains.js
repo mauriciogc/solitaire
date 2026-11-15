@@ -47,7 +47,7 @@ export function rainCSS(inner) {
   // Título Luz del norte: verde aurora a violeta, que se mueve despacio como la luz.
   css.push(`.title-chip.t-luzdelnorte { --tc: #fff; --td: #14204a; background: linear-gradient(100deg, #2fbf8a, #5ff0b0 30%, #a785ff 65%, #5ff0b0) 0 0 / 300% 100%; font-family: 'Lilita One'; font-weight: 400; text-shadow: 0 1.5px 0 #14204a; box-shadow: inset 0 -3px 0 #14204a; animation: shimmer 6s linear infinite; } .title-chip.t-luzdelnorte span { -webkit-text-stroke: 3px var(--td); paint-order: stroke fill; }`);
   // La ventana del perfil con el marco Corona de cristales (.modal.mr-*, como los demás marcos).
-  css.push(`.modal.mr-cristales { --mr: #5fe6f0; --mrh: linear-gradient(100deg, #1f8ea0, #5fe6f0 55%, #1f8ea0); --mrd: #0f5a66; background: radial-gradient(2px 2px at 30% 30%, #8ff2f8, transparent) 0 0 / 38px 38px, var(--cream); }`);
+  css.push(`.modal.mr-cristales { --mr: #b48cff; --mrh: linear-gradient(100deg, #7d52d8, #c9a6ff 55%, #7d52d8); --mrd: #4a2a99; background: radial-gradient(2px 2px at 30% 30%, #c9a6ff, transparent) 0 0 / 38px 38px, var(--cream); }`);
   css.push(`.modal.mr-cristales > .mhead::before { content: ''; position: absolute; left: 12px; top: 6px; z-index: 4; width: 38px; height: 38px; pointer-events: none; background: ${svgURL(one('cristal'))} center / contain no-repeat; rotate: -14deg; animation: mr-sticker 2.6s ease-in-out infinite; }`);
   // El sticker de Jugar (.go.met::before) con el icono de cada lluvia en vez del meteorito.
   for (const [k, ico] of [['comet', 'cometaLluvia'], ['aurora', 'aurora'], ['crystal', 'cristal']]) css.push(`.go.met.sh-${k}::before { background: ${svgURL(one(ico))} center / contain no-repeat; }`);
