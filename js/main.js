@@ -681,7 +681,7 @@ function sideTour() {
           return c;
         });
         const n = own.length + locked.length;
-        const g = h(`<div class="tour-grp"><span class="iconbtn tb grp-btn">${icon('star')}</span><div class="grp-drawer" style="--gc:${Math.min(3, Math.ceil(n / 2))}"></div></div>`);
+        const g = h(`<div class="tour-grp"><span class="iconbtn tb grp-btn">${icon('star')}</span><div class="grp-drawer" style="--gc:${evCols(n)}"></div></div>`);
         drawer = g.querySelector('.grp-drawer');
         own.forEach((c) => drawer.append(c));
         col.append(g);
@@ -967,17 +967,19 @@ const achievementsBtn = () => {
   return `<button class="iconbtn tb press prog logros-btn ${fresh('logros')}" data-a="logros" style="--p:${open.length ? p.toFixed(3) : 1}" aria-label="Logros" title="Logros">${icon('trophy')}${medals ? `<small class="rn">${medals}</small>` : ''}</button>`;
 };
 // 8 nov 2026: con más de 3 botones, cada lado se agrupa en un botón dorado con lo más urgente (listo > arde > nuevo) y
-// cuántos tienen algo listo; tocarlo abre su cajón (tarjeta oscura sin título, 3 o 4 renglones y hasta 3 columnas,
+// cuántos tienen algo listo; tocarlo abre su cajón (tarjeta oscura sin título; menú: 3 o 4 renglones y hasta 3 columnas; eventos: 2 renglones y hasta 4 columnas,
 // cada botón con su nombre abajo) y
 // tocar afuera lo cierra.
 // La festividad del día entra a la columna de eventos.
 const GROUP_FROM = 4;
+const evCols = (n) => Math.min(4, Math.ceil(n / 2));
 const grouped = (k, label, html) => {
   const n = (html.match(/<button /g) || []).length;
   if (n < GROUP_FROM) return html;
   // Menú: de 3 o 4 renglones y máximo 3 columnas (hasta 6 en 3 renglones, 7-8 en 4 de 2, más en 3 columnas).
-  // Eventos: máximo 2 renglones (hasta 3 columnas), para que el cajón no llegue al botón de jugar.
-  const cols = k === 'r' ? Math.min(3, Math.ceil(n / 2)) : n <= 6 ? Math.ceil(n / 3) : n <= 8 ? 2 : 3;
+  // Eventos: máximo 2 renglones, para que el cajón no llegue al botón de jugar: hasta 3 columnas y, si son 7 u 8 (raro:
+  // festividades pegadas con su preventa), 4 (14 nov 2026, el usuario).
+  const cols = k === 'r' ? evCols(n) : n <= 6 ? Math.ceil(n / 3) : n <= 8 ? 2 : 3;
   return `<button class="iconbtn tb press grp-btn" data-a="grp-${k}" aria-label="${label}" aria-expanded="false" title="${label}">${icon(k === 'l' ? 'menu' : 'star')}<span class="grp-n" hidden></span></button><div class="grp-drawer" style="--gc:${cols}">${html}</div>`;
 };
 const eventButtons = (res) => {

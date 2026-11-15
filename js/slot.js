@@ -1,6 +1,7 @@
 // Tragamonedas galáctico (14 nov 2026, pedido del usuario): una tirada de la suerte para entrar al evento del mes o a una
 // festividad. Sale los días de la preventa (3 días antes) y el mero día (festividad: su día; evento del mes: del 1 al 5),
-// si todavía no compras la entrada y traes menos del doble de lo que cuesta. Se cobra una vez por edición
+// si todavía no compras la entrada (traigas lo que traigas: 14 nov 2026, el usuario: que no salgan perdiendo los que
+// ahorraron; si traes más del doble, la tabla es más chica). Se cobra una vez por edición
 // (save.spins[id]); sola en el mapa sale mientras no la jales (no se puede saltar) y luego abre su ventana de compra.
 // Si dos ediciones están abiertas a la vez, una sola tirada cuenta para las dos y paga el doble.
 // Premio: se escoge primero y luego los planetas que lo forman. Si te falta para la entrada, te da lo que falta más un
@@ -12,6 +13,8 @@ import { money, reduced, flyToWallet, sparkle, confetti, popPrize, updateCoins, 
 
 // [monedas, probabilidad %]. El último es el jackpot: 4 agujeros negros.
 export const SLOT_PAY = [[200, 17], [300, 30], [400, 33], [600, 14], [1000, 4], [2000, 2]];
+// Si trae más del doble de la entrada (14 nov 2026, el usuario: amortiguar): la misma tabla, más chica. El jackpot igual.
+export const SLOT_PAY_RICH = [[100, 17], [150, 30], [250, 33], [400, 14], [800, 4]];
 const JACKPOT = 2000, HOLE = 5;
 // Los mismos planetitas del regalo diario.
 const PLANETS = [['#ff9c5b', '#e2753a', '#ffd27a'], ['#5ab0ff', '#2f86c8', '#9fe6ff'], ['#86cf5c', '#4d9f45', '#2f86c8'], ['#ff7aa2', '#d64f7c', '#ffd0e0'], ['#a37bff', '#7c55e0', '#e0d0ff']];
@@ -36,31 +39,43 @@ function editions() {
   if (e && !e.state.paid && d.getDate() <= SLOT_MONTH_DAYS) add(e, evTicketPrice(e), 'mes');
   return out.slice(0, 2);
 }
-// La tirada de hoy: { eds, total, mult } o null (no hay o traes el doble de lo que cuestan).
+// La tirada de hoy: { eds, total, mult } o null (no hay).
 export function slotOffer() {
   const eds = editions();
   if (!eds.length) return null;
-  const total = eds.reduce((n, x) => n + x.price, 0);
-  return save.coins < total * 2 ? { eds, total, mult: eds.length } : null;
+  return { eds, total: eds.reduce((n, x) => n + x.price, 0), mult: eds.length };
+}
+// Para el modo dev: si hoy hay tirada y, si no, por qué.
+export function slotWhy() {
+  const eds = editions(), fmt = (n) => n.toLocaleString('es-MX');
+  if (!eds.length) return 'Hoy no hay: ninguna preventa ni día de fiesta abierto (o ya cobraste su tirada).';
+  const total = eds.reduce((n, x) => n + x.price, 0), names = eds.map((x) => x.name).join(' y ');
+  const tier = save.coins < total ? `le faltan ${fmt(total - save.coins)}: lo que falta + 90 a 540` : save.coins <= total * 2 ? 'hasta el doble: tabla normal' : `más del doble (${fmt(total * 2)}): tabla chica`;
+  return `Hoy sí sale${eds.length > 1 ? ' ×2' : ''}: ${names} · entrada ${fmt(total)} · traes ${fmt(save.coins)} → ${tier}.`;
 }
 // Sale sola en el mapa mientras haya tirada sin jalar (no se puede saltar).
 export const slotDue = () => !!slotOffer();
 
-// El premio (sin multiplicar). need: lo que te falta (ya dividido entre mult); force: 'jackpot' para el modo dev.
+// El premio (sin multiplicar): { c: monedas, row: su renglón de la tabla (0 todos distintos … 4 cuatro planetas, 5 jackpot) }.
+// need: lo que te falta (ya dividido entre mult) · rich: trae más del doble · force: 'jackpot' para el modo dev.
+// Tres escalones: le falta → lo que falta + 90 a 540 · hasta el doble → SLOT_PAY · más del doble → SLOT_PAY_RICH.
 export const SLOT_EXTRA = [90, 540];
-function prize(need, force) {
-  if (force === 'jackpot' || Math.random() * 100 < SLOT_PAY.at(-1)[1]) return JACKPOT;
-  if (need > 0) return Math.round((need + SLOT_EXTRA[0] + Math.random() * (SLOT_EXTRA[1] - SLOT_EXTRA[0])) / 10) * 10;
+function prize(need, rich, force) {
+  if (force === 'jackpot' || Math.random() * 100 < SLOT_PAY.at(-1)[1]) return { c: JACKPOT, row: 5 };
+  if (need > 0) {
+    const c = Math.round((need + SLOT_EXTRA[0] + Math.random() * (SLOT_EXTRA[1] - SLOT_EXTRA[0])) / 10) * 10;
+    return { c, row: c >= 1000 ? 4 : c >= 600 ? 3 : c >= 400 ? 2 : c >= 300 ? 1 : 0 };
+  }
+  const T = rich ? SLOT_PAY_RICH : SLOT_PAY.slice(0, -1);
   let r = Math.random() * (100 - SLOT_PAY.at(-1)[1]);
-  for (const [c, w] of SLOT_PAY.slice(0, -1)) if ((r -= w) < 0) return c;
-  return SLOT_PAY[0][0];
+  for (let i = 0; i < T.length; i++) if ((r -= T[i][1]) < 0) return { c: T[i][0], row: i };
+  return { c: T[0][0], row: 0 };
 }
-// Los 4 símbolos según cuánto da: 4 agujeros el jackpot · 4 planetas iguales desde 1,000 · 3 iguales desde 600 · dos
-// pares desde 400 · un par desde 300 · todos distintos lo demás.
-function face(p) {
-  if (p === JACKPOT) return [HOLE, HOLE, HOLE, HOLE];
+// Los 4 símbolos de cada renglón: 4 agujeros (jackpot) · 4 planetas iguales · 3 iguales · dos pares · un par · todos distintos.
+function face(row) {
+  if (row === 5) return [HOLE, HOLE, HOLE, HOLE];
   const [a, b, c, d] = shuffle([0, 1, 2, 3, 4, HOLE]), pl = shuffle([0, 1, 2, 3, 4])[0];
-  return shuffle(p >= 1000 ? [pl, pl, pl, pl] : p >= 600 ? [a, a, a, b] : p >= 400 ? [a, a, b, b] : p >= 300 ? [a, a, b, c] : [a, b, c, d]);
+  return shuffle([[a, b, c, d], [a, a, b, c], [a, a, b, b], [a, a, a, b], [pl, pl, pl, pl]][row]);
 }
 
 // ---------- La pantalla ----------
@@ -123,7 +138,7 @@ export function openSlot({ test = false, force = null } = {}) {
       state = 'spin';
       q('.sx-tap').remove();
       // Se cobra al jalar (si cierra la app a la mitad, ya lo tiene).
-      const p = prize(Math.ceil((off.total - save.coins) / mult), force), pay = p * mult, f = face(p);
+      const pz = prize(Math.ceil((off.total - save.coins) / mult), save.coins > off.total * 2, force), p = pz.c, pay = p * mult, f = face(pz.row);
       if (!test) {
         save.spins ||= {};
         for (const x of eds) save.spins[x.id] = 1;

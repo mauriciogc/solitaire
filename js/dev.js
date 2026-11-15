@@ -6,7 +6,7 @@ import { streakWin, streakLose, dailyStreak, nextGoal, col, daysToNextCol, ev, d
 import { TIERS, generateLevel, hardHelp, festivalPick, festivalLevel, eventLevel, eventGroup, EVENT_WORLDS, packGroups, worldInfo, specials, specialGroup, SPECIAL_ID, TOTAL_LEVELS, LEVELS_PER_WORLD, MECH_NAMES, MECHANICS, MECH_INTRO, SCROLL_FROM, EXTRA, extraDebut, tideFirst, holeFirst, doorsFirst, bandaFirst, rocksFirst } from './levels.js';
 import { playCasual, solve, initState } from './engine.js';
 import { openModal, toast, updateCoins, popGoal } from './ui.js';
-import { openSlot } from './slot.js';
+import { openSlot, slotWhy, SLOT_PAY, SLOT_PAY_RICH, SLOT_EXTRA, SLOT_MONTH_DAYS } from './slot.js';
 import { mulberry32 } from './rng.js';
 import { icon, miniPlanet } from './art.js';
 import { tableHTML, BIOMES, biomeKey } from './biomes.js';
@@ -690,9 +690,16 @@ export function openDevMenu({ onGallery, onPlanets, onFestivals, onGoLevel, onRe
     <table class="dtable"><tr><th>Sello</th><th>Niveles</th><th>Monedas</th><th>Exclusivo</th><th></th></tr>${Array.from({ length: PASS_MAX }, (_, i) => ppRow(i + 1, passGoal(i + 1), passPrize(i + 1), i < (save.pass?.s || 0))).join('')}</table>
     <p class="dline"><b>Secretos</b>: ${secretCount()} ganados · ${save.pass?.x || 0} de ${SECRET_MAX} premios</p>
     <table class="dtable"><tr><th>Premio</th><th>Secretos</th><th>Monedas</th><th>Exclusivo</th><th></th></tr>${Array.from({ length: SECRET_MAX }, (_, i) => ppRow(i + 1, secretGoal(i + 1), secretPrize(i + 1), i < (save.pass?.x || 0))).join('')}</table>`;
+  // Tragamonedas galáctico (14 nov 2026, js/slot.js): cómo funciona y si hoy sale.
+  const SLOT_FACE = ['Todos distintos', 'Un par', 'Dos pares', 'Tres iguales', '4 planetas iguales', '4 agujeros negros (jackpot)'];
+  const slotTable = `<p class="dline"><b>Tragamonedas</b>: ${slotWhy()}</p>
+    <p class="dline">Sale al entrar al juego o volver al mapa, en la <b>preventa</b> (3 días antes) y el <b>mero día</b> (festividad: su día; mes: del 1 al ${SLOT_MONTH_DAYS}), si no compró la entrada (traiga lo que traiga). Una tirada por edición; si hay dos abiertas, una sola <b>×2</b>. No se puede saltar y al terminar abre la compra.</p>
+    <p class="dline">Tres escalones: si le <b>falta</b> para la entrada, lo que falta + ${SLOT_EXTRA[0]} a ${SLOT_EXTRA[1]} al azar (los planetas salen según el monto); si trae <b>hasta el doble</b>, la tabla normal; si trae <b>más del doble</b>, la tabla chica. El jackpot (${SLOT_PAY.at(-1)[1]}%) sale en todos.</p>
+    <table class="dtable"><tr><th>Resultado</th><th>Hasta el doble</th><th>Más del doble</th><th>%</th></tr>${SLOT_PAY.map(([c, w], i) => `<tr><td class="dname">${SLOT_FACE[i]}</td><td>${c.toLocaleString('es-MX')}</td><td>${(SLOT_PAY_RICH[i]?.[0] ?? c).toLocaleString('es-MX')}</td><td>${w}%</td></tr>`).join('')}</table>`;
   const countHTML = `<p class="dline ${clashes.length ? 'd-no' : 'd-yes'}">${clashes.length ? `<b>Choque:</b> en el nivel ${clashes.join(', ')} se abren dos cosas a la vez (en rojo).` : 'Sin choques: cada ventana de desbloqueo sale en su propio nivel.'}</p><table class="dtable dorder"><tr><th></th><th></th><th>Qué</th><th>Nivel</th><th>Mundo</th><th>Tú</th></tr>${rows.map(line).join('')}</table>
     <p class="dline"><b>Tienda: tienes ${sum((k) => ITEMS[k].filter((it) => owns(k, it.k)).length)} de ${Object.values(ITEMS).flat().length}</b> (tuyas / que hay)</p>
     <table class="dtable dshop"><tr><th>De dónde sale</th><th>Tienes</th><th>Faltan</th><th>Hay</th></tr>${ORIGINS_DEV.map(([o, name, ico]) => { const n = sum((k) => cnt(k, o)), y = sum((k) => mine(k, o)); return !n ? '' : `<tr class="dshop-g dacc" data-acc="s${o}"><td class="dname">${icon(ico)}${name}<span class="dchev">${icon('chev')}</span></td>${nums(y, n)}</tr>${SECTIONS.filter(({ k }) => cnt(k, o)).map(({ k, name: sn }) => `<tr class="dsub" data-of="s${o}" hidden><td class="dname">${icon(SEC_ICO[k])}${sn}</td>${nums(mine(k, o), cnt(k, o))}</tr>`).join('')}`; }).join('')}<tr class="dtot"><td><b>Total</b></td>${nums(sum((k) => ITEMS[k].filter((it) => owns(k, it.k)).length), Object.values(ITEMS).flat().length)}</tr></table>
+    ${slotTable}
     ${passTable}
     <p class="dline">De la tienda, ${shopLocked} siguen con candado por mundo; lo último se abre en el mundo ${lastNeed + 1} (nivel ${lastNeed * LEVELS_PER_WORLD + 1}).</p>`;
   // Secciones con título; cada botón dice en corto lo que hace (la explicación larga va en su title).
@@ -827,9 +834,9 @@ export function openDevMenu({ onGallery, onPlanets, onFestivals, onGoLevel, onRe
         festOn && { l: 'Siguiente planeta', fn: () => festSet({ k: Math.min(FL - 1, (Math.floor(festNow.state.k / FN) + 1) * FN) }) },
         festOn && { l: 'Ganar todo hasta el último jefe', title: 'Gana los niveles que faltan (con sus premios) y te deja en el jefe del último planeta', fn: () => ((festival().state.run = null), winTo(festival, festEnter, festWin, FL - 1)) },
         festOn && { l: 'Empezar de cero', fn: () => ((save.fi = null), persist(), onRefresh()) },
-        // Tragamonedas galáctico (14 nov 2026, js/slot.js): sale en la preventa y el día de la fiesta si traes menos del
-        // doble de la entrada; una tirada por edición.
-        { l: 'Tragamonedas otra vez', title: 'Borra las tiradas cobradas: vuelve a salir en el mapa (en preventa o el día de la fiesta, con menos del doble de la entrada)', fn: () => (delete save.spins, persist(), onRefresh()) },
+        // Tragamonedas galáctico (14 nov 2026, js/slot.js): sale en la preventa y el día de la fiesta si no has comprado
+        // la entrada; una tirada por edición.
+        { l: 'Tragamonedas otra vez', title: 'Borra las tiradas cobradas: vuelve a salir en el mapa (en preventa o el día de la fiesta)', fn: () => (delete save.spins, persist(), onRefresh()) },
         { l: 'Abrir la tragamonedas', title: 'De prueba: no da monedas ni marca nada', fn: () => openSlot({ test: true }) },
         { l: 'Ver el jackpot', title: 'De prueba: caen los 4 agujeros negros', fn: () => openSlot({ test: true, force: 'jackpot' }) },
         { l: 'Quedarme con 300 monedas', title: 'Para que salga la tirada', fn: () => ((save.coins = 300), persist(), onRefresh()) },
