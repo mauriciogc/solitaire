@@ -1,5 +1,5 @@
 import { mulberry32, hash, randInt, pick, shuffle } from './rng.js';
-import { follows, mod13, HOLE_EVERY, BELT_W, solve, initState, playRank, cutOf, refStep, refReady, play as playCard, draw as drawCard, won, starsFor, playCasual } from './engine.js';
+import { boxNext, follows, mod13, HOLE_EVERY, BELT_W, solve, initState, playRank, cutOf, refStep, refReady, play as playCard, draw as drawCard, won, starsFor, playCasual } from './engine.js';
 
 // Unidades del tablero: una carta mide W x H. Posiciones = esquina superior izquierda.
 export const W = 1;
@@ -463,7 +463,7 @@ export const tideFirst = () => {
   if (tideDebut == null) for (tideDebut = TIDE_FROM; cardDebut(tideDebut) || exFold(tideDebut) || scrollKind(tideDebut) || hardHelp(tideDebut) || isRespite(tideDebut); tideDebut++);
   return tideDebut;
 };
-export const tideKind = (g) => (exFoldKind(g) ? exFoldKind(g) === 'tide' : !cardDebut(g) && (g === tideFirst() || (g > tideFirst() && !ovDebut(g) && !((hash(g * 3571 + 61) >>> 5) % 10))));
+export const tideKind = (g) => finalTable(g) ? finalTable(g) === 'tide' : (exFoldKind(g) ? exFoldKind(g) === 'tide' : !cardDebut(g) && (g === tideFirst() || (g > tideFirst() && !ovDebut(g) && !((hash(g * 3571 + 61) >>> 5) % 10))));
 // Agujero negro (8 nov 2026): mesa sobre un tablero normal, como la marea (nunca juntas). Atrapa casi todo un grupo
 // (9 nov 2026; antes 3-4 cartas marcadas) y cada HOLE_EVERY jugadas o robos les revuelve los números (ver rankOf en engine.js). Desde HOYO_FROM + 1 (a más de
 // 10 niveles de la carta moneda), se intenta en ~1 de cada 5 normales del camino sin otra mesa, respiro ni ayudas
@@ -484,7 +484,7 @@ export const doorsFirst = () => {
   if (doorsDebut == null) for (doorsDebut = DOORS_FROM; cardDebut(doorsDebut) || exFold(doorsDebut) || scrollKind(doorsDebut) || hardHelp(doorsDebut) || isRespite(doorsDebut) || tideKind(doorsDebut) || holeKind(doorsDebut); doorsDebut++);
   return doorsDebut;
 };
-export const doorsKind = (g) => (exFoldKind(g) ? exFoldKind(g) === 'doors' : !cardDebut(g) && !tideKind(g) && !holeKind(g) && (g === doorsFirst() || (g > doorsFirst() && !ovDebut(g) && !((hash(g * 6151 + 113) >>> 4) % 10))));
+export const doorsKind = (g) => finalTable(g) ? finalTable(g) === 'doors' : (exFoldKind(g) ? exFoldKind(g) === 'doors' : !cardDebut(g) && !tideKind(g) && !holeKind(g) && (g === doorsFirst() || (g > doorsFirst() && !ovDebut(g) && !((hash(g * 6151 + 113) >>> 4) % 10))));
 // Banda transportadora (8 nov 2026): una fila de cartas da vueltas dentro de una máquina; solo se ven BELT_W a la vez
 // y avanza un lugar con cada jugada o robo (ver beltShown en engine.js). Va junto a un tablero normal.
 export const BANDA_FROM = 450; // antes 455
@@ -493,7 +493,7 @@ export const bandaFirst = () => {
   if (bandaDebut == null) for (bandaDebut = BANDA_FROM; cardDebut(bandaDebut) || exFold(bandaDebut) || scrollKind(bandaDebut) || hardHelp(bandaDebut) || isRespite(bandaDebut) || tideKind(bandaDebut) || holeKind(bandaDebut) || doorsKind(bandaDebut); bandaDebut++);
   return bandaDebut;
 };
-export const bandaKind = (g) => (exFoldKind(g) ? exFoldKind(g) === 'banda' : !cardDebut(g) && !tideKind(g) && !holeKind(g) && !doorsKind(g) && (g === bandaFirst() || (g > bandaFirst() && !ovDebut(g) && !((hash(g * 2477 + 71) >>> 5) % 6))));
+export const bandaKind = (g) => finalTable(g) ? finalTable(g) === 'banda' : (exFoldKind(g) ? exFoldKind(g) === 'banda' : !cardDebut(g) && !tideKind(g) && !holeKind(g) && !doorsKind(g) && (g === bandaFirst() || (g > bandaFirst() && !ovDebut(g) && !((hash(g * 2477 + 71) >>> 5) % 6))));
 // Cinturón de asteroides (10 nov 2026, pedido del usuario): mesa sobre un tablero normal, nunca con otra. Cada
 // ROCK_EVERY robos caen 2 o 3 piedras que tapan cartas libres por unas jugadas (ver dropRocks en engine.js). Desde
 // ROCAS_FROM, ~1 de cada 6 normales que no traen otra mesa.
@@ -503,8 +503,28 @@ export const rocksFirst = () => {
   if (rocksDebut == null) for (rocksDebut = ROCKS_FROM; cardDebut(rocksDebut) || exFold(rocksDebut) || scrollKind(rocksDebut) || hardHelp(rocksDebut) || isRespite(rocksDebut) || tideKind(rocksDebut) || holeKind(rocksDebut) || doorsKind(rocksDebut) || bandaKind(rocksDebut); rocksDebut++);
   return rocksDebut;
 };
-export const rocksKind = (g) => (exFoldKind(g) ? exFoldKind(g) === 'rocks' : !cardDebut(g) && !tideKind(g) && !holeKind(g) && !doorsKind(g) && !bandaKind(g) && (g === rocksFirst() || (g > rocksFirst() && !ovDebut(g) && !((hash(g * 5303 + 89) >>> 5) % 6))));
-export const holeKind = (g) => (exFoldKind(g) ? exFoldKind(g) === 'hole' : !cardDebut(g) && !tideKind(g) && (g === holeFirst() || (g > holeFirst() && !ovDebut(g) && !((hash(g * 4241 + 97) >>> 6) % 5))));
+export const rocksKind = (g) => finalTable(g) ? finalTable(g) === 'rocks' : (exFoldKind(g) ? exFoldKind(g) === 'rocks' : !cardDebut(g) && !tideKind(g) && !holeKind(g) && !doorsKind(g) && !bandaKind(g) && (g === rocksFirst() || (g > rocksFirst() && !ovDebut(g) && !((hash(g * 5303 + 89) >>> 5) % 6))));
+// Caja galáctica (15 nov 2026, pedido del usuario): mesa sobre un tablero normal con una caja en la orilla que se abre
+// con una combinación de 3 a 8 números jugados en orden (ver boxStep en engine.js). Solo da premio: no cambia si el
+// nivel se gana. Desde BOX_FROM, ~1 de cada 8 normales que no traen otra mesa.
+export const BOX_FROM = 650;
+// Nivel final de cada planeta (el 10, menos el del jefe de constelación): de preferencia una mesa especial de las que
+// ya se estrenaron (FINAL_TABLES: desde qué nivel), escogida con su hash. Los duros no (su tablero es otro).
+export const FINAL_MIX = 3;
+export const isFinal = (g) => g < TOTAL_LEVELS && g % LEVELS_PER_WORLD === LEVELS_PER_WORLD - 1 && !constBoss(g);
+const FINAL_TABLES = () => [['gravedad', SCROLL_FROM.gravedad], ['nebulosa', SCROLL_FROM.nebulosa], ['hangar', SCROLL_FROM.hangar], ['bitacora', SCROLL_FROM.bitacora], ['tide', TIDE_FROM], ['hole', HOLE_FROM], ['doors', DOORS_FROM], ['banda', BANDA_FROM], ['rocks', ROCKS_FROM], ['portal', SCROLL_FROM.portal], ['voltea', SCROLL_FROM.voltea], ['box', BOX_FROM]];
+export const finalTable = (g) => {
+  if (!isFinal(g) || hardHelp(g)) return null;
+  const open = FINAL_TABLES().filter(([, f]) => g > f + 5);
+  return open.length ? open[hash(g * 911 + 17) % open.length][0] : null;
+};
+let boxDebut = null;
+export const boxFirst = () => {
+  if (boxDebut == null) for (boxDebut = BOX_FROM; cardDebut(boxDebut) || exFold(boxDebut) || scrollKind(boxDebut) || hardHelp(boxDebut) || isRespite(boxDebut) || tideKind(boxDebut) || holeKind(boxDebut) || doorsKind(boxDebut) || bandaKind(boxDebut) || rocksKind(boxDebut); boxDebut++);
+  return boxDebut;
+};
+export const boxKind = (g) => finalTable(g) ? finalTable(g) === 'box' : !cardDebut(g) && !exFold(g) && !scrollKind(g) && !tideKind(g) && !holeKind(g) && !doorsKind(g) && !bandaKind(g) && !rocksKind(g) && (g === boxFirst() || (g > boxFirst() && !ovDebut(g) && !((hash(g * 6907 + 131) >>> 5) % 8)));
+export const holeKind = (g) => finalTable(g) ? finalTable(g) === 'hole' : (exFoldKind(g) ? exFoldKind(g) === 'hole' : !cardDebut(g) && !tideKind(g) && (g === holeFirst() || (g > holeFirst() && !ovDebut(g) && !((hash(g * 4241 + 97) >>> 6) % 5))));
 export const GRAV_SHOWN = 2; // cartas boca arriba en cada columna
 export const HOLE_MAX = 99; // cartas que atrapa el agujero negro, como mucho (10 nov 2026: todas; antes 12)
 export const HOLE_TAKE = 1; // parte que se traga y revuelve en cada vuelta (10 nov 2026: todas; antes 0.4)
@@ -523,8 +543,8 @@ const cardDebut = (g) => g % LEVELS_PER_WORLD === 0 && MECHANICS.some((m) => !EX
 // agujero negro, puertas, banda o asteroides), escogida por nivel; antes, enrollada, gravedad o nebulosa.
 // 14 nov 2026 (calendario nuevo): los estrenos de las mesas que van sobre un tablero normal y de las cartas de regalo
 // caen justo en el primer nivel de su mundo (301, 401…; 221, 271): ahí no sale otra mesa al azar.
-const ovDebut = (g) => g === TIDE_FROM || g === HOLE_FROM || g === DOORS_FROM || g === BANDA_FROM || g === ROCKS_FROM;
-const reserved = (g) => ovDebut(g) || EXTRA.some((m) => MECH_INTRO[m] * LEVELS_PER_WORLD === g);
+const ovDebut = (g) => g === TIDE_FROM || g === HOLE_FROM || g === DOORS_FROM || g === BANDA_FROM || g === ROCKS_FROM || g === BOX_FROM;
+const reserved = (g) => ovDebut(g) || constBoss(g) || EXTRA.some((m) => MECH_INTRO[m] * LEVELS_PER_WORLD === g);
 const exFold = (g) => g >= 208 && g < TOTAL_LEVELS && !cardDebut(g) && !reserved(g) && !((hash(g * 3571 + 211) >>> 7) % 12);
 const exFoldKind = (g) => {
   if (!exFold(g) || g < TIDE_FROM) return null;
@@ -533,6 +553,8 @@ const exFoldKind = (g) => {
 };
 export function scrollKind(g) {
   if (g >= TOTAL_LEVELS || cardDebut(g) || reserved(g)) return null;
+  const ft = finalTable(g);
+  if (ft) return SCROLL_FROM[ft] != null ? ft : null;
   // Cada una se presenta justo en su nivel de inicio; después sale al azar.
   for (const k in SCROLL_FROM) if (g === SCROLL_FROM[k]) return k;
   if (g >= SCROLL_FROM.mesa && !(hash(g * 31 + 7) % 12)) return 'mesa';
@@ -744,6 +766,7 @@ export const isSecret = (g) => g >= TOTAL_LEVELS && g < TOTAL_LEVELS + WORLD_COU
 export function generateLevel(g, ev = null) {
   if (ev) return buildLevel(g, ev);
   if (g >= SPECIAL_ID) return specialLevel(g - SPECIAL_ID);
+  if (constBoss(g)) return bossLevel(g);
   const h = hardHelp(g);
   if (h) return pickLevel(`c${g}`, h + 1, (t) => buildLevel(g, null, t, h + 1));
   return softLevel(g);
@@ -775,6 +798,63 @@ export function pickLevel(key, tier, make) {
     if (off <= near) break;
   }
   picked.set(key, best.t);
+  return best.L;
+}
+
+// ---------- Jefes de constelación (15 nov 2026, pedido del usuario) ----------
+// El último nivel de cada constelación (100, 200…) trae una criatura que juega contra ti (ver bossStep en engine.js).
+// Se turnan de la más sencilla a la más compleja y cada 4 constelaciones vuelven más fuertes (r = la vuelta): la
+// fuego del Fénix cae en más cartas, el Ilusionista y el Kraken atacan más seguido, el Kraken mancha más cartas y la Ballena
+// se traga más. Mesa normal (sin otra mesa) y nunca duro. Se prueba el tablero t hasta que el solucionador lo gana con
+// el jefe; la vida (hp) sube con el tablero y la vuelta. level.foe (level.boss ya es el jefe de cada planeta).
+export const BOSS_ORDER = ['fenix', 'ilus', 'kraken', 'whale'];
+export const BOSS_NAMES = { fenix: 'Fénix estelar', ilus: 'El Ilusionista', kraken: 'Kraken', whale: 'Ballena glotona' };
+export const BOSS_MIN = 0.15;
+// Vida del jefe: 60% de las cartas + 2 por vuelta. Si con ella ningún tablero llega a BOSS_MIN, se baja por pasos
+// (15 nov 2026, el usuario: «si son jefes, buscar un tablero que cumpla mayor a 15%»; la Ballena enterraba el 1600):
+// con menos vida se le vence antes y deja de atacar.
+const BOSS_HP = [null, 0.45, 0.35, 0.25];
+export const constBoss = (g) => g < TOTAL_LEVELS && g % (10 * LEVELS_PER_WORLD) === 10 * LEVELS_PER_WORLD - 1;
+export const bossOf = (g) => (constBoss(g) ? { kind: BOSS_ORDER[Math.floor(g / (10 * LEVELS_PER_WORLD)) % BOSS_ORDER.length], r: Math.floor(g / (10 * LEVELS_PER_WORLD) / BOSS_ORDER.length) } : null);
+// Jefe en segundo plano (15 nov 2026): buscar un tablero que pase del 15% puede tardar segundos; js/boss-worker.js lo
+// arma sin trabar la pantalla mientras juegas los niveles de antes y main.js guarda lo que escogió (setBossPick).
+export const bossPick = (g) => (bossLevel(g), picked.get(`b${g}`));
+export const setBossPick = (g, p) => picked.set(`b${g}`, p);
+export const bossPicked = (g) => picked.has(`b${g}`);
+function bossLevel(g) {
+  const key = `b${g}`, B = bossOf(g);
+  // p = [t, k]: la versión del tablero y el paso de vida.
+  const make = ([t, k]) => {
+    const L = buildLevel(g, null, t);
+    L.foe = { kind: B.kind, r: B.r, hp: k ? Math.round(L.cards.length * BOSS_HP[k]) : Math.round(L.cards.length * 0.6) + 2 * Math.min(4, B.r) };
+    return L;
+  };
+  if (picked.has(key)) return picked.get(key) < 0 ? buildLevel(g) : make(picked.get(key));
+  // El primero que se gana con el jefe y que el bot casual gana más de BOSS_MIN (15%) de las veces, probando 8
+  // tableros con cada paso de vida; si ninguno, el más fácil de los que se ganan. Se arma al entrar al nivel.
+  let best = null;
+  const solved = new Set();
+  search: for (let k = 0; k < BOSS_HP.length; k++) {
+    for (let t = 0; t < 8; t++) {
+      const x = make([t, k]);
+      // Con menos vida lo que ya se ganaba se sigue ganando: no se vuelve a resolver.
+      if (!solved.has(t) && !solve(x, initState(x), 60000)) continue;
+      solved.add(t);
+      // Prueba rápida (30 partidas) y, si pasa, se confirma con 60 más (con 30 solas, 5 victorias parecían 17% y
+      // eran 10%). Pide un poco más de BOSS_MIN para dejar margen.
+      let n = QUICK, w = quickWins(x);
+      if (w >= QUICK * BOSS_MIN) {
+        const r = mulberry32(x.g * 7 + 3);
+        for (let i = 0; i < 2 * QUICK; i++) w += playCasual(x, r);
+        n = 3 * QUICK;
+      }
+      if (!best || w / n > best.w) best = { L: x, p: [t, k], w: w / n };
+      if (w >= n * (BOSS_MIN + 0.03)) break search;
+    }
+  }
+  // Si ninguno se gana con el jefe (no ha pasado), el primero sin él.
+  if (!best) return picked.set(key, -1), buildLevel(g);
+  picked.set(key, best.p);
   return best.L;
 }
 
@@ -810,6 +890,23 @@ export const TIERS = [
 // Cartas que le quedan al mazo jugando la solución de referencia (el camino acertado: roba solo cuando su carta aún
 // no se puede jugar). -1 si no termina.
 // Igual que la referencia de npm test (tests/verify-levels.mjs).
+// Los números que juega la solución de referencia, en orden (lo que queda en el descarte tras cada jugada).
+export function refRanks(L) {
+  let s = initState(L);
+  const out = [];
+  for (const id of L.solution) {
+    if (s.rem[id]) continue;
+    const c = L.cards[id], w = refStep(c, s);
+    while (!refReady(L, c, s, w)) {
+      if (!s.stock.length) return out;
+      s = drawCard(L, s).s;
+    }
+    s = playCard(L, s, id, w.low ?? false).s;
+    if (!s.top.wild && s.top.rank != null) out.push(s.top.rank);
+  }
+  return out;
+}
+
 export function refLeft(L) {
   let s = initState(L);
   for (const id of L.solution) {
@@ -839,6 +936,9 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
   const fresh = !ev && !hardHelp(g);
   // Respiro: en cada mundo 1 nivel (a veces 2) sale fácil, para que no todos sean cuesta arriba (ver isRespite).
   const respite = fresh && !secret && isRespite(base);
+  // Nivel final de cada planeta (15 nov 2026, pedido del usuario): junta más cartas de las que ya conoces (cada una
+  // FINAL_MIX veces más probable) y de preferencia una mesa especial (finalTable). No el del jefe de constelación.
+  const fin = fresh && !secret && !respite && isFinal(base) ? FINAL_MIX : 1;
   const kind0 = !ev && !secret && !respite ? scrollKind(base) : null;
   const want = ev ? ev.scroll || null : fresh || kind0 !== 'mesa' ? kind0 : null;
   // Mesas de columnas (son la gravedad, scroll 'gravedad'): la que se voltea (media vuelta cada FLIP_EVERY acciones,
@@ -854,11 +954,12 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
   const debut = !!want && base === SCROLL_FROM[want];
   let d = respite ? Math.min(d0, 0.06 + d0 * 0.15) : debut ? d0 * (scroll === 'gravedad' ? 0.35 : 0.3) : scroll === 'mesa' ? d0 * 0.3 : scroll === 'gravedad' ? d0 * (base < 200 ? 0.35 : 0.55) : scroll ? d0 * 0.65 : d0;
   // Mesas sobre un tablero normal (marea, agujero negro y puertas): nunca dos en el mismo nivel.
-  const overlay = fresh && !secret && !respite && !scroll;
+  const overlay = fresh && !secret && !respite && !scroll && !constBoss(base);
   const holeOn = overlay && holeKind(base);
   const doorsOn = overlay && doorsKind(base);
   const banda = overlay && !doorsOn && bandaKind(base);
   const rocksOn = overlay && !holeOn && !doorsOn && !banda && rocksKind(base);
+  const boxOn = overlay && !holeOn && !doorsOn && !banda && !rocksOn && boxKind(base);
   // Agujero negro y banda ya cuestan por sí mismas: el tablero va un poco más amable (como las otras mesas). Las
   // puertas, apenas (sus pilas no cuentan si no las abres). La banda pesa más (al bot le costaba 31% contra 47%): la mitad.
   if (holeOn) d *= base === holeFirst() ? 0.25 : 0.6; // su estreno, más amable
@@ -949,7 +1050,7 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
   const rc = mulberry32(hash(g * 7907 + t * 31 + 11));
   // En el camino sin ayudas no es al azar: va donde lo pone extraPlan (1-4 por tramo de 30-35 niveles).
   const plan = fresh && !secret;
-  const extraHere = (m, roll) => base === extraDebut(m) || (plan ? (roll(), extraPlanned(m, base)) : roll() < EXTRA_ODDS);
+  const extraHere = (m, roll) => base === extraDebut(m) || (plan ? (roll(), extraPlanned(m, base)) : roll() < EXTRA_ODDS * fin);
   if (!scroll && !bitaOn && n >= 8 && world >= MECH_INTRO.comet && extraHere('comet', rc)) mech.add('comet');
   // Cohete turbo: el otro regalo, igual que el cometa pero con su propio sorteo.
   const rt = mulberry32(hash(g * 6007 + t * 37 + 5));
@@ -959,7 +1060,7 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
   // niveles que no lo traen queden igual. En su mundo va en todos (sola en los primeros niveles); después, de vez en cuando.
   // También en las mesas especiales (7 nov 2026): se juega como cualquier carta.
   const rb = mulberry32(hash(g * 5303 + t * 41 + 3));
-  if (n >= 10 && world >= MECH_INTRO.ticket && (world === MECH_INTRO.ticket || rb() < TICKET_ODDS)) {
+  if (n >= 10 && world >= MECH_INTRO.ticket && (world === MECH_INTRO.ticket || rb() < TICKET_ODDS * fin)) {
     const keep = respite || (world === MECH_INTRO.ticket && index < 5) ? 0 : 1;
     const comet = mech.has('comet');
     [...mech].slice(keep).forEach((m) => mech.delete(m));
@@ -969,7 +1070,7 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
   }
   // Fantasma: su propio sorteo, como el boleto. En su mundo va en todos (solo en los primeros 5); cuenta en el límite de 2.
   const rgh = mulberry32(hash(g * 7411 + t * 43 + 9));
-  if (n >= 10 && world >= MECH_INTRO.ghost && (world === MECH_INTRO.ghost || rgh() < GHOST_ODDS)) {
+  if (n >= 10 && world >= MECH_INTRO.ghost && (world === MECH_INTRO.ghost || rgh() < GHOST_ODDS * fin)) {
     const keep = respite || (world === MECH_INTRO.ghost && index < 5) ? 0 : 1;
     const comet = mech.has('comet');
     [...mech].filter((m) => m !== 'comet').slice(keep).forEach((m) => mech.delete(m));
@@ -978,7 +1079,7 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
   }
   // Nave ladrona: sorteo propio; en su mundo, en todos (sola en los 5 primeros). Cuenta en el límite de 2.
   const rsh = mulberry32(hash(g * 8641 + t * 47 + 13));
-  if (n >= 10 && world >= MECH_INTRO.ship && (world === MECH_INTRO.ship || rsh() < SHIP_ODDS)) {
+  if (n >= 10 && world >= MECH_INTRO.ship && (world === MECH_INTRO.ship || rsh() < SHIP_ODDS * fin)) {
     const keep = respite || (world === MECH_INTRO.ship && index < 5) ? 0 : 1;
     [...mech].filter((m) => m !== 'comet').slice(keep).forEach((m) => mech.delete(m));
     mech.add('ship');
@@ -986,7 +1087,7 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
   // Enredadera y fuego (13 nov 2026): sorteo propio, como el fantasma; en su mundo, en todos (sola en los 5 primeros).
   // Cuenta en el límite de 2. Fuera de las mesas que se recorren y del agujero negro (ese no lleva otras cartas).
   const rvi = mulberry32(hash(g * 9173 + t * 79 + 53));
-  if (n >= 12 && !scroll && !holeOn && world >= MECH_INTRO.vine && (world === MECH_INTRO.vine || rvi() < VINE_ODDS)) {
+  if (n >= 12 && !scroll && !holeOn && world >= MECH_INTRO.vine && (world === MECH_INTRO.vine || rvi() < VINE_ODDS * fin)) {
     const keep = respite || (world === MECH_INTRO.vine && index < 5) ? 0 : 1;
     const comet = mech.has('comet');
     [...mech].filter((m) => m !== 'comet').slice(keep).forEach((m) => mech.delete(m));
@@ -998,7 +1099,7 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
   // todos (solos en los 5 primeros). Cuentan en el límite de 2. No en la mesa que se voltea ni con agujero negro.
   for (const [m, odds, seed] of [['domino', DOM_ODDS, 6763], ['triple', TRI_ODDS, 8237]]) {
     const rr = mulberry32(hash(g * seed + t * 83 + 71));
-    if (n >= (m === 'triple' ? 12 : 10) && !flipOn && !holeOn && world >= MECH_INTRO[m] && (world === MECH_INTRO[m] || rr() < odds)) {
+    if (n >= (m === 'triple' ? 12 : 10) && !flipOn && !holeOn && world >= MECH_INTRO[m] && (world === MECH_INTRO[m] || rr() < odds * fin)) {
       const keep = respite || (world === MECH_INTRO[m] && index < 5) ? 0 : 1;
       const comet = mech.has('comet');
       [...mech].filter((x) => x !== 'comet').slice(keep).forEach((x) => mech.delete(x));
@@ -1008,7 +1109,7 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
   }
 
   // Raspadita, telescopio y gemelas: solas en los 5 primeros niveles de su mundo (se ponen al final de buildLevel).
-  if ((world === MECH_INTRO.scratch || world === MECH_INTRO.scope || world === MECH_INTRO.twin) && index < 5) [...mech].filter((x) => x !== 'comet').forEach((x) => mech.delete(x));
+  if ((world === MECH_INTRO.scratch || world === MECH_INTRO.scope || world === MECH_INTRO.twin || world === MECH_INTRO.lasso || world === MECH_INTRO.wand) && index < 5) [...mech].filter((x) => x !== 'comet').forEach((x) => mech.delete(x));
 
   // Carta regalo: una carta especial (sin número) que se activa sola al quedar destapada del todo
   // y manda 2-5 cartas al final del mazo. Va tapada y en el primer 40% del orden de retirada.
@@ -1103,7 +1204,7 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
   for (const id of [...bombIds, ...cometIds]) delete cards[id].rank;
   for (const [id, x] of doms) cards[id].dom = x;
   if (flipOn) for (const c of cards) c.flipBy = flipBy[c.id];
-  const SPECIAL = ['lock', 'key', 'pack', 'ice', 'alt', 'arrow', 'curtain', 'curtainKey', 'bomb', 'live', 'comet', 'turbo', 'half', 'dom', 'tri', 'scr', 'ghost', 'coin', 'cham', 'ring', 'doorKey', 'belt', 'bolt', 'shield', 'vine', 'fire', 'sleep', 'rainbow', 'magnet', 'twin', 'scope'];
+  const SPECIAL = ['lock', 'key', 'pack', 'ice', 'alt', 'arrow', 'curtain', 'curtainKey', 'bomb', 'live', 'comet', 'turbo', 'half', 'dom', 'tri', 'scr', 'ghost', 'coin', 'cham', 'ring', 'doorKey', 'belt', 'bolt', 'shield', 'vine', 'fire', 'sleep', 'rainbow', 'magnet', 'twin', 'scope', 'lasso', 'wand'];
   const plain = (id) => SPECIAL.every((f) => cards[id][f] == null);
 
   // Boleto partido (1-2): la referencia juega primero la mitad de arriba (su número de la cadena) y la de abajo al final
@@ -1413,7 +1514,7 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
 
   // Carta moneda (1-3): al jugarla da monedas (10 + 2 por constelación, tope 60). No cambia las reglas: ganable igual.
   const rco = mulberry32(hash(g * 9293 + t * 53 + 17));
-  if (n >= 8 && world >= MECH_INTRO.coin && (world === MECH_INTRO.coin || rco() < COIN_ODDS)) {
+  if (n >= 8 && world >= MECH_INTRO.coin && (world === MECH_INTRO.coin || rco() < COIN_ODDS * fin)) {
     const coins = Math.round(Math.min(60, 10 + 2 * Math.floor(base / (LEVELS_PER_WORLD * 10))) * 1.15);
     for (let k2 = randInt(rco, 1, 3); k2 > 0; k2--) {
       const k = pickPlain(0, np);
@@ -1424,7 +1525,7 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
   // moneda: no cuenta en el límite ni cambia otros niveles). Siempre ganable: jugado como comodín deja el descarte
   // como comodín y la referencia sigue igual. En su mundo, en todos (los 5 primeros con 2).
   const rcm = mulberry32(hash(g * 6271 + t * 59 + 23));
-  if (n >= 8 && world >= MECH_INTRO.cham && (world === MECH_INTRO.cham || rcm() < CHAM_ODDS)) {
+  if (n >= 8 && world >= MECH_INTRO.cham && (world === MECH_INTRO.cham || rcm() < CHAM_ODDS * fin)) {
     for (let k2 = world === MECH_INTRO.cham && index < 5 ? 2 : 1; k2 > 0; k2--) {
       const k = pickPlain(0, np);
       if (k != null) cards[play[k]].cham = rcm() < 0.5 ? 1 : 2;
@@ -1549,7 +1650,7 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
     // Rayo: una carta sin otra mecánica en la primera mitad de la referencia (así tiene a quién sacar). 11 nov 2026: se
     // lleva al mazo de 1 a 3 cartas enterradas; eso puede romper la referencia, así que se comprueba (si no, sin rayo).
     const rbo = mulberry32(hash(g * 7333 + t * 67 + 41));
-    if (world >= MECH_INTRO.bolt && (world === MECH_INTRO.bolt || rbo() < BOLT_ODDS)) {
+    if (world >= MECH_INTRO.bolt && (world === MECH_INTRO.bolt || rbo() < BOLT_ODDS * fin)) {
       const ks = [];
       for (let k = 1; k < Math.ceil(np * 0.55); k++) if (plain(play[k])) ks.push(k);
       if (ks.length) {
@@ -1562,10 +1663,19 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
     // Telescopio (14 nov 2026, pedido del usuario): al jugarlo se ven todas las cartas 3 turnos. Solo deja ver: no se
     // comprueba. En la primera mitad de la referencia, para que sirva.
     const rsp = mulberry32(hash(g * 6151 + t * 109 + 83));
-    if (world >= MECH_INTRO.scope && (world === MECH_INTRO.scope || rsp() < SCOPE_ODDS)) {
+    if (world >= MECH_INTRO.scope && (world === MECH_INTRO.scope || rsp() < SCOPE_ODDS * fin)) {
       const ks = [];
       for (let k = 0; k < Math.ceil(np * 0.5); k++) if (plain(play[k])) ks.push(k);
       if (ks.length) cards[play[pick(rsp, ks)]].scope = 1;
+    }
+    // Lazo y varita (15 nov 2026, pedido del usuario): solo ayudan (la referencia los juega como cartas normales y no los
+    // usa), así que no se comprueban. En la primera mitad de la referencia, para que sirvan.
+    for (const [m, f, salt, odds] of [['lasso', 'lasso', 131, LASSO_ODDS], ['wand', 'wand', 137, WAND_ODDS]]) {
+      const rw = mulberry32(hash(g * 7417 + t * salt + 101));
+      if (world < MECH_INTRO[m] || !(world === MECH_INTRO[m] || rw() < odds * fin)) continue;
+      const ks = [];
+      for (let k = 0; k < Math.ceil(np * 0.5); k++) if (plain(play[k]) && !cards[play[k]].cst) ks.push(k);
+      if (ks.length) cards[play[pick(rw, ks)]][f] = 1;
     }
     // Gemelas (14 nov 2026, pedido del usuario): dos cartas atadas con un lazo; al jugar una, la otra sale de donde
     // esté y cae al descarte. La segunda va más adelante en la referencia (casi siempre tapada al jugar la primera).
@@ -1573,7 +1683,7 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
     // 14 nov 2026 (el usuario: «podríamos poner más de una»): de 1 a 3 parejas según el tamaño, cada una de su color
     // (c.twinC); la pareja se reconoce por el color.
     const rtw = mulberry32(hash(g * 5381 + t * 113 + 89));
-    if (world >= MECH_INTRO.twin && (world === MECH_INTRO.twin || rtw() < TWIN_ODDS)) {
+    if (world >= MECH_INTRO.twin && (world === MECH_INTRO.twin || rtw() < TWIN_ODDS * fin)) {
       const ok = (k) => plain(play[k]) && !cards[play[k]].cst;
       const want = 1 + Math.floor(rtw() * (n >= 30 ? 3 : n >= 20 ? 2 : 1));
       for (let pc = 0, tries = 0; pc < want && tries < 3 * want; tries++) {
@@ -1593,11 +1703,11 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
     // Astronauta (14 nov 2026, pedido del usuario): llega al nivel para guardarte una carta. Solo ayuda (el
     // solucionador no lo usa): no se comprueba. Solo en mesas normales.
     const ras = mulberry32(hash(g * 4919 + t * 127 + 97));
-    if (world >= MECH_INTRO.astro && !level.tide && !level.belt && !level.doors && !level.hole && !level.rocks && !level.neb && (world === MECH_INTRO.astro || ras() < ASTRO_ODDS)) level.astro = 1;
+    if (world >= MECH_INTRO.astro && !level.tide && !level.belt && !level.doors && !level.hole && !level.rocks && !level.neb && (world === MECH_INTRO.astro || ras() < ASTRO_ODDS * fin)) level.astro = 1;
     // Constelación: 3 (o 4) cartas que la referencia juega una tras otra sin robar. Pueden traer otra mecánica (hielo,
     // candado…), menos el boleto partido (se juega en dos veces).
     const rcs = mulberry32(hash(g * 3301 + t * 73 + 47));
-    if (world >= MECH_INTRO.cst && (world === MECH_INTRO.cst || rcs() < CST_ODDS)) {
+    if (world >= MECH_INTRO.cst && (world === MECH_INTRO.cst || rcs() < CST_ODDS * fin)) {
       const m = n >= 22 && rcs() < 0.4 ? 4 : 3, at = [];
       for (let i = 0; i + m <= seq.length; i++) {
         const run = seq.slice(i, i + m);
@@ -1613,7 +1723,7 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
     // sin robar); al llegar despierta y se queda despierta. Va donde la referencia ya trae esa racha antes de jugarla,
     // así nunca le estorba. En su mundo, en todos (1-2); después, con su sorteo.
     const rsl = mulberry32(hash(g * 4447 + t * 89 + 61));
-    if (world >= MECH_INTRO.sleep && (world === MECH_INTRO.sleep || rsl() < SLEEP_ODDS)) {
+    if (world >= MECH_INTRO.sleep && (world === MECH_INTRO.sleep || rsl() < SLEEP_ODDS * fin)) {
       const run = new Map();
       let r0 = 0;
       for (const x of seq) {
@@ -1631,7 +1741,7 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
     }
     // Arcoíris (13 nov 2026): al jugarlo, las 3 jugadas siguientes pueden ser ±2. Solo ayuda: no se comprueba.
     const rar = mulberry32(hash(g * 3767 + t * 97 + 67));
-    if (world >= MECH_INTRO.rainbow && (world === MECH_INTRO.rainbow || rar() < RAINBOW_ODDS)) {
+    if (world >= MECH_INTRO.rainbow && (world === MECH_INTRO.rainbow || rar() < RAINBOW_ODDS * fin)) {
       const ks = [];
       for (let k = 0; k < np; k++) if (plain(play[k])) ks.push(k);
       if (ks.length) cards[play[pick(rar, ks)]].rainbow = 1;
@@ -1639,7 +1749,7 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
     // Imán (13 nov 2026): al jugarlo, tu siguiente robo saca del mazo la carta que deja jugar más cartas del tablero.
     // Cambia lo que robas, así que la referencia puede no servir: se comprueba y si no se gana, se quita.
     const rmg = mulberry32(hash(g * 2909 + t * 101 + 71));
-    if (world >= MECH_INTRO.magnet && (world === MECH_INTRO.magnet || rmg() < MAGNET_ODDS)) {
+    if (world >= MECH_INTRO.magnet && (world === MECH_INTRO.magnet || rmg() < MAGNET_ODDS * fin)) {
       const ks = [];
       for (let k = 1; k < Math.ceil(np * 0.7); k++) if (plain(play[k])) ks.push(k);
       if (ks.length) {
@@ -1654,7 +1764,7 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
   // ayuda (y da monedas si te arriesgas antes de verla toda), así que no se comprueba. No en mesas que se recorren.
   {
     const rsc = mulberry32(hash(g * 5737 + t * 113 + 29));
-    if (!scroll && world >= MECH_INTRO.scratch && (world === MECH_INTRO.scratch || rsc() < SCR_ODDS)) {
+    if (!scroll && world >= MECH_INTRO.scratch && (world === MECH_INTRO.scratch || rsc() < SCR_ODDS * fin)) {
       // Pegadas = las de los lados (13 nov 2026: contando las que la tapan, al quedar libre ya se veía casi toda). Solo las
       // de verdad junto a ella, a menos de 1.2 de centro a centro (14 nov 2026: contaba las de dos filas abajo y la punta
       // de una pirámide salía «raspada» sin nada a los lados).
@@ -1664,10 +1774,30 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
       const kOf = new Map(play.map((id, k) => [id, k]));
       const ks = [];
       for (let k = Math.floor(np * 0.3); k < np; k++) if (plain(play[k]) && coveredBy[play[k]].length && side(cards[play[k]]).filter((j) => kOf.get(j) < k).length >= 2) ks.push(play[k]);
+      // Su estreno siempre la trae (15 nov 2026: al recorrerla al 721, ese tablero no tenía ninguna con 2 a los lados).
+      if (!ks.length && world === MECH_INTRO.scratch && index === 0) for (let k = Math.floor(np * 0.3); k < np; k++) if (plain(play[k]) && coveredBy[play[k]].length && side(cards[play[k]]).some((j) => kOf.get(j) < k)) ks.push(play[k]);
       if (ks.length) {
         const c = cards[pick(rsc, ks)];
         c.scr = side(c);
       }
+    }
+  }
+  // Caja galáctica: la combinación sale del camino de referencia (sus números en el orden en que los juega), así se puede
+  // abrir jugando bien. De 3 a 8 números según la dificultad; entre más, mejor premio (lo da el juego).
+  if (boxOn) {
+    const rb = mulberry32(hash(g * 2287 + t * 149 + 113));
+    const ranks = refRanks(level);
+    const len0 = Math.min(8, 3 + Math.floor(rb() * (2 + d * 5)));
+    for (let tries = 0, len = len0; len >= 3 && ranks.length >= len && !level.box; tries++, tries % 20 || len--) {
+      // Un tramo de la referencia (de len a 2·len jugadas) y en él len posiciones al azar, en orden; se comprueba que
+      // abre siguiendo la referencia completa.
+      const span = Math.min(ranks.length, len + Math.floor(rb() * (len + 1))), from = Math.floor(rb() * (ranks.length - span + 1));
+      const at = shuffle(rb, Array.from({ length: span }, (_, k) => from + k)).slice(0, len).sort((a, b) => a - b);
+      const combo = at.map((k) => ranks[k]);
+      if (new Set(combo).size < Math.min(len, 3)) continue;
+      let bx = 0;
+      for (const x of ranks) bx = boxNext(combo, bx, x);
+      if (bx === len) level.box = { combo };
     }
   }
   level.meta.mechs = MECHANICS.filter((m) => cards.some((c) => c[MECH_FIELD[m]] != null) || (m === 'turbo' && stock.some((c) => c.turbo)) || (m === 'ship' && level.ship) || (m === 'astro' && level.astro));
@@ -1736,7 +1866,7 @@ export const hardCount = (c) => Math.round(3 + (c * 37) / 51); // c desde 0
 // arcoíris cayeron en duros y el 121 salía sin gemelas): el duro pasa al siguiente nivel que no sea estreno, así cada
 // constelación tiene los mismos. Se arma la primera vez que se pide (MECH_INTRO y los *_FROM se definen después).
 let HARD = null;
-const debutLevels = () => new Set([...MECHANICS.filter((m) => !EXTRA.includes(m)).map((m) => MECH_INTRO[m] * LEVELS_PER_WORLD), ...Object.values(SCROLL_FROM), TIDE_FROM, HOLE_FROM, DOORS_FROM, BANDA_FROM, ROCKS_FROM]);
+const debutLevels = () => new Set([...MECHANICS.filter((m) => !EXTRA.includes(m)).map((m) => MECH_INTRO[m] * LEVELS_PER_WORLD), ...Object.values(SCROLL_FROM), TIDE_FROM, HOLE_FROM, DOORS_FROM, BANDA_FROM, ROCKS_FROM, BOX_FROM, ...Array.from({ length: TOTAL_LEVELS / CONST_LEVELS }, (_, c) => (c + 1) * CONST_LEVELS - 1)]);
 function hardMap() {
   if (HARD) return HARD;
   HARD = new Map();
@@ -1803,10 +1933,10 @@ export function festivalLevel(seed, k, world, n = FESTIVAL_PER_PLANET) {
 }
 
 // ---------- Mecánicas por mundo ----------
-export const MECHANICS = ['lock', 'pack', 'ice', 'double', 'arrow', 'curtain', 'bomb', 'live', 'ticket', 'comet', 'turbo', 'ghost', 'ship', 'coin', 'cham', 'bolt', 'cst', 'vine', 'magnet', 'rainbow', 'sleep', 'domino', 'triple', 'scratch', 'scope', 'twin', 'astro'];
-const MECH_FIELD = { lock: 'lock', pack: 'pack', ice: 'ice', double: 'alt', arrow: 'arrow', curtain: 'curtain', bomb: 'bomb', live: 'live', ticket: 'half', comet: 'comet', turbo: 'turbo', ghost: 'ghost', ship: 'ship', coin: 'coin', cham: 'cham', bolt: 'bolt', cst: 'cst', vine: 'vine', magnet: 'magnet', rainbow: 'rainbow', sleep: 'sleep', domino: 'dom', triple: 'tri', scratch: 'scr', scope: 'scope', twin: 'twin', astro: 'astro' };
+export const MECHANICS = ['lock', 'pack', 'ice', 'double', 'arrow', 'curtain', 'bomb', 'live', 'ticket', 'comet', 'turbo', 'ghost', 'ship', 'coin', 'cham', 'bolt', 'cst', 'vine', 'magnet', 'rainbow', 'sleep', 'domino', 'triple', 'scratch', 'scope', 'twin', 'astro', 'lasso', 'wand'];
+const MECH_FIELD = { lock: 'lock', pack: 'pack', ice: 'ice', double: 'alt', arrow: 'arrow', curtain: 'curtain', bomb: 'bomb', live: 'live', ticket: 'half', comet: 'comet', turbo: 'turbo', ghost: 'ghost', ship: 'ship', coin: 'coin', cham: 'cham', bolt: 'bolt', cst: 'cst', vine: 'vine', magnet: 'magnet', rainbow: 'rainbow', sleep: 'sleep', domino: 'dom', triple: 'tri', scratch: 'scr', scope: 'scope', twin: 'twin', astro: 'astro', lasso: 'lasso', wand: 'wand' };
 // Van con su sorteo, fuera de chooseMechanics (si entraran, cambiarían todos los niveles ya probados).
-const OWN_DRAW = ['ticket', 'ghost', 'ship', 'coin', 'cham', 'bolt', 'cst', 'vine', 'magnet', 'rainbow', 'sleep', 'domino', 'triple', 'scratch', 'scope', 'twin', 'astro'];
+const OWN_DRAW = ['ticket', 'ghost', 'ship', 'coin', 'cham', 'bolt', 'cst', 'vine', 'magnet', 'rainbow', 'sleep', 'domino', 'triple', 'scratch', 'scope', 'twin', 'astro', 'lasso', 'wand'];
 // Mundo (índice desde 0) en el que se presenta cada una.
 // 8 nov 2026: corridas para que cada estreno quede a 10 niveles o más del anterior (antes lock 1, pack 2, ice 4, double 7,
 // arrow 11, curtain 15, bomb 19, live 24, ticket 20, comet 12, turbo 16, ghost 29, ship 34, coin 26, cham 32).
@@ -1821,9 +1951,11 @@ const OWN_DRAW = ['ticket', 'ghost', 'ship', 'coin', 'cham', 'bolt', 'cst', 'vin
 // telescopio 81, gemelas 121, doble 131, astronauta 171, flecha 181, cometa 221, cortina 231, turbo 271, bomba 281,
 // boleto partido 321, viva 331, moneda 371, fantasma 381, camaleón 421, nave 431, rayo 471, constelación 481,
 // enredadera 521, imán 531, arcoíris 571, dormida 581, dominó 621, triple 631 y raspadita 651. Antes: { lock: 1, pack: 2, ice: 6, double: 12, arrow: 17, curtain: 22, bomb: 27, live: 33, ticket: 28, comet: 19, turbo: 24, ghost: 39, ship: 44, coin: 36, cham: 42, bolt: 47, cst: 49, vine: 52, magnet: 54, rainbow: 56, sleep: 58, domino: 60, triple: 62, scratch: 63, scope: 7, twin: 8, astro: 14 };
-export const MECH_INTRO = { lock: 1, pack: 2, ice: 7, scope: 8, twin: 12, double: 13, astro: 17, arrow: 18, comet: 22, curtain: 23, turbo: 27, bomb: 28, ticket: 32, live: 33, coin: 37, ghost: 38, cham: 42, ship: 43, bolt: 47, cst: 48, vine: 52, magnet: 53, rainbow: 57, sleep: 58, domino: 62, triple: 63, scratch: 65 };
+// 15 nov 2026 (pedido del usuario): lazo 67 (671) y varita 68 (681); la raspadita se recorre al final, 72 (721), y la
+// caja galáctica (mesa, BOX_FROM) en el 651.
+export const MECH_INTRO = { lock: 1, pack: 2, ice: 7, scope: 8, twin: 12, double: 13, astro: 17, arrow: 18, comet: 22, curtain: 23, turbo: 27, bomb: 28, ticket: 32, live: 33, coin: 37, ghost: 38, cham: 42, ship: 43, bolt: 47, cst: 48, vine: 52, magnet: 53, rainbow: 57, sleep: 58, domino: 62, triple: 63, lasso: 67, wand: 68, scratch: 72 };
 export const MECH_NAMES = {
-  lock: 'Candado', pack: 'Carta regalo', ice: 'Hielo', double: 'Carta doble', arrow: 'Flecha', curtain: 'Cortina', bomb: 'Bomba', live: 'Carta viva', ticket: 'Boleto partido', comet: 'Cometa', turbo: 'Cohete turbo', ghost: 'Fantasma', ship: 'Nave ladrona', coin: 'Carta moneda', cham: 'Camaleón', bolt: 'Rayo', cst: 'Constelación', vine: 'Enredadera', magnet: 'Imán', rainbow: 'Arcoíris', sleep: 'Carta dormida', domino: 'Dominó', triple: 'Boleto triple', scratch: 'Raspadita', scope: 'Telescopio', twin: 'Cartas gemelas', astro: 'Astronauta',
+  lock: 'Candado', pack: 'Carta regalo', ice: 'Hielo', double: 'Carta doble', arrow: 'Flecha', curtain: 'Cortina', bomb: 'Bomba', live: 'Carta viva', ticket: 'Boleto partido', comet: 'Cometa', turbo: 'Cohete turbo', ghost: 'Fantasma', ship: 'Nave ladrona', coin: 'Carta moneda', cham: 'Camaleón', bolt: 'Rayo', cst: 'Constelación', vine: 'Enredadera', magnet: 'Imán', rainbow: 'Arcoíris', sleep: 'Carta dormida', domino: 'Dominó', triple: 'Boleto triple', scratch: 'Raspadita', scope: 'Telescopio', twin: 'Cartas gemelas', astro: 'Astronauta', lasso: 'Lazo', wand: 'Varita',
 };
 // Cartas de regalo (cometa y cohete turbo): no entran al sorteo de mecánicas, van aparte (buildLevel).
 // En el camino sin ayudas cada una sale de 1 a 4 veces en cada tramo de 30-35 niveles (extraPlan, pedido 6 nov 2026).
@@ -1852,6 +1984,8 @@ export const DOM_ODDS = 0.12, TRI_ODDS = 0.1;
 export const SCR_ODDS = 0.1;
 // Telescopio, gemelas y astronauta (14 nov 2026): al final de buildLevel, con su sorteo.
 export const SCOPE_ODDS = 0.1, TWIN_ODDS = 0.12, ASTRO_ODDS = 0.1;
+// Lazo y varita (15 nov 2026): al final de buildLevel, con su sorteo.
+export const LASSO_ODDS = 0.1, WAND_ODDS = 0.1;
 export const EXTRA_ODDS = 0.047;
 // Estreno: el primer nivel de su mundo que no es duro ni mesa especial.
 const debuts = {};

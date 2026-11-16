@@ -369,7 +369,7 @@ export class Galaxy {
   }
   badge(o, i, l) {
     const d = this.dirOf(o, i), boss = i === this.lastOf(o), secret = i === 10;
-    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.badgeTex(i + 1, l, boss, secret, o.wd.gift && o.wd.badgeIco), transparent: true }));
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.badgeTex(i + 1, l, boss, secret, o.wd.gift && o.wd.badgeIco, boss && o.wd.w % 10 === 9), transparent: true }));
     const s = (l.kind === 'cur' ? 0.25 : 0.2) * (boss || secret ? 1.1 : 1);
     sp.center.set(0.5, 0.42);
     sp.userData = { s: [s, s * 1.4], level: i, kind: l.kind };
@@ -380,7 +380,7 @@ export class Galaxy {
   retex(o, i, l) {
     const sp = o.badges[i];
     sp.material.map.dispose();
-    sp.material.map = this.badgeTex(i + 1, l, i === this.lastOf(o), i === 10, o.wd.gift && o.wd.badgeIco);
+    sp.material.map = this.badgeTex(i + 1, l, i === this.lastOf(o), i === 10, o.wd.gift && o.wd.badgeIco, i === this.lastOf(o) && o.wd.w % 10 === 9);
     sp.material.needsUpdate = true;
     const s = (l.kind === 'cur' ? 0.25 : 0.2) * (i >= this.lastOf(o) ? 1.1 : 1);
     sp.userData.s = [s, s * 1.4]; sp.userData.kind = l.kind; sp.userData.pop = 1;
@@ -450,7 +450,8 @@ export class Galaxy {
     path.add(g);
   }
   // Insignia de nivel: estrellas ARRIBA del círculo para que no se pierdan contra el planeta.
-  badgeTex(n, lv, boss, secret, gift) {
+  // foe: el último nivel de la constelación, el del jefe (15 nov 2026): corona rosa; los demás niveles finales, trofeo.
+  badgeTex(n, lv, boss, secret, gift, foe = false) {
     const c = document.createElement('canvas'); c.width = 128; c.height = 180;
     const g = c.getContext('2d'), cx = 64, cy = 110, R = 42;
     const col = { done: ['#4aa8de', '#2f86c0'], cur: ['#ff5f7e', '#d63d5f'], lock: ['#e9e4f2', '#c9c1dc'] }[lv.kind];
@@ -481,9 +482,15 @@ export class Galaxy {
       const at = { 1: [[0, 38, 19]], 2: [[-17, 42, 17], [17, 42, 17]], 3: [[-30, 46, 15], [0, 36, 18], [30, 46, 15]] }[Math.min(3, lv.stars)] || [];
       for (const [x, y, r] of at) star(cx + x, y, r, true);
     }
-    else if (boss) { // corona del jefe
+    else if (boss && foe) { // corona del jefe de constelación (rosa, con su gema)
       g.beginPath(); g.moveTo(cx - 24, cy - 34); g.lineTo(cx - 28, cy - 62); g.lineTo(cx - 12, cy - 46); g.lineTo(cx, cy - 68); g.lineTo(cx + 12, cy - 46); g.lineTo(cx + 28, cy - 62); g.lineTo(cx + 24, cy - 34); g.closePath();
+      g.fillStyle = lv.kind === 'lock' ? '#d9d2ea' : '#ff5f8e'; g.fill(); g.lineWidth = 6; g.stroke();
+      g.beginPath(); g.arc(cx, cy - 44, 6, 0, 7); g.fillStyle = '#ffd54a'; g.fill(); g.lineWidth = 4; g.stroke();
+    }
+    else if (boss) { // trofeo del nivel final de cada planeta (15 nov 2026; antes corona: era el «jefe»)
+      g.beginPath(); g.moveTo(cx - 20, cy - 70); g.lineTo(cx + 20, cy - 70); g.lineTo(cx + 18, cy - 52); g.quadraticCurveTo(cx + 14, cy - 42, cx + 5, cy - 40); g.lineTo(cx + 5, cy - 34); g.lineTo(cx + 12, cy - 34); g.lineTo(cx + 12, cy - 28); g.lineTo(cx - 12, cy - 28); g.lineTo(cx - 12, cy - 34); g.lineTo(cx - 5, cy - 34); g.lineTo(cx - 5, cy - 40); g.quadraticCurveTo(cx - 14, cy - 42, cx - 18, cy - 52); g.closePath();
       g.fillStyle = lv.kind === 'lock' ? '#d9d2ea' : '#ffc83d'; g.fill(); g.lineWidth = 6; g.stroke();
+      g.beginPath(); g.moveTo(cx - 20, cy - 64); g.quadraticCurveTo(cx - 32, cy - 62, cx - 22, cy - 50); g.moveTo(cx + 20, cy - 64); g.quadraticCurveTo(cx + 32, cy - 62, cx + 22, cy - 50); g.lineWidth = 5; g.stroke();
     }
     g.font = `${n > 9 ? 46 : 54}px "Lilita One"`; g.textAlign = 'center'; g.textBaseline = 'middle';
     // Secreto: estrella blanca mientras falta; dorada (y las 3 estrellitas arriba) cuando ya se hizo.

@@ -1,8 +1,8 @@
 import { save, persist } from './storage.js';
-import { openModal, toast, confetti, updateCoins, money, starsHTML, reduced, buzz, sparkle, wait, spendFromWallet, flyToWallet, balloons, lootBubbles, streakWarnHTML, betLoseHTML, shownCoins, popPrize } from './ui.js';
+import { openModal, HEADS, toast, confetti, updateCoins, money, starsHTML, reduced, buzz, sparkle, wait, spendFromWallet, flyToWallet, balloons, lootBubbles, streakWarnHTML, betLoseHTML, shownCoins, popPrize } from './ui.js';
 import { worldInfo, packGroups, MECH_NAMES, LEVELS_PER_WORLD, scrollStrip, scrollSpan, scrollCover, SCROLL_VIEW, SCROLL_SHOW, NEB_SLOTS, GRAV_SHOWN, W, H } from './levels.js';
 import * as E from './engine.js';
-import { price, EV_MARKUP, round5, HELPS, buyable } from './economy.js';
+import { price, EV_MARKUP, round5, HELPS, buyable, BOX_PRIZE } from './economy.js';
 import { helpOff } from './meteor.js';
 import { cardBackURL, icon, star, coin, lockIcon, keyIcon, arrowIcon, curtainIcon, suitSVG, avatarHTML, vineSVG, sproutSVG, ASTRO_ART } from './art.js';
 import { tableHTML } from './biomes.js';
@@ -24,7 +24,7 @@ export const MECH_KINDS = [
   ['Cambian con los turnos', ['live', 'ghost', 'cham']],
   ['Reglas al jugar', ['double', 'arrow', 'ticket', 'domino', 'triple', 'twin']],
   ['No se juegan', ['pack', 'bomb', 'comet']],
-  ['Te ayudan', ['coin', 'turbo', 'bolt', 'cst', 'magnet', 'rainbow', 'scratch', 'scope']],
+  ['Te ayudan', ['coin', 'turbo', 'bolt', 'cst', 'magnet', 'rainbow', 'scratch', 'scope', 'lasso', 'wand']],
 ];
 // Dibujos que viven en main.js y dev.js (la carta de ejemplo y el icono de cada mesa): main.js los pone al arrancar.
 export const ART = { mechCard: () => '', tableIcon: () => '' };
@@ -53,6 +53,10 @@ export const TIPS = {
   sleep: 'Está <b>dormida</b>: despierta cuando llevas su número de cartas <b>seguidas</b> sin robar. Si robas antes, vuelve a empezar.',
   // 14 nov 2026 (pedido del usuario): sin cuenta a la vista; el texto dice cuántos turnos.
   scope: 'Se juega normal y por <b>3 turnos</b> se ven <b>todas</b> las cartas del tablero, también las tapadas. Planea por dónde ir.',
+  // 15 nov 2026 (pedido del usuario): lazo y varita.
+  lasso: 'Se juega normal. Después <b>escoges cualquier carta</b> del tablero (libre, tapada o especial) y la lazas: <b>va directo al descarte</b> y sigues desde ella.',
+  // (TIP_HELP: la carta presenta también la ayuda Varita.)
+  wand: 'Se juega normal. Después tocas una carta libre y le sale una pestaña con <b>+</b> y <b>−</b>: le <b>subes o bajas hasta 3</b>. Con la palomita queda así.',
   twin: 'Van atadas con un <b>lazo</b>. Al jugar una, la otra sale de donde esté, aunque esté tapada, y cae al <b>descarte</b>: sigues desde ella.',
   vine: 'No se juega mientras la tape la <b>enredadera</b>, que <b>crece</b> cada 5 jugadas o robos. Juega la carta de <b>fuego</b> y las quema todas.',
 };
@@ -61,6 +65,7 @@ export const TIPS = {
 export const TIP_HELP = {
   // 13 nov 2026 (pedido del usuario): la carta imán presenta también la ayuda imán, como la mesa de asteroides al láser.
   magnet: ['iman', 'himan', '<b>Imán:</b> también lo compras en tus ayudas, para usarlo cuando quieras.'],
+  wand: ['varita', 'hvarita', '<b>Varita:</b> también la compras en tus ayudas, para usarla cuando quieras.'],
   scope: ['tele', 'htele', '<b>Telescopio:</b> también lo compras en tus ayudas y deja ver todo <b>5 turnos</b>.'],
   lock: ['llave', 'hllave', '<b>Llave maestra:</b> abre todos los candados y cortinas.'],
   curtain: ['llave', 'hllave', '<b>Llave maestra:</b> abre todos los candados y cortinas.'],
@@ -70,7 +75,7 @@ export const TIP_HELP = {
   ghost: ['reloj', 'hreloj', '<b>Reloj de arena:</b> congela 3 turnos todo lo que cuenta.'],
   vine: ['reloj', 'hreloj', '<b>Reloj de arena:</b> congela 3 turnos todo lo que cuenta.'],
 };
-const MECH_FIELD = { lock: 'lock', pack: 'pack', ice: 'ice', double: 'alt', arrow: 'arrow', curtain: 'curtain', bomb: 'bomb', live: 'live', ticket: 'half', comet: 'comet', turbo: 'turbo', ghost: 'ghost', ship: 'ship', coin: 'coin', cham: 'cham', bolt: 'bolt', cst: 'cst', vine: 'vine', magnet: 'magnet', rainbow: 'rainbow', sleep: 'sleep', domino: 'dom', triple: 'tri', scratch: 'scr', scope: 'scope', twin: 'twin' };
+const MECH_FIELD = { lasso: 'lasso', wand: 'wand', lock: 'lock', pack: 'pack', ice: 'ice', double: 'alt', arrow: 'arrow', curtain: 'curtain', bomb: 'bomb', live: 'live', ticket: 'half', comet: 'comet', turbo: 'turbo', ghost: 'ghost', ship: 'ship', coin: 'coin', cham: 'cham', bolt: 'bolt', cst: 'cst', vine: 'vine', magnet: 'magnet', rainbow: 'rainbow', sleep: 'sleep', domino: 'dom', triple: 'tri', scratch: 'scr', scope: 'scope', twin: 'twin' };
 // Constelación (10 nov 2026, pedido del usuario): al juntarla, CST_HELP de las veces una ayuda y si no monedas, de 50 a
 // 200 (casi siempre de las bajas: el promedio queda en ~100, unas 2 veces lo que paga un nivel ahí).
 const CST_HELP = 0.15;
@@ -139,7 +144,7 @@ export function faceHTML(c, rank = c.rank) {
   const badge = c.lock != null ? `<span class="lk-badge">${lockIcon(LOCK_HUES[c.lock])}</span>` : c.key != null ? `<span class="lk-badge">${keyIcon(LOCK_HUES[c.key])}</span>` : '';
   // 11 nov 2026 (pedido del usuario: igual que el cohete turbo): rayo, fantasma y llave de puerta llevan su dibujo
   // arriba a la derecha, en el lugar del palo; la constelación, su estrellita abajo a la derecha, dentro de la carta.
-  const mk = c.bolt ? 'rayo' : c.fire ? 'flame' : c.magnet ? 'iman' : c.scope ? 'telescopio' : c.rainbow ? 'arcoiris' : c.ghost ? 'ghost' : c.doorKey ? 'llavePuerta' : null;
+  const mk = c.bolt ? 'rayo' : c.fire ? 'flame' : c.magnet ? 'iman' : c.scope ? 'telescopio' : c.lasso ? 'lazoVaquero' : c.wand ? 'varitaEstrella' : c.rainbow ? 'arcoiris' : c.ghost ? 'ghost' : c.doorKey ? 'llavePuerta' : null;
   const suit = c.key != null ? '' : c.coin ? `<span class="cs coin-cs">${icon('monedas')}</span>` : mk ? `<span class="cs mk-cs">${icon(mk)}</span>` : `<span class="${cs}">${s}</span>`;
   return `<div class="face front${red}${kind}"${tint}>${corner}${suit}${badge}<span class="big${r === '10' ? ' ten' : ''}${SIXNINE(r)}">${r}</span>${arrow}${c.cst ? `<span class="cst-mk">${icon('star')}</span>` : ''}${c.cham ? `${CHAM_FACE('cham-eyes')}<span class="cham-ov">${CHAM_FACE('cham-face')}</span>` : ''}${c.twin != null ? twinEye(c) : ''}</div>`;
 }
@@ -171,10 +176,110 @@ export const TABLE_TEXT = {
   portal: ['Unas <b>grúas de feria</b> jalan las columnas hacia arriba.', 'Solo juegas la carta de hasta arriba: al tocarla, la <b>garra</b> baja, la agarra y se la lleva. Luego sube la columna.'],
   // Astronauta (14 nov 2026, pedido del usuario: «no carta, un ayudante»): como la nave, va como mesa.
   astro: ['Aquí te acompaña <b>Tito</b>, un astronauta.', 'Tócalo y luego toca una carta libre: vuela por ella y te la <b>guarda</b>. Cuando conecte, tócalo otra vez y la <b>lleva al descarte</b>. Después se va.'],
+  // 15 nov 2026 (pedido del usuario): 3 a 8 números; solo enseña el que sigue.
+  caja: ['En la orilla hay una <b>caja galáctica</b> con combinación.', 'Su pantalla te dice el <b>siguiente número</b>: juégalos <b>en orden</b> (pueden ir separados). Si juegas otro de la combinación, <b>se reinicia</b>. Ábrela y te da un premio.'],
   voltea: ['Las cartas van en <b>columnas</b> dentro de una cápsula.', 'Solo juegas la de <b>abajo</b>. Cada <b>5 jugadas o robos</b> la cápsula da <b>media vuelta</b>. Cuando tiembla, ¡cuidado!'],
 };
-const TABLE_NAME = { nave: 'Nave ladrona', mesa: 'Mesa enrollada', gravedad: 'Gravedad', nebulosa: 'Nebulosa', marea: 'Marea', puertas: 'Puertas', banda: 'Banda transportadora', hoyo: 'Agujero negro', rocas: 'Asteroides', voltea: 'Mesa que se voltea', hangar: 'Hangar', bitacora: 'Bitácora', portal: 'Grúa de feria', astro: 'Astronauta' };
+const TABLE_NAME = { nave: 'Nave ladrona', mesa: 'Mesa enrollada', gravedad: 'Gravedad', nebulosa: 'Nebulosa', marea: 'Marea', puertas: 'Puertas', banda: 'Banda transportadora', hoyo: 'Agujero negro', rocas: 'Asteroides', caja: 'Caja galáctica', voltea: 'Mesa que se voltea', hangar: 'Hangar', bitacora: 'Bitácora', portal: 'Grúa de feria', astro: 'Astronauta' };
 const TABLE_HELP = { rocas: helpTip('hlaser', '<b>Láser:</b> rompe todas las piedras.', true), nave: helpTip('hescudo', '<b>Escudo:</b> la nave ya no te roba en todo el nivel.', true), astro: helpTip('hastro', '<b>Astronauta:</b> después también lo compras en tus ayudas.', true) };
+// ---------- Jefes de constelación (15 nov 2026, pedido del usuario) ----------
+// Dibujos de las criaturas (toon, contorno de tinta). El Kraken no se ve: solo su tinta (y su brazo en el manotazo).
+const INKF = '#2a1f5c';
+export const FOE_ART = {
+  fenix: `<svg viewBox="0 0 96 80"><path d="M58 40C46 22 30 14 8 16c14 6 22 14 26 24-10-4-20-4-30 2 14 2 24 8 30 16 10 4 20 2 24-4z" fill="#ff8a3d" stroke="${INKF}" stroke-width="2.6" stroke-linejoin="round"/><path d="M50 40C42 30 32 24 20 22c8 6 12 12 14 18" fill="#ffd54a" stroke="${INKF}" stroke-width="1.8" stroke-linejoin="round"/><path d="M56 44c4 14 0 26-8 34 4-10 2-18-4-24" fill="#ff5f3d" stroke="${INKF}" stroke-width="2.2" stroke-linejoin="round"/><circle cx="66" cy="34" r="14" fill="#ffb347" stroke="${INKF}" stroke-width="2.6"/><path d="M62 21c0-8 4-14 10-18-2 6 0 10 4 12 2-4 6-6 10-6-4 4-6 8-6 14" fill="#ff5f3d" stroke="${INKF}" stroke-width="2.2" stroke-linejoin="round"/><path d="M68 24l1.4 3.6 3.8.4-2.9 2.5.9 3.7L68 32.2l-3.2 2 .9-3.7-2.9-2.5 3.8-.4z" fill="#fff6c8" stroke="${INKF}" stroke-width="1.2"/><path d="M78 34l12 3-12 4z" fill="#ffd54a" stroke="${INKF}" stroke-width="2" stroke-linejoin="round"/><circle cx="71" cy="33" r="2.6" fill="${INKF}"/><circle cx="72" cy="32" r=".9" fill="#fff"/></svg>`,
+  ilus: `<svg viewBox="0 0 70 80"><path d="M14 38q21-8 42 0l8 40H6z" fill="#3a1f7a" stroke="${INKF}" stroke-width="2.6" stroke-linejoin="round"/><path d="M20 40q15-5 30 0l4 36H16z" fill="#c2186b" stroke="${INKF}" stroke-width="2" stroke-linejoin="round"/><ellipse cx="35" cy="36" rx="14" ry="12" fill="#b8f0d0" stroke="${INKF}" stroke-width="2.6"/><path d="M22 33q13-8 26 0l-2 6q-11-5-22 0z" fill="#14101f" stroke="${INKF}" stroke-width="1.8"/><ellipse cx="29.5" cy="35" rx="2.6" ry="2" fill="#ffd54a"/><ellipse cx="40.5" cy="35" rx="2.6" ry="2" fill="#ffd54a"/><path d="M29 44q6 4 12 0" stroke="${INKF}" stroke-width="2" fill="none" stroke-linecap="round"/><path d="M16 26h38" stroke="${INKF}" stroke-width="7" stroke-linecap="round"/><path d="M16 26h38" stroke="#14101f" stroke-width="4" stroke-linecap="round"/><path d="M22 26V4h26v22z" fill="#14101f" stroke="${INKF}" stroke-width="2.6" stroke-linejoin="round"/><path d="M22 18h26" stroke="#a37bff" stroke-width="5"/><path d="M28 10l1 2.4 2.6.3-2 1.7.6 2.6-2.2-1.4-2.2 1.4.6-2.6-2-1.7 2.6-.3zM40 8l.7 1.6 1.7.2-1.3 1.1.4 1.7-1.5-.9-1.5.9.4-1.7-1.3-1.1 1.7-.2z" fill="#ffd54a"/><circle cx="8" cy="56" r="5" fill="#fff" stroke="${INKF}" stroke-width="2"/><circle cx="62" cy="56" r="5" fill="#fff" stroke="${INKF}" stroke-width="2"/></svg>`,
+  whale: `<svg viewBox="0 0 96 96"><path d="M96 10C60 6 26 22 22 48c-4 26 30 42 74 38z" fill="#5a7bff" stroke="${INKF}" stroke-width="3" stroke-linejoin="round"/><path d="M28 40q14 6 4 18q-12-8-4-18z" fill="#1b1440" stroke="${INKF}" stroke-width="2.6"/><path d="M30 42l4 3M29 48l5 0M30 54l4-3" stroke="#fff" stroke-width="2" stroke-linecap="round"/><circle cx="52" cy="30" r="5" fill="#fff" stroke="${INKF}" stroke-width="2.2"/><circle cx="51" cy="30" r="2.4" fill="${INKF}"/><path d="M40 70q20 10 50 4" fill="none" stroke="#cfe3ff" stroke-width="3"/><path d="M60 14q4-8 0-12M66 14q6-6 8-12" stroke="#8ff0ff" stroke-width="3" fill="none" stroke-linecap="round"/></svg>`,
+};
+// Fénix (15 nov 2026, pedido del usuario): nunca se ve; solo su fuego. Su icono (barra de vida, Tu camino, ventanas)
+// es una llama.
+const FIRE_SVG = `<svg viewBox="0 0 40 48"><path d="M20 2c2 8 10 10 13 18 2-6 1-10 0-12 5 5 7 14 5 23-2 10-9 15-18 15S4 41 2 32C0 24 3 17 7 13c0 5 2 8 4 9-1-8 3-15 9-20z" fill="#ff6a3d" stroke="${INKF}" stroke-width="2.4" stroke-linejoin="round" class="f1"/><path class="f2" d="M20 13c2 6 8 9 9 17 1 8-4 13-9 13s-10-4-9-11c1-5 4-8 5-11 1 3 2 4 3 5-1-5 0-9 1-13z" fill="#ff9a3d"/><path class="f3" d="M20 25c2 4 5 6 5 11 0 4-2 6-5 6s-5-2-5-5c0-3 3-6 5-12z" fill="#ffc83d"/><path class="f4" d="M20 33c1 2 2.5 3 2.5 5a2.5 2.5 0 0 1-5 0c0-2 1.5-3 2.5-5z" fill="#fff1a0"/></svg>`;
+const FIRE_ICO = () => FIRE_SVG;
+// Ilusionista (15 nov 2026): tampoco se ve; su icono son los brillitos que lanza (estrellas de cuatro picos).
+const star4 = (x, y, r, fill, w = 2.2) => `<path d="M${x} ${y - r}C${x + r * 0.16} ${y - r * 0.16} ${x + r * 0.16} ${y - r * 0.16} ${x + r} ${y}C${x + r * 0.16} ${y + r * 0.16} ${x + r * 0.16} ${y + r * 0.16} ${x} ${y + r}C${x - r * 0.16} ${y + r * 0.16} ${x - r * 0.16} ${y + r * 0.16} ${x - r} ${y}C${x - r * 0.16} ${y - r * 0.16} ${x - r * 0.16} ${y - r * 0.16} ${x} ${y - r}z" fill="${fill}" stroke="${INKF}" stroke-width="${w}" stroke-linejoin="round"/>`;
+export const SPARK_SVG = `<svg viewBox="0 0 40 40">${star4(17, 22, 14, '#ffd54a')}${star4(31, 9, 7, '#7fa4ff', 1.8)}${star4(32, 30, 5, '#ff8fd8', 1.6)}<path d="M13 17l2 2" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>`;
+// Icono del Kraken (barra de vida, Tu camino, ventanas, cofre): una mancha de tinta con chorros (15 nov 2026, pedido
+// del usuario: antes era la punta de un tentáculo).
+const KRAKEN_ICO = (w = 32) => `<svg viewBox="0 0 40 40" width="${w}" height="${w}"><path d="M20 3.5c7.5 0 13.5 4.6 13.2 11.6-.2 5-3 8.2-6.2 9.6v6.3a2.6 2.6 0 0 1-5.2 0v-4.8c-.6.1-1.2.1-1.8.1v8.2a3 3 0 0 1-6 0v-9.6C10 23.2 6.6 19.6 6.8 14 7 7.6 12.6 3.5 20 3.5z" fill="#1f1438" stroke="${INKF}" stroke-width="1.6" stroke-linejoin="round"/><circle cx="35.4" cy="7.6" r="2" fill="#1f1438"/><circle cx="4.6" cy="25.4" r="1.7" fill="#1f1438"/><circle cx="35.6" cy="22.6" r="1.3" fill="#1f1438"/><ellipse cx="15.6" cy="11.4" rx="5.4" ry="3.8" fill="#4a2f80"/><path d="M11.4 12.2q1.6-4.4 6.6-5" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" opacity=".7"/></svg>`;
+// Icono de la Ballena (15 nov 2026, pedido del usuario: «como aire»): una nube verde de soplido con sus rayitas.
+const WHALE_ICO = () => { const C = [[22, 22, 9], [14, 25, 7], [30, 26, 6.5], [21, 30, 6]]; return `<svg viewBox="0 0 40 40">${C.map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r + 1.6}" fill="${INKF}"/>`).join('')}${C.map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r}" fill="#8ee07a"/>`).join('')}<circle cx="19" cy="19" r="3.4" fill="#c8f5b8"/><path d="M3 12q4-2 7 0M2 19q3-1.6 5 0M33 8q3 1 4 4" stroke="${INKF}" stroke-width="2.2" fill="none" stroke-linecap="round"/><circle cx="26" cy="27" r="1.6" fill="#4caf50"/><circle cx="15" cy="27" r="1.2" fill="#4caf50"/></svg>`; };
+export const FOE_ICON = { fenix: FIRE_ICO, ilus: () => SPARK_SVG, kraken: () => KRAKEN_ICO(), whale: WHALE_ICO };
+export const FOE_NAME = { fenix: 'Fénix estelar', ilus: 'el Ilusionista', kraken: 'el Kraken', whale: 'la Ballena glotona' };
+export const FOE_TITLE = { fenix: 'Fénix estelar', ilus: 'El Ilusionista', kraken: 'Kraken', whale: 'Ballena glotona' };
+export const FOE_TEXT = {
+  fenix: ['Nunca lo ves: solo su fuego.', 'Cuando <b>tus cartas tiemblan</b>, cae <b>fuego</b> sobre las libres. El fuego se mueve y deja ver su número <b>por partes</b>. Con <b>racha de 5</b> el fuego baja un turno y ves el número.'],
+  ilus: ['Nunca lo ves: solo su magia.', 'Cuando <b>todas tus cartas boca arriba tiemblan</b>, en tu siguiente turno <b>cambian de número</b>, como por magia. Juega antes las que te sirven.'],
+  kraken: ['Nunca lo ves: solo su tinta.', 'Cuando <b>tus cartas tiemblan</b>, salpica <b>tinta</b> en varias cartas: no se juegan hasta que estén <b>limpias</b>. Con <b>3 cartas seguidas</b> se lava una mancha. Si robas 3 veces con tinta en la mesa, da un <b>manotazo</b>: revuelve las cartas y limpia la mitad de la tinta.'],
+  whale: ['Nunca la ves: solo su aire.', 'Cuando <b>tus cartas tiemblan</b>, <b>jala</b> cartas volteadas a su panza y <b>3 turnos</b> después las <b>escupe encima</b> de otras: las de abajo quedan tapadas hasta que juegues las escupidas. Para ganar no se puede quedar con ninguna.'],
+};
+export const FOE_BTN = { fenix: 'orange', ilus: 'blue', kraken: 'purple', whale: 'green' };
+// Jefes que no se ven en el tablero (solo lo que hacen): no ocupan la orilla.
+const FOE_HIDDEN = ['fenix', 'ilus', 'kraken', 'whale'];
+export const FOE_ALL = '<span class="fa-bar" aria-hidden="true"><b></b></span><span>Cada carta que juegas en <b>racha</b> le baja vida. Si se la acabas, se va y te deja un <b>premio más grande</b>.</span>';
+// Lo que el jefe le hace al tablero no se deshace (lo de antes tampoco).
+// La ayuda que sirve contra cada uno, en su ventana: el reloj de arena los detiene.
+const FOE_LOCK = 'Lo que hizo el jefe no se puede deshacer';
+const foeLock = (ev) => !!(ev?.boss && (ev.boss.ash || ev.boss.ilus || ev.boss.ink || ev.boss.slam || ev.boss.eat || ev.boss.spit));
+
+// Tinta del Kraken (15 nov 2026, el usuario escogió la «mancha B» de dev/kraken-tinta.html): una mancha que tapa la
+// carta (y su número) con chorros que nacen dentro de ella, se angostan y terminan en gota; gotas que caen sin parar y
+// salpicaduras alrededor. La forma cambia con la carta.
+const INK = '#1f1438';
+const f1 = (v) => v.toFixed(1);
+const inkRnd = (id) => (k) => { const v = Math.sin(id * 12.9898 + k * 78.233) * 43758.5453; return v - Math.floor(v); };
+const inkDrip = (x, y0, len, w) => `M${f1(x - w * 1.7)} ${f1(y0)}C${f1(x - w * 1.7)} ${f1(y0 + len * 0.35)} ${f1(x - w)} ${f1(y0 + len * 0.5)} ${f1(x - w)} ${f1(y0 + len)}a${f1(w)} ${f1(w)} 0 0 0 ${f1(2 * w)} 0C${f1(x + w)} ${f1(y0 + len * 0.5)} ${f1(x + w * 1.7)} ${f1(y0 + len * 0.35)} ${f1(x + w * 1.7)} ${f1(y0)}Z`;
+function inkSVG(id) {
+  const rnd = inkRnd(id), n = 14, pts = [];
+  for (let i = 0; i < n; i++) {
+    const a = (i / n) * Math.PI * 2, r = 38 + rnd(i) * 9 + (i % 2 ? 4.5 : 0);
+    pts.push([50 + Math.cos(a) * r * 1.15, 62 + Math.sin(a) * r * 1.4]);
+  }
+  const mid = (p, q) => `${f1((p[0] + q[0]) / 2)} ${f1((p[1] + q[1]) / 2)}`;
+  let blob = `M${mid(pts[n - 1], pts[0])}`;
+  pts.forEach((p, i) => (blob += `Q${f1(p[0])} ${f1(p[1])} ${mid(p, pts[(i + 1) % n])}`));
+  let drips = '', dots = '';
+  for (let j = 0; j < 5; j++) {
+    const x = 14 + j * 18 + rnd(20 + j) * 6, w = 3 + rnd(40 + j) * 3.5, len = 30 + rnd(30 + j) * 45;
+    drips += `<path class="drip" style="--d:${f1(-rnd(5 + j) * 2)}s" d="${inkDrip(x, 80, len, w)}" fill="${INK}"/><circle class="drop" style="animation-delay:${f1(-rnd(50 + j) * 2.2)}s" cx="${f1(x)}" cy="${f1(80 + len + w * 2.4)}" r="${f1(w * 0.85)}" fill="${INK}"/>`;
+  }
+  for (let j = 0; j < 6; j++) {
+    const a = rnd(60 + j) * Math.PI * 2, r = 50 + rnd(70 + j) * 10;
+    dots += `<circle cx="${f1(50 + Math.cos(a) * r)}" cy="${f1(64 + Math.sin(a) * r * 1.3)}" r="${f1(2 + rnd(80 + j) * 3)}" fill="${INK}"/>`;
+  }
+  return `<svg viewBox="0 0 100 140" preserveAspectRatio="none">${dots}${drips}<path d="${blob}Z" fill="${INK}"/><ellipse cx="38" cy="44" rx="20" ry="15" fill="#3b2468" opacity=".75"/><path d="M26 40q8-14 24-15" stroke="#fff" stroke-width="4" fill="none" stroke-linecap="round" opacity=".55"/><circle cx="24" cy="52" r="2.6" fill="#fff" opacity=".5"/></svg>`;
+}
+const INK_BALL = `<svg viewBox="0 0 40 40"><path d="M20 3c9 0 17 7 17 17s-8 17-17 17S3 30 3 20 11 3 20 3z" fill="${INK}" stroke="#120a24" stroke-width="2"/><ellipse cx="14" cy="13" rx="6" ry="4" fill="#6a4aa6"/></svg>`;
+const SPONGE = `<svg viewBox="0 0 40 28"><rect x="2" y="2" width="36" height="24" rx="7" fill="#ffd54a" stroke="${INKF}" stroke-width="2.5"/><circle cx="12" cy="11" r="2.5" fill="#e8a91a"/><circle cx="25" cy="17" r="3" fill="#e8a91a"/><circle cx="30" cy="9" r="2" fill="#e8a91a"/></svg>`;
+const SQUEEGEE = `<svg viewBox="0 0 80 30"><rect x="34" y="0" width="12" height="16" rx="3" fill="#ff8a3d" stroke="${INKF}" stroke-width="2.5"/><rect x="2" y="14" width="76" height="8" rx="3" fill="#9aa3c7" stroke="${INKF}" stroke-width="2.5"/><rect x="4" y="21" width="72" height="6" rx="2" fill="#2f2a4a"/></svg>`;
+// Tentáculo del manotazo (15 nov 2026, el usuario: «el dibujo del tentáculo está perfecto»): su línea es una curva
+// (bezier de 4 puntos) que cambia de pose; grueso en la base y fino en la punta, panza rosa y chupones. sw = grueso.
+const bez = (P, t) => { const u = 1 - t; return [0, 1].map((k) => u * u * u * P[0][k] + 3 * u * u * t * P[1][k] + 3 * u * t * t * P[2][k] + t * t * t * P[3][k]); };
+function tentPath(P, sw, wob, ph) {
+  const n = 60, C = [];
+  for (let i = 0; i <= n; i++) {
+    const t = i / n, a = bez(P, Math.max(0, t - 0.01)), b = bez(P, Math.min(1, t + 0.01)), [x, y] = bez(P, t), tx = b[0] - a[0], ty = b[1] - a[1], m = Math.hypot(tx, ty) || 1, nx = -ty / m, ny = tx / m;
+    const hw = (sw / 2) * (1 - 0.82 * t ** 1.2), o = wob * sw * 0.5 * Math.sin(t * 9 - ph) * t;
+    C.push([x + nx * o, y + ny * o, nx, ny, hw]);
+  }
+  const side = (k) => C.map(([x, y, nx, ny, hw]) => `${f1(x + nx * hw * k)} ${f1(y + ny * hw * k)}`);
+  const [tx, ty, tnx, tny, thw] = C[n], end = `Q${f1(tx + tny * thw * 2.4)} ${f1(ty - tnx * thw * 2.4)} `;
+  let rim = '', hole = '';
+  const ring = (x, y, r) => `M${f1(x - r)} ${f1(y)}a${f1(r)} ${f1(r)} 0 1 0 ${f1(2 * r)} 0a${f1(r)} ${f1(r)} 0 1 0 ${f1(-2 * r)} 0`;
+  for (let i = 4; i < n - 2; i += 4) {
+    const [x, y, nx, ny, hw] = C[i], sx = x - nx * hw * 0.5, sy = y - ny * hw * 0.5;
+    rim += ring(sx, sy, hw * 0.42);
+    hole += ring(sx, sy, hw * 0.18);
+  }
+  return `<path d="M${side(1).join('L')}${end}${side(-1).reverse().join('L')}Z" fill="#b65ccc" stroke="${INKF}" stroke-width="3" stroke-linejoin="round"/><path d="M${side(-0.05).join('L')}${end}${side(-0.9).reverse().join('L')}Z" fill="#f79cc8"/><path d="M${side(0.5).slice(0, -4).join('L')}" stroke="#e3a2f2" stroke-width="${f1(sw * 0.1)}" fill="none" stroke-linecap="round"/><path d="${rim}" fill="#ffd0e4" stroke="#a2367f" stroke-width="1.4"/><path d="${hole}" fill="#e27aae"/>`;
+}
+// Poses del manotazo en una mesa de 334 de ancho con las cartas de enfrente a la altura 159 (se escalan a la de verdad):
+// escondido arriba a la derecha, levantado, golpe y rebote.
+const SLAM_POSE = {
+  hide: [[360, -150], [330, -110], [300, -90], [280, -120]],
+  up: [[360, -40], [250, 40], [170, -10], [215, 45]],
+  hit: [[360, -40], [300, 80], [180, 170], [60, 150]],
+  rest: [[360, -40], [300, 70], [190, 150], [80, 140]],
+};
+
 // Ventana con el formato de las cartas (11 nov 2026): dibujo a la izquierda y, al lado, su nombre y su texto.
 const tipCard = (pic, name, text, cls = '') => `<div class="tip-card"><span class="tip-pic${cls}">${pic}</span><p><b>${name}</b>${text}</p></div>`;
 const helpPic = (back) => `<span class="help-tip-card" style="background-image:${cardBackURL(back)}"></span>`;
@@ -258,6 +363,8 @@ const BACK_MARK = (c) =>
   : c.fire ? ['#ff6a3d', 'tb-ico mk-fire', icon('flame')]
   : c.magnet ? ['#ff5f7e', 'tb-ico mk-magnet', icon('iman')]
   : c.scope ? ['#8a7cf0', 'tb-ico mk-scope', icon('telescopio')]
+  : c.lasso ? ['#c98a4b', 'tb-ico mk-lasso', icon('lazoVaquero')]
+  : c.wand ? ['#a37bff', 'tb-ico mk-wand', icon('varitaEstrella')]
   : c.rainbow ? ['#5ab0ff', 'tb-ico mk-rainbow', icon('arcoiris')]
   : c.cst ? ['#ffc83d', 'tb-ico mk-cst', icon('star')]
   : c.ghost ? ['#b9aef0', 'tb-ico mk-ghost', icon('ghost')]
@@ -320,6 +427,9 @@ export class Game {
     this.dealing = true; // durante el barajeo las cartas no se voltean
     this.modalOpen = false;
     if (opts.resume?.st) this.restore(opts.resume); // partidas guardadas con el formato viejo se empiezan de nuevo
+    // Al seguir una partida guardada (15 nov 2026, el usuario) la ventana del jefe no vuelve a salir (las bombas y
+    // cometas sí se vuelven a presentar).
+    this.foeShown = !!opts.resume?.st;
     this.sync();
 
     this.el = this.build();
@@ -340,6 +450,8 @@ export class Game {
     this.layout();
     this.cards.forEach((c) => !c.removed && this.makeCardEl(c));
     this.makeHole();
+    this.makeBox();
+    this.makeFoe();
     this.makeRocks();
     this.makeDoors();
     this.makeBelt();
@@ -378,6 +490,30 @@ export class Game {
 
   // La primera vez que aparece una mecánica se explica (solo en modo jugador; en dev se ve en la galería).
   tips() {
+    // Jefe de constelación: su ventana sale siempre, al empezar el nivel (15 nov 2026, pedido del usuario; sin letrero
+    // de entrada: nada lo tiene), pero no al seguir una partida guardada (foeShown). save.seen solo marca que ya lo conoces.
+    const F = this.level.foe;
+    if (F && !this.foeShown) {
+      this.foeShown = true;
+      save.seen[`jefe-${F.kind}`] = true;
+      persist();
+      this.modalOpen = true;
+      return openModal({
+        title: `Jefe: ${FOE_TITLE[F.kind]}`,
+        // Cabecera del color del jefe (los que aún no tienen, rosa).
+        color: HEADS[`foe-${F.kind}`] ? `foe-${F.kind}` : 'pink',
+        body: tipCard(`<span class="foe-pic">${FOE_ICON[F.kind]()}</span>`, FOE_TITLE[F.kind], `${FOE_TEXT[F.kind][0]} ${FOE_TEXT[F.kind][1]}`, ' tip-ico') + `<div class="foe-all">${FOE_ALL}</div>`,
+        wide: true,
+        cls: `foe-tip foe-${F.kind}`,
+        closable: false,
+        onClose: () => {
+          this.modalOpen = false;
+          setTimeout(() => this.tips(), 300);
+        },
+        // El botón va del color del jefe (15 nov 2026, pedido del usuario; los demás jefes, por definir: verde).
+        buttons: [{ label: '¡A pelear!', cls: FOE_BTN[F.kind] || 'green' }],
+      });
+    }
     if (this.level.scroll === 'mesa' && !save.seen.mesa) {
       save.seen.mesa = true;
       persist();
@@ -480,6 +616,21 @@ export class Game {
         onClose: () => {
           this.modalOpen = false;
           if (!reduced()) this.holeEl?.animate([{ scale: 1 }, { scale: 1.3 }, { scale: 1 }], { duration: 500, iterations: 2 });
+          setTimeout(() => this.tips(), 300);
+        },
+        buttons: [{ label: '¡Entendido!', cls: 'green' }],
+      });
+    }
+    if (this.level.box && !save.seen.caja) {
+      save.seen.caja = true;
+      persist();
+      this.modalOpen = true;
+      return openModal({
+        ...TABLE_INTRO.caja,
+        closable: false,
+        onClose: () => {
+          this.modalOpen = false;
+          if (!reduced()) this.boxEl?.animate([{ scale: 1 }, { scale: 1.2, rotate: '-6deg' }, { scale: 1 }], { duration: 500, iterations: 2 });
           setTimeout(() => this.tips(), 300);
         },
         buttons: [{ label: '¡Entendido!', cls: 'green' }],
@@ -677,7 +828,7 @@ export class Game {
     el.innerHTML = `${tableHTML(level.world, this.opts.event?.table)}
       <header class="hud">
         <button class="tb hbtn" data-a="exit" aria-label="Pausa" title="Pausa">${icon('pause')}</button>
-        <div class="hud-mid"><div class="combo info"></div></div>
+        <div class="hud-mid"><div class="combo info"></div>${level.foe ? `<div class="foe-bar foe-${level.foe.kind}" aria-label="Vida del jefe"><span class="fb-ico">${FOE_ICON[level.foe.kind]()}</span><span class="fb-hp"><b></b></span></div>` : ''}</div>
         <div class="hud-r">${level.doors ? `<div class="pill info key-pill" aria-label="Llaves" title="Llaves: abre la puerta que quieras">${icon('door')}<b>0</b></div>` : ''}${this.opts.bet > 1 ? `<div class="pill info bet-pill b${this.opts.bet}" aria-label="Apuesta ×${this.opts.bet}" title="Apuesta: premios y ayudas ×${this.opts.bet}">×${this.opts.bet}</div>` : ''}${this.opts.racha ? `<div class="pill info racha-pill ${this.opts.racha.hot ? 'hot' : ''}" aria-label="Racha">${this.opts.racha.hot ? `<span class="fire">${icon('flame')}</span>` : ''}${icon(this.opts.racha.ico)}<span>${this.opts.racha.n}</span></div>` : ''}<div class="pill info${this.opts.meteor ? ` met-pill sh-${this.opts.meteor.kind}` : ''}">${coin()}<span data-coins>${money(shownCoins())}</span>${this.opts.meteor ? `<i class="x2">${this.opts.meteor.x > 1 ? `×${this.opts.meteor.x}` : icon(this.opts.meteor.ico)}</i><small class="met-clock"></small>` : ''}</div>${avatarHTML(save, 'hud-av')}</div>
       </header>
       <div class="board-wrap"><div class="board"></div><div class="streak"></div></div>
@@ -891,6 +1042,8 @@ export class Game {
     this.cards.forEach((c) => c.el && this.place(c));
     this.paintSheets();
     this.placeHole();
+    this.placeBox();
+    this.placeFoe();
     this.placeDoors();
     this.placeBeltBox();
     this.renderStock();
@@ -959,6 +1112,11 @@ export class Game {
       return this.level.doors.map((x, d) => ({ w: W, h, g: x.g, hc: E.doorOpen(this.level, d, this.st) ? x.h : H, ext: x.h - H }));
     }
     if (this.level.hole) return [{ w: 1.9, h: 1.45 }];
+    // Caja galáctica (15 nov 2026): un poco más alta que una carta.
+    if (this.level.box) return [{ w: 1.25, h: 1.6 }];
+    // Jefe de constelación: la criatura va en la orilla (los que no se ven, no).
+    // El Fénix tampoco (no se ve: solo cae su fuego).
+    if (this.level.foe && this.level.foe.kind !== 'kraken' && !FOE_HIDDEN.includes(this.level.foe.kind)) return [{ w: 1.7, h: 1.7 }];
     return [];
   }
   // Acomoda los grupos del tablero y la franja. Devuelve lo mismo que packGroups (con los grupos de las puertas en su
@@ -1185,6 +1343,536 @@ export class Game {
     if (!this.holeEl || !b) return;
     Object.assign(this.holeEl.style, { left: `${b.x * this.u}px`, top: `${b.y * this.u}px`, width: `${b.w * this.u}px`, height: `${b.h * this.u}px` });
   }
+  // ---------- Caja galáctica (15 nov 2026, pedido del usuario) ----------
+  // En la franja de la orilla. Su pantalla enseña el siguiente número de la combinación y abajo una luz por número; cada
+  // acierto hace clic y prende una luz; otro número de la combinación la reinicia (pantalla roja). Abierta, suelta su
+  // premio (BOX_PRIZE) y se va. Deshacer la regresa como estaba (y quita el premio).
+  makeBox() {
+    if (!this.level.box) return;
+    const n = this.level.box.combo.length, b = document.createElement('div');
+    b.className = 'gbox';
+    b.innerHTML = `<svg viewBox="0 0 74 96" aria-hidden="true"><rect x="3" y="8" width="68" height="85" rx="10" fill="#6a4be8" stroke="#2a1f5c" stroke-width="3"/><rect x="3" y="8" width="68" height="20" rx="9" fill="#8a6bff" stroke="#2a1f5c" stroke-width="3"/><circle cx="37" cy="6" r="5" fill="#ffd54a" stroke="#2a1f5c" stroke-width="2"/><path d="M14 84h46" stroke="#ffd54a" stroke-width="4" stroke-linecap="round"/>${[[12, 18], [62, 88], [61, 40]].map(([x, y]) => `<path d="M${x} ${y - 4}l1.2 3 3 1-3 1-1.2 3-1.2-3-3-1 3-1z" fill="#fff"/>`).join('')}</svg><span class="gb-scr"></span><span class="gb-lt${n > 4 ? ' two' : ''}">${'<s></s>'.repeat(n)}</span>`;
+    this.boardEl.append(b);
+    this.boxEl = b;
+    this.boxPaint();
+    this.placeBox();
+  }
+  placeBox() {
+    const b = this.railBox?.[0];
+    if (!this.boxEl || !b) return;
+    Object.assign(this.boxEl.style, { left: `${b.x * this.u}px`, top: `${b.y * this.u}px`, width: `${b.w * this.u}px`, height: `${b.h * this.u}px`, fontSize: `${this.u * 0.42}px` });
+  }
+  boxPaint() {
+    const el = this.boxEl;
+    if (!el) return;
+    const combo = this.level.box.combo, bx = this.st.bx || 0, open = bx >= combo.length;
+    el.classList.toggle('open', open);
+    el.querySelector('.gb-scr').textContent = open ? '' : RANKS[combo[bx]];
+    el.querySelectorAll('.gb-lt s').forEach((s, k) => s.classList.toggle('on', k < bx));
+  }
+  // Lo que pasó con la jugada: clic, se reinicia o se abre (con su premio).
+  boxFx(kind) {
+    const el = this.boxEl;
+    if (!el) return;
+    this.boxPaint();
+    const scr = el.querySelector('.gb-scr');
+    if (kind === 'click') {
+      buzz(10);
+      if (!reduced()) scr.animate([{ scale: 1 }, { scale: 1.35 }, { scale: 1 }], { duration: 300, easing: 'ease-out' });
+    } else if (kind === 'reset') {
+      buzz(30);
+      scr.classList.remove('err');
+      void scr.offsetWidth;
+      scr.classList.add('err');
+      this.shake(el);
+    } else if (kind === 'open') {
+      const p = BOX_PRIZE[this.level.box.combo.length] || BOX_PRIZE[3];
+      const [x, y] = center(el.getBoundingClientRect());
+      if (p.coins) {
+        save.coins += p.coins;
+        flyToWallet('coins', { x, y }, p.coins, shownCoins() - p.coins);
+      }
+      if (p.wild) {
+        save.wild += p.wild;
+        this.updateCounts();
+        squash(this.el.querySelector('.wild-card'));
+      }
+      persist();
+      this.history[this.history.length - 1].boxPrize = p;
+      buzz([20, 40, 20]);
+      if (!reduced()) sparkle({ x, y }, 16);
+      this.showStreak(`¡Caja abierta!${p.coins ? ` +${p.coins}` : ''}${p.wild ? ' + comodín' : ''}`);
+    }
+  }
+
+  // ---------- Jefes de constelación (15 nov 2026, pedido del usuario) ----------
+  // La criatura va en la orilla (Fénix, Ilusionista y Kraken no se ven); la barra de vida, en la cabecera.
+  // Nada de texto ni cuentas en el tablero: antes de atacar tiembla o se agita (bossSoon), y la ventana de la primera
+  // vez explica todo. Lo que hace no se deshace (FOE_LOCK).
+  makeFoe() {
+    const F = this.level.foe;
+    if (!F) return;
+    if (!FOE_HIDDEN.includes(F.kind)) {
+      const el = document.createElement('div');
+      el.className = `foe foe-${F.kind}`;
+      el.innerHTML = FOE_ART[F.kind];
+      this.boardEl.append(el);
+      this.foeEl = el;
+    }
+    this.placeFoe();
+    this.foePaint();
+  }
+  placeFoe() {
+    if (!this.level.foe) return;
+    const b = this.railBox?.[0];
+    if (this.foeEl && b) Object.assign(this.foeEl.style, { left: `${b.x * this.u}px`, top: `${b.y * this.u}px`, width: `${b.w * this.u}px`, height: `${b.h * this.u}px` });
+    // Ballena: lo que escupió va encima de su carta.
+    for (const c of this.cards) if (c.el && this.st.ontop?.[c.id] != null && !this.st.rem[c.id]) this.placeSpat(c);
+  }
+  placeSpat(c) {
+    const t = this.cards[this.st.ontop[c.id]];
+    if (!t?.el || !c.el) return;
+    Object.assign(c.el.style, { left: t.el.style.left, top: `${parseFloat(t.el.style.top) - this.u * 0.12}px`, rotate: `${((c.id * 37) % 13) - 6}deg`, zIndex: +t.el.style.zIndex + 1 });
+  }
+  foePaint() {
+    const F = this.level.foe, st = this.st;
+    if (!F) return;
+    const bar = this.el.querySelector('.foe-bar');
+    if (bar) {
+      bar.querySelector('.fb-hp b').style.width = `${(Math.max(0, st.hp) / F.hp) * 100}%`;
+      bar.classList.toggle('gone', st.hp <= 0);
+    }
+    const soon = E.bossSoon(this.level, st) && !this.dealing;
+    this.foeEl?.classList.toggle('warn', soon);
+    // Ilusionista: las que va a cambiar tiemblan. Fénix y Ballena: las que están a la vista (le puede tocar a cualquiera).
+    // Kraken (15 nov 2026, pedido del usuario: «que tiemblen las cartas»): las libres que puede manchar, solo si todavía
+    // le cabe otra mancha.
+    const grab = F.kind === 'kraken' && (st.ink?.length || 0) < 1 + Math.min(2, F.r);
+    // Ballena: solo las que se puede llevar (no las que ella escupió encima de otra).
+    const ilus = !soon ? null : F.kind === 'whale' ? new Set(E.whaleEatable(this.level, st).map((c) => c.id)) : F.kind === 'ilus' || F.kind === 'fenix' || grab ? new Set(this.cards.filter((c) => c.el && !c.removed && c.rank != null && !c.pack && !c.bomb && !c.comet && E.isOpen(this.level, c, st)).map((c) => c.id)) : null;
+    for (const c of this.cards) {
+      if (!c.el) continue;
+      c.el.classList.toggle('foe-warn', !!ilus?.has(c.id));
+      // Kraken: su tinta (la mancha más vieja se va aclarando con cada jugada seguida).
+      if (F.kind === 'kraken') this.inkOn(c, E.inked(c, st), st.ink?.[0]?.ids.includes(c.id) ? st.tickle : 0);
+      // Ballena: las que se tragó no se ven; las que escupió van encima de otra.
+      c.el.classList.toggle('eaten', !!st.belly?.some((b) => b.id === c.id));
+      if (st.ontop?.[c.id] != null && !st.rem[c.id]) this.placeSpat(c);
+    }
+  }
+  // Tinta del Kraken encima de una carta: llega con su bola (inkIn); con cada jugada seguida se sacude y gotea (w) y a la
+  // tercera la limpia la esponja o el jalador (se turnan: washTool).
+  inkOn(c, on, w = 0) {
+    let ov = c.el.querySelector(':scope > .ink-ov');
+    // Las que limpia el manotazo siguen manchadas hasta el golpe (inkHold).
+    if (!on && this.inkHold?.has(c.id)) return;
+    c.el.classList.toggle('inked', on);
+    if (on && !ov) {
+      ov = document.createElement('i');
+      ov.className = 'ink-ov';
+      ov.style.setProperty('--id', `${-((c.id * 0.53) % 2.8).toFixed(2)}s`);
+      ov.innerHTML = inkSVG(c.id);
+      c.el.append(ov);
+      const d = this.inkIn?.get(c.id);
+      if (!reduced() && d != null) ov.animate([{ scale: 0.2, opacity: 0 }, { scale: 1.18, opacity: 1, offset: 0.45 }, { scale: 0.94, offset: 0.7 }, { scale: 1, opacity: 1 }], { duration: 460, delay: d, easing: 'ease-out', fill: 'backwards' });
+    } else if (!on && ov && !ov.classList.contains('out')) {
+      ov.classList.add('out');
+      if (reduced()) return ov.remove();
+      this.inkClean(c, ov);
+      return;
+    }
+    if (!ov || !on) return;
+    const prev = +(ov.dataset.w || 0);
+    ov.dataset.w = w;
+    // Cada jugada seguida: la mancha se sacude y gotea (todavía no se juega).
+    if (w > prev && !reduced()) ov.animate([{ scale: 1 }, { scale: 0.9, translate: '0 5%' }, { scale: 1, translate: '0 0' }], { duration: 420, easing: 'cubic-bezier(.3,1.4,.5,1)' });
+  }
+  // Limpieza (15 nov 2026, el usuario escogió esponja y jalador de dev/kraken-tinta.html). Esponja: la mancha se parte en
+  // 4 tiras y la esponja con espuma talla en zigzag (cada tira se borra por donde pasa). Jalador: barre de arriba abajo,
+  // la tinta se junta en la orilla y cae. Al final la carta brilla.
+  async inkClean(c, ov) {
+    const el = c.el, w = el.offsetWidth, h = el.offsetHeight, html = ov.innerHTML, tool = document.createElement('i');
+    const done = () => {
+      tool.remove();
+      ov.remove();
+      if (!el.isConnected) return;
+      el.animate([{ filter: 'brightness(1)', scale: 1 }, { filter: 'brightness(1.3) drop-shadow(0 0 10px #fff)', scale: 1.08, offset: 0.4 }, { filter: 'brightness(1)', scale: 1 }], { duration: 500 });
+      sparkle({ x: center(el.getBoundingClientRect())[0], y: center(el.getBoundingClientRect())[1] }, 8);
+    };
+    tool.className = 'ink-tool';
+    el.append(tool);
+    if (this.washTool === 'squeegee') {
+      tool.innerHTML = SQUEEGEE;
+      Object.assign(tool.style, { width: `${w * 1.3}px`, left: `${-w * 0.15}px` });
+      const dur = 750, y0 = -h * 0.12, y1 = h * 1.3;
+      const drop = document.createElement('i');
+      drop.className = 'ink-pool';
+      el.append(drop);
+      tool.animate([{ top: `${y0}px` }, { top: `${y1}px` }], { duration: dur, easing: 'ease-in-out', fill: 'forwards' });
+      drop.animate([{ top: `${y0 + w * 0.35}px`, height: '0px' }, { top: `${y1 + w * 0.36}px`, height: `${w * 0.16}px` }], { duration: dur, easing: 'ease-in-out', fill: 'forwards' });
+      ov.animate([{ clipPath: 'inset(-30% -30% -80% -30%)' }, { clipPath: 'inset(130% -30% -80% -30%)' }], { duration: dur, easing: 'ease-in-out', fill: 'forwards' });
+      await wait(dur);
+      drop.animate([{ translate: '0 0', opacity: 1 }, { translate: '0 60px', opacity: 0 }], { duration: 400, easing: 'ease-in', fill: 'forwards' }).finished.then(() => drop.remove());
+      await tool.animate([{ opacity: 1 }, { opacity: 0, translate: '0 20px' }], { duration: 250, fill: 'forwards' }).finished;
+      return done();
+    }
+    tool.innerHTML = SPONGE;
+    tool.style.width = `${w * 0.75}px`;
+    const n = 4, top = (i) => (i ? `${(i * 100) / n}%` : '-30%'), bot = (i) => (i < n - 1 ? `${100 - ((i + 1) * 100) / n}%` : '-80%');
+    ov.innerHTML = '';
+    const bands = Array.from({ length: n }, (_, i) => {
+      const b = document.createElement('i');
+      b.className = 'ink-band';
+      b.innerHTML = html;
+      b.style.clipPath = `inset(${top(i)} -30% ${bot(i)} -30%)`;
+      ov.append(b);
+      return b;
+    });
+    for (let i = 0; i < n; i++) {
+      const y = ((i + 0.5) * h * 1.25) / n - w * 0.26, ltr = i % 2 === 0, xa = -w * 0.3, xb = w * 0.6;
+      const a = tool.animate([{ left: `${ltr ? xa : xb}px`, top: `${y}px`, rotate: '-8deg' }, { left: `${ltr ? xb : xa}px`, top: `${y}px`, rotate: '8deg' }], { duration: 240, easing: 'ease-in-out', fill: 'forwards' });
+      bands[i].animate([{ clipPath: bands[i].style.clipPath }, { clipPath: ltr ? `inset(${top(i)} -30% ${bot(i)} 130%)` : `inset(${top(i)} 130% ${bot(i)} -30%)` }], { duration: 240, easing: 'ease-in-out', fill: 'forwards' });
+      for (let k = 0; k < 3; k++) setTimeout(() => this.foam(el, Math.random() * w, y + w * 0.2), k * 70);
+      await a.finished;
+    }
+    await tool.animate([{ opacity: 1 }, { opacity: 0, translate: '20px -20px' }], { duration: 220, fill: 'forwards' }).finished;
+    done();
+  }
+  // Espuma de la esponja: una burbuja que sube y truena.
+  foam(el, x, y) {
+    if (!el.isConnected) return;
+    const b = document.createElement('i'), s = 8 + Math.random() * 9;
+    b.className = 'ink-foam';
+    Object.assign(b.style, { left: `${x - s / 2}px`, top: `${y - s / 2}px`, width: `${s}px`, height: `${s}px` });
+    el.append(b);
+    b.animate([{ scale: 0, opacity: 1 }, { scale: 1, opacity: 1, offset: 0.4 }, { scale: 1.1, translate: '0 -20px', opacity: 0 }], { duration: 700 }).finished.then(() => b.remove());
+  }
+  // Tinta (15 nov 2026, el usuario escogió «desde la pantalla»): cada bola viene de enfrente, grande como si te la
+  // aventaran, y se encoge hasta pegar en su carta; ahí revienta (la mancha aparece en inkOn con el retraso de su bola).
+  inkSplash(ids) {
+    buzz(30);
+    this.inkIn = new Map();
+    clearTimeout(this.inkClr);
+    this.inkClr = setTimeout(() => (this.inkIn = null), 2500);
+    if (reduced()) return;
+    const box = this.el.getBoundingClientRect();
+    ids.forEach((id, k) => {
+      const t = this.cards[id]?.el;
+      if (!t) return;
+      const r = t.getBoundingClientRect(), d = k * 160, fly = 480, s = r.width * 0.75;
+      this.inkIn.set(id, d + fly);
+      const x = r.left - box.left + r.width / 2, y = r.top - box.top + r.height * 0.45;
+      const p = document.createElement('i');
+      p.className = 'ink-drop';
+      p.innerHTML = INK_BALL;
+      Object.assign(p.style, { left: `${x - s / 2}px`, top: `${y - s / 2}px`, width: `${s}px`, height: `${s}px` });
+      this.el.append(p);
+      p.animate([{ translate: `${k % 2 ? 70 : -70}px 90px`, scale: 8, opacity: 0, rotate: '0deg' }, { opacity: 0.95, offset: 0.2 }, { translate: '0 0', scale: 1, opacity: 1, rotate: '200deg' }], { duration: fly, delay: d, easing: 'cubic-bezier(.55,0,.85,.4)', fill: 'backwards' }).finished.then(() => p.remove());
+      setTimeout(() => {
+        if (!t.isConnected) return;
+        buzz(12);
+        t.animate([{ translate: '0 0', rotate: '0deg' }, { translate: '0 6px', rotate: `${k % 2 ? 4 : -4}deg` }, { translate: '0 0', rotate: '0deg' }], { duration: 300, easing: 'ease-out' });
+        this.inkSpray(x, y, r.width * 0.7);
+      }, d + fly);
+    });
+  }
+  // Salpicadura: gotitas que salen disparadas (col = su color).
+  inkSpray(x, y, dist, n = 10, col = INK) {
+    for (let i = 0; i < n; i++) {
+      const s = document.createElement('i'), a = (i / n) * Math.PI * 2 + Math.random(), dd = dist * (0.6 + Math.random() * 0.7), w = 4 + Math.random() * 6;
+      s.className = 'ink-spat';
+      Object.assign(s.style, { left: `${x}px`, top: `${y}px`, width: `${w}px`, background: col });
+      this.el.append(s);
+      s.animate([{ translate: '0 0', scale: 1, opacity: 1 }, { translate: `${Math.cos(a) * dd}px ${Math.sin(a) * dd + 12}px`, scale: 0.5, opacity: 0 }], { duration: 480, easing: 'cubic-bezier(.2,.8,.4,1)' }).finished.then(() => s.remove());
+    }
+  }
+  // Lo que hizo el jefe en esta jugada o robo, con su animación.
+  foeFx(b) {
+    const F = this.level.foe;
+    if (!F || !b) return;
+    const bar = this.el.querySelector('.foe-bar');
+    if (b.hit && bar && !reduced()) {
+      bar.animate([{ translate: '0 0' }, { translate: '-4px 0' }, { translate: '4px 0' }, { translate: '0 0' }], { duration: 260 });
+      this.foeEl?.animate([{ filter: 'brightness(1)' }, { filter: 'brightness(2.2)' }, { filter: 'brightness(1)' }], { duration: 300 });
+    }
+    // Kraken: salpica tinta o da el manotazo (la tinta lavada se escurre sola en foePaint).
+    if (b.ink) this.inkSplash(b.ink);
+    // Se lavó una mancha: la limpia la esponja o el jalador, uno y otro (foePaint la quita con inkClean).
+    if (b.wash) this.washTool = (this.washK = (this.washK || 0) + 1) % 2 ? 'sponge' : 'squeegee';
+    if (b.slam) this.krakenSlam(b.slam, b.unink || []);
+    // Fénix: cae fuego desde arriba sobre las cartas.
+    if (b.ash) this.fireFall(b.ash);
+    // Y si cayó en una con enredadera, se quema (el hielo se derrite solo en refresh).
+    if (b.melt) this.burnFx(b.melt.filter((id) => this.level.cards[id].vine != null), true);
+    // Ilusionista: su magia.
+    if (b.ilus) this.magicFx(b.ilus);
+    // Ballena: se traga unas cartas (vuelan a su boca) y escupe otras encima.
+    if (b.eat) this.whaleEat(b.eat);
+    if (b.spit) this.whaleSpit(b.spit);
+    if (b.gone) this.foeBeaten();
+    this.foePaint();
+  }
+  // Ilusionista (15 nov 2026, pedido del usuario: «mucho más llamativo»): una estrella brillante cae desde arriba
+  // sobre cada carta; al llegar, la carta destella, sale un anillo de luz, revientan estrellitas y gira con su número
+  // nuevo (que no se ve hasta que llega la estrella: magic-wait).
+  magicFx(ids) {
+    buzz([15, 40, 15]);
+    if (reduced()) return;
+    const box = this.el.getBoundingClientRect();
+    ids.forEach((id, k) => {
+      const el = this.cards[id]?.el;
+      if (!el) return;
+      el.classList.add('magic-wait');
+      const r = el.getBoundingClientRect(), d = k * 70, fall = 420;
+      const x = r.left - box.left + r.width / 2, y = r.top - box.top + r.height / 2, x0 = x + (k % 2 ? 50 : -50);
+      const p = document.createElement('i');
+      p.className = 'magic-drop';
+      p.innerHTML = SPARK_SVG;
+      this.el.append(p);
+      p.animate([{ translate: `${x0}px -60px`, scale: 0.5, rotate: '0deg', opacity: 0 }, { opacity: 1, offset: 0.15 }, { translate: `${x}px ${y}px`, scale: 1.2, rotate: '200deg', opacity: 1, offset: 0.9 }, { translate: `${x}px ${y}px`, scale: 2, rotate: '240deg', opacity: 0 }], { duration: fall + 60, delay: d, easing: 'cubic-bezier(.45,0,.85,.55)', fill: 'both' }).finished.then(() => p.remove());
+      setTimeout(() => {
+        el.classList.remove('magic-wait');
+        if (!el.isConnected) return;
+        buzz(8);
+        el.querySelector('.inner')?.animate([{ rotate: 'y 0deg' }, { rotate: 'y 90deg', offset: 0.5 }, { rotate: 'y 0deg' }], { duration: 420 });
+        el.animate([{ filter: 'brightness(1)' }, { filter: 'brightness(1.8) drop-shadow(0 0 14px #7fa4ff)', offset: 0.25 }, { filter: 'brightness(1)' }], { duration: 700 });
+        const ring = document.createElement('i');
+        ring.className = 'magic-ring';
+        Object.assign(ring.style, { left: `${x}px`, top: `${y}px`, width: `${r.width * 1.3}px` });
+        this.el.append(ring);
+        ring.animate([{ scale: 0.3, opacity: 1 }, { scale: 1.6, opacity: 0 }], { duration: 560, easing: 'ease-out' }).finished.then(() => ring.remove());
+        const cols = ['#ffd54a', '#7fa4ff', '#ff8fd8', '#fff', '#b98cff'];
+        for (let i = 0; i < 12; i++) {
+          const s = document.createElement('i'), a = (i / 12) * Math.PI * 2 + k, dist = r.width * (0.8 + (i % 3) * 0.3);
+          s.className = 'magic-star';
+          Object.assign(s.style, { left: `${x}px`, top: `${y}px`, background: cols[i % cols.length], width: `${8 + (i % 3) * 5}px` });
+          this.el.append(s);
+          s.animate([{ translate: '0 0', scale: 0.4, rotate: '0deg', opacity: 1 }, { translate: `${Math.cos(a) * dist}px ${Math.sin(a) * dist}px`, scale: 1, rotate: '180deg', opacity: 1, offset: 0.6 }, { translate: `${Math.cos(a) * dist * 1.2}px ${Math.sin(a) * dist * 1.2 + 12}px`, scale: 0.2, rotate: '260deg', opacity: 0 }], { duration: 760, easing: 'cubic-bezier(.2,.8,.3,1)' }).finished.then(() => s.remove());
+        }
+      }, d + fall);
+    });
+  }
+  // Fénix: bolas de fuego caen desde arriba de la pantalla, una tras otra, y al tocar la carta la prenden (su fuego
+  // aparece en refresh, con el retraso de su bola: fireIn).
+  fireFall(ids) {
+    buzz(25);
+    this.fireIn = new Map();
+    if (reduced()) return;
+    const box = this.el.getBoundingClientRect();
+    ids.forEach((id, k) => {
+      const t = this.cards[id]?.el;
+      if (!t) return;
+      const r = t.getBoundingClientRect(), p = document.createElement('i'), d = k * 110, fall = 520;
+      this.fireIn.set(id, d + fall - 60);
+      p.className = 'fire-drop';
+      p.innerHTML = '<i></i>';
+      this.el.append(p);
+      const x = r.left - box.left + r.width / 2, y = r.top - box.top + r.height * 0.45, x0 = x + (k % 2 ? 40 : -40);
+      p.animate([{ translate: `${x0}px -60px`, scale: 0.7, opacity: 0 }, { translate: `${x0 + (x - x0) * 0.2}px ${y * 0.15}px`, opacity: 1, offset: 0.15 }, { translate: `${x}px ${y}px`, scale: 1.1, opacity: 1, offset: 0.92 }, { translate: `${x}px ${y}px`, scale: 1.8, opacity: 0 }], { duration: fall + 80, delay: d, easing: 'cubic-bezier(.5,0,.9,.6)', fill: 'both' }).finished.then(() => p.remove());
+      setTimeout(() => {
+        if (!t.isConnected) return;
+        buzz(12);
+        t.animate([{ translate: '0 0' }, { translate: '0 5px' }, { translate: '0 0' }], { duration: 220, easing: 'ease-out' });
+        const [cx, cy] = center(t.getBoundingClientRect());
+        sparkle({ x: cx, y: cy }, 6);
+      }, d + fall - 40);
+    });
+  }
+  // Manotazo (15 nov 2026, el usuario escogió el de dev/kraken-tinta.html): el tentáculo baja de arriba a la derecha,
+  // se levanta y golpea de arriba abajo como la palanca del tragamonedas; la mesa tiembla, todas las cartas brincan y
+  // sale «¡PUM!» grande enfrente; las revueltas cambian de número y palo justo con el golpe y a la mitad de las manchadas
+  // se le cae la tinta, que sale volando (unink).
+  async krakenSlam(ids, unink = []) {
+    // Hasta el golpe se quedan con su cara de antes (refresh no las repinta) y con su tinta.
+    this.slamHold = new Set(ids);
+    this.inkHold = new Set(unink);
+    const shake = () => {
+      this.inkHold = null;
+      for (const id of unink) {
+        const c = this.cards[id], ov = c?.el?.querySelector(':scope > .ink-ov');
+        if (!ov) continue;
+        c.el.classList.remove('inked');
+        ov.classList.add('out');
+        if (reduced()) {
+          ov.remove();
+          continue;
+        }
+        const r = c.el.getBoundingClientRect(), box = this.el.getBoundingClientRect(), dx = (id % 2 ? 1 : -1) * (30 + (id % 4) * 12);
+        ov.animate([{ translate: '0 0', scale: 1, rotate: '0deg', opacity: 1 }, { translate: `${dx}px -50px`, scale: 1.25, rotate: `${dx / 2}deg`, opacity: 1, offset: 0.4 }, { translate: `${dx * 1.6}px 40px`, scale: 0.6, rotate: `${dx}deg`, opacity: 0 }], { duration: 650, easing: 'cubic-bezier(.3,.6,.6,1)', fill: 'forwards' }).finished.then(() => ov.remove());
+        this.inkSpray(r.left - box.left + r.width / 2, r.top - box.top + r.height / 2, r.width * 0.9, 12);
+      }
+    };
+    const swap = () => {
+      this.slamHold = null;
+      for (const id of ids) {
+        const c = this.cards[id];
+        if (!c?.el) continue;
+        const box = c.el.querySelector('.inner');
+        if (box) box.outerHTML = `<div class="inner">${faceHTML({ ...c, suit: this.st.suit?.[id] ?? c.suit }, E.rankOf(c, this.st))}${backHTML(c)}</div>`;
+        c.el.dataset.sh = E.rankOf(c, this.st);
+      }
+    };
+    if (reduced()) return (swap(), shake(), this.showStreak('¡PUM!'));
+    this.busy = true;
+    // Las poses están hechas para una mesa de 334 de ancho: se escalan al ancho de la mesa y se bajan a las cartas de
+    // enfrente (las libres más abajo).
+    const W = this.wrapEl.offsetWidth, k = W / 334, live = this.cards.filter((c) => c.el && !c.removed && !this.st.rem[c.id]);
+    const front = live.length ? Math.max(...live.map((c) => parseFloat(c.el.style.top))) + this.boardEl.offsetTop + this.u * 0.7 : this.wrapEl.offsetHeight / 2;
+    const map = (P) => P.map(([x, y]) => [x * k, front + (y - 159) * k]);
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('class', 'kraken-arm');
+    const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    svg.append(g);
+    this.wrapEl.append(svg);
+    const pose = (from, to, ms, ease, wob) => {
+      const A = map(from), B = map(to), t0 = performance.now();
+      return new Promise((ok) => {
+        const step = (now) => {
+          const t = Math.min(1, (now - t0) / ms), e = ease(t);
+          g.innerHTML = tentPath(A.map((p, i) => [p[0] + (B[i][0] - p[0]) * e, p[1] + (B[i][1] - p[1]) * e]), 44 * k, wob * Math.sin(Math.PI * t), now / 80);
+          if (t < 1) requestAnimationFrame(step);
+          else ok();
+        };
+        requestAnimationFrame(step);
+      });
+    };
+    const io = (t) => (t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2), inn = (t) => t * t * t, out = (t) => 1 - (1 - t) ** 3;
+    const lift = SLAM_POSE.up.map(([x, y]) => [x + 6, y - 14]);
+    buzz(20);
+    await pose(SLAM_POSE.hide, SLAM_POSE.up, 600, out, 1);
+    await pose(SLAM_POSE.up, lift, 300, io, 1.4);
+    await pose(lift, SLAM_POSE.hit, 200, inn, 0.3);
+    // ¡Golpe!
+    buzz([60, 30, 60, 30, 40]);
+    this.wrapEl.animate([{ translate: '0 0', rotate: '0deg' }, { translate: '0 16px' }, { translate: '-12px -7px', rotate: '-1.5deg' }, { translate: '11px 6px', rotate: '1.2deg' }, { translate: '-7px -3px', rotate: '-.6deg' }, { translate: '4px 2px' }, { translate: '0 0', rotate: '0deg' }], { duration: 760, easing: 'ease-out' });
+    const pum = document.createElement('i');
+    pum.className = 'kraken-pum';
+    pum.textContent = '¡PUM!';
+    this.wrapEl.append(pum);
+    pum.animate([{ scale: 0.2, rotate: '-12deg', opacity: 0 }, { scale: 1.35, rotate: '6deg', opacity: 1, offset: 0.35 }, { scale: 1, rotate: '-3deg', opacity: 1, offset: 0.6 }, { scale: 1.05, opacity: 1, offset: 0.85 }, { scale: 1.3, opacity: 0 }], { duration: 1100, fill: 'forwards' }).finished.then(() => pum.remove());
+    live.forEach((c, i) => c.el.animate([{ translate: '0 0', rotate: '0deg' }, { translate: `${((c.id % 5) - 2) * 6}px -${40 + (c.id % 3) * 10}px`, rotate: `${(c.id % 2 ? 1 : -1) * (10 + (c.id % 5) * 4)}deg`, offset: 0.45 }, { translate: '0 0', rotate: '0deg' }], { duration: 700, delay: (i % 6) * 25, easing: 'cubic-bezier(.3,1.3,.5,1)' }));
+    const box = this.el.getBoundingClientRect(), wr = this.wrapEl.getBoundingClientRect();
+    this.inkSpray(wr.left - box.left + 120 * k, wr.top - box.top + front, 60 * k, 14, '#3a2a14');
+    // Cambian justo con el golpe, detrás del ¡PUM!, y la tinta suelta sale volando.
+    swap();
+    shake();
+    setTimeout(() => (this.busy = false), 280);
+    await pose(SLAM_POSE.hit, SLAM_POSE.rest, 200, out, 0.6);
+    await wait(650);
+    await pose(SLAM_POSE.rest, SLAM_POSE.hide, 650, inn, 1.2);
+    svg.remove();
+  }
+  // Ballena (15 nov 2026, pedido del usuario: no se ve): un aire sube por la mesa y jala las cartas hacia arriba (lejos
+  // del mazo): tiemblan, se estiran y salen volando girando. Al escupirlas caen desde arriba con un soplido.
+  whaleEat(ids) {
+    buzz([30, 20, 40, 20, 60]);
+    if (reduced()) return;
+    this.whaleWind(true);
+    // La mesa se jala hacia arriba con el aire.
+    this.wrapEl.animate([{ translate: '0 0' }, { translate: '0 -8px', offset: 0.35 }, { translate: '2px -5px', offset: 0.55 }, { translate: '-2px -7px', offset: 0.7 }, { translate: '0 0' }], { duration: 1000, easing: 'ease-in-out' });
+    const box = this.el.getBoundingClientRect();
+    ids.forEach((id, k) => {
+      const el = this.cards[id]?.el;
+      if (!el) return;
+      const r = el.getBoundingClientRect(), up = r.bottom - box.top + 120, dx = (box.width / 2 - (r.left - box.left + r.width / 2)) * 0.4;
+      // La animación va antes de esconderla (foePaint le pone .eaten; .gulping la deja ver mientras vuela).
+      el.classList.add('gulping');
+      el.animate([
+        { translate: '0 0', scale: '1 1', rotate: '0deg' },
+        { translate: '-3px -2px', rotate: '-4deg', offset: 0.1 },
+        { translate: '3px -4px', rotate: '4deg', offset: 0.2 },
+        { translate: '-2px -8px', scale: '0.95 1.12', rotate: '-3deg', offset: 0.32 },
+        { translate: `${dx * 0.3}px -40px`, scale: '0.85 1.2', rotate: '40deg', offset: 0.55 },
+        { translate: `${dx}px ${-up}px`, scale: '0.3 0.4', rotate: '420deg' },
+      ], { duration: 900, delay: k * 110, easing: 'cubic-bezier(.5,0,.9,.6)' }).finished.then(() => el.classList.remove('gulping'));
+    });
+  }
+  // Aire (15 nov 2026, el usuario: «más fuerte, no me di cuenta»): una ráfaga verdosa cruza la pantalla, muchas rayas
+  // gruesas pasan rápido (hacia arriba al jalar, hacia abajo al escupir) y polvito que vuela con ellas.
+  whaleWind(up) {
+    const box = this.el.getBoundingClientRect(), H = box.height, dir = up ? -1 : 1;
+    const gust = document.createElement('i');
+    gust.className = `whale-gust${up ? '' : ' down'}`;
+    this.el.append(gust);
+    gust.animate([{ translate: `0 ${-dir * 60}%`, opacity: 0 }, { opacity: 1, offset: 0.3 }, { translate: `0 ${dir * 60}%`, opacity: 0 }], { duration: up ? 1100 : 700, easing: 'ease-in-out' }).finished.then(() => gust.remove());
+    const n = up ? 40 : 24;
+    for (let i = 0; i < n; i++) {
+      const w = document.createElement('i'), x = Math.random() * box.width, h = 80 + Math.random() * 140, y0 = up ? H * (0.35 + Math.random() * 0.6) : -h - Math.random() * H * 0.3;
+      w.className = 'whale-wind';
+      Object.assign(w.style, { left: `${x}px`, top: `${y0}px`, height: `${h}px`, width: `${5 + Math.random() * 8}px` });
+      this.el.append(w);
+      const dx = up ? (box.width / 2 - x) * 0.3 : (Math.random() - 0.5) * 40, dy = up ? -y0 - h : H * (0.5 + Math.random() * 0.4);
+      w.animate([{ translate: '0 0', opacity: 0, rotate: `${dx / 10}deg` }, { opacity: 0.95, offset: 0.2 }, { translate: `${dx}px ${dy}px`, opacity: 0, rotate: `${dx / 10}deg` }], { duration: (up ? 600 : 420) + Math.random() * 300, delay: Math.random() * (up ? 600 : 250), easing: 'cubic-bezier(.4,0,.8,.6)', fill: 'backwards' }).finished.then(() => w.remove());
+    }
+    if (!up) return;
+    for (let i = 0; i < 18; i++) {
+      const d = document.createElement('i'), x = Math.random() * box.width, y0 = H * (0.5 + Math.random() * 0.45), sz = 4 + Math.random() * 6;
+      d.className = 'whale-dust';
+      Object.assign(d.style, { left: `${x}px`, top: `${y0}px`, width: `${sz}px`, height: `${sz}px` });
+      this.el.append(d);
+      const dx = (box.width / 2 - x) * 0.4 + (Math.random() - 0.5) * 60;
+      d.animate([{ translate: '0 0', opacity: 0 }, { opacity: 1, offset: 0.2 }, { translate: `${dx * 0.4}px ${-y0 * 0.4}px`, offset: 0.5 }, { translate: `${dx}px ${-y0 - 20}px`, opacity: 0, rotate: '360deg' }], { duration: 900 + Math.random() * 300, delay: Math.random() * 400, easing: 'ease-in', fill: 'backwards' }).finished.then(() => d.remove());
+    }
+  }
+  whaleSpit(list) {
+    buzz([40, 30, 40]);
+    if (!reduced()) this.whaleWind(false);
+    const box = this.el.getBoundingClientRect();
+    list.forEach(([id], k) => {
+      const c = this.cards[id];
+      if (!c?.el) return;
+      c.el.classList.remove('eaten');
+      if (this.st.ontop?.[id] != null) this.placeSpat(c);
+      else this.place(c);
+      if (reduced()) return;
+      const r = c.el.getBoundingClientRect(), d = k * 120;
+      c.el.animate([{ translate: `${(k % 2 ? 1 : -1) * 40}px ${-(r.bottom - box.top) - 60}px`, scale: 0.4, rotate: '-220deg' }, { translate: '0 -14px', scale: '1.05 0.95', rotate: '0deg', offset: 0.8 }, { translate: '0 0', scale: 1 }], { duration: 620, delay: d, easing: 'cubic-bezier(.4,.1,.5,1)', fill: 'backwards' });
+      // Soplido al caer: una onda verde, nubes que se abren y la mesa rebota.
+      setTimeout(() => {
+        if (!c.el.isConnected) return;
+        buzz(25);
+        const [x, y] = center(c.el.getBoundingClientRect());
+        this.wrapEl.animate([{ translate: '0 0' }, { translate: '0 6px' }, { translate: '0 -2px' }, { translate: '0 0' }], { duration: 320 });
+        const ring = document.createElement('i');
+        ring.className = 'whale-ring';
+        Object.assign(ring.style, { left: `${x - box.left}px`, top: `${y - box.top}px`, width: `${r.width * 1.6}px` });
+        this.el.append(ring);
+        ring.animate([{ scale: 0.2, opacity: 1 }, { scale: 1.8, opacity: 0 }], { duration: 560, easing: 'ease-out' }).finished.then(() => ring.remove());
+        for (let i = 0; i < 12; i++) {
+          const p = document.createElement('i'), a = (i / 12) * Math.PI * 2, s = 20 + (i % 3) * 10;
+          p.className = 'whale-puff';
+          Object.assign(p.style, { left: `${x - box.left - s / 2}px`, top: `${y - box.top - s / 2}px`, width: `${s}px`, height: `${s}px` });
+          this.el.append(p);
+          p.animate([{ translate: '0 0', scale: 0.3, opacity: 1 }, { translate: `${Math.cos(a) * r.width * 1.1}px ${Math.sin(a) * r.width * 0.8}px`, scale: 1.5, opacity: 0 }], { duration: 650, easing: 'ease-out' }).finished.then(() => p.remove());
+        }
+      }, d + 500);
+    });
+  }
+  // Lo venciste: se va volando, la barra se apaga y lo que tenía regresa (la ballena suelta lo de su panza).
+  foeBeaten() {
+    this.foeBeat = true;
+    buzz([30, 40, 30]);
+    for (const c of this.cards) if (c.el?.classList.contains('eaten')) (c.el.classList.remove('eaten'), this.place(c));
+    if (this.foeEl && !reduced()) this.foeEl.animate([{ translate: '0 0', rotate: '0deg', opacity: 1 }, { translate: '30px -60vh', rotate: '25deg', opacity: 0 }], { duration: 1100, easing: 'cubic-bezier(.5,0,.8,.5)', fill: 'forwards' });
+    else if (this.foeEl) this.foeEl.style.opacity = 0;
+    if (!reduced()) confetti(50);
+    this.showStreak(`¡Venciste a ${FOE_NAME[this.level.foe.kind]}!`);
+  }
+  // Fénix: tocaste una con fuego que no conecta. Tiembla y cuenta como robo (no se deshace).
+  blindMiss(c) {
+    const before = this.st, { s, ev } = E.blind(this.level, before, c.id);
+    this.history.push({ t: 'blind', before, ev, best: this.best, bonus: this.bonus, lock: 'Tocar a ciegas no se puede deshacer' });
+    this.st = s;
+    this.sync();
+    buzz(30);
+    this.shake(c.el);
+    this.showCombo();
+    if (ev.boss) this.foeFx(ev.boss);
+    this.refresh();
+    this.save();
+    this.checkEnd();
+  }
+
   // ---------- Cinturón de asteroides (10 nov 2026) ----------
   // En la orilla, una franja de piedras que flotan; encima, cuántos robos faltan para que caigan (ROCK_EVERY). Las
   // piedras que tapan cartas van en cada carta (.rock-ov, con las jugadas que les quedan; ver refresh).
@@ -1268,14 +1956,17 @@ export class Game {
   }
   // Fuego (13 nov 2026): a cada carta con enredadera le sube una llama, las hojas se queman (se oscurecen), se
   // deshacen en ceniza que cae y la carta queda libre. Va sobre una copia de las hojas: la de verdad ya se escondió.
-  burnFx(ids) {
-    toast(`${icon('flame')} ¡Fuego! Se queman las enredaderas`);
+  // quiet: la quema el fuego del Fénix (sin aviso ni llama propia: ya cae la suya).
+  burnFx(ids, quiet = false) {
+    if (!ids.length) return;
+    if (!quiet) toast(`${icon('flame')} ¡Fuego! Se queman las enredaderas`);
     buzz(25);
     if (reduced()) return;
     ids.forEach((id, k) => {
       const el = this.cards[id]?.el, ov = el?.querySelector('.vine-ov');
       if (!ov) return;
-      const d = 120 + k * 110;
+      // Con el Fénix se quema cuando llega su bola de fuego.
+      const d = quiet ? (this.fireIn?.get(id) ?? 0) : 120 + k * 110;
       const ash = ov.cloneNode(true);
       ash.classList.add('vine-burn');
       el.append(ash);
@@ -1285,6 +1976,7 @@ export class Game {
         { filter: 'brightness(0.25) grayscale(1)', opacity: 1, translate: '0 0', offset: 0.55 },
         { filter: 'brightness(0.2) grayscale(1) blur(1px)', opacity: 0, translate: '0 18%', scale: 0.92 },
       ], { duration: 900, delay: d, easing: 'ease-in', fill: 'both' }).finished.then(() => ash.remove());
+      if (quiet) return;
       const f = document.createElement('span');
       f.className = 'fire-fx';
       f.innerHTML = icon('flame') + icon('flame') + icon('flame');
@@ -1823,6 +2515,27 @@ export class Game {
   }
 
   // Pinta lo que depende del estado: boca arriba, candados, cortinas, hielo, bomba y carta viva.
+  // Fuego del Fénix sobre una carta: una llama encima del número que se mueve (lo deja ver por partes); el número de la
+  // esquina se esconde (on-fire).
+  // Llega con su bola (fireIn) y se apaga con humo (al jugarla o al vencer al Fénix).
+  fireOn(c, on) {
+    const ov = c.el.querySelector(':scope > .fire-ov');
+    c.el.classList.toggle('on-fire', on);
+    if (on && !ov) {
+      const f = document.createElement('i');
+      f.className = 'fire-ov';
+      // Cada carta con su propio paso (para que no se muevan todas igual).
+      f.style.setProperty('--fd', `${-((c.id * 0.37) % 3).toFixed(2)}s`);
+      f.innerHTML = `<span class="fl">${FIRE_SVG}</span>`;
+      c.el.append(f);
+      const d = this.fireIn?.get(c.id);
+      if (!reduced()) f.animate([{ opacity: 0, scale: 0.6 }, { opacity: 1, scale: 1.08, offset: 0.6 }, { opacity: 1, scale: 1 }], { duration: 380, delay: d ?? 0, easing: 'ease-out', fill: 'backwards' });
+    } else if (!on && ov && !ov.classList.contains('out')) {
+      ov.classList.add('out');
+      if (reduced()) return ov.remove();
+      ov.animate([{ opacity: 1, scale: 1 }, { opacity: 0, scale: 0.7, translate: '0 -30%' }], { duration: 420, easing: 'ease-in', fill: 'forwards' }).finished.then(() => ov.remove());
+    }
+  }
   refresh() {
     const { level, st } = this;
     // Mesa que se voltea: a 1 jugada o robo de la vuelta, la cápsula tiembla (no con el reloj de arena); al voltearse, gira.
@@ -1837,6 +2550,8 @@ export class Game {
     else if (level.scroll) this.nebUpdate();
     for (const c of this.cards) if (c.scr && c.el && !c.removed) this.paintScr(c);
     this.paintSheets();
+    this.boxPaint();
+    this.foePaint();
     this.updateStuck(true);
     this.doorUpdate();
     // Banda: cada acción la mueve un lugar (y su cinta avanza).
@@ -1887,13 +2602,19 @@ export class Game {
         if (box) box.innerHTML = faceHTML(x, E.rankOf(c, st)) + backHTML(x);
       }
     }
+    this.el.classList.toggle('fire-low', E.fireLow(st));
     // Arcoíris encendido: las cartas que puedes jugar ahorita se pintan de colores (cambian con cada descarte).
     const rbCan = st.top?.rb > 0 && !this.dealing ? new Set(E.legal(level, st).map((c) => c.id)) : null;
     for (const c of this.cards) {
+      // Fénix: la que se jugó se lleva su fuego, que se apaga en el camino.
+      if (c.removed && c.el) this.fireOn(c, false);
       if (c.removed || !c.el) continue;
       const el = c.el;
       // Telescopio: las tapadas se ven (con orilla de telescopio) mientras dure; solo es para ver.
       const see = st.scope > 0 && !this.dealing && !this.shownUp(c);
+      // Fénix (15 nov 2026): el fuego va encima de la carta boca arriba y se mueve: deja ver su número por partes.
+      // Con racha de 5, 10… se hace chico un turno (se ve el número); Ver cartas lo apaga esos segundos (fire-off, peekAll).
+      this.fireOn(c, !!st.ash?.includes(c.id) && !st.rem[c.id]);
       if (!this.dealing) el.classList.toggle('up', this.shownUp(c) || see);
       el.classList.toggle('scope-see', see);
       el.classList.toggle('rb-can', !!rbCan?.has(c.id));
@@ -1947,6 +2668,17 @@ export class Game {
           };
           if (was == null || reduced() || !this.holeEl) set();
           else setTimeout(set, 340);
+        }
+      }
+      // Lazo y varita (15 nov 2026): las que puedes escoger brillan; la varita cambia el número de la carta.
+      el.classList.toggle('lasso-can', !!st.lasso && E.canLasso(level, c, st));
+      el.classList.toggle('wand-can', !!st.wand && E.canWand(level, c, st) && this.wandOn?.id !== c.id);
+      if (st.shift?.[c.id] != null || el.dataset.sh) {
+        const r = E.rankOf(c, st);
+        // (Las que revuelve el manotazo esperan al golpe: slamHold.)
+        if (el.dataset.sh !== String(r) && this.wandOn?.id !== c.id && !this.slamHold?.has(c.id)) {
+          el.dataset.sh = r;
+          this.paintRank(el, r);
         }
       }
       // Carta dormida: su número es lo que le falta de racha; al despertar se estira y se le va el gorro.
@@ -2112,7 +2844,11 @@ export class Game {
     this.turboShown = cur;
     const pips = '<span class="tp"></span>'.repeat(cur);
     this.comboEl.classList.toggle('turbo', tb);
+    // Jefe (15 nov 2026, pedido del usuario): su barra de vida va dentro de la racha, a la derecha (se conserva el
+    // mismo elemento para que no se reinicie su ancho).
+    const fb = this.el.querySelector('.foe-bar');
     this.comboEl.innerHTML = `${this.levelTag()}${tb ? `<span class="turbo-chip">${icon('rocket')}<b>×2</b><span class="tps">${pips}</span></span>` : ''}<span class="dots">${from ? `<b>×${from}</b>` : ''}${dots}${prize}</span>${near ? `<em class="need outl">¡Falta ${left}!</em>` : ''}`;
+    if (fb) this.comboEl.append(fb);
     if (cur !== prev) this.turboFx(cur, prev, oldChip, oldRect);
     this.comboEl.classList.toggle('near', near);
     this.comboEl.classList.toggle('hot', near && left === 1);
@@ -2186,6 +2922,10 @@ export class Game {
     if (!c || c.removed) return;
     const { level, st } = this;
     if (this.astroPick) return this.pickHold(c);
+    // Lazo y varita esperando: la carta que tocas es la que escoges.
+    if (this.wandOn) return this.wandClose(c);
+    if (st.lasso && E.canLasso(level, c, st) && !this.coach) return this.lassoPull(c);
+    if (st.wand && E.canWand(level, c, st) && !this.coach) return this.wandOpen(c);
     if (c.pack || c.bomb || c.comet) {
       buzz();
       if (c.pack) this.tell('pack', 'Destápala por completo y te regala cartas');
@@ -2194,6 +2934,9 @@ export class Game {
       return this.shake(c.el);
     }
     if (this.coach && !this.coach.allows(c)) return;
+    // Fénix: tocaste de memoria una con ceniza que no conecta: cuenta como robo.
+    // Con el fuego bajo (un turno, al llegar la racha a 5, 10…) el número se ve: ahí equivocarse no cuesta.
+    if (st.ash?.includes(c.id) && !E.fireLow(st) && E.isOpen(level, c, st) && E.playRank(level, c, st) == null) return this.blindMiss(c);
     if (E.playRank(level, c, st) == null) {
       if (c.scr && E.isOpen(level, c, st) && E.scrOpen(c, st) < E.SCR_WIN) return this.scrMiss(c);
       buzz();
@@ -2318,13 +3061,14 @@ export class Game {
 
   play(c, low = false) {
     this.magnetAimOff();
+    if (this.wandOn) this.wandClose(null, true);
     if (c.scr) c.el?.querySelector('.scr-ov')?.remove();
     const before = this.st;
     const { s, ev } = E.play(this.level, before, c.id, low);
     const burnRects = this.burnRects(ev.boom);
     // Raspadita: si esta jugada la raspa (o es ella), ya no se deshace.
     const scraped = c.scr || this.level.cards.some((x) => x.scr && !before.rem[x.id] && E.scrOpen(x, s) > E.scrOpen(x, before));
-    this.history.push({ t: 'play', before, ev, best: this.best, bonus: this.bonus, ...(scraped && { lock: true }) });
+    this.history.push({ t: 'play', before, ev, best: this.best, bonus: this.bonus, ...(scraped && { lock: true }), ...(foeLock(ev) && { lock: FOE_LOCK }) });
     this.st = s;
     this.sync();
     this.best = Math.max(this.best, s.streak);
@@ -2341,6 +3085,141 @@ export class Game {
     else if (ev.tri?.left) this.tearStub(c, ev);
     else this.flyToWaste(c, ev, E.cutOf(c, before), ev.tri?.stub);
     if (ev.twin != null) this.pullTwin(aEl, this.cards[ev.twin]);
+    this.afterPlay(before, ev, burnRects);
+  }
+
+  // Número de la carta en su cara (esquina y centro), con un brinco.
+  paintRank(el, r, bump = true) {
+    for (const sel of ['.front .big', '.front .rk']) {
+      const t = el.querySelector(sel);
+      if (!t) continue;
+      t.textContent = RANKS[r];
+      t.classList.toggle('uline', RANKS[r] === '6' || RANKS[r] === '9');
+      if (sel === '.front .big') t.classList.toggle('ten', RANKS[r] === '10');
+    }
+    if (bump && !reduced() && !this.dealing) el.querySelector('.front .big')?.animate([{ scale: 1 }, { scale: 1.5, rotate: '-10deg', offset: 0.45 }, { scale: 1, rotate: '0deg' }], { duration: 420, easing: 'ease-out' });
+  }
+
+  // ---------- Varita (15 nov 2026, pedido del usuario) ----------
+  // Después de jugarla, tocas una carta libre: le sale una pestaña al lado con +, − y la palomita. Cada toque cambia 1
+  // (hasta WAND_MAX); la palomita lo deja así. Sin cambiar nada, la palomita solo cierra (y si conecta, la juega).
+  wandOpen(c) {
+    const el = c.el;
+    if (!el) return;
+    this.wandOn = { id: c.id, d: 0, base: E.rankOf(c, this.st) };
+    const tab = document.createElement('div');
+    tab.className = 'wand-tab';
+    tab.innerHTML = `<button data-w="1" aria-label="Subir">+</button><button data-w="-1" aria-label="Bajar">−</button><button data-w="ok" class="ok" aria-label="Listo">${icon('check')}</button><i class="dots">${'<s></s>'.repeat(E.WAND_MAX)}</i>`;
+    this.el.append(tab);
+    this.wandOn.tab = tab;
+    this.wandPlace();
+    tab.addEventListener('pointerdown', (e) => {
+      e.stopPropagation();
+      const b = e.target.closest('button[data-w]');
+      if (!b || this.busy) return;
+      if (b.dataset.w === 'ok') return this.wandApply();
+      const w = this.wandOn, d = w.d + +b.dataset.w;
+      if (Math.abs(d) > E.WAND_MAX) return (buzz(), this.shake(b));
+      w.d = d;
+      buzz(8);
+      this.paintRank(el, E.mod13(w.base + d));
+      tab.querySelectorAll('.dots s').forEach((x, k) => x.classList.toggle('on', k < Math.abs(d)));
+      if (!reduced()) b.animate([{ scale: 1 }, { scale: 0.82 }, { scale: 1 }], { duration: 160 });
+    });
+    el.classList.add('wand-on');
+    this.refresh();
+    if (!reduced()) tab.animate([{ scale: 0, opacity: 0 }, { scale: 1.1, opacity: 1, offset: 0.7 }, { scale: 1 }], { duration: 260, easing: 'ease-out' });
+  }
+  // La pestaña va pegada al lado derecho de la carta (o al izquierdo si no cabe).
+  wandPlace() {
+    const w = this.wandOn, c = w && this.cards[w.id];
+    if (!c?.el) return;
+    const r = c.el.getBoundingClientRect(), box = this.el.getBoundingClientRect(), t = w.tab;
+    t.style.setProperty('--u', `${r.width}px`);
+    const right = r.right + t.offsetWidth < box.right - 4;
+    t.classList.toggle('left', !right);
+    t.style.left = `${(right ? r.right - 2 : r.left - t.offsetWidth + 2) - box.left}px`;
+    t.style.top = `${r.top + r.height / 2 - t.offsetHeight / 2 - box.top}px`;
+  }
+  // Tocar una carta con la pestaña abierta: la misma la deja como estaba; otra, abre la suya.
+  wandClose(c, keep = false) {
+    const w = this.wandOn;
+    if (!w) return;
+    this.wandOn = null;
+    w.tab.remove();
+    const el = this.cards[w.id]?.el;
+    el?.classList.remove('wand-on');
+    if (el) this.paintRank(el, E.rankOf(this.cards[w.id], this.st), false);
+    this.refresh();
+    if (c && !keep && c.id !== w.id) this.tapCard(c.id);
+  }
+  wandApply() {
+    const w = this.wandOn, c = this.cards[w.id];
+    if (!w.d) {
+      this.wandClose(null);
+      if (E.playRank(this.level, c, this.st) != null) this.play(c);
+      return;
+    }
+    const before = this.st, r = E.useWand(this.level, before, w.id, w.d);
+    this.wandOn = null;
+    w.tab.remove();
+    c.el?.classList.remove('wand-on');
+    if (!r) return this.refresh();
+    this.history.push({ t: 'wand', before, ev: r.ev, best: this.best, bonus: this.bonus });
+    this.st = r.s;
+    this.sync();
+    buzz(15);
+    if (c.el) {
+      c.el.dataset.sh = E.rankOf(c, r.s);
+      const [x, y] = center(c.el.getBoundingClientRect());
+      if (!reduced()) sparkle({ x, y }, 8);
+    }
+    this.refresh();
+    this.save();
+    this.checkEnd();
+  }
+
+  // ---------- Lazo (15 nov 2026, pedido del usuario) ----------
+  // Después de jugarlo, la carta que toques (libre, tapada o especial) se laza: la cuerda sale del descarte, la amarra
+  // y la jala. Una carta de número va al descarte (es una jugada); una especial hace lo suyo y no se deshace.
+  async lassoPull(c) {
+    const before = this.st, r = E.pull(this.level, before, c.id);
+    if (!r) return (buzz(), this.shake(c.el));
+    this.busy = true;
+    const w = this.wasteEl.getBoundingClientRect(), to = c.el.getBoundingClientRect(), box = this.el.getBoundingClientRect();
+    if (!reduced()) {
+      const [ax, ay] = center(w), [bx, by] = center(to), x0 = box.left, y0 = box.top;
+      const rope = document.createElement('div');
+      rope.className = 'lasso-rope';
+      rope.innerHTML = `<svg width="${box.width}" height="${box.height}"><path d="M${ax - x0} ${ay - y0}Q${(ax + bx) / 2 - x0 - 40} ${Math.min(ay, by) - y0 - 60} ${bx - x0} ${by - y0 + to.height * 0.35}"/><ellipse cx="${bx - x0}" cy="${by - y0}" rx="${to.width * 0.66}" ry="${to.height * 0.6}"/></svg>`;
+      this.el.append(rope);
+      requestAnimationFrame(() => rope.classList.add('on'));
+      c.el.classList.add('lassoed');
+      await new Promise((ok) => setTimeout(ok, 480));
+      buzz(15);
+      rope.classList.add('off');
+      setTimeout(() => rope.remove(), 300);
+    }
+    this.busy = false;
+    if (r.ev.special) {
+      this.history.push({ t: 'pull', before, ev: r.ev, best: this.best, bonus: this.bonus, lock: 'Lo que el lazo saca de una carta especial no se puede deshacer' });
+      this.st = r.s;
+      this.sync();
+      this.best = Math.max(this.best, r.s.streak);
+      this.afterPlay(before, r.ev, []);
+      return;
+    }
+    // Una carta de número: vuela al descarte como una jugada (boca arriba aunque estuviera tapada).
+    const { s, ev } = r;
+    const burnRects = this.burnRects(ev.boom);
+    this.history.push({ t: 'play', before, ev, best: this.best, bonus: this.bonus });
+    this.st = s;
+    this.sync();
+    this.best = Math.max(this.best, s.streak);
+    this.bonus += s.streak;
+    this.flewFrom = c.el ? center(c.el.getBoundingClientRect()) : null;
+    c.el?.classList.remove('lassoed');
+    this.flyToWaste(c, ev, 0);
     this.afterPlay(before, ev, burnRects);
   }
 
@@ -2777,6 +3656,8 @@ export class Game {
     if (pc?.magnet) toast(`${icon('iman')} ¡Imán! Tu siguiente robo te sirve`);
     if (pc?.rainbow) toast(`${icon('arcoiris')} ¡Arcoíris! 3 jugadas pueden saltar dos`);
     if (pc?.scope) toast(`${icon('telescopio')} ¡Telescopio! Ves todas las cartas ${E.SCOPE_TURNS} turnos`);
+    if (pc?.lasso && this.st.lasso) toast(`${icon('lazoVaquero')} ¡Lazo! Toca la carta que quieras`);
+    if (pc?.wand && this.st.wand) toast(`${icon('varitaEstrella')} ¡Varita! Toca una carta libre`);
     // Raspadita jugada antes de verla toda: monedas (entre menos se veía, más). Deshacer las quita.
     if (pc?.scr) {
       const pay = E.scrPay(pc, before);
@@ -2790,6 +3671,8 @@ export class Game {
       }
     }
     if (ev.bolted) this.boltFx(ev.bolted);
+    if (ev.box) this.boxFx(ev.box);
+    if (ev.boss) this.foeFx(ev.boss);
     if (ev.cst) this.cstFx(ev, this.flewFrom || [0, 0]);
     if (this.cards[ev.id].coin && !ev.split) this.coinCard(this.cards[ev.id]);
     this.burn(ev.boom, burnRects);
@@ -3257,6 +4140,7 @@ export class Game {
 
   draw() {
     if (this.coach && !this.coach.allows('stock')) return;
+    if (this.wandOn) this.wandClose(null, true);
     if (!this.stock.length) {
       if (this.hasMove()) {
         toast('¡Aún tienes jugadas!');
@@ -3268,7 +4152,7 @@ export class Game {
     this.magnetAimOff();
     const before = this.st;
     const { s, ev } = E.draw(this.level, before);
-    this.history.push({ t: 'draw', before, ev, best: this.best, bonus: this.bonus });
+    this.history.push({ t: 'draw', before, ev, best: this.best, bonus: this.bonus, ...(foeLock(ev) && { lock: FOE_LOCK }) });
     const a = this.stockTop().getBoundingClientRect();
     const burnRects = this.burnRects(ev.boom, 1);
     this.st = s;
@@ -3287,6 +4171,7 @@ export class Game {
     if (ev.turbo) this.launchTurbo(ev);
     if (ev.cst) this.cstFx(ev);
     if (ev.rocks) toast(`${icon('asteroide')} ¡Cayeron asteroides!`), buzz(30);
+    if (ev.boss) this.foeFx(ev.boss);
     this.refresh();
     if (missed.length) setTimeout(() => this.warnMissed(missed), FLY_MS);
     this.save();
@@ -3373,7 +4258,8 @@ export class Game {
     if (this.history[this.history.length - 1].t === 'door') return toast('Abrir una puerta no se puede deshacer');
     // Raspadita (13 nov 2026, el usuario): lo que la raspa o la juega, y fallarle, no se deshace (si no, se ve el número
     // y se regresa para cobrar las monedas).
-    if (this.history[this.history.length - 1].lock) return toast('Lo que raspa la raspadita no se puede deshacer');
+    if (this.history[this.history.length - 1].lock) return toast(typeof this.history[this.history.length - 1].lock === 'string' ? this.history[this.history.length - 1].lock : 'Lo que raspa la raspadita no se puede deshacer');
+    if (this.wandOn) this.wandClose(null, true);
     this.magnetAimOff();
     this.clawHold = 0;
     const inf = this.opts.dev?.infinite;
@@ -3411,6 +4297,13 @@ export class Game {
     });
     (ev.packs || []).forEach((id, i) => this.unflyPack(this.cards[id], packRects[i]));
     // Constelación juntada: el premio se regresa.
+    // Caja galáctica abierta: el premio se regresa.
+    if (h.boxPrize) {
+      if (h.boxPrize.coins) save.coins = Math.max(0, save.coins - h.boxPrize.coins);
+      if (h.boxPrize.wild) save.wild = Math.max(0, save.wild - h.boxPrize.wild);
+      updateCoins();
+      this.updateCounts();
+    }
     if (h.cstPrize) {
       if (h.cstPrize.coins) save.coins = Math.max(0, save.coins - h.cstPrize.coins);
       else save.helps[h.cstPrize.help] = Math.max(0, (save.helps[h.cstPrize.help] || 0) - 1);
@@ -3478,23 +4371,25 @@ export class Game {
   helpKeys() {
     const { level, st } = this, left = (c) => !st.rem[c.id] && c.el;
     const useful = {
-      reloj: this.cards.some((c) => left(c) && (c.bomb || c.comet || c.live || c.ghost || c.cham || c.ring || c.belt)) || !!level.rocks || E.vineLeft(level, st) != null,
+      reloj: this.cards.some((c) => left(c) && (c.bomb || c.comet || c.live || c.ghost || c.cham || c.ring || c.belt)) || !!level.rocks || E.vineLeft(level, st) != null || E.bossAlive(level, st),
       laser: !!level.rocks,
       escudo: !!level.ship && !st.shield,
       // El imán se vende cuando ya conoces la carta imán (nivel 531).
       iman: this.stock.length > 0 && !st.magnet && (!!save.seen.magnet || save.helps.iman > 0),
+      // La varita se vende cuando ya conoces la carta (nivel 681) o tienes alguna.
+      varita: !st.wand && this.cards.some((c) => c.el && E.canWand(level, c, { ...st, wand: true })) && (!!save.seen.wand || save.helps.varita > 0),
       llave: this.cards.some((c) => left(c) && ((c.lock != null && !E.lockOpen(level, c, st)) || (c.curtain != null && !E.curtainOpen(level, c, st)))),
-      ver: this.cards.some((c) => left(c) && !this.shownUp(c)),
+      ver: this.cards.some((c) => left(c) && !this.shownUp(c)) || !!st.ash?.length,
       // Telescopio y astronauta (14 nov 2026): se venden cuando ya los conoces (niveles 81 y 171) o si tienes alguno.
       tele: this.cards.some((c) => left(c) && !this.shownUp(c)) && !(st.scope > 0) && (!!save.seen.scope || save.helps.tele > 0),
       astro: this.astroTable() && !E.astroHere(level, st) && st.hold == null && (!!save.seen.astro || save.helps.astro > 0),
     };
     // 13 nov 2026 (pedido del usuario): de la más barata a la más cara; las que no se compran (ver 4 y 5 s), al final.
     const cost = (k) => (k === 'wild' || buyable(k) ? this.priceOf(k) : Infinity);
-    return ['wild', 'iman', 'reloj', 'laser', 'escudo', 'ver2', 'ver3', 'ver4', 'ver5', 'astro', 'tele', 'llave'].filter((k) => k === 'wild' || ((buyable(k) || (save.helps[k] || 0) > 0) && useful[HELPS[k].secs ? 'ver' : k])).sort((a, b) => cost(a) - cost(b));
+    return ['wild', 'iman', 'varita', 'reloj', 'laser', 'escudo', 'ver2', 'ver3', 'ver4', 'ver5', 'astro', 'tele', 'llave'].filter((k) => k === 'wild' || ((buyable(k) || (save.helps[k] || 0) > 0) && useful[HELPS[k].secs ? 'ver' : k])).sort((a, b) => cost(a) - cost(b));
   }
   helpName(k) {
-    return k === 'wild' ? 'Comodín' : HELPS[k].secs ? `Ver ${HELPS[k].secs} s` : k === 'reloj' ? 'Reloj' : k === 'laser' ? 'Láser' : k === 'escudo' ? 'Escudo' : k === 'iman' ? 'Imán' : k === 'tele' ? 'Telescopio' : k === 'astro' ? 'Astronauta' : 'Llave';
+    return k === 'wild' ? 'Comodín' : HELPS[k].secs ? `Ver ${HELPS[k].secs} s` : k === 'reloj' ? 'Reloj' : k === 'laser' ? 'Láser' : k === 'escudo' ? 'Escudo' : k === 'iman' ? 'Imán' : k === 'varita' ? 'Varita' : k === 'tele' ? 'Telescopio' : k === 'astro' ? 'Astronauta' : 'Llave';
   }
   // El astronauta solo cabe en mesas normales (como cuando sale en el nivel).
   astroTable() {
@@ -3502,7 +4397,7 @@ export class Game {
     return !L.scroll && !L.tide && !L.belt && !L.doors && !L.hole && !L.rocks && !L.neb;
   }
   helpBack(k) {
-    return cardBackURL(k === 'wild' ? 'comodin' : k === 'reloj' ? 'hreloj' : k === 'llave' ? 'hllave' : k === 'laser' ? 'hlaser' : k === 'escudo' ? 'hescudo' : k === 'iman' ? 'himan' : k === 'tele' ? 'htele' : k === 'astro' ? 'hastro' : 'hver');
+    return cardBackURL(k === 'wild' ? 'comodin' : k === 'reloj' ? 'hreloj' : k === 'llave' ? 'hllave' : k === 'laser' ? 'hlaser' : k === 'escudo' ? 'hescudo' : k === 'iman' ? 'himan' : k === 'varita' ? 'hvarita' : k === 'tele' ? 'htele' : k === 'astro' ? 'hastro' : 'hver');
   }
   helpHave(k) {
     return k === 'wild' ? save.wild : save.helps[k] || 0;
@@ -3627,12 +4522,13 @@ export class Game {
   helpUseless(k) {
     if (k === 'wild') return this.st.top?.wild ? 'Ya tienes un comodín en juego' : null;
     const { level, st } = this, left = (c) => !st.rem[c.id] && c.el;
-    if (k === 'reloj' && !level.rocks && E.vineLeft(level, st) == null && !this.cards.some((c) => left(c) && (c.bomb || c.comet || c.live || c.ghost || c.cham || c.ring || c.belt))) return 'Aquí no hay cuentas que congelar';
+    if (k === 'reloj' && !level.rocks && E.vineLeft(level, st) == null && !E.bossAlive(level, st) && !this.cards.some((c) => left(c) && (c.bomb || c.comet || c.live || c.ghost || c.cham || c.ring || c.belt))) return 'Aquí no hay cuentas que congelar';
     if (k === 'laser' && !Object.keys(st.rock || {}).length) return 'No hay piedras que romper';
+    if (k === 'varita') return st.wand ? 'Ya tienes la varita lista: toca una carta' : !this.cards.some((c) => c.el && E.canWand(level, c, { ...st, wand: true })) ? 'No hay carta libre que cambiar' : null;
     if (k === 'iman') return !this.stock.length ? 'Ya no hay cartas en el mazo' : st.magnet ? 'Ya tienes un imán esperando tu robo' : null;
     if (k === 'escudo') return !level.ship ? 'Aquí no pasa la nave ladrona' : st.shield ? 'Ya tienes el escudo puesto' : null;
     if (k === 'llave' && !this.cards.some((c) => left(c) && ((c.lock != null && !E.lockOpen(level, c, st)) || (c.curtain != null && !E.curtainOpen(level, c, st))))) return 'No hay candados ni cortinas cerrados';
-    if ((HELPS[k].secs || k === 'tele') && !this.cards.some((c) => left(c) && !this.shownUp(c))) return 'Ya ves todas las cartas';
+    if ((HELPS[k].secs || k === 'tele') && !this.cards.some((c) => left(c) && !this.shownUp(c)) && !(HELPS[k].secs && st.ash?.length)) return 'Ya ves todas las cartas';
     if (k === 'tele' && st.scope > 0) return 'Ya estás viendo todas las cartas';
     if (k === 'astro') return !this.astroTable() ? 'El astronauta no cabe en esta mesa' : E.astroHere(level, st) || st.hold != null ? 'El astronauta ya está aquí' : null;
     return null;
@@ -3653,10 +4549,10 @@ export class Game {
     if (HELPS[k].secs) return this.peekAll(HELPS[k].secs);
     const st = this.st;
     this.history.push({ t: 'help', k, before: st, best: this.best, bonus: this.bonus });
-    this.st = k === 'reloj' ? E.useClock(st) : k === 'laser' ? E.useLaser(st) : k === 'escudo' ? E.useShield(st) : k === 'iman' ? E.useMagnet(st) : k === 'tele' ? E.useScope(st) : k === 'astro' ? E.useAstro(st) : E.useMaster(st);
+    this.st = k === 'reloj' ? E.useClock(st) : k === 'laser' ? E.useLaser(st) : k === 'escudo' ? E.useShield(st) : k === 'iman' ? E.useMagnet(st) : k === 'varita' ? E.useWandHelp(st) : k === 'tele' ? E.useScope(st) : k === 'astro' ? E.useAstro(st) : E.useMaster(st);
     if (k === 'laser') this.laserHit = true;
     // (El escudo trae su propio aviso: shieldFx, con la burbuja sobre el mazo.)
-    if (k !== 'escudo') toast(k === 'tele' ? `${icon('telescopio')} ¡Ves todas las cartas ${E.SCOPE_HELP} turnos!` : k === 'astro' ? `${icon('astronauta')} ¡Llegó Tito! Tócalo para que te guarde una carta` : k === 'iman' ? `${icon('iman')} ¡Imán! Tu siguiente robo te sirve` : k === 'reloj' ? `${icon('arena')} ¡Todo congelado ${E.CLOCK_TURNS} turnos!` : k === 'laser' ? `${icon('laser')} ¡Piedras rotas!` : `${icon('llaveMaestra')} ¡Candados y cortinas abiertos!`);
+    if (k !== 'escudo') toast(k === 'tele' ? `${icon('telescopio')} ¡Ves todas las cartas ${E.SCOPE_HELP} turnos!` : k === 'astro' ? `${icon('astronauta')} ¡Llegó Tito! Tócalo para que te guarde una carta` : k === 'iman' ? `${icon('iman')} ¡Imán! Tu siguiente robo te sirve` : k === 'varita' ? `${icon('varitaEstrella')} ¡Varita! Toca una carta libre` : k === 'reloj' ? `${icon('arena')} ¡Todo congelado ${E.CLOCK_TURNS} turnos!` : k === 'laser' ? `${icon('laser')} ¡Piedras rotas!` : `${icon('llaveMaestra')} ¡Candados y cortinas abiertos!`);
     this.refresh();
     if (k === 'escudo') this.shieldFx();
     this.updateCounts();
@@ -3667,6 +4563,8 @@ export class Game {
     this.busy = true;
     const hidden = this.cards.filter((c) => !c.removed && c.el && !this.st.rem[c.id] && !this.shownUp(c));
     hidden.forEach((c, i) => setTimeout(() => c.el?.classList.add('up', 'peek-all'), reduced() ? 0 : i * 25));
+    // Fénix: el fuego se apaga mientras dura.
+    this.el.classList.add('fire-off');
     const big = document.createElement('div');
     big.className = 'peek-count outl';
     this.el.append(big);
@@ -3674,6 +4572,7 @@ export class Game {
     setTimeout(() => {
       big.remove();
       hidden.forEach((c) => c.el?.classList.remove('peek-all'));
+      this.el.classList.remove('fire-off');
       this.busy = false;
       this.refresh();
     }, secs * 1000);
@@ -4035,7 +4934,7 @@ export class Game {
     if (pill) pill.textContent = money(shown);
     const { coins, tickets, prev, gold, cgold, wild, undo, col } = res;
     const ev = this.opts.event;
-    const title = ev ? res.title : this.level.secret ? '¡Nivel secreto!' : this.level.boss ? '¡Jefe derrotado!' : '¡Nivel superado!';
+    const title = ev ? res.title : this.level.secret ? '¡Nivel secreto!' : this.level.foe ? (this.foeBeat ? '¡Jefe derrotado!' : '¡Le ganaste al jefe!') : this.level.boss ? '¡Nivel final superado!' : '¡Nivel superado!';
     // Los premios son burbujas (icono + cantidad, sin texto) que salen de las estrellas y suben despacio; se pueden
     // tronar y cuentan para el premio de burbujas (countPop en ui.js).
     // 9 nov 2026: las burbujas traen la cantidad ya multiplicada y SIN etiqueta ×N ni ×2 de la lluvia (parecía que se

@@ -3,11 +3,12 @@
 import { save, prefs, persist, backupOnce, restoreBackup, setDev, backupInfo } from './storage.js';
 import { missions, missionDone, ACHIEVEMENTS, ACHIEVEMENT_TOP, achievementGot, achievementNeed, achievementsVisible } from './missions.js';
 import { streakWin, streakLose, dailyStreak, nextGoal, col, daysToNextCol, ev, daysToNextEvent, evEnter, evWin, EVENT_PER_PLANET, EVENT_LEVELS, festival, festEnter, festWin, nextFestival, daysToNextFestival, daysToFestival, festShape, isOn, UNLOCK } from './events.js';
-import { TIERS, generateLevel, hardHelp, festivalPick, festivalLevel, eventLevel, eventGroup, EVENT_WORLDS, packGroups, worldInfo, specials, specialGroup, SPECIAL_ID, TOTAL_LEVELS, LEVELS_PER_WORLD, MECH_NAMES, MECHANICS, MECH_INTRO, SCROLL_FROM, EXTRA, extraDebut, tideFirst, holeFirst, doorsFirst, bandaFirst, rocksFirst } from './levels.js';
-import { playCasual, solve, initState } from './engine.js';
+import { TIERS, generateLevel, hardHelp, festivalPick, festivalLevel, eventLevel, eventGroup, EVENT_WORLDS, packGroups, worldInfo, specials, specialGroup, SPECIAL_ID, TOTAL_LEVELS, LEVELS_PER_WORLD, MECH_NAMES, MECHANICS, MECH_INTRO, SCROLL_FROM, EXTRA, extraDebut, tideFirst, holeFirst, doorsFirst, bandaFirst, rocksFirst, boxFirst, BOSS_ORDER, BOSS_NAMES } from './levels.js';
+import { playCasual, solve, initState, BOSS_EVERY, BOSS_FIRST, KRAKEN_TICKLE, KRAKEN_SLAM, WHALE_SPIT } from './engine.js';
 import { openModal, toast, updateCoins, popGoal } from './ui.js';
 import { openSlot, slotWhy, SLOT_PAY, SLOT_PAY_RICH, SLOT_EXTRA, SLOT_MONTH_DAYS } from './slot.js';
 import { mulberry32 } from './rng.js';
+import { FOE_ICON } from './game.js';
 import { icon, miniPlanet } from './art.js';
 import { tableHTML, BIOMES, biomeKey } from './biomes.js';
 import { peek } from './galaxy.js';
@@ -15,7 +16,7 @@ import { EVENTS, COLLECTIONS, FESTIVALS, festivalDays } from './events.js';
 import { ITEMS, SECTIONS, owns, lockedUntil } from './shop.js';
 import { PASS_MAX, SECRET_MAX, secretGoal, passGoal, passPrize, secretPrize, passCount, secretCount } from './passport.js';
 import { meteor, nextShowers, metItems, MET_FROM, STAR_FROM, metPrizes, SHOWERS, NEW_RAINS } from './meteor.js';
-import { BET_STEPS, BET_BOSS_FEE, BET_FEE, maxBet, RESCUE_WEEK, RESCUE_COINS, RESCUE_ITEMS, ticketCost, TICKET_PRICE } from './economy.js';
+import { BET_STEPS, BET_BOSS_FEE, BET_FEE, maxBet, RESCUE_WEEK, RESCUE_COINS, RESCUE_ITEMS, ticketCost, TICKET_PRICE, foeBeatPrize } from './economy.js';
 import { KINDS, TREASURE, makeLot, makeCode, rewardName, lotText, usedHere, lotNonces } from './codes.js';
 // Darte los exclusivos del pasaporte (kind 'pase') o de los secretos ('secreto'), sin cobrar sus premios.
 function passGive(kind) {
@@ -183,6 +184,7 @@ const TABLE_ICONS = {
   puertas: SV('<rect x="5" y="4" width="22" height="25" rx="3" fill="#b5763f"/><path d="M16 4v25" stroke-width="1.6"/><circle cx="13" cy="17" r="1.6" fill="#2a1f5c"/><circle cx="19" cy="17" r="1.6" fill="#2a1f5c"/>'),
   hoyo: SV('<circle cx="16" cy="16" r="13" fill="#8a5cf0"/><circle cx="16" cy="16" r="9" fill="#ff8a3d"/><circle cx="16" cy="16" r="5.5" fill="#05030f"/>'),
   rocas: SV('<path d="M8 8l8-3 7 5 1 8-5 6-9 1-5-6z" fill="#a99bbd"/><circle cx="12" cy="13" r="2.4" fill="#7a6c94"/><circle cx="18" cy="18" r="1.8" fill="#7a6c94"/><path d="M25 5l3-2M27 10l3 0" stroke-width="1.8" stroke-linecap="round"/>'),
+  caja: SV('<rect x="6" y="5" width="20" height="24" rx="4" fill="#6a4be8"/><rect x="10" y="10" width="12" height="8" rx="2" fill="#1b1440"/><path d="M13 14h6" stroke="#8ff0b8" stroke-width="2.4"/><circle cx="11" cy="23" r="1.6" fill="#5fd47a"/><circle cx="16" cy="23" r="1.6" fill="#5a527e"/><circle cx="21" cy="23" r="1.6" fill="#5a527e"/><circle cx="16" cy="4" r="2.4" fill="#ffd54a"/>'),
   marea: SV('<rect x="5" y="3" width="22" height="26" rx="3" fill="#fff6e6"/><path d="M5 18c4-3 7 3 11 0s7 3 11 0v8a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3z" fill="#4aa8de"/>'),
 };
 export const tableIcon = (t) => TABLE_ICONS[t] || '';
@@ -192,7 +194,7 @@ const SCROLL_NAMES = { mesa: 'mesa enrollada', gravedad: 'gravedad', nebulosa: '
 // Mesas que son gravedad por dentro (13 nov 2026): se filtran por su bandera.
 const colKind = (L) => (L.flip ? 'voltea' : L.portal ? 'portal' : L.hangar ? 'hangar' : null);
 const COL_TABLES = [['hangar', 'Hangar', SCROLL_FROM.hangar + 1], ['bitacora', 'Bitácora', SCROLL_FROM.bitacora + 1], ['portal', 'Grúa de feria', SCROLL_FROM.portal + 1], ['voltea', 'Mesa que se voltea', SCROLL_FROM.voltea + 1]];
-const OVERLAY_TABLES = [['marea', 'Marea', tideFirst() + 1, (L) => !!L.tide], ['hoyo', 'Agujero negro', holeFirst() + 1, (L) => !!L.hole], ['puertas', 'Puertas', doorsFirst() + 1, (L) => !!L.doors], ['banda', 'Banda transportadora', bandaFirst() + 1, (L) => !!L.belt], ['rocas', 'Asteroides', rocksFirst() + 1, (L) => !!L.rocks]];
+const OVERLAY_TABLES = [['marea', 'Marea', tideFirst() + 1, (L) => !!L.tide], ['hoyo', 'Agujero negro', holeFirst() + 1, (L) => !!L.hole], ['puertas', 'Puertas', doorsFirst() + 1, (L) => !!L.doors], ['banda', 'Banda transportadora', bandaFirst() + 1, (L) => !!L.belt], ['rocas', 'Asteroides', rocksFirst() + 1, (L) => !!L.rocks], ['caja', 'Caja galáctica', boxFirst() + 1, (L) => !!L.box]];
 const PIECES = [['steps', 3], ['cross', 3], ['crown', 8], ['rosette', 13], ['sandwich', 16], ['tiltFan', 21]];
 // Nombres en español de formas y piezas (galería e Info).
 const TPL_NAMES = { pyramid: 'Pirámide', peaks: 'Picos', clusters: 'Grupitos', star: 'Estrella', layers: 'Capas', wall: 'Muro', towers: 'Torres', butterfly: 'Mariposa', diamond: 'Diamante', spiral: 'Espiral', mesa: 'Mesa enrollada', heart: 'Corazón', gravedad: 'Gravedad', scatter: 'Dispersas', nebulosa: 'Nebulosa', invPyramid: 'Pirámide invertida', hourglass: 'Reloj de arena', bitacora: 'Bitácora' };
@@ -323,7 +325,7 @@ export function galleryScreen({ onPlay, onPlayLevel, onBack }) {
   // Tarjeta: el tablero grande con su número y lo que lo distingue encima; abajo forma, cartas y dificultad.
   // pickI: índice en la lista del mes/día (se juega el tablero tal cual); si no, el id del nivel.
   const tile = (L, pickI) => {
-    const badges = [L.boss && `<i class="gb gb-boss">${icon('crown')}Jefe</i>`, L.tier && `<i class="gb gb-tier gb-t${L.tier}">${TIERS[L.tier].name}</i>`, L.respite && '<i class="gb gb-rest">Respiro</i>', (L.scroll || L.sheets) && `<i class="gb gb-mesa">${tableIcon(colKind(L) || (L.sheets ? 'bitacora' : L.scroll))}${{ voltea: 'Se voltea', portal: 'Grúa', hangar: 'Hangar' }[colKind(L)] || (L.sheets ? 'Bitácora' : TPL_NAMES[L.scroll])}</i>`, L.tide && `<i class="gb gb-mesa">${tableIcon('marea')}Marea</i>`].filter(Boolean).join('');
+    const badges = [L.boss && `<i class="gb gb-boss">${icon(L.foe ? 'crown' : 'trophy')}${L.foe ? 'Jefe' : 'Final'}</i>`, L.tier && `<i class="gb gb-tier gb-t${L.tier}">${TIERS[L.tier].name}</i>`, L.respite && '<i class="gb gb-rest">Respiro</i>', (L.scroll || L.sheets) && `<i class="gb gb-mesa">${tableIcon(colKind(L) || (L.sheets ? 'bitacora' : L.scroll))}${{ voltea: 'Se voltea', portal: 'Grúa', hangar: 'Hangar' }[colKind(L)] || (L.sheets ? 'Bitácora' : TPL_NAMES[L.scroll])}</i>`, L.tide && `<i class="gb gb-mesa">${tableIcon('marea')}Marea</i>`].filter(Boolean).join('');
     const inSet = pickI != null;
     const uses = !inSet && L.special != null ? [...(useBy[L.special]?.values() || [])] : [];
     const num = inSet ? L.k + 1 : L.special != null ? L.special + 1 : L.g + 1;
@@ -665,12 +667,14 @@ export function openDevMenu({ onGallery, onPlanets, onFestivals, onGoLevel, onRe
     ['Fiestas de Europa', UNLOCK.fiesta5, 'cascovikingo', fisOf(false, 5)],
     ['Fiestas de Oriente', UNLOCK.fiesta6, 'koinobori', fisOf(false, 6)],
   ];
-  const KINDS = { ev: 'Evento', card: 'Carta', mesa: 'Mesa' };
+  const KINDS = { ev: 'Evento', card: 'Carta', mesa: 'Mesa', jefe: 'Jefe' };
   const rows = [
     ...UN.map(([name, l, ico, sub, note]) => ({ n: l + 1, k: 'ev', name, pic: icon(ico), sub, note })),
     ...MECH_ORDER.map((m) => ({ n: mechDebut(m), k: 'card', name: MECH_NAMES[m], pic: `<span class="dmc">${card(m)}</span>` })),
     ...Object.entries(SCROLL_FROM).map(([t, g]) => ({ n: g + 1, k: 'mesa', name: SCROLL_NAMES[t], pic: tableIcon(t) })),
     ...OVERLAY_TABLES.map(([k, name, n]) => ({ n, k: 'mesa', name: name.toLowerCase(), pic: tableIcon(k) })),
+    // Jefes de constelación (15 nov 2026): la primera vez de cada uno; luego se turnan cada 100 niveles.
+    ...BOSS_ORDER.map((k, i) => ({ n: (i + 1) * 100, k: 'jefe', name: BOSS_NAMES[k], pic: `<span class="rd-foe">${FOE_ICON[k]()}</span>`, note: 'Último nivel de cada constelación; se turnan y cada 4 constelaciones vuelven más fuertes.' })),
     ...BET_AT.map(([m, g], i) => ({ n: g + 1, k: 'ev', name: `Apuesta hasta ×${m}`, pic: `<i class="go-bet dbet b${m}">×${m}</i>`, note: `${i ? `Sale su presentación "¡Subiste a ×${m}!"` : 'Sale la presentación "¡Nuevo: Apuestas!" con sus reglas (antes del evento del mes)'}. Su primera partida va forzada a ×${m} y gratis; cuota ${BET_FEE * (m - 1)} monedas, en jefes ${BET_BOSS_FEE[m]} (× el boleto de entrada); con lluvia de meteoritos, los boletos a mitad.` })),
   ].sort((a, b) => a.n - b.n || Object.keys(KINDS).indexOf(a.k) - Object.keys(KINDS).indexOf(b.k));
   // Choques: dos ventanas de desbloqueo (eventos) en el mismo nivel salen una tras otra. Se marcan en rojo.
@@ -686,29 +690,52 @@ export function openDevMenu({ onGallery, onPlanets, onFestivals, onGoLevel, onRe
   // exclusivo (los botones para dártelos están en Pruebas → Pasaporte y secretos).
   const itName = (it) => (it ? `${GIFT_KIND_DEV[it[0]] || it[0]} ${ITEMS[it[0]].find((x) => x.k === it[1])?.name || it[1]}` : '–');
   const ppRow = (n, goal, pr, got) => `<tr><td>${n}</td><td>${goal.toLocaleString('es-MX')}</td><td>${pr.coins.toLocaleString('es-MX')}</td><td class="dname">${itName(pr.item)}${pr.item && owns(pr.item[0], pr.item[1]) ? ' <span class="d-yes">✓</span>' : ''}</td><td>${got ? '<span class="d-yes">cobrado</span>' : ''}</td></tr>`;
-  const passTable = `<p class="dline"><b>Pasaporte</b>: ${passCount().toLocaleString('es-MX')} niveles distintos · ${save.pass?.s || 0} de ${PASS_MAX} sellos</p>
-    <table class="dtable"><tr><th>Sello</th><th>Niveles</th><th>Monedas</th><th>Exclusivo</th><th></th></tr>${Array.from({ length: PASS_MAX }, (_, i) => ppRow(i + 1, passGoal(i + 1), passPrize(i + 1), i < (save.pass?.s || 0))).join('')}</table>
-    <p class="dline"><b>Secretos</b>: ${secretCount()} ganados · ${save.pass?.x || 0} de ${SECRET_MAX} premios</p>
-    <table class="dtable"><tr><th>Premio</th><th>Secretos</th><th>Monedas</th><th>Exclusivo</th><th></th></tr>${Array.from({ length: SECRET_MAX }, (_, i) => ppRow(i + 1, secretGoal(i + 1), secretPrize(i + 1), i < (save.pass?.x || 0))).join('')}</table>`;
+  const passTable = `<table class="dtable"><tr><th>Sello</th><th>Niveles</th><th>Monedas</th><th>Exclusivo</th><th></th></tr>${Array.from({ length: PASS_MAX }, (_, i) => ppRow(i + 1, passGoal(i + 1), passPrize(i + 1), i < (save.pass?.s || 0))).join('')}</table>`;
+  const secretTable = `<table class="dtable"><tr><th>Premio</th><th>Secretos</th><th>Monedas</th><th>Exclusivo</th><th></th></tr>${Array.from({ length: SECRET_MAX }, (_, i) => ppRow(i + 1, secretGoal(i + 1), secretPrize(i + 1), i < (save.pass?.x || 0))).join('')}</table>`;
   // Tragamonedas galáctico (14 nov 2026, js/slot.js): cómo funciona y si hoy sale.
   const SLOT_FACE = ['Todos distintos', 'Un par', 'Dos pares', 'Tres iguales', '4 planetas iguales', '4 agujeros negros (jackpot)'];
-  const slotTable = `<p class="dline"><b>Tragamonedas</b>: ${slotWhy()}</p>
-    <p class="dline">Sale al entrar al juego o volver al mapa, en la <b>preventa</b> (3 días antes) y el <b>mero día</b> (festividad: su día; mes: del 1 al ${SLOT_MONTH_DAYS}), si no compró la entrada (traiga lo que traiga). Una tirada por edición; si hay dos abiertas, una sola <b>×2</b>. No se puede saltar y al terminar abre la compra.</p>
+  const slotTable = `<p class="dline">Sale al entrar al juego o volver al mapa, en la <b>preventa</b> (3 días antes) y el <b>mero día</b> (festividad: su día; mes: del 1 al ${SLOT_MONTH_DAYS}), si no compró la entrada (traiga lo que traiga). Una tirada por edición; si hay dos abiertas, una sola <b>×2</b>. No se puede saltar y al terminar abre la compra.</p>
     <p class="dline">Tres escalones: si le <b>falta</b> para la entrada, lo que falta + ${SLOT_EXTRA[0]} a ${SLOT_EXTRA[1]} al azar (los planetas salen según el monto); si trae <b>hasta el doble</b>, la tabla normal; si trae <b>más del doble</b>, la tabla chica. El jackpot (${SLOT_PAY.at(-1)[1]}%) sale en todos.</p>
     <table class="dtable"><tr><th>Resultado</th><th>Hasta el doble</th><th>Más del doble</th><th>%</th></tr>${SLOT_PAY.map(([c, w], i) => `<tr><td class="dname">${SLOT_FACE[i]}</td><td>${c.toLocaleString('es-MX')}</td><td>${(SLOT_PAY_RICH[i]?.[0] ?? c).toLocaleString('es-MX')}</td><td>${w}%</td></tr>`).join('')}</table>`;
   // Nave de rescate (15 nov 2026, el usuario: explicada como la tragamonedas).
   const g0 = Math.min(save.next || 0, TOTAL_LEVELS - 1), need0 = ticketCost(g0), top0 = Math.ceil(need0 * 1.5);
-  const rescueTable = `<p class="dline"><b>Nave de rescate</b>: ${rescueSub()}.</p>
-    <p class="dline">Llega sola al entrar al juego o volver al mapa (galaxia o planeta) cuando <b>no te alcanza</b> para el siguiente nivel nuevo: menos boletos de los que pide, sin monedas para comprar los que faltan (${TICKET_PRICE} c/u), sin el regalo de boletos listo y sin partida a medias. Hasta <b>${RESCUE_WEEK} veces en 7 días</b> y nunca dos el mismo día.</p>
+  const rescueTable = `<p class="dline">Llega sola al entrar al juego o volver al mapa (galaxia o planeta) cuando <b>no te alcanza</b> para el siguiente nivel nuevo: menos boletos de los que pide, sin monedas para comprar los que faltan (${TICKET_PRICE} c/u), sin el regalo de boletos listo y sin partida a medias. Hasta <b>${RESCUE_WEEK} veces en 7 días</b> y nunca dos el mismo día.</p>
     <p class="dline">Sin ventana: se oscurece, cruza la nave y suelta <b>4 cápsulas</b> en paracaídas; tocas una, se abre y sus premios salen en burbujas (ya sumados). Las demás se caen sin decir qué traían. Todas traen ${RESCUE_ITEMS.wild} comodín, ${RESCUE_ITEMS.undo} deshacer y 1 ver cartas 3 s; cambian los boletos (de los que pide el nivel a ×1.5) y las monedas: la de más boletos trae más.</p>
     <table class="dtable"><tr><th>Cápsula</th><th>Boletos (aquí)</th><th>Monedas</th></tr>${RESCUE_COINS.map((c, k) => `<tr><td>${k + 1}</td><td>${need0 + Math.round((k * (top0 - need0)) / 3)}</td><td>${c.toLocaleString('es-MX')}</td></tr>`).join('')}</table>`;
+  // Jefes de constelación (15 nov 2026, pedido del usuario): cómo se hacen más difíciles cada vez que vuelven. Se
+  // turnan cada 100 niveles y cada 4 constelaciones dan una vuelta (r); lo que sube deja de subir en la vuelta 8.
+  const foeDoes = (k, r) => ({
+    fenix: `Fuego en ${1 + r} a todas las libres`,
+    ilus: 'Cambia ±1 o ±2 todas las boca arriba',
+    kraken: `Hasta ${1 + Math.min(2, r)} mancha${r ? 's' : ''} de tinta (${r ? '3-4' : '2-3'} cartas c/u)`,
+    whale: ['Jala 1-2', 'Jala 2', 'Jala 2-3', 'Jala 3-4'][Math.min(3, r)],
+  })[k];
+  const foeRows = [];
+  for (let g = 99, i = 0; g < TOTAL_LEVELS; g += 100, i++) {
+    const k = BOSS_ORDER[i % BOSS_ORDER.length], r = Math.floor(i / BOSS_ORDER.length);
+    if (r > 8) break;
+    foeRows.push(`<tr${i % 4 === 0 && i ? ' style="border-top:3px solid #c9bfe6"' : ''}><td>${(g + 1).toLocaleString('es-MX')}</td><td class="dname"><span class="rd-foe dfoe">${FOE_ICON[k]()}</span> ${BOSS_NAMES[k]}</td><td>${r + 1}</td><td>${BOSS_EVERY[k][Math.min(3, r)]}</td><td class="dname">${foeDoes(k, r)}</td><td>+${2 * Math.min(4, r)}</td><td>${foeBeatPrize(r).coins.toLocaleString('es-MX')}</td></tr>`);
+  }
+  const foeTable = `<p class="dline">El último nivel de cada constelación (cada 100). Cada 4 constelaciones vuelven más fuertes (una <b>vuelta</b> más). El primer ataque llega a las ${BOSS_FIRST} acciones; luego cada «Ataca cada» acciones (el reloj de arena lo detiene).</p>
+    <p class="dline"><b>Vida</b>: 60% de las cartas del tablero + lo de la columna (cada carta en racha le quita 1). <b>Cofre</b>: monedas del cofre de jefe derrotado (además 1 comodín, 3 deshacer, reloj y ver 3 s; la apuesta no lo toca).</p>
+    <p class="dline"><b>Ilusionista</b>: siempre cambia todas las boca arriba (±1 o ±2); lo único que sube es qué tan seguido lo hace. <b>Kraken</b>: la carta con tinta no se juega hasta quedar limpia; con ${KRAKEN_TICKLE} jugadas seguidas se lava la mancha más vieja; con ${KRAKEN_SLAM} robos con tinta, manotazo (revuelve el 90% de las que no tienen tinta y limpia la mitad de las manchadas). Si no queda nada que jugar por la tinta, la mancha más vieja se limpia sola. <b>Ballena</b>: jala cualquier volteada (siempre al menos 1) y la escupe ${WHALE_SPIT} acciones después encima de otra; sin mazo ni nada que jugar, escupe todo ya.</p>
+    <table class="dtable"><tr><th>Nivel</th><th>Jefe</th><th>Vuelta</th><th>Ataca cada</th><th>Qué hace</th><th>Vida</th><th>Cofre</th></tr>${foeRows.join('')}</table>
+    <p class="dline">Después de la vuelta 9 ya no sube nada (ataques desde la vuelta 4, vida desde la 5, cofre desde la 9).</p>`;
   const countHTML = `<p class="dline ${clashes.length ? 'd-no' : 'd-yes'}">${clashes.length ? `<b>Choque:</b> en el nivel ${clashes.join(', ')} se abren dos cosas a la vez (en rojo).` : 'Sin choques: cada ventana de desbloqueo sale en su propio nivel.'}</p><table class="dtable dorder"><tr><th></th><th></th><th>Qué</th><th>Nivel</th><th>Mundo</th><th>Tú</th></tr>${rows.map(line).join('')}</table>
     <p class="dline"><b>Tienda: tienes ${sum((k) => ITEMS[k].filter((it) => owns(k, it.k)).length)} de ${Object.values(ITEMS).flat().length}</b> (tuyas / que hay)</p>
     <table class="dtable dshop"><tr><th>De dónde sale</th><th>Tienes</th><th>Faltan</th><th>Hay</th></tr>${ORIGINS_DEV.map(([o, name, ico]) => { const n = sum((k) => cnt(k, o)), y = sum((k) => mine(k, o)); return !n ? '' : `<tr class="dshop-g dacc" data-acc="s${o}"><td class="dname">${icon(ico)}${name}<span class="dchev">${icon('chev')}</span></td>${nums(y, n)}</tr>${SECTIONS.filter(({ k }) => cnt(k, o)).map(({ k, name: sn }) => `<tr class="dsub" data-of="s${o}" hidden><td class="dname">${icon(SEC_ICO[k])}${sn}</td>${nums(mine(k, o), cnt(k, o))}</tr>`).join('')}`; }).join('')}<tr class="dtot"><td><b>Total</b></td>${nums(sum((k) => ITEMS[k].filter((it) => owns(k, it.k)).length), Object.values(ITEMS).flat().length)}</tr></table>
-    ${slotTable}
-    ${rescueTable}
-    ${passTable}
+
     <p class="dline">De la tienda, ${shopLocked} siguen con candado por mundo; lo último se abre en el mundo ${lastNeed + 1} (nivel ${lastNeed * LEVELS_PER_WORLD + 1}).</p>`;
+  // Reglas (15 nov 2026, pedido del usuario): lo de cómo funcionan las cosas, aparte del recuento (camino y tienda).
+  // 15 nov 2026 (pedido del usuario): cada regla en su tarjeta, con su icono, título y subtítulo (cómo va hoy).
+  const rule = (k, ico, t, sub, html) => `<section class="dsec drule r-${k}"><h4><span class="dr-ico">${ico}</span><span class="dr-t">${t}<small>${sub}</small></span></h4>${html}</section>`;
+  const rulesHTML = [
+    rule('foe', `<span class="rd-foe">${FOE_ICON.kraken()}</span>`, 'Jefes de constelación', 'Fénix → Ilusionista → Kraken → Ballena', foeTable),
+    rule('slot', icon('tragamonedas'), 'Tragamonedas', slotWhy(), slotTable),
+    rule('rescue', icon('nave'), 'Nave de rescate', rescueSub(), rescueTable),
+    rule('pass', icon('pasaporte'), 'Pasaporte', `${passCount().toLocaleString('es-MX')} niveles distintos · ${save.pass?.s || 0} de ${PASS_MAX} sellos`, passTable),
+    rule('secret', icon('starSecret'), 'Secretos', `${secretCount()} ganados · ${save.pass?.x || 0} de ${SECRET_MAX} premios`, secretTable),
+  ].join('');
   // Secciones con título; cada botón dice en corto lo que hace (la explicación larga va en su title).
   const S = [
     // Orden del menú (10 nov 2026, pedido del usuario): de lo más importante a lo menos.
@@ -753,6 +780,8 @@ export function openDevMenu({ onGallery, onPlanets, onFestivals, onGoLevel, onRe
           if (save.open > wg) save.open = wg;
           else if (save[tk] > 0) save[tk]--;
         }
+        // Jefe de constelación: su cofre de jefe derrotado se puede volver a cobrar.
+        if (save.foeWon) save.foeWon = save.foeWon.filter((x) => x !== g);
         if (save.run?.g === g) save.run = null;
         persist();
         toast(`Nivel ${g + 1} otra vez sin ganar`);
@@ -927,9 +956,10 @@ export function openDevMenu({ onGallery, onPlanets, onFestivals, onGoLevel, onRe
     title: 'Modo dev',
     cls: 'devmenu',
     wide: true,
-    // Dos pestañas: los botones primero (lo que más se usa) y el recuento aparte.
-    body: `<div class="dtabs"><button class="dtab on" data-tab="btns">Pruebas</button><button class="dtab" data-tab="count">Recuento</button></div>
+    // Tres pestañas: los botones primero (lo que más se usa), el recuento (camino y tienda) y las reglas.
+    body: `<div class="dtabs"><button class="dtab on" data-tab="btns">Pruebas</button><button class="dtab" data-tab="count">Recuento</button><button class="dtab" data-tab="rules">Reglas</button></div>
       <div class="dpane" data-pane="count" hidden><section class="dsec">${countHTML}</section></div>
+      <div class="dpane" data-pane="rules" hidden>${rulesHTML}</div>
       <div class="dpane" data-pane="btns"><p class="note">Todo lo que hagas aquí es de prueba: al salir del modo dev vuelve tu partida.${(() => { const b = backupInfo(); return b ? `<br>Tu partida guardada: <b>nivel ${b.next + 1}</b>, mundo ${b.open + 1}, ${b.coins.toLocaleString('es-MX')} monedas.` : '<br><b>No hay copia de tu partida</b>: sal y vuelve a entrar al modo dev.'; })()}</p>
       ${S.map(secHTML).join('')}</div>`,
     buttons: [

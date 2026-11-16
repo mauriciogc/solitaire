@@ -9,7 +9,7 @@ export const TICKET_PRICE = 250;
 // Boosters: el comodín, el pack de 3 deshacer y +5 cartas suben con el avance, en los mismos escalones que los boletos
 // (1, 2 o 3 boletos por nivel). Subidos el 7 nov 2026 (antes 250/350/450, 50/75/100 y 100/150/200): el usuario
 // gastaba +5 "a granel" y le seguían sobrando monedas; que duela.
-const TIERS = { wild: [500, 650, 800], undo: [150, 200, 250], extra: [300, 400, 500], reloj: [300, 400, 500], ver2: [150, 200, 250], ver3: [250, 325, 400], llave: [2000, 2500, 3000], tele: [2000, 2500, 3000], astro: [1700, 2125, 2550], laser: [250, 325, 400], escudo: [250, 325, 400], iman: [700, 910, 1120] };
+const TIERS = { wild: [500, 650, 800], undo: [150, 200, 250], extra: [300, 400, 500], reloj: [300, 400, 500], ver2: [150, 200, 250], ver3: [250, 325, 400], llave: [2000, 2500, 3000], tele: [2000, 2500, 3000], astro: [1700, 2125, 2550], laser: [250, 325, 400], escudo: [250, 325, 400], iman: [700, 910, 1120], varita: [1250, 1575, 1900] };
 // Mazo de ayudas (7 nov 2026): la carta dorada del tablero abre el comodín y estas. save.helps = clave -> cuántas.
 // Las que no tienen precio solo se ganan (ver 4 y 5 s; la de 5 casi solo en eventos). La llave maestra es cara a propósito.
 export const HELPS = {
@@ -29,6 +29,8 @@ export const HELPS = {
   tele: { name: 'Telescopio', ico: 'telescopio', text: 'Deja ver <b>todas</b> las cartas del tablero durante <b>5 turnos</b>.' },
   // 14 nov 2026 (pedido del usuario): el astronauta sale en algunos niveles y luego se vende, 15% más barato que la llave.
   astro: { name: 'Astronauta', ico: 'astronauta', text: 'Llega a tu nivel y te <b>guarda una carta</b> libre. Cuando conecte, la manda al descarte.' },
+  // 15 nov 2026 (pedido del usuario): la varita también se compra, entre el comodín y el telescopio.
+  varita: { name: 'Varita', ico: 'varitaEstrella', text: 'Toca una carta libre y <b>súbele o bájale hasta 3</b>.' },
   iman: { name: 'Imán', ico: 'iman', text: 'Tu <b>siguiente robo</b> saca del mazo la carta que <b>más te sirve</b>, sin cortar tu racha, y te enseña cuál jugar.' },
 };
 export const buyable = (k) => !!TIERS[k];
@@ -154,6 +156,15 @@ export function starsNeeded(w) {
 export const RESCUE_WEEK = 3;
 export const RESCUE_COINS = [200, 300, 400, 500];
 export const RESCUE_ITEMS = { wild: 1, undo: 3, helps: { ver3: 1 } };
+
+// Caja galáctica (15 nov 2026): premio según cuántos números pide la combinación (de 3 a 8).
+export const BOX_PRIZE = { 3: { coins: 115 }, 4: { coins: 170 }, 5: { coins: 230 }, 6: { coins: 290 }, 7: { wild: 1 }, 8: { wild: 1, coins: 175 } };
+
+// Jefe de constelación (15 nov 2026, pedido del usuario: «que den una caja más grande y más cosas» y «que no se
+// mezcle»): el cofre del planeta da solo lo suyo; acabarle la vida da aparte su cofre de jefe (todo lo del jefe, con
+// cartas de ayuda), una sola vez por nivel (save.foeWon), aunque sea al repetirlo. Monedas +25% cada vuelta.
+export const FOE_PRIZE = { coins: 2000, wild: 1, undo: 3, helps: { reloj: 1, ver3: 1 } };
+export const foeBeatPrize = (r) => Object.fromEntries(Object.entries(FOE_PRIZE).map(([n, v]) => [n, n === 'coins' ? round5(v * (1 + 0.25 * Math.min(8, r))) : n === 'helps' ? { ...v } : v]));
 
 export const CONST_PRIZE = { coins: 2300, wild: 1, undo: 1 };
 export const CONST_OPEN = 1000;

@@ -374,6 +374,9 @@ const ICONS = {
     + tshape('M21 6l6-3 4 7-6 3z', '#ffc83d', '#ec9a17', '', 2.2) + tshape('M2 17l3-1.5 2.4 4.6-3 1.5z', '#ffc83d', '#ec9a17', '', 2) + `<circle cx="15" cy="18" r="2.4" fill="#fff6e6" stroke="${K}" stroke-width="1.8"/>`,
   // Astronauta (14 nov 2026): Tito, el mismo de la bandeja (ASTRO_ART), en chiquito.
   astronauta: () => `<g transform="translate(1.6 0) scale(0.45)">${ASTRO_ART}</g>`,
+  // Lazo y varita (15 nov 2026, cartas nuevas): la cuerda con su lazada y la varita con su estrella.
+  lazoVaquero: () => `<path d="M7 16C3 11 7 4 15 4s12 5 11 9-6 6-11 5" fill="none" stroke="${K}" stroke-width="5.4" stroke-linecap="round"/><path d="M7 16C3 11 7 4 15 4s12 5 11 9-6 6-11 5" fill="none" stroke="#e0a160" stroke-width="2.8" stroke-linecap="round"/><path d="M7 16C3 11 7 4 15 4s12 5 11 9-6 6-11 5" fill="none" stroke="#a8692e" stroke-width="2.8" stroke-dasharray="1.2 2.6" stroke-linecap="round"/><path d="M15 18c-3 2-5 5-3 7s5 0 3-2-5 0-6 3-3 3-5 2" fill="none" stroke="${K}" stroke-width="5.4" stroke-linecap="round"/><path d="M15 18c-3 2-5 5-3 7s5 0 3-2-5 0-6 3-3 3-5 2" fill="none" stroke="#e0a160" stroke-width="2.8" stroke-linecap="round"/><path d="M15 18c-3 2-5 5-3 7s5 0 3-2-5 0-6 3-3 3-5 2" fill="none" stroke="#a8692e" stroke-width="2.8" stroke-dasharray="1.2 2.6" stroke-linecap="round"/><circle cx="15.5" cy="17.6" r="2.6" fill="#c98a4b" stroke="${K}" stroke-width="1.8"/>`,
+  varitaEstrella: () => `<path d="M5 28L18.5 14.5" stroke="${K}" stroke-width="6.4" stroke-linecap="round"/><path d="M5 28L18.5 14.5" stroke="#3a2f78" stroke-width="3.2" stroke-linecap="round"/><path d="M15.5 17.5l3-3" stroke="#fff" stroke-width="3.2" stroke-linecap="round"/>` + tshape('M23 2.5l1.8 4 4.4.5-3.3 3 .9 4.3L23 12.1l-3.8 2.2.9-4.3-3.3-3 4.4-.5z', '#ffd54a', '#f0a830', '', 1.8),
   iman: () => tshape('M6 4h7v12a3 3 0 0 0 6 0V4h7v12a10 10 0 0 1-20 0z', '#ff5f7e', '#d63d5f', `<path d="M9 17a7 7 0 0 0 4.5 6" fill="none" stroke="#ffd0da" stroke-width="2" stroke-linecap="round"/>`, 2.2) + tshape('M6 4h7v5H6zM19 4h7v5h-7z', '#eef0f8', '#c4c9dc', '', 2),
   // Arcoíris (13 nov 2026): cuatro arcos de color y dos nubes.
   arcoiris: () => ['#ff5f7e', '#ffd54a', '#5fd47a', '#5ab0ff'].map((c, i) => `<path d="M${4 + i * 3} 24a${12 - i * 3} ${12 - i * 3} 0 0 1 ${24 - i * 6} 0" fill="none" stroke="${K}" stroke-width="5.2"/><path d="M${4 + i * 3} 24a${12 - i * 3} ${12 - i * 3} 0 0 1 ${24 - i * 6} 0" fill="none" stroke="${c}" stroke-width="2.8"/>`).join('')
@@ -727,6 +730,7 @@ export const BACKS = {
   htele: { a: '#8a7cf0', b: '#6a5ad4', dots: '#efeaff', art: () => `<g transform="translate(17 37) scale(2.06)">${ICONS.telescopio()}</g>` },
   hastro: { a: '#3a4a9a', b: '#2a3680', dots: '#e6ecff', art: () => `<g transform="translate(17 37) scale(2.06)">${ICONS.astronauta()}</g>` },
   himan: { a: '#ff7a8e', b: '#e8506a', dots: '#ffe6ea', art: () => `<g transform="translate(17 37) scale(2.06)">${ICONS.iman()}</g>` },
+  hvarita: { a: '#b48cff', b: '#8a5cf0', dots: '#efe6ff', art: () => `<g transform="translate(17 37) scale(2.06)">${ICONS.varitaEstrella()}</g>` },
   // Mazo de ayudas (botón de la bandeja): genérico, turquesa con un destello mágico (no es el comodín).
   ayudas: { a: '#2fb4b0', b: '#1f9490', dots: '#e6fffb',
     art: () => {
@@ -1043,6 +1047,16 @@ export const chestBody = (cls = '') => big(
 export const chestLid = (cls = '') => big(
   tshape('M8 31v-7a11 11 0 0 1 11-11h26a11 11 0 0 1 11 11v7z', '#d58a4a', '#a8652f', '<path d="M12 18q20-6 40 0" stroke="#e8a66a" stroke-width="3" fill="none"/>', 3)
   + tshape('M15 14.5h7V31h-7zM42 14.5h7V31h-7z', '#ffc83d', '#ec9a17', '', 2.4), cls);
+// Cofre del jefe de constelación (15 nov 2026): más grande y del color del jefe (c = [color, sombra, brillo]), con
+// esquinas doradas, una placa al frente (ahí va el dibujo del jefe, encima en HTML) y una gema en la tapa.
+export const foeChestBody = (c, cls = '') => big(
+  tshape('M6 30h52v23a5 5 0 0 1-5 5H11a5 5 0 0 1-5-5z', c[0], c[1], `<path d="M6 41h52" stroke="${c[1]}" stroke-width="2"/><path d="M10 34h44" stroke="${c[2]}" stroke-width="2" stroke-linecap="round" opacity=".7"/>`, 3)
+  + tshape('M13 30h5v28h-5zM46 30h5v28h-5z', '#ffc83d', '#ec9a17', '', 2.2)
+  + tshape('M23 31h18v15a9 9 0 0 1-18 0z', '#ffc83d', '#ec9a17', '<path d="M26 34h12v11a6 6 0 0 1-12 0z" fill="#fff1c2"/>', 2.4), cls);
+export const foeChestLid = (c, cls = '') => big(
+  tshape('M6 31v-8a12 12 0 0 1 12-12h28a12 12 0 0 1 12 12v8z', c[0], c[1], `<path d="M11 17q21-7 42 0" stroke="${c[2]}" stroke-width="3" fill="none" stroke-linecap="round"/>`, 3)
+  + tshape('M13 31V12.5h5V31zM46 31V12.5h5V31z', '#ffc83d', '#ec9a17', '', 2.2)
+  + tshape('M32 4l6 7-6 7-6-7z', '#ff5f7e', '#d63d5f', '<path d="M29.5 9.5 32 7" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/>', 2.2), cls);
 // Nave de rescate (11 nov 2026): cápsula con paracaídas, en 3 piezas encimadas (mismo viewBox) para animarlas aparte:
 // el paracaídas (con sus cuerdas) se va volando, la tapa salta y el cuerpo se queda. c = [color, sombra].
 export const capChute = (c, cls = '') => big(

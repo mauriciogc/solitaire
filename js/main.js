@@ -1,11 +1,11 @@
 import { save, prefs, persist, resetProfile, deleteProfile, renameProfile, exportCode, readCode, loadProfile, setDev } from './storage.js';
 import { UNLOCK, EVENTS, FESTIVALS, COLLECTIONS, evSoon, isOn, nextEvent, daysToNextCol, plusCols, STREAK_GOALS, STREAK_STEP, streakGoal, nextIndex, dailyStreak, streakTheme, streakReady, streakHot, streakWin, streakLose, streakPendToFeats, msToMidnight, col, colLeft, colWin, colOffers, colBuy, ev, evLeft, evTicketLeft, evTicketPrice, evBuyTicket, evPrize, evEnter, evWin, evLose, evAlbum, festAlbum, EVENT_PLANETS, EVENT_PER_PLANET, EVENT_LEVELS, festival, festivalLeft, festivalSoon, soonLeft, evPrePrice, evPreOwned, evPreBuy, nextFestival, festEnter, festWin, festLose, festShape, festPrice, festPaid, festBuy, festPre, FEST_PRE, FEST_ENTRY, EV_FIRST } from './events.js';
-import { WORLD_COUNT, LEVELS_PER_WORLD, TOTAL_LEVELS, worldInfo, generateLevel, variantLevel, MECH_INTRO, MECH_NAMES, MECHANICS, EXTRA, extraDebut, SCROLL_FROM, tideFirst, holeFirst, doorsFirst, bandaFirst, rocksFirst, secretId, isSecret, eventLevel, festivalLevel } from './levels.js';
-import { Game, faceHTML, backHTML, TIPS, TABLE_TEXT, MECH_KINDS, ART, scrSVG } from './game.js';
-import { maxBet, betFee, betSteps, BET_STEPS, HELPS, DAILY_PATH, dailyState, dailyPieces, DAILY_SHIELD_MAX, starsNeeded, TICKET_PRICE, ticketCost, ticketRefund, coinsFor, bossChest, rollChest, CONST_PRIZE, CONST_OPEN, openCost, constStart, openFree, boosted, secretCoins, rollSecret, openSurprise, MET_OFF, metShopPrice, RESCUE_WEEK, RESCUE_COINS, RESCUE_ITEMS } from './economy.js';
+import { WORLD_COUNT, LEVELS_PER_WORLD, TOTAL_LEVELS, worldInfo, generateLevel, constBoss, bossPicked, setBossPick, variantLevel, MECH_INTRO, MECH_NAMES, MECHANICS, EXTRA, extraDebut, SCROLL_FROM, tideFirst, holeFirst, doorsFirst, bandaFirst, rocksFirst, boxFirst, BOSS_ORDER, secretId, isSecret, eventLevel, festivalLevel } from './levels.js';
+import { Game, faceHTML, backHTML, TIPS, TABLE_TEXT, MECH_KINDS, ART, scrSVG, FOE_ICON, FOE_TITLE, FOE_TEXT, FOE_NAME, FOE_BTN } from './game.js';
+import { maxBet, betFee, betSteps, BET_STEPS, HELPS, DAILY_PATH, dailyState, dailyPieces, DAILY_SHIELD_MAX, starsNeeded, TICKET_PRICE, ticketCost, ticketRefund, coinsFor, bossChest, rollChest, CONST_PRIZE, CONST_OPEN, openCost, constStart, openFree, boosted, secretCoins, rollSecret, openSurprise, MET_OFF, metShopPrice, foeBeatPrize, RESCUE_WEEK, RESCUE_COINS, RESCUE_ITEMS } from './economy.js';
 import { track, missions, missionDef, missionDone, missionsAllDone, autoClaim, ACHIEVEMENTS, ACHIEVEMENT_PRIZES, ACHIEVEMENT_MEDAL, ACHIEVEMENT_TOP, achievementGot, achievementProgress, achievementsVisible } from './missions.js';
 import { pauseOffscreen, openModal, toast, updateCoins, money, esc, reduced, wait, flyToWallet, spendFromWallet, sparkle, confetti, starsHTML, warp, buzz, balloons, lootBubbles, floatBubbles, streakWarnHTML, popPrize, popBalloon, countPop, HEADS, betLoseHTML, shownCoins } from './ui.js';
-import { icon, iconURL, iconInner, star, coin, miniPlanet, avatarHTML, AVATAR_COLORS, kidOf, KID_SKINS, KID_HAIRS, KID_STYLES, cardBackURL, setDeck, lockIcon, curtainIcon, chestBody, chestLid, boxBody, boxLid, capChute, capBody, capLid, vineSVG } from './art.js';
+import { icon, iconURL, iconInner, star, coin, miniPlanet, avatarHTML, AVATAR_COLORS, kidOf, KID_SKINS, KID_HAIRS, KID_STYLES, cardBackURL, setDeck, lockIcon, curtainIcon, chestBody, chestLid, foeChestBody, foeChestLid, boxBody, boxLid, capChute, capBody, capLid, vineSVG } from './art.js';
 import { GROUPS, SECTIONS, ITEMS, shopItems, groupOf, owns, equipped, equip, buy, item, lockedUntil, titleHTML, titleIcon, sell, sellable, sellPrice } from './shop.js';
 import { BIOMES, biomeKey, EVENT_BIOMES, tableHTML } from './biomes.js';
 import { redeem } from './codes.js';
@@ -356,8 +356,29 @@ const worldsOf = (region, gate) => {
 // start: mundo al que entrar directo (al volver de un nivel) · anim: transición de entrada
 // after: lo que hay que animar al volver de ganar ({ g, w, res }) · unlock: mundo cuyo desbloqueo hay que animar al llegar.
 let map = null; // el mapa en pantalla: { galaxy, region }
+// El siguiente jefe de constelación se arma en segundo plano cuando faltan BOSS_WARM niveles o menos (15 nov 2026:
+// buscar su tablero puede tardar segundos). Si al entrar todavía no está, se arma ahí mismo, como antes.
+const BOSS_WARM = 30;
+let bossWorker = null;
+function warmBoss() {
+  const g = Math.floor((save.next || 0) / 100) * 100 + 99;
+  if (g >= TOTAL_LEVELS || !constBoss(g) || g - (save.next || 0) > BOSS_WARM || bossPicked(g) || bossWorker || !window.Worker) return;
+  try {
+    bossWorker = new Worker(new URL('./boss-worker.js', import.meta.url), { type: 'module' });
+    bossWorker.onmessage = (e) => {
+      if (e.data.p != null) setBossPick(e.data.g, e.data.p);
+      bossWorker.terminate();
+      bossWorker = null;
+    };
+    bossWorker.onerror = () => (bossWorker.terminate(), (bossWorker = null));
+    bossWorker.postMessage(g);
+  } catch {
+    bossWorker = null;
+  }
+}
 function showMap({ region, start = null, anim, after = null, unlock = null, paid = false } = {}) {
   gallery.active = false;
+  setTimeout(warmBoss, 1500);
   if (region == null) region = regionOf(start ?? unlock ?? currentWorld());
   current = () => showMap({ region });
   // Se pueden ver todas las constelaciones, aunque estén bloqueadas: así se nota que hay muchas.
@@ -1060,6 +1081,8 @@ function mechCard(m, x = 0) {
   if (m === 'vine') return mini(x, '9', 's', { marks: `<span class="vine-ov">${vineSVG()}</span>` }, 'vined vine-demo');
   if (m === 'magnet') return mini(x, '4', 'h', { magnet: 1 });
   if (m === 'scope') return mini(x, '9', 'c', { scope: 1 });
+  if (m === 'lasso') return mini(x, '6', 'd', { lasso: 1 });
+  if (m === 'wand') return mini(x, '7', 's', { wand: 1 });
   if (m === 'twin') return mini(x, '5', 'h', { twin: 1 });
   if (m === 'rainbow') return mini(x, '6', 'c', { rainbow: 1 });
   if (m === 'sleep') return mini(x, '8', 'd', { marks: `<span class="sleep-ov"><i class="sl-cap">${icon('dormida')}</i><span class="zz"><i>z</i><i>z</i><i>z</i></span><b>3</b></span>` }, 'asleep');
@@ -1077,7 +1100,15 @@ const missionIcon = (m) => (m.mech ? `<span class="mis-card">${mechCard(m.mech)}
 // Todo lo que se abre jugando (eventos, cartas especiales y mesas) en el orden en que sale. Lo que ya alcanzaste se ve
 // completo; lo que falta sale con "?" y el nivel en que llega. "Tú" marca el nivel en que vas.
 // n: el nivel (contando desde 1) en que se ve por primera vez: los eventos, al ganar UNLOCK[k] niveles.
-const ROAD_KINDS = { ev: 'Evento', card: 'Carta nueva', mesa: 'Mesa nueva' };
+const ROAD_KINDS = { ev: 'Evento', card: 'Carta nueva', mesa: 'Mesa nueva', jefe: 'Jefe' };
+// Filtros de Tu camino: nombre, icono y el texto de arriba de cada sección (n = cuántas llevas).
+const ROAD_TABS = [
+  ['', 'Todo', 'camino', (n, all) => `Todo lo que vas descubriendo en tu viaje. Llevas <b>${n} de ${all}</b>.`],
+  ['ev', 'Eventos', 'star', (n) => `Eventos, festividades, apuestas y premios del pasaporte. Llevas <b>${n}</b>.`],
+  ['card', 'Cartas', 'card', (n) => `Cartas especiales y ayudas nuevas que salen en los tableros. Llevas <b>${n}</b>.`],
+  ['mesa', 'Mesas', 'planet', (n) => `Mesas y cosas que cambian todo el tablero. Llevas <b>${n}</b>.`],
+  ['jefe', 'Jefes', 'crown', (n) => `Criaturas que juegan contra ti en el último nivel de cada constelación. Ya conociste <b>${n}</b>.`],
+];
 const ROAD_TABLES = [
   ['mesa', 'Mesa enrollada', 'Limpia las cartas del principio y la mesa avanza: salen más cartas del rollo.'],
   ['gravedad', 'Gravedad', 'Solo juegas la carta de abajo de cada columna. Al quitarla, la columna cae.'],
@@ -1121,6 +1152,7 @@ function roadItems() {
     { id: 'hoyo', n: holeFirst() + 1, name: 'Agujero negro', text: 'Cada 4 jugadas o robos se traga todas sus cartas y las escupe con los números revueltos.' },
     { id: 'nave', n: MECH_INTRO.ship * LEVELS_PER_WORLD + 1, name: 'Nave ladrona', text: '' },
     { id: 'rocas', n: rocksFirst() + 1, name: 'Asteroides', text: '' },
+    { id: 'caja', n: boxFirst() + 1, name: 'Caja galáctica', text: '' },
     { id: 'astro', n: MECH_INTRO.astro * LEVELS_PER_WORLD + 1, name: 'Astronauta', text: '' },
   ].map((x) => ({ ...x, k: 'mesa', pic: x.id === 'nave' ? icon('nave') : x.id === 'astro' ? icon('astronauta') : tableIcon(x.id), text: TABLE_TEXT[x.id] ? TABLE_TEXT[x.id].join(' ') : x.text }));
   // Pasaporte y secretos (12 nov 2026): los sellos y premios ganados, en el nivel en que ibas; el siguiente sello, en el
@@ -1138,9 +1170,13 @@ function roadItems() {
   const helps = [
     helpStop('ayuda-tele', 'scope', 'htele', 'Telescopio (ayuda)', 'Lo compras en tus ayudas: deja ver todas las cartas del tablero 5 turnos.'),
     helpStop('ayuda-astro', 'astro', 'hastro', 'Astronauta (ayuda)', 'Lo compras en tus ayudas: llega a tu nivel y te guarda una carta.'),
+    helpStop('ayuda-varita', 'wand', 'hvarita', 'Varita (ayuda)', 'La compras en tus ayudas: tocas una carta libre y le subes o bajas hasta 3.'),
   ];
+  // Jefes de constelación (15 nov 2026): la primera vez que sale cada uno (100, 200, 300…), solo cuando ya pasaste ese
+  // nivel (no se anuncian con «?»: son sorpresa).
+  const foes = BOSS_ORDER.map((k, i) => ({ id: `jefe-${k}`, n: (i + 1) * 10 * LEVELS_PER_WORLD, k: 'jefe', kind: 'Jefe nuevo', name: FOE_TITLE[k], pic: `<span class="rd-foe">${FOE_ICON[k]()}</span>`, text: `${FOE_TEXT[k][1]} Sale en el último nivel de cada constelación.` }));
   const order = Object.keys(ROAD_KINDS);
-  return [...evs, ...bets, ...cards, ...helps, ...tables, ...pass].sort((a, b) => a.n - b.n || order.indexOf(a.k) - order.indexOf(b.k));
+  return [...evs, ...bets, ...foes.filter((x) => x.n <= (save.next || 0)), ...cards, ...helps, ...tables, ...pass].sort((a, b) => a.n - b.n || order.indexOf(a.k) - order.indexOf(b.k));
 }
 // Nivel en que vas (el siguiente por jugar) y cuántas paradas ya alcanzaste (siempre son las primeras de la lista).
 const roadAt = () => Math.min((save.next || 0) + 1, TOTAL_LEVELS);
@@ -1172,12 +1208,12 @@ function openRoad() {
       </button></li>`;
   };
   const me = `<li class="rd-me"><span class="rd-av">${avatarHTML(save)}</span><p class="rd-me-txt"><b>Vas en el nivel ${fmtLvl(at)}</b><small>${next ? `Lo siguiente: en ${left(next) === 1 ? '1 nivel' : `${fmtLvl(left(next))} niveles`}` : '¡Ya descubriste todo!'}</small></p></li>`;
-  // Filtros: lo único arriba. Cada uno dice cuántos llevas (antes además había un resumen y una barra: lo mismo 3 veces).
-  const chip = (k, label, ico) => {
-    const all = k ? items.filter((x) => x.k === k) : items;
-    const n = all.filter((x) => x.n <= at).length;
-    return `<button class="rd-chip${k ? '' : ' on'}" data-f="${k}" aria-pressed="${!k}"><span class="rd-cl">${ico}<span>${label}</span></span><i>${k ? n : `${n}/${all.length}`}</i></button>`;
-  };
+  // Filtros (15 nov 2026, pedido del usuario): solo los que ya tienen algo (van saliendo conforme avanzas), sin número
+  // (para que quepan); cuántos llevas va en el texto de arriba de la lista, que cambia con el filtro.
+  const have = (k) => items.filter((x) => (!k || x.k === k) && x.n <= at).length;
+  const tabs = ROAD_TABS.filter(([k]) => !k || have(k));
+  const intro = (k) => ROAD_TABS.find((t) => t[0] === k)[3](have(k), items.length);
+  const chip = ([k, label, ico]) => `<button class="rd-chip${k ? '' : ' on'}" data-f="${k}" aria-pressed="${!k}"><span class="rd-cl">${icon(ico)}<span>${label}</span></span></button>`;
   const list = items.map(row);
   list.splice(got, 0, me);
   let io = null;
@@ -1187,7 +1223,8 @@ function openRoad() {
     wide: true,
     cls: 'road-modal',
     onClose: () => io?.disconnect(),
-    body: `<div class="rd-top"><div class="rd-seg" style="--i:0"><span class="rd-ind"></span>${chip('', 'Todo', icon('camino'))}${chip('ev', 'Eventos', icon('star'))}${chip('card', 'Cartas', icon('card'))}${chip('mesa', 'Mesas', icon('planet'))}</div></div>
+    body: `<div class="rd-top"><div class="rd-seg" style="--i:0;--n:${tabs.length}"><span class="rd-ind"></span>${tabs.map(chip).join('')}</div></div>
+      <p class="rd-intro">${intro('')}</p>
       <ol class="road" data-f=""><span class="rd-line"></span><span class="rd-fill"></span>${list.join('')}<li class="rd-end">${icon('flag')}<small>¡Y aún hay más por venir!</small></li></ol>`,
   });
   const body = m.el.querySelector('.mbody'), road = m.el.querySelector('.road'), meEl = road.querySelector('.rd-me');
@@ -1238,6 +1275,7 @@ function openRoad() {
     if (c) {
       m.el.querySelectorAll('.rd-chip').forEach((x, k) => (x.classList.toggle('on', x === c), x.setAttribute('aria-pressed', x === c), x === c && m.el.querySelector('.rd-seg').style.setProperty('--i', k)));
       road.dataset.f = c.dataset.f;
+      m.el.querySelector('.rd-intro').innerHTML = intro(c.dataset.f);
       road.querySelectorAll('.rd').forEach((x) => {
         // 10 nov 2026: con filtro solo sale lo ya descubierto (la idea es no saber dónde sale lo que falta).
         const show = !c.dataset.f || (x.dataset.k === c.dataset.f && !x.classList.contains('lock'));
@@ -1689,7 +1727,10 @@ function startLevel(g, { resume = false, free = false, anim = 'up', bet = 1, pai
       if (res.met?.prize?.items) await openMetPrize(res.met.prize.items, res.met.kind);
       const w = worldOf(g);
       const go = () => showMap({ start: w, anim: 'down', after: res.counted ? { g, w, res } : null });
-      if (res.chest) return openBossReward(w, res).then(go);
+      // Jefe derrotado: después del cofre del planeta (si tocaba), su cofre de jefe.
+      const foe = () => (res.foeChest ? openFoeReward(res.foeChest) : null);
+      if (res.chest) return openBossReward(w, res).then(foe).then(go);
+      if (res.foeChest) return foe().then(go);
       if (res.seal) return openSecretSeal(w).then(go);
       go();
     },
@@ -1754,6 +1795,17 @@ function startLevel(g, { resume = false, free = false, anim = 'up', bet = 1, pai
         save.undo += chest.undo || 0;
         save.wild += chest.wild || 0;
       }
+      // Jefe derrotado (le acabaste la vida): su cofre, una sola vez por nivel, aunque sea al repetirlo (15 nov 2026).
+      let foeChest = null;
+      if (level.foe && game?.foeBeat && !(save.foeWon ||= []).includes(g)) {
+        // La apuesta no lo toca (15 nov 2026, el usuario: «lo que se gana es lo que hay»).
+        foeChest = { ...foeBeatPrize(level.foe.r), kind: level.foe.kind };
+        save.foeWon.push(g);
+        save.coins += foeChest.coins || 0;
+        save.undo += foeChest.undo || 0;
+        save.wild += foeChest.wild || 0;
+        for (const [k, n] of Object.entries(foeChest.helps || {})) save.helps[k] = (save.helps[k] || 0) + n;
+      }
       // La lluvia de meteoritos ya dio su comodín o deshacer (metWin): con apuesta se suman los que faltan.
       const mw = (met?.prize?.wild || 0) * mult, mu = (met?.prize?.undo || 0) * mult;
       save.wild += mw - (met?.prize?.wild || 0);
@@ -1763,7 +1815,7 @@ function startLevel(g, { resume = false, free = false, anim = 'up', bet = 1, pai
       updateCoins();
       // Repetir desde la victoria salta el festejo del mapa: no se ofrece si toca abrir el mundo siguiente.
       // Los boletos del premio de la lluvia ya los guardó metWin: aquí solo se enseñan.
-      return { bet: mult, coins, tickets: tickets + (met?.prize?.tickets || 0), prev, gold, cgold, chest, wild: mw + (met?.gift === 'wild' ? 1 : 0), undo: mu + (met?.gift === 'undo' ? 1 : 0), helps: giftHelps(met), met, worldStars: worldStars(w), counted: true, first: !prev, racha: dailyStreak, replay: !free && !chest, col: tokenCount ? { n: tokenCount, ico: col().token } : null };
+      return { bet: mult, coins, tickets: tickets + (met?.prize?.tickets || 0), prev, gold, cgold, chest, wild: mw + (met?.gift === 'wild' ? 1 : 0), undo: mu + (met?.gift === 'undo' ? 1 : 0), helps: giftHelps(met), met, worldStars: worldStars(w), counted: true, first: !prev, racha: dailyStreak, replay: !free && !chest && !foeChest, foeChest, col: tokenCount ? { n: tokenCount, ico: col().token } : null };
     },
   });
   // El tablero sube y la pantalla anterior se queda atrás.
@@ -2238,7 +2290,7 @@ function paintMe() {
 
 // ---------- Regalo diario: se ve una semana (6 días + el día 7 grande con caja sorpresa) ----------
 const prizeIcons = (p) =>
-  [p.coins && `${coin()}<b>${p.coins}</b>`, p.tickets && `${icon('ticket')}<b>×${p.tickets}</b>`, p.undo && `${icon('undo')}<b>×${p.undo}</b>`, p.wild && `${icon('wild')}<b>×${p.wild}</b>`, ...Object.entries(p.helps || {}).map(([k, n]) => n && `${icon(HELPS[k].ico)}<b>×${n}</b>`)].filter(Boolean);
+  [p.coins && `${coin()}<b>${fmt(p.coins)}</b>`, p.tickets && `${icon('ticket')}<b>×${p.tickets}</b>`, p.undo && `${icon('undo')}<b>×${p.undo}</b>`, p.wild && `${icon('wild')}<b>×${p.wild}</b>`, ...Object.entries(p.helps || {}).map(([k, n]) => n && `${icon(HELPS[k].ico)}<b>×${n}</b>`)].filter(Boolean);
 // Lo que da un premio, como piezas para la ventana (icono + cantidad).
 const lootHTML = (p) => prizeIcons(p).map((x) => `<span class="loot-it">${x}</span>`).join('');
 // Suma el premio al guardado y lo lanza al monedero desde un punto de la pantalla.
@@ -3632,7 +3684,7 @@ function betInfo(first) {
         title: '¡Nuevo: Apuestas!', color: 'gold', hero: `<span class="bet-big b${m} outl">×${m}</span>`,
         lead: ulLead(lvl, 'la apuesta', `En los niveles nuevos apuestas al tocar Jugar y ganas <b>hasta ${w} de todo</b>.`),
         rules: [
-          ['gift', `Todo lo que ganes va <b>×${m}</b>: monedas, boletos, comodines, fichas y el cofre del jefe.`],
+          ['gift', `Todo lo que ganes va <b>×${m}</b>: monedas, boletos, comodines, fichas y el cofre del nivel final.`],
           ['ticket', `Al entrar pagas tus boletos <b>×${m}</b> y unas monedas. Si no ganas, <b>no regresa</b>.`],
           ['flag', 'Los niveles que ya ganaste y los eventos se juegan <b>normal</b>.'],
           gift,
@@ -3642,7 +3694,7 @@ function betInfo(first) {
         title: `¡Subiste a ×${m}!`, color: 'gold', badge: '¡Subiste!', hero: `<span class="bet-big b${m} outl">×${m}</span>`,
         lead: ulLead(lvl, `la apuesta ×${m}`, `Ahora ganas <b>hasta ${w} de todo</b>.`),
         rules: [
-          ['gift', `Monedas, boletos, comodines, deshacer, fichas y el cofre del jefe: todo <b>×${m}</b>.`],
+          ['gift', `Monedas, boletos, comodines, deshacer, fichas y el cofre del nivel final: todo <b>×${m}</b>.`],
           ['ticket', `Al entrar pagas tus boletos <b>×${m}</b> y unas monedas. Si no ganas, <b>no regresa</b>.`],
           gift,
         ],
@@ -4160,6 +4212,38 @@ function openBossReward(w, res) {
   });
 }
 
+// Jefe derrotado (15 nov 2026, pedido del usuario): después del cofre del planeta, su cofre de jefe, más grande y de
+// su color, con su dibujo al frente. Cae, se sacude cada vez más fuerte, se abre con destello y suelta sus regalos.
+const FOE_CHEST = { fenix: ['#ff7a2a', '#c94d14', '#ffb36b'], ilus: ['#4f6cff', '#3349d6', '#9db0ff'], kraken: ['#b25fd0', '#8a3fae', '#e3a6f0'], whale: ['#47c27a', '#2f9e5c', '#a6ecbf'] };
+function openFoeReward(fc) {
+  return new Promise((done) => {
+    const c = FOE_CHEST[fc.kind] || ['#8a5cf0', '#6c3fd4', '#a785ff'];
+    const m = openModal({
+      title: '¡Jefe derrotado!',
+      color: `foe-${fc.kind}`,
+      closable: false,
+      cls: `boss-win foe-win foe-${fc.kind}`,
+      body: `<p class="lead">¡Venciste a <b>${FOE_NAME[fc.kind]}</b>! Este es su cofre.</p>
+        <div class="chest-row"><div class="chest foe-chest"><span class="lid">${foeChestLid(c)}</span><span class="body">${foeChestBody(c)}<i class="fc-emb">${FOE_ICON[fc.kind]()}</i></span>${fc.bet > 1 ? `<i class="go-bet chest-bet b${fc.bet}">×${fc.bet}</i>` : ''}</div></div>`,
+      buttons: [{ label: 'Continuar', cls: `${FOE_BTN[fc.kind] || 'green'} wide`, onClick: done }],
+    });
+    const row = m.el.querySelector('.chest-row'), chest = m.el.querySelector('.chest');
+    const loot = () => lootBubbles(m, prizeIcons(fc), chest);
+    if (reduced()) return row.classList.add('open', 'done'), loot();
+    chest.animate([{ translate: '0 -120px', scale: 0.6, opacity: 0 }, { translate: '0 0', scale: 1.08, opacity: 1, offset: 0.7 }, { scale: 0.96, offset: 0.85 }, { translate: '0 0', scale: 1 }], { duration: 560, delay: 150, easing: 'cubic-bezier(.5,0,.75,0)', fill: 'backwards' });
+    setTimeout(async () => {
+      for (const a of [6, 10, 14]) await chest.animate([{ rotate: '0deg' }, { rotate: `-${a}deg` }, { rotate: `${a}deg` }, { rotate: '0deg' }], { duration: 360 }).finished;
+      row.classList.add('open');
+      const r = chest.getBoundingClientRect();
+      chest.animate([{ scale: 1 }, { scale: 1.15 }, { scale: 1 }], { duration: 320, easing: 'ease-out' });
+      sparkle({ x: r.left + r.width / 2, y: r.top + r.height / 3 }, 30);
+      confetti(70);
+      await loot();
+      row.classList.add('done');
+    }, 900);
+  });
+}
+
 // Nivel secreto con 3 estrellas: el sello morado cae sobre la postal del mundo.
 const SEAL_IN = [{ scale: 2.8, rotate: '20deg', opacity: 0 }, { scale: 0.9, rotate: '-16deg', opacity: 1, offset: 0.7 }, { scale: 1, rotate: '-10deg' }];
 function openSecretSeal(w) {
@@ -4218,7 +4302,7 @@ function openAlbum() {
         ${[[8, 20], [40, 110], [70, 6], [168, 4], [205, 96], [226, 30], [120, 132]].map(([x, y], i) => `<i class="tw" style="left:${x}px;top:${y}px;--i:${i}"></i>`).join('')}
       </div>
       <b class="ae-title">Tu álbum está vacío</b>
-      <p class="note">Vence al jefe de un mundo para ganar tu primera postal.<br>Entre más estrellas tenga el mundo, mejor sello.</p>
+      <p class="note">Gana el nivel final de un mundo para ganar tu primera postal.<br>Entre más estrellas tenga el mundo, mejor sello.</p>
     </div>`;
   // Pestañas Mundos / Eventos / Especiales: Eventos sale cuando ya ganó al menos un evento del mes completo, y
   // Especiales, una festividad completa.
@@ -4605,8 +4689,8 @@ function openWorldGate(w, onCancel, prior = null) {
     onClose: onCancel,
     body: `<div class="gate">${miniPlanet(BIOMES[biomeKey(info.place)].emblem, 'gate-pl')}<b>${isConst ? `Constelación ${regionOf(w) + 1} · ` : ''}${esc(info.name)}</b>
       <div class="rows">
-        ${prior != null ? `<div class="row">${icon('lock')}<b>Constelación anterior<span>Termina ${esc(regionName(prior))} y vence a su último jefe</span></b><em>${icon('lock')}</em></div>` : ''}
-        <div class="row ${okGold ? 'ok' : ''}">${isConst ? `${icon('constTicket')}<b>Boleto de constelación<span>Lo da el último jefe de la constelación</span></b>` : `${icon('gold')}<b>Boleto dorado<span>Lo da el jefe del mundo anterior</span></b>`}${okGold ? icon('check') : '<em>0/1</em>'}</div>
+        ${prior != null ? `<div class="row">${icon('lock')}<b>Constelación anterior<span>Termina ${esc(regionName(prior))} y vence a su jefe</span></b><em>${icon('lock')}</em></div>` : ''}
+        <div class="row ${okGold ? 'ok' : ''}">${isConst ? `${icon('constTicket')}<b>Boleto de constelación<span>Lo da el jefe de la constelación</span></b>` : `${icon('gold')}<b>Boleto dorado<span>Lo da el jefe del mundo anterior</span></b>`}${okGold ? icon('check') : '<em>0/1</em>'}</div>
         <div class="row ${okStars ? 'ok' : ''}">${star(true)}<b>Estrellas<span>${okStars ? '¡Listo!' : `Te faltan ${need - have}: repite niveles (es gratis)`}</span></b>${okStars ? icon('check') : `<em>${have}/${need}</em>`}</div>
         ${cost ? `<div class="row ${okCoins ? 'ok' : ''}">${coin()}<b>Monedas<span>${okCoins ? 'Nueva constelación' : `Te faltan ${money(cost - save.coins)}`}</span></b>${okCoins ? `<em>${money(cost)}</em>` : `<em>${money(save.coins)}/${money(cost)}</em>`}</div>`  : ''}
         ${free ? `<div class="row ok">${coin()}<b>Monedas<span>¡Esta constelación va por nuestra cuenta!</span></b><em>${was} Gratis</em></div>` : ''}
@@ -5324,6 +5408,7 @@ function openHelp(tab = 'basico', then) {
         <div class="step" data-u="rocas"><div class="ill c"><span class="help-card" style="background-image:${cardBackURL('hlaser')}"></span></div><p><b>Láser:</b> rompe todas las piedras de los asteroides.</p></div>
         <div class="step" data-u="ship"><div class="ill c"><span class="help-card" style="background-image:${cardBackURL('hescudo')}"></span></div><p><b>Escudo:</b> la nave ladrona ya no te roba en todo el nivel.</p></div>
         <div class="step" data-u="magnet"><div class="ill c"><span class="help-card" style="background-image:${cardBackURL('himan')}"></span></div><p><b>Imán:</b> tu siguiente robo saca del mazo la carta que más te sirve, sin cortar tu racha, y la carta que conviene jugar tiembla.</p></div>
+        <div class="step" data-u="wand"><div class="ill c"><span class="help-card" style="background-image:${cardBackURL('hvarita')}"></span></div><p><b>Varita:</b> tocas una carta libre y le subes o bajas hasta 3. También la compras en tus ayudas.</p></div>
         <div class="step" data-u="scope"><div class="ill c"><span class="help-card" style="background-image:${cardBackURL('htele')}"></span></div><p><b>Telescopio:</b> deja ver todas las cartas del tablero 5 turnos.</p></div>
         <div class="step" data-u="astro"><div class="ill c"><span class="help-card" style="background-image:${cardBackURL('hastro')}"></span></div><p><b>Astronauta:</b> llega a tu nivel y te guarda una carta libre. Cuando conecte, la manda al descarte.</p></div>
         <div class="step"><div class="ill c"><span class="help-btn">${icon('undo')}</span></div><p><b>Deshacer:</b> regresa tu última jugada o la carta que robaste.</p></div>

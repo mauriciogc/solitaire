@@ -54,6 +54,12 @@
 //             despierta (s.awake = ids)
 //   twin      cartas gemelas (14 nov 2026): id de su pareja (atadas con un lazo). Al jugar una, la otra sale de donde
 //             esté (aunque esté tapada) y cae al descarte encima: se sigue desde ella. Suma su punto de racha
+//   wand      varita (15 nov 2026): al jugarla, puedes tocar una carta libre de número fijo y subirle o bajarle hasta
+//             WAND_MAX (useWand; no es jugada ni robo). s.wand = está esperando; se pierde con tu siguiente jugada o
+//             robo. s.shift[id] = lo que se le sumó a esa carta (rankOf lo aplica)
+//   lasso     lazo (15 nov 2026): al jugarlo, escoges cualquier carta del tablero (libre, tapada o especial) y va directo
+//             al descarte (pull: es una jugada de esa carta; las especiales hacen lo suyo y el descarte no cambia).
+//             s.lasso = está esperando; se pierde con tu siguiente jugada o robo
 //   scope     telescopio (14 nov 2026): al jugarlo se ven todas las cartas del tablero SCOPE_TURNS acciones (s.scope =
 //             las que quedan; solo es para ver: no cambia qué se puede jugar). La ayuda Telescopio da SCOPE_HELP
 //
@@ -62,6 +68,10 @@
 // s.hold = id de la carta que guarda y s.holdRank su número. Mientras guarde una, no se gana.
 //
 // Mesas del nivel: level.rocks = { n } cinturón de asteroides (10 nov 2026, ver dropRocks).
+// level.foe = { kind, hp, r } jefe de constelación (15 nov 2026): una criatura que juega contra ti (ver bossStep). Tiene
+// vida (s.hp): cada carta que juegas con racha de 2 o más le quita 1; en 0 se va y regresa lo que tenía.
+// level.box = { combo } caja galáctica (15 nov 2026): se abre jugando sus números en orden (s.bx = cuántos van; ver
+// boxNext). Solo da premio (lo da el juego).
 import { hash } from './rng.js';
 
 export const mod13 = (n) => ((n % 13) + 13) % 13;
@@ -113,6 +123,8 @@ export const useLaser = (s0) => ({ ...cloneState(s0), rock: {} });
 export const useShield = (s0) => ({ ...cloneState(s0), shield: true });
 // Ayuda imán (13 nov 2026): lo mismo que jugar la carta imán.
 export const useMagnet = (s0) => ({ ...cloneState(s0), magnet: true });
+// Ayuda Varita (15 nov 2026): como jugar la carta varita: tocas una carta libre y le cambias el número.
+export const useWandHelp = (s0) => ({ ...cloneState(s0), wand: true });
 // Telescopio (14 nov 2026): la carta deja ver todo SCOPE_TURNS acciones; la ayuda, SCOPE_HELP.
 export const SCOPE_TURNS = 3, SCOPE_HELP = 5;
 export const useScope = (s0) => ({ ...cloneState(s0), scope: Math.max(s0.scope || 0, SCOPE_HELP) });
@@ -138,12 +150,14 @@ export function initState(level, extra = {}) {
     ...(level.doors && { keys: 0, open: [] }),
     // Asteroides: robos desde la última caída y piedras en el tablero (id -> jugadas que les quedan).
     ...(level.rocks && { rq: 0, rock: {} }),
+    // Jefe de constelación: su vida y lo que tiene agarrado (ver bossStep).
+    ...(level.foe && { hp: level.foe.hp, ash: [], melt: [], ink: [], tickle: 0, belly: [], ontop: {}, under: {} }),
     ...extra,
   };
 }
 
 // (Partidas guardadas antes del boleto partido no traen cut.)
-export const cloneState = (s) => ({ ...s, rem: s.rem.slice(), stock: s.stock.slice(), boom: s.boom.slice(), cut: (s.cut || []).slice(), ...(s.awake && { awake: s.awake.slice() }), ...(s.open && { open: s.open.slice() }), ...(s.lift && { lift: s.lift.slice() }), ...(s.rock && { rock: { ...s.rock } }), ...(s.scrGone && { scrGone: s.scrGone.slice() }) });
+export const cloneState = (s) => ({ ...s, rem: s.rem.slice(), stock: s.stock.slice(), boom: s.boom.slice(), cut: (s.cut || []).slice(), ...(s.awake && { awake: s.awake.slice() }), ...(s.open && { open: s.open.slice() }), ...(s.lift && { lift: s.lift.slice() }), ...(s.rock && { rock: { ...s.rock } }), ...(s.scrGone && { scrGone: s.scrGone.slice() }), ...(s.shift && { shift: { ...s.shift } }), ...(s.ash && { ash: s.ash.slice(), melt: (s.melt || []).slice(), ink: (s.ink || []).map((t) => ({ ...t, ids: t.ids.slice() })), belly: s.belly.map((b) => ({ ...b })), ontop: { ...s.ontop }, under: { ...s.under } }), ...(s.suit && { suit: { ...s.suit } }) });
 
 // Mitad del boleto partido que ya se jugó (0 = está entero, 1 = la de arriba, 2 = la de abajo).
 export const cutOf = (c, s) => (c.half != null && s.cut?.[c.id]) || 0;
@@ -203,7 +217,8 @@ export const holeTook = (c, t) => !!c.ring && t > 0 && c.ring[t % c.ring.length]
 
 // Número que muestra ahora una carta (la carta viva cambia con las acciones; del boleto partido, la mitad que queda;
 // la del agujero negro, la que le toca en el giro).
-export const rankOf = (c, s) => (c.ring ? c.ring[holeTurn(s) % c.ring.length] : c.live ? mod13(c.rank + c.live * s.actions) : cutOf(c, s) === 1 ? c.half : c.tri && triOf(c, s) & 1 ? triRank(c, triEnds(c, s)[0] ?? 0) : c.rank);
+export const rankOf = (c, s) => (s.shift?.[c.id] ? mod13(rank0(c, s) + s.shift[c.id]) : rank0(c, s));
+const rank0 = (c, s) => (c.ring ? c.ring[holeTurn(s) % c.ring.length] : c.live ? mod13(c.rank + c.live * s.actions) : cutOf(c, s) === 1 ? c.half : c.tri && triOf(c, s) & 1 ? triRank(c, triEnds(c, s)[0] ?? 0) : c.rank);
 
 // ¿Vale el rango r sobre el descarte? A y K se conectan. Una flecha en el descarte obliga a una dirección.
 // Una carta doble en el descarte abre dos caminos (vale seguir desde cualquiera de sus dos números).
@@ -260,7 +275,7 @@ function magnetPick(level, s) {
 }
 
 // Tramos de la nebulosa ya vaciados.
-export const nebOut = (level, s) => (level.neb ? level.neb.reduce((n, t) => n + t.every((j) => s.rem[j]), 0) : 0);
+export const nebOut = (level, s) => (level.neb ? level.neb.reduce((n, t) => n + t.every((j) => playedOut(s, j)), 0) : 0);
 // Puertas (9 nov 2026): pilas chicas a la orilla del tablero, cada una tras su puerta (level.doors[d] = { n, prize,
 // coins? }). Hay menos llaves que puertas: cada carta llave da una llave y el jugador escoge qué puerta abrir. Al abrirse
 // su premio se activa (moneda, cometa o cohete) y sus cartas salen al tablero y cuentan para ganar. Si nunca la abre,
@@ -269,14 +284,22 @@ export const doorOpen = (level, d, s) => !!s.open?.[d];
 // ¿Cuenta para ganar? Las cartas tras una puerta cerrada no.
 export const counts = (level, c, s) => c.door == null || doorOpen(level, c.door, s);
 // El rayo de antes (s.lift, partidas guardadas del 10 nov) sacaba una carta de abajo: queda libre aunque sigan ahí.
-export const isFree = (c, s, level) => ((flipped(level, s) ? c.flipBy : c.coveredBy).every((j) => s.rem[j]) || !!s.lift?.includes(c.id)) && (!c.neb || nebOut(level, s) >= c.neb) && (c.door == null || doorOpen(level, c.door, s));
-export const curtainOpen = (level, c, s) => c.curtain == null || !!s.master || !!s.rem[level.curtains[c.curtain]];
-export const lockOpen = (level, c, s) => c.lock == null || !!s.master || !!s.rem[level.keys[c.lock]];
-export const iceLeft = (c, s) => (c.ice && !s.burnt ? Math.max(0, c.ice - s.plays) : 0);
+// Ballena: la carta que escupió va encima de otra (s.ontop[id] = la de abajo, s.under al revés): ya no la tapa lo de
+// su lugar de antes, ni ella tapa lo de ahí; la de abajo queda tapada mientras la escupida siga.
+const moved = (s, j) => s.ontop?.[j] != null;
+const topped = (c, s) => s.under?.[c.id] != null && !s.rem[s.under[c.id]];
+export const isFree = (c, s, level) => (moved(s, c.id) || (flipped(level, s) ? c.flipBy : c.coveredBy).every((j) => s.rem[j] || moved(s, j)) || !!s.lift?.includes(c.id)) && !topped(c, s) && (!c.neb || nebOut(level, s) >= c.neb) && (c.door == null || doorOpen(level, c.door, s));
+// Jugada de verdad: fuera del tablero y no en la panza de la Ballena (15 nov 2026, el usuario: se comió la llave y el
+// candado se abrió). Lo que se abre al jugar una carta (candado, cortina, nebulosa) usa esto y no s.rem.
+const playedOut = (s, j) => !!s.rem[j] && !s.belly?.some((b) => b.id === j);
+export const curtainOpen = (level, c, s) => c.curtain == null || !!s.master || playedOut(s, level.curtains[c.curtain]);
+export const lockOpen = (level, c, s) => c.lock == null || !!s.master || playedOut(s, level.keys[c.lock]);
+// Fénix: el fuego que le cae a una carta le quita su hielo o su enredadera (s.melt).
+export const iceLeft = (c, s) => (c.ice && !s.burnt && !s.melt?.includes(c.id) ? Math.max(0, c.ice - s.plays) : 0);
 // Enredadera (13 nov 2026): cuántas tiene ya y si esta carta está tapada. El fuego (s.burnt) las quema todas.
 export const VINE_EVERY = 5;
 export const vineCount = (level, s) => (!level.vine || s.burnt ? 0 : Math.min(level.vine.n, level.vine.n0 + Math.floor(s.actions / VINE_EVERY)));
-export const vineOn = (level, c, s) => c.vine != null && c.vine < vineCount(level, s);
+export const vineOn = (level, c, s) => c.vine != null && c.vine < vineCount(level, s) && !s.melt?.includes(c.id);
 // Acciones que faltan para que crezca (null si ya no crece).
 export const vineLeft = (level, s) => (vineCount(level, s) && vineCount(level, s) < level.vine.n ? VINE_EVERY - (s.actions % VINE_EVERY) : null);
 export const bombLeft = (c, s) => (c.bomb && !s.rem[c.id] ? c.bomb - s.actions : null);
@@ -305,7 +328,9 @@ export const underWater = (c, s) => !!c.wet && (s.tide || 0) >= c.wet;
 export const BELT_W = 4; // 8 nov 2026: con 3 el bot casual ganaba 30% (47% en uno normal)
 export const beltPos = (level, c, s) => (((c.belt - 1 - s.actions) % level.belt.K) + level.belt.K) % level.belt.K;
 export const beltShown = (level, c, s) => !c.belt || !level.belt || beltPos(level, c, s) < level.belt.W;
-export const isOpen = (level, c, s) => faceUp(level, c, s) && lockOpen(level, c, s) && !iceLeft(c, s) && ghostShown(c, s) && !underWater(c, s) && beltShown(level, c, s) && !rockOn(c, s) && !vineOn(level, c, s) && !asleep(c, s);
+export const isOpen = (level, c, s) => faceUp(level, c, s) && lockOpen(level, c, s) && !iceLeft(c, s) && ghostShown(c, s) && !underWater(c, s) && beltShown(level, c, s) && !rockOn(c, s) && !vineOn(level, c, s) && !asleep(c, s) && !inked(c, s);
+// Kraken: carta con tinta (no se juega hasta que quede limpia del todo).
+export const inked = (c, s) => !!s.ink?.some((t) => t.ids.includes(c.id));
 // Cinturón de asteroides (10 nov 2026, pedido del usuario): cada ROCK_EVERY robos caen level.rocks.n piedras (2 o 3)
 // sobre cartas libres; cada una la tapa ROCK_PLAYS turnos (jugadas o robos; 11 nov 2026, antes solo jugadas) o hasta usar la ayuda Láser. Como la marea,
 // tiene límite: nunca más de ROCK_MAX piedras a la vez y siempre deja ROCK_KEEP cartas libres sin piedra. El reloj de
@@ -369,7 +394,7 @@ export const refStep = (c, s) => (c.half != null && !cutOf(c, s) ? { rank: c.ran
 export const refReady = (level, c, s, w = refStep(c, s)) => (w.rank != null ? playRank(level, c, s) === w.rank : w.low != null ? isOpen(level, c, s) && triPick(c, s, w.low) === w.low : playRank(level, c, s) != null);
 
 export const legal = (level, s) => level.cards.filter((c) => playRank(level, c, s) != null);
-export const won = (s, level) => s.hold == null && s.rem.every((r, i) => r || (level?.cards[i].door != null && !s.open?.[level.cards[i].door]));
+export const won = (s, level) => s.hold == null && !s.belly?.length && s.rem.every((r, i) => r || (level?.cards[i].door != null && !s.open?.[level.cards[i].door]));
 
 // ---------- Premios de racha ----------
 // Racha 6: +1 carta útil al mazo · 13: un comodín al mazo · 18 y 23: +1 carta útil · 30: escoba (barre toda la capa
@@ -530,9 +555,9 @@ function checkBombs(level, s) {
 }
 
 // ---------- Acciones (devuelven un estado nuevo y lo que pasó, para animarlo) ----------
-export function play(level, s0, id, low = false) {
+export function play(level, s0, id, low = false, forced = false) {
   const c = level.cards[id];
-  const r = playRank(level, c, s0, low);
+  const r = forced ? rankOf(c, s0) : playRank(level, c, s0, low);
   const s = cloneState(s0);
   // Boleto entero: se parte y la otra mitad se queda en el tablero.
   const split = c.half != null && !cutOf(c, s0) ? (r === c.rank && !(low && r === c.half) ? 1 : 2) : 0;
@@ -547,13 +572,23 @@ export function play(level, s0, id, low = false) {
   // La carta doble llega al descarte con sus dos números; la flecha, con su obligación.
   // Dominó: en el descarte se queda el otro número (por el que no entraste).
   const exit = c.dom != null ? (r === c.rank ? c.dom : c.rank) : null;
-  s.top = chamWild(c, s0) ? { wild: true } : c.alt != null ? { rank: c.rank, alt: c.alt, suit: c.suit } : exit != null ? { rank: exit, suit: c.suit } : { rank: r, suit: c.suit, ...(c.arrow && { arrow: c.arrow }) };
+  const suit = s0.suit?.[id] ?? c.suit;
+  s.top = chamWild(c, s0) ? { wild: true } : c.alt != null ? { rank: c.rank, alt: c.alt, suit } : exit != null ? { rank: exit, suit } : { rank: r, suit, ...(c.arrow && { arrow: c.arrow }) };
+  // Fénix: una carta con ceniza que se juega ya no la trae.
+  if (s.ash?.length) s.ash = s.ash.filter((j) => j !== id);
   // Arcoíris: el descarte lleva las jugadas ±2 que quedan.
   const rb = c.rainbow ? RAINBOW : Math.max(0, (s0.top?.rb || 0) - 1);
   if (rb && !s.top.wild) s.top.rb = rb;
   // Imán: espera tu siguiente robo.
   if (c.magnet) s.magnet = true;
+  // Varita y lazo: esperan a que escojas carta; si no, se pierden con esta jugada.
+  s.wand = !!c.wand;
+  s.lasso = !!c.lasso;
   s.plays++;
+  // Caja galáctica: el número que quedó en el descarte.
+  const box0 = s0.bx || 0;
+  if (level.box && !s.top.wild) s.bx = boxNext(level.box.combo, box0, s.top.rank);
+  const box = level.box && s.bx !== box0 ? (s.bx === level.box.combo.length ? 'open' : s.bx > box0 ? 'click' : 'reset') : null;
   tick(s);
   // Telescopio: se ven todas las cartas las siguientes SCOPE_TURNS acciones.
   if (c.scope) s.scope = Math.max(s.scope || 0, SCOPE_TURNS);
@@ -606,7 +641,8 @@ export function play(level, s0, id, low = false) {
     s.rem[b] = true;
     s.stock.push({ rank: rankOf(x, s), suit: x.suit, ...(x.alt != null && { alt: x.alt }), ...(x.arrow && { arrow: x.arrow }) });
   }
-  return { s, ev: { t: 'play', id, rank: r, packs, defused, reward, boost, boom, wished, wishes, gone, ...(c.turbo && { turbo: true }), ...(twin != null && { twin }), ...(split && { split }), ...(tri && { tri }), ...(exit != null && { exit }), ...(shipBack && { shipBack }), ...(c.doorKey && { key: true }), ...(cst && { cst }), ...(rockOff.length && { rockOff }), ...(bolted.length && { bolted }), ...(burnt && { burnt }) } };
+  const boss = bossStep(level, s0, s, true);
+  return { s, ev: { t: 'play', id, rank: r, ...(boss && { boss }), packs, defused, reward, boost, boom, wished, wishes, gone, ...(c.turbo && { turbo: true }), ...(twin != null && { twin }), ...(split && { split }), ...(tri && { tri }), ...(exit != null && { exit }), ...(shipBack && { shipBack }), ...(c.doorKey && { key: true }), ...(cst && { cst }), ...(rockOff.length && { rockOff }), ...(bolted.length && { bolted }), ...(burnt && { burnt }), ...(box && { box }) } };
 }
 
 // Abrir la puerta d con una llave. No es jugada ni robo: no mueve la racha ni las cuentas, salvo su premio
@@ -660,6 +696,259 @@ export function astroSend(level, s0) {
   return { s, ev: { ...ev, t: 'send' } };
 }
 
+// ---------- Jefes de constelación (15 nov 2026, pedido del usuario) ----------
+// Cada uno ataca cada BOSS_EVERY acciones (el reloj de arena lo detiene: las acciones no avanzan) y avisa una acción
+// antes (lo dibuja el juego: tiembla o se agita; no hay texto ni cuentas en el tablero). r = la vuelta (cada 4
+// constelaciones vuelve el mismo jefe y es más fuerte).
+//   fenix   no se ve (15 nov 2026): cae fuego en 1 a todas las cartas libres (s.ash) y se queda hasta jugarlas. El
+//           fuego se mueve y deja ver el número por partes (lo dibuja el juego; con racha de 5, 10… baja un turno (fireLow) y
+//           Ver cartas lo apaga esos segundos). Si tocas una que no conecta, cuenta como robo (blind).
+//           También cae en libres con hielo o enredadera: se los quita (s.melt)
+//   ilus    el Ilusionista cambia el número de todas las cartas boca arriba (s.shift, como la varita)
+//   kraken  no se ve (15 nov 2026, pedido del usuario: antes eran tentáculos): salpica tinta en 2 a 4 cartas libres
+//           juntas (s.ink, una mancha por ataque: no se juegan hasta que queden limpias del todo). Con KRAKEN_TICKLE
+//           jugadas seguidas se lava la mancha más vieja (s.tickle; robar lo reinicia). Si pasan KRAKEN_SLAM robos con
+//           tinta: manotazo, el 90% de las cartas sin tinta cambian de lugar (sus números y palos se revuelven: s.shift
+//           y s.suit), con el golpe se limpia la mitad de las manchadas (al menos una; out.unink) y la cuenta de robos
+//           vuelve a 0. Si todas las libres quedan con tinta (nada que jugar), la más vieja se limpia sola (bossStep)
+//   whale   no se ve (15 nov 2026, pedido del usuario): jala 1-2 cartas volteadas (luego 2 y 2-3; siempre al menos
+//           1, aunque sea la última; cualquier volteada menos las que ella escupió encima de otra) a su panza (s.belly; no cuentan como jugadas)
+//           y WHALE_SPIT acciones después las escupe boca arriba encima de otras (s.ontop / s.under): la de abajo queda
+//           tapada. Para ganar no puede quedar nada en su panza. Si ya no hay mazo ni nada que jugar, escupe todo ya
+// Cada cuántas acciones ataca, por vuelta (la primera vez más espaciado; luego más seguido).
+export const BOSS_EVERY = { fenix: [4, 4, 4, 3], ilus: [6, 5, 4, 3], kraken: [7, 6, 5, 4], whale: [5, 4, 4, 4] };
+export const KRAKEN_TICKLE = 3, KRAKEN_SLAM = 3, WHALE_SPIT = 3;
+export const bossAlive = (level, s) => !!level.foe && s.hp > 0;
+// Fénix: con racha de 5, 10, 15… el fuego baja un turno (se ve el número) y luego vuelve.
+export const fireLow = (s) => s.streak > 0 && s.streak % 5 === 0;
+export const bossEvery = (level) => (level.foe ? BOSS_EVERY[level.foe.kind][Math.min(3, level.foe.r)] : 0);
+// ¿Ataca en la acción que sigue? (para que el juego avise: tiembla o se agita)
+// El primer ataque llega BOSS_FIRST acciones antes de la cuenta (para que se vea pronto; luego cada bossEvery).
+export const BOSS_FIRST = 2;
+export const bossSoon = (level, s) => bossAlive(level, s) && !(s.freeze > 0) && (s.actions + 1 + BOSS_FIRST) % bossEvery(level) === 0;
+const bossHash = (level, s, k = 0) => hash(level.g * 977 + s.actions * 131 + k * 31 + s.rem.reduce((a, b, i) => a + (b ? i + 1 : 0), 0));
+// Ballena: lo que puede jalar (cualquier volteada, tenga la mecánica que tenga). isOpen ya sabe si tiene una escupida
+// encima (s.under se queda con la de arriba aunque ya se haya jugado: no sirve para filtrar).
+const whaleCan = (level, s) => level.cards.filter((c) => isOpen(level, c, s));
+// Las que sí puede jalar: no las que ella misma escupió encima de otra (15 nov 2026, el usuario). El juego hace temblar
+// estas antes de que jale.
+export const whaleEatable = (level, s) => whaleCan(level, s).filter((c) => s.ontop[c.id] == null);
+// Escupe lo que lleva WHALE_SPIT acciones en su panza (all: todo) encima de una volteada; si no hay, a su lugar.
+function whaleSpit(level, s, all = false) {
+  const spit = [];
+  s.belly = s.belly.filter((b) => {
+    if (!all && s.actions - b.at < WHALE_SPIT) return true;
+    const free = whaleCan(level, s).filter((c) => c.id !== b.id);
+    const t = free.length ? free[bossHash(level, s, b.id) % free.length] : null;
+    s.rem[b.id] = false;
+    if (t) (s.ontop[b.id] = t.id), (s.under[t.id] = b.id);
+    spit.push([b.id, t ? t.id : null]);
+    return false;
+  });
+  return spit;
+}
+// Cartas de número sin otra mecánica que hoy se pueden jugar (lo que los jefes tocan).
+const bossKind = (c) => c.rank != null && !special(c) && c.half == null && !c.tri && c.dom == null && c.alt == null && !c.ring;
+// Lo que tapan el fuego y la tinta (15 nov 2026, el usuario: «que todas las que tienen dinámica se comporten como una
+// carta»): cualquier carta del tablero que no sea bomba, cometa ni paquete. Lo que cambia números (Ilusionista, manotazo)
+// sigue solo con las de un número (bossKind).
+const bossCover = (c) => c.rank != null && !special(c);
+// Kraken (15 nov 2026, el usuario se quedó atorado): si ya no queda ninguna carta para jugar porque todas las libres
+// tienen tinta, la mancha más vieja se limpia sola (sin esto solo quedaba robar hasta perder).
+function bossStep(level, s0, s, played) {
+  const out = bossAct(level, s0, s, played);
+  // Ballena: sin mazo y sin nada que jugar ya no pasarían acciones para que escupa: escupe todo ya.
+  if (level.foe?.kind === 'whale' && s.belly?.length && !s.stock.length && !level.cards.some((c) => isOpen(level, c, s))) {
+    const r = out || {};
+    r.spit = [...(r.spit || []), ...whaleSpit(level, s, true)];
+    return r;
+  }
+  if (level.foe?.kind !== 'kraken' || s.hp <= 0 || !s.ink?.length || out?.wash || level.cards.some((c) => isOpen(level, c, s))) return out;
+  const r = out || {};
+  r.wash = s.ink.shift().ids;
+  s.tickle = 0;
+  return r;
+}
+function bossAct(level, s0, s, played) {
+  if (!level.foe || s0.hp <= 0) return null;
+  const B = level.foe, out = {};
+  if (played && s.streak >= 2) {
+    s.hp--;
+    out.hit = 1;
+  }
+  if (B.kind === 'kraken') s.ink ||= [];
+  if (B.kind === 'kraken' && s.ink.length) {
+    if (played) {
+      if (++s.tickle >= KRAKEN_TICKLE) {
+        out.wash = s.ink.shift().ids;
+        s.tickle = 0;
+      }
+    } else {
+      s.tickle = 0;
+      s.ink.forEach((t) => t.d++);
+      if (s.ink.some((t) => t.d >= KRAKEN_SLAM)) {
+        // Manotazo: revuelve el 90% de las que quedan en el tablero (sin tinta) y la cuenta vuelve a empezar.
+        s.ink.forEach((t) => (t.d = 0));
+        const ids = level.cards.filter((c) => !s.rem[c.id] && c.rank != null && !special(c) && c.half == null && !c.tri && c.dom == null && c.alt == null && !c.ring && !inked(c, s)).map((c) => c.id);
+        const r0 = bossHash(level, s, 7), stay = new Set(ids.slice().sort((x, y) => hash(x * 37 + r0) - hash(y * 37 + r0)).slice(0, Math.max(1, Math.round(ids.length * 0.1))));
+        const mov = ids.filter((j) => !stay.has(j));
+        if (mov.length > 1) {
+          const face = mov.map((j) => [rankOf(level.cards[j], s), s.suit?.[j] ?? level.cards[j].suit]);
+          s.shift ||= {};
+          s.suit ||= {};
+          mov.forEach((j, i) => {
+            const [rk, su] = face[(i + 1 + (r0 % (mov.length - 1))) % mov.length];
+            s.shift[j] = mod13((s.shift[j] || 0) + rk - rankOf(level.cards[j], s));
+            s.suit[j] = su;
+          });
+          out.slam = mov;
+        }
+        // Con el golpe se cae la tinta de la mitad de las cartas manchadas (al menos una; esas no se revolvieron).
+        const all = s.ink.flatMap((t) => t.ids), off = new Set(all.slice().sort((x, y) => hash(x * 41 + r0) - hash(y * 41 + r0)).slice(0, Math.ceil(all.length / 2)));
+        s.ink = s.ink.map((t) => ({ ...t, ids: t.ids.filter((i) => !off.has(i)) })).filter((t) => t.ids.length);
+        out.unink = [...off];
+      }
+    }
+  }
+  if (s.hp <= 0) {
+    // Se va: la ceniza se quita, la tinta se lava y la ballena regresa a su lugar lo que se tragó.
+    s.ash = [];
+    s.ink = [];
+    for (const b of s.belly) s.rem[b.id] = false;
+    s.belly = [];
+    out.gone = true;
+    return out;
+  }
+  const every = bossEvery(level);
+  if (B.kind === 'whale') {
+    // Primero escupe lo que ya le toca.
+    const spit = whaleSpit(level, s);
+    if (spit.length) out.spit = spit;
+  }
+  if (s.actions === s0.actions || (s.actions + BOSS_FIRST) % every) return Object.keys(out).length ? out : null;
+  const can = level.cards.filter((c) => bossCover(c) && isOpen(level, c, s));
+  const h = bossHash(level, s);
+  if (B.kind === 'fenix') {
+    // También le puede caer a una libre con hielo o enredadera: se los quita (s.melt) y queda con fuego.
+    const meltable = (c) => !s.rem[c.id] && (c.ice || c.vine != null) && !s.melt.includes(c.id) && !isOpen(level, c, s) && isOpen(level, c, { ...s, melt: [...s.melt, c.id] });
+    const fresh = [...can, ...level.cards.filter((c) => bossCover(c) && meltable(c))].filter((c) => !s.ash.includes(c.id));
+    if (fresh.length) {
+      const k = Math.min(fresh.length, Math.max(1 + B.r, 1 + (h % fresh.length)));
+      const pick = fresh.map((c) => c.id).sort((a, b) => hash(a * 53 + h) - hash(b * 53 + h)).slice(0, k);
+      const melt = pick.filter((id) => meltable(level.cards[id]));
+      s.ash.push(...pick);
+      s.melt.push(...melt);
+      out.ash = pick;
+      if (melt.length) out.melt = melt;
+    }
+  } else if (B.kind === 'ilus') {
+    const one = can.filter(bossKind);
+    if (one.length) {
+      s.shift ||= {};
+      out.ilus = one.map((c) => {
+        // Truco chico: cada una sube o baja 1 o 2 (al azar del todo rompía todas las cadenas: el bot pasaba de 98% a 0%).
+        const k = hash(c.id * 61 + h) % 4, d = [1, 2, -1, -2][k];
+        s.shift[c.id] = mod13((s.shift[c.id] || 0) + d);
+        return c.id;
+      });
+    }
+  } else if (B.kind === 'kraken') {
+    const max = 1 + Math.min(2, B.r);
+    const free = can.filter((c) => !inked(c, s));
+    if (s.ink.length < max && free.length > 1) {
+      const a = free[h % free.length];
+      // Las de junto a la primera; si no hay, las libres más cercanas (2 o 3; desde la segunda vuelta, 3 o 4).
+      const dist = (c) => Math.hypot(a.x - c.x, a.y - c.y) + (c.group === a.group ? 0 : 50);
+      const ids = [a.id, ...free.filter((c) => c.id !== a.id).sort((x, y) => dist(x) - dist(y) || x.id - y.id).map((c) => c.id)].slice(0, 2 + ((h >>> 3) % 2) + Math.min(1, B.r));
+      // Nunca mancha todas las libres: siempre deja al menos una.
+      if (ids.length < free.length) {
+        s.ink.push({ ids, d: 0 });
+        s.tickle = 0;
+        out.ink = ids;
+      }
+    }
+  } else if (B.kind === 'whale') {
+    // Cualquier volteada menos las que ella misma escupió encima de otra (whaleEatable). 1-2 la primera vez; luego 2 y
+    // 2-3 (>>>: el hash pasa de 2^31).
+    // Si no hay ninguna no jala (y el juego no las hizo temblar: solo tiemblan las de whaleEatable). Desde la vuelta 4
+    // jala 2-3 como en la 3 (con 3-4 el bot casual ganaba el 1600 el 1%).
+    const free = whaleEatable(level, s);
+    const n = Math.min(free.length, [1, 2, 2, 2][Math.min(3, B.r)] + (B.r === 1 ? 0 : (h >>> 2) % 2));
+    if (n > 0) {
+      const eat = free.map((c) => c.id).sort((a, b) => hash(a * 71 + h) - hash(b * 71 + h)).slice(0, n);
+      for (const id of eat) {
+        s.rem[id] = true;
+        if (s.ontop[id] != null) delete s.under[s.ontop[id]], delete s.ontop[id];
+        s.belly.push({ id, at: s.actions });
+      }
+      out.eat = eat;
+    }
+  }
+  return Object.keys(out).length ? out : null;
+}
+// Fénix: tocaste una carta con fuego que no conecta. Cuenta como robo: se corta la racha y pasa una acción.
+export function blind(level, s0, id) {
+  const s = cloneState(s0);
+  s.streak = 0;
+  s.turbo = 0;
+  s.wand = s.lasso = false;
+  tick(s);
+  const boss = bossStep(level, s0, s, false);
+  return { s, ev: { t: 'blind', id, ...(boss && { boss }) } };
+}
+
+// ---------- Caja galáctica (15 nov 2026) ----------
+// Con el número jugado r: si es el que sigue, avanza; si es otro de la combinación, se reinicia (o empieza otra vez si
+// es el primero); cualquier otro número no la toca. Robar tampoco.
+export function boxNext(combo, bx, r) {
+  if (bx >= combo.length) return bx;
+  if (r === combo[bx]) return bx + 1;
+  return combo.includes(r) ? (r === combo[0] ? 1 : 0) : bx;
+}
+
+// ---------- Varita (15 nov 2026) ----------
+// Después de jugarla, una carta libre de número fijo sube o baja hasta WAND_MAX (d = −3…3, sin 0). No es jugada ni
+// robo: no mueve la racha ni las cuentas.
+export const WAND_MAX = 3;
+const plain = (c) => c.rank != null && !special(c) && c.half == null && !c.tri && c.dom == null && c.alt == null && c.twin == null && !c.live && !c.ghost && !c.cham && !c.ring && !c.scr;
+export const canWand = (level, c, s) => !!s.wand && !s.rem[c.id] && plain(c) && isOpen(level, c, s);
+export function useWand(level, s0, id, d) {
+  const c = level.cards[id];
+  if (!canWand(level, c, s0) || !d || Math.abs(d) > WAND_MAX) return null;
+  const s = { ...cloneState(s0), wand: false, shift: { ...s0.shift, [id]: mod13((s0.shift?.[id] || 0) + d) } };
+  return { s, ev: { t: 'wand', id, d, from: rankOf(c, s0), to: rankOf(c, s) } };
+}
+
+// ---------- Lazo (15 nov 2026) ----------
+// Después de jugarlo, cualquier carta que siga en el tablero: libre, tapada o especial (no las de una puerta cerrada,
+// lo que la nebulosa o la banda esconden, ni boletos o dominó, que tienen dos números).
+export const canLasso = (level, c, s) => !!s.lasso && !s.rem[c.id] && (c.door == null || doorOpen(level, c.door, s)) && (!c.neb || nebOut(level, s) >= c.neb) && beltShown(level, c, s) && c.half == null && !c.tri && c.dom == null;
+export function pull(level, s0, id) {
+  const c = level.cards[id];
+  if (!canLasso(level, c, s0)) return null;
+  // Especial: hace lo suyo (regalo suelta sus cartas, bomba se desactiva, cometa suma a la racha); el descarte no cambia.
+  if (special(c)) {
+    const s = { ...cloneState(s0), lasso: false }, out = { packs: [], defused: [], wished: [] }, wishes = [];
+    s.rem[id] = true;
+    if (c.pack) {
+      s.stock.push(...c.pack.map((x) => ({ ...x })));
+      out.packs.push(id);
+    } else if (c.comet) {
+      const from = s.streak;
+      s.streak += cometWish(level, s);
+      out.wished.push(id);
+      for (let k = from + 1; k <= s.streak; k++) {
+        const w = applyReward(level, s, k);
+        if (w) wishes.push({ ...w, at: k });
+      }
+    } else out.defused.push(id);
+    activate(level, s, out);
+    return { s, ev: { t: 'pull', id, special: true, ...out, wishes, reward: null, boom: [], gone: [] } };
+  }
+  const { s, ev } = play(level, { ...s0, lasso: false }, id, false, true);
+  return { s, ev: { ...ev, t: 'pull' } };
+}
+
 // Constelación: on = la carta es estrellita. Devuelve 'on' (sumó), 'done' (las juntó todas), 'lost' (se apagó) o null.
 export function cstStep(level, s, on) {
   if (!level.cst || s.cst === -1 || s.cst === level.cst) return null;
@@ -682,6 +971,7 @@ export function draw(level, s0) {
   }
   const card = s.stock.shift();
   s.top = card;
+  s.wand = s.lasso = false;
   tick(s);
   if (!pick) s.streak = 0;
   s.turbo = card.turbo ? TURBO : 0;
@@ -698,7 +988,8 @@ export function draw(level, s0) {
   // también se gastan al robar. Primero se gastan las que ya estaban y luego caen las nuevas (con sus 3 turnos).
   const rockOff = wearRocks(s);
   const rocks = dropRocks(level, s, s0.freeze > 0);
-  return { s, ev: { t: 'draw', card, boom, gone, ...act, wishes, ...(card.turbo && { turbo: true }), ...(ship && { ship }), ...(cst && { cst }), ...(rockOff.length && { rockOff }), ...(rocks.length && { rocks }), ...(s0.magnet && { pulled, aim }) } };
+  const boss = bossStep(level, s0, s, false);
+  return { s, ev: { t: 'draw', card, ...(boss && { boss }), boom, gone, ...act, wishes, ...(card.turbo && { turbo: true }), ...(ship && { ship }), ...(cst && { cst }), ...(rockOff.length && { rockOff }), ...(rocks.length && { rocks }), ...(s0.magnet && { pulled, aim }) } };
 }
 
 // ---------- Solucionador y bot ----------
@@ -709,7 +1000,7 @@ const hasTurbo = (level) => level.cards.some((c) => c.turbo) || level.stock.some
 // Busca una solución desde un estado (profundidad primero, con memoria). Devuelve [id | 'draw' | 'wild', …] o null.
 // wilds: comodines que puede usar (como en el juego, solo al quedarse sin jugadas).
 export function solve(level, s0, limit = 250000, wilds = 0) {
-  const timed = !!level.vine || !!level.flip || level.cards.some((c) => c.live || c.bomb || c.comet || c.ghost || c.cham || c.ring || c.belt);
+  const timed = !!level.foe || !!level.vine || !!level.flip || level.cards.some((c) => c.live || c.bomb || c.comet || c.ghost || c.cham || c.ring || c.belt);
   const turbo = hasTurbo(level);
   const seen = new Set();
   const path = [];
@@ -717,7 +1008,7 @@ export function solve(level, s0, limit = 250000, wilds = 0) {
   const dfs = (s, w = wilds) => {
     if (won(s, level)) return true;
     if (++nodes > limit) return false;
-    const key = `${w}|${s.rem.map((b, i) => (b ? 1 : s.cut?.[i] ? s.cut[i] + 1 : 0)).join('')}|${s.stock.map(sig).join(',')}|${sig(s.top)}|${(s.streak <= LAST_REWARD ? s.streak : LAST_REWARD + 1 + ((s.streak - LAST_REWARD) % 3))}${timed ? `|${s.actions}|${s.boom}|${s.freeze || 0}` : ''}${level.ship ? `|${s.shipIn}|${s.stolen.map(sig).join('.')}` : ''}${level.tide ? `|${s.tq}` : ''}${s.master ? '|m' : ''}${turbo ? `|${s.turbo}` : ''}${level.rocks ? `|${s.rq}|${Object.entries(s.rock).join(';')}` : ''}${s.lift ? `|${s.lift}` : ''}${s.shield ? '|S' : ''}${s.burnt ? '|B' : ''}${s.magnet ? '|M' : ''}${s.awake ? `|a${s.awake}` : ''}`;
+    const key = `${w}|${s.rem.map((b, i) => (b ? 1 : s.cut?.[i] ? s.cut[i] + 1 : 0)).join('')}|${s.stock.map(sig).join(',')}|${sig(s.top)}|${(s.streak <= LAST_REWARD ? s.streak : LAST_REWARD + 1 + ((s.streak - LAST_REWARD) % 3))}${timed ? `|${s.actions}|${s.boom}|${s.freeze || 0}` : ''}${level.ship ? `|${s.shipIn}|${s.stolen.map(sig).join('.')}` : ''}${level.tide ? `|${s.tq}` : ''}${s.master ? '|m' : ''}${turbo ? `|${s.turbo}` : ''}${level.rocks ? `|${s.rq}|${Object.entries(s.rock).join(';')}` : ''}${s.lift ? `|${s.lift}` : ''}${s.shield ? '|S' : ''}${s.burnt ? '|B' : ''}${s.magnet ? '|M' : ''}${s.awake ? `|a${s.awake}` : ''}${s.shift ? `|w${Object.entries(s.shift).join(';')}` : ''}${level.box ? `|x${s.bx || 0}` : ''}${level.foe ? `|b${s.hp}|${s.tickle}|${(s.ink || []).map((t) => `${t.ids}:${t.d}`).join('/')}|${s.belly.map((b) => `${b.id}:${b.at}`).join('/')}|${Object.entries(s.ontop).join('/')}|${s.ash}|${s.melt || ''}` : ''}`;
     if (seen.has(key)) return false;
     seen.add(key);
     const moves = legal(level, s);

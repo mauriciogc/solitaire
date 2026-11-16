@@ -680,6 +680,10 @@ html.dev-on .galaxy .res .me { display: none; }
 .btn.gold { background: var(--gold); box-shadow: inset 0 -5px 0 #e89a17, inset 0 2px 0 #ffe7a3, 0 3px 0 var(--ink); }
 .btn.green { background: #5ad68c; box-shadow: inset 0 -5px 0 #2f9e5c, inset 0 2px 0 #a8f0c4, 0 3px 0 var(--ink); }
 .btn.pink { background: #ff5f7e; box-shadow: inset 0 -5px 0 #d63d5f, inset 0 2px 0 #ffa3b6, 0 3px 0 var(--ink); }
+.btn.orange { background: #ff8a3d; box-shadow: inset 0 -5px 0 #e0561a, inset 0 2px 0 #ffc59a, 0 3px 0 var(--ink); }
+.btn.blue { background: #4f6cff; color: #fff; box-shadow: inset 0 -5px 0 #3349d6, inset 0 2px 0 #9db0ff, 0 3px 0 var(--ink); }
+/* Kraken (15 nov 2026): morado, como sus tentáculos. */
+.btn.purple { background: #b25fd0; color: #fff; box-shadow: inset 0 -5px 0 #8a3fae, inset 0 2px 0 #e3a6f0, 0 3px 0 var(--ink); }
 .btn.ghost { background: var(--cream); }
 .btn.sq { width: 50px; padding: 0; flex-direction: column; gap: 0; }
 .btn.sq small { font-size: 12px; margin-top: -4px; }
@@ -864,6 +868,23 @@ html.dev-on .galaxy .res .me { display: none; }
 .chest-row.done .loot-it:nth-child(2) { animation-delay: -.8s; } .chest-row.done .loot-it:nth-child(3) { animation-delay: -1.6s; }
 @keyframes loot-bob { 50% { translate: 0 -5px; } }
 .chest-row:not(.open) .loot { visibility: hidden; }
+/* Cofre del jefe derrotado (15 nov 2026): más grande, rayos del color del jefe y su dibujo en la placa del frente. */
+.foe-win .lead { margin: 2px 0 6px; }
+.foe-win .chest-row { margin: 26px 0 18px; }
+.chest.foe-chest { width: 150px; height: 150px; }
+.chest.foe-chest::before { inset: -56px; background: repeating-conic-gradient(var(--fc-ray, #ffd75a) 0 10deg, transparent 10deg 22deg); }
+.foe-fenix .chest.foe-chest { --fc-ray: #ffa24a; }
+.foe-ilus .chest.foe-chest { --fc-ray: #9db0ff; }
+.foe-kraken .chest.foe-chest { --fc-ray: #e3a6f0; }
+.foe-whale .chest.foe-chest { --fc-ray: #a6ecbf; }
+.foe-tip.foe-whale .fa-bar b { background: linear-gradient(#8ee07a, #47c27a); box-shadow: inset 0 -2px 0 #2f9e5c; }
+.foe-tip.foe-kraken .fa-bar b { background: linear-gradient(#d68ae8, #b25fd0); box-shadow: inset 0 -2px 0 #8a3fae; }
+.foe-tip.foe-ilus .fa-bar b { background: linear-gradient(#7f97ff, #4f6cff); box-shadow: inset 0 -2px 0 #3349d6; }
+.chest.foe-chest .fc-emb { position: absolute; left: 50%; top: 68%; width: 22%; aspect-ratio: 1; translate: -50% -50%; display: grid; place-items: center; }
+.chest.foe-chest .fc-emb svg { width: 100%; height: 100%; overflow: visible; }
+.chest-row.open .chest.foe-chest .fc-emb { animation: fc-emb 1.6s ease-in-out infinite; }
+@keyframes fc-emb { 50% { translate: -50% calc(-50% - 4px); scale: 1.1; } }
+@media (max-height: 640px) { .chest.foe-chest { width: 110px; height: 110px; } .foe-win .chest-row { margin: 14px 0 10px; } }
 .chest-row:not(.open) .loot-it { animation: none; }
 @media (prefers-reduced-motion: reduce) { .chest-row.done .loot-it { animation: none; } }
 .album { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(250px, 100%), 1fr)); gap: 12px 8px; margin-top: 6px; }
@@ -1857,6 +1878,20 @@ html:not(.dev-on) .dev-pill { display: none; }
 .devmenu .dsec { margin: 10px 0 0; padding: 8px 10px 10px; border-radius: 14px; background: #f3edff; border: 2px solid #d9cdf7; text-align: left; }
 .devmenu .dsec h4 { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 8px; margin: 0 0 7px; font: 400 16px 'Lilita One'; color: var(--ink); }
 .devmenu .dsec h4 small { font: 700 12px 'Baloo 2', sans-serif; color: #6d6394; }
+/* Reglas del menú dev (15 nov 2026): cada una en su tarjeta, con cabecera de color, icono en burbuja y subtítulo. */
+.devmenu .drule { --rc: #8a5cf0; --rl: #f3edff; padding: 0 0 10px; overflow: hidden; background: #fff; border-color: var(--rc); box-shadow: 0 3px 0 var(--rc); }
+.devmenu .drule > :not(h4) { margin-left: 10px; margin-right: 10px; }
+.devmenu .drule > .dtable { width: calc(100% - 20px); }
+.devmenu .drule h4 { align-items: center; flex-wrap: nowrap; gap: 10px; margin: 0 0 6px; padding: 8px 10px; background: var(--rl); border-bottom: 2px solid var(--rc); }
+.devmenu .drule .dr-ico { flex: none; width: 38px; height: 38px; display: grid; place-items: center; border-radius: 50%; background: #fff; border: 2.5px solid var(--ink); box-shadow: 0 2px 0 var(--ink), inset 0 -3px 0 var(--rl); }
+.devmenu .drule .dr-ico > svg, .devmenu .drule .dr-ico .rd-foe { width: 26px; height: 26px; }
+.devmenu .drule .dr-t { display: flex; flex-direction: column; min-width: 0; font-size: 17px; line-height: 1.1; }
+.devmenu .drule .dr-t small { margin-top: 2px; line-height: 1.2; }
+.devmenu .r-foe { --rc: #c46fd6; --rl: #f8e8fb; }
+.devmenu .r-slot { --rc: #ff9c5b; --rl: #fff0e4; }
+.devmenu .r-rescue { --rc: #4aa8de; --rl: #e6f4fc; }
+.devmenu .r-pass { --rc: #47c27a; --rl: #e5f7ec; }
+.devmenu .r-secret { --rc: #ffc83d; --rl: #fff7dc; }
 /* Recuento del menú dev: eventos de cada tipo y cosas de la tienda por origen. */
 .devmenu .dline { margin: 6px 0 3px; font: 700 13px 'Baloo 2', sans-serif; color: var(--ink); }
 .devmenu .dtable { width: 100%; border-collapse: collapse; font: 700 12px 'Baloo 2', sans-serif; color: var(--ink); }
@@ -1866,6 +1901,10 @@ html:not(.dev-on) .dev-pill { display: none; }
 
 .devmenu .dorder .dpic { width: 30px; padding: 1px 2px; }
 .devmenu .dpic > .ico { width: 20px; height: 20px; display: block; margin: 0 auto; }
+/* Jefes en el recuento y en las reglas: del tamaño de los otros iconos. */
+.devmenu .dpic > .rd-foe { width: 22px; height: 22px; margin: 0 auto; }
+.devmenu .rd-foe.dfoe { display: inline-grid; width: 22px; height: 22px; vertical-align: middle; }
+.devmenu .rd-foe svg { width: 100%; height: 100%; }
 .devmenu .dmc { display: grid; place-items: center; height: 22px; }
 .devmenu .dmc .card { position: relative; left: 0 !important; --cw: 14px; rotate: -6deg; }
 .devmenu .dkind { display: inline-grid; place-items: center; width: 18px; height: 18px; font-style: normal; border-radius: 50%; color: #fff; font-size: 11px; line-height: 1; }
@@ -2533,8 +2572,8 @@ p.met-sale { display: flex; align-items: center; justify-content: center; gap: 6
 .road-modal .mbody { padding: 0 14px 18px; text-align: left; }
 /* contain: el selector nunca empuja el ancho de la ventana (en vertical se salía de la pantalla). */
 .rd-top { position: sticky; top: 0; z-index: 3; margin: 0 -14px; padding: 10px 14px; contain: inline-size; background: var(--cream); box-shadow: 0 6px 8px -8px #2a1f5c66; }
-.rd-seg { position: relative; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); padding: 4px; border-radius: 16px; background: #efe4cc; box-shadow: inset 0 2px 0 #2a1f5c1a; }
-.rd-ind { position: absolute; top: 4px; bottom: 4px; left: 4px; width: calc((100% - 8px) / 4); border-radius: 12px; background: #4aa8de; border: 2px solid var(--ink); box-shadow: inset 0 -3px 0 #2f86c0, 0 2px 0 var(--ink); translate: calc(var(--i) * 100%) 0; transition: translate .35s var(--ease-out); }
+.rd-seg { position: relative; display: grid; grid-template-columns: repeat(var(--n, 4), minmax(0, 1fr)); padding: 4px; border-radius: 16px; background: #efe4cc; box-shadow: inset 0 2px 0 #2a1f5c1a; }
+.rd-ind { position: absolute; top: 4px; bottom: 4px; left: 4px; width: calc((100% - 8px) / var(--n, 4)); border-radius: 12px; background: #4aa8de; border: 2px solid var(--ink); box-shadow: inset 0 -3px 0 #2f86c0, 0 2px 0 var(--ink); translate: calc(var(--i) * 100%) 0; transition: translate .35s var(--ease-out); }
 .rd-chip { position: relative; z-index: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; height: 46px; padding: 0 2px; border: 0; background: none; color: var(--ink); font: 800 13px/1.1 'Baloo 2', sans-serif; transition: color .25s; }
 .rd-cl { display: flex; align-items: center; gap: 4px; max-width: 100%; }
 .rd-cl > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -2544,6 +2583,8 @@ p.met-sale { display: flex; align-items: center; justify-content: center; gap: 6
 .rd-chip.on i { color: #e6f4ff; }
 .rd-chip:active .rd-cl { scale: .94; }
 /* Muy angosto: sin iconos, para que quepa el nombre. */
+/* Angosto: el icono arriba del nombre (caben hasta 5 filtros). Muy angosto: sin iconos. */
+@media (max-width: 599px) { .rd-cl { flex-direction: column; gap: 2px; } }
 @media (max-width: 359px) { .rd-chip .ico { display: none; } }
 
 .road { --lx: 27px; position: relative; list-style: none; margin: 14px 0 0; padding: 0; }
@@ -2556,7 +2597,10 @@ p.met-sale { display: flex; align-items: center; justify-content: center; gap: 6
 .rd-box { width: 100%; min-width: 0; display: flex; align-items: flex-start; gap: 10px; padding: 0 0 0 3px; background: none; border: 0; color: var(--ink); text-align: left; font: inherit; }
 /* El dibujo tapa la línea (va encima) con su contorno toon. */
 .rd-pic { position: relative; z-index: 1; flex: none; width: 48px; height: 48px; display: grid; place-items: center; border-radius: 14px; border: 2.5px solid var(--ink); box-shadow: inset 0 -4px 0 #0000001a, 0 2px 0 var(--ink); }
-.k-ev .rd-pic { background: #fff1d6; } .k-card .rd-pic { background: #efe8ff; } .k-mesa .rd-pic { background: #def1ff; }
+.k-ev .rd-pic { background: #fff1d6; } .k-card .rd-pic { background: #efe8ff; } .k-mesa .rd-pic { background: #def1ff; } .k-jefe .rd-pic { background: #ffe3e9; }
+/* Texto de arriba de la lista: qué hay en la sección y cuántas llevas (cambia con el filtro). */
+.rd-intro { margin: 10px 2px 2px; text-align: center; font-weight: 700; font-size: 14px; line-height: 1.3; color: #6e66a3; }
+.rd-intro b { color: var(--ink); }
 .rd-pic > .ico { width: 34px; height: 34px; }
 .rd-card { position: relative; width: 28px; height: 39px; }
 .rd-card > .card { position: absolute; left: 0 !important; top: 0; --cw: 28px; rotate: -6deg; }
@@ -3606,3 +3650,141 @@ s.was { text-decoration: line-through 2px #ff5f7e; opacity: .7; margin-right: .2
 /* Tito saluda al terminar las ventanas del nivel: brilla y brinca. */
 .astro.hello .astro-me { filter: drop-shadow(0 0 8px #7ef0ff) drop-shadow(0 0 4px #fff); animation: astro-hello .8s ease-in-out 4; }
 @keyframes astro-hello { 0%, 100% { translate: 0 0; rotate: 0deg; } 30% { translate: 0 -12px; rotate: -10deg; } 60% { translate: 0 -4px; rotate: 10deg; } }
+
+/* ---------- Lazo y varita (15 nov 2026) ---------- */
+/* Las que puedes escoger: el lazo con orilla de cuerda (también las tapadas), la varita con brillo lila. */
+.board .card.lasso-can { box-shadow: 0 0 0 4px #c98a4b, 0 0 14px #e0a16099; border-radius: calc(var(--cw) * 0.14); animation: astro-can 1s ease-in-out infinite; }
+.board .card.wand-can { box-shadow: 0 0 0 4px #c9a6ff, 0 0 16px #a37bffaa; border-radius: calc(var(--cw) * 0.14); animation: astro-can 1s ease-in-out infinite; }
+.board .card.wand-on { box-shadow: 0 0 0 4px #a37bff, 0 0 20px #a37bff; border-radius: calc(var(--cw) * 0.14); z-index: 9000 !important; }
+.board .card.lassoed { animation: lassoed .45s ease-in-out; }
+@keyframes lassoed { 30% { rotate: -6deg; } 70% { rotate: 6deg; } }
+/* Pestaña de la varita: sale pegada al lado de la carta, con +, − y la palomita. */
+.wand-tab { position: absolute; z-index: 9500; display: flex; flex-direction: column; align-items: center; gap: max(3px, calc(var(--u, 50px) * 0.06)); padding: 5px 5px 5px 7px; background: #c9a6ff; border: 2.5px solid var(--ink); border-left: 0; border-radius: 0 12px 12px 0; box-shadow: 0 3px 0 var(--ink); transform-origin: left center; }
+.wand-tab.left { border-left: 2.5px solid var(--ink); border-right: 0; border-radius: 12px 0 0 12px; padding: 5px 7px 5px 5px; transform-origin: right center; }
+.wand-tab button { width: clamp(30px, calc(var(--u, 50px) * 0.62), 40px); height: clamp(26px, calc(var(--u, 50px) * 0.5), 34px); border-radius: 8px; border: 2.2px solid var(--ink); background: #fff; color: var(--ink); font: 400 clamp(17px, calc(var(--u, 50px) * 0.36), 22px)/1 'Lilita One'; display: grid; place-items: center; padding: 0; box-shadow: 0 2px 0 var(--ink); touch-action: manipulation; }
+.wand-tab button.ok { background: #5fd47a; color: #fff; }
+.wand-tab button.ok .ico { width: 70%; height: 70%; }
+.wand-tab .dots { display: flex; gap: 3px; }
+.wand-tab .dots s { width: 7px; height: 7px; border-radius: 50%; background: #fff; border: 1.5px solid var(--ink); text-decoration: none; }
+.wand-tab .dots s.on { background: #ffd54a; }
+/* La cuerda del lazo: sale del descarte, se dibuja y amarra la carta. */
+.lasso-rope { position: absolute; inset: 0; z-index: 9400; pointer-events: none; }
+.lasso-rope svg { overflow: visible; }
+.lasso-rope path, .lasso-rope ellipse { fill: none; stroke: #c98a4b; stroke-width: 5; stroke-linecap: round; filter: drop-shadow(0 2px 0 #2a1f5c); }
+.lasso-rope path { stroke-dasharray: 900; stroke-dashoffset: 900; transition: stroke-dashoffset .35s ease-out; }
+.lasso-rope ellipse { opacity: 0; transform-box: fill-box; transform-origin: center; scale: 1.4; transition: opacity .15s .3s, scale .2s .3s; }
+.lasso-rope.on path { stroke-dashoffset: 0; }
+.lasso-rope.on ellipse { opacity: 1; scale: 1; }
+.lasso-rope.off { opacity: 0; transition: opacity .25s; }
+@media (prefers-reduced-motion: reduce) { .board .card.lasso-can, .board .card.wand-can { animation: none; } }
+.back .tb-ico.mk-lasso { background: #fff1dc; box-shadow: inset 0 -3px 0 #e0b07a; }
+.back .tb-ico.mk-wand { background: #f1e8ff; box-shadow: inset 0 -3px 0 #c9a6ff; }
+
+/* ---------- Caja galáctica (15 nov 2026) ---------- */
+.gbox { position: absolute; z-index: 5; pointer-events: none; transition: scale .4s, opacity .5s; }
+.gbox > svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.gbox .gb-scr { position: absolute; left: 17%; right: 17%; top: 33%; height: 25%; border-radius: 6px; background: #1b1440; border: 2.5px solid var(--ink); color: #8ff0b8; font: 400 1.25em/1 'Lilita One'; display: grid; place-items: center; text-shadow: 0 0 8px #5fd47a; }
+.gbox .gb-scr.err { color: #ff5f7e; text-shadow: 0 0 8px #ff5f7e; animation: gb-err .6s; }
+@keyframes gb-err { 0%, 60% { background: #4a1030; } }
+.gbox .gb-lt { position: absolute; left: 10%; right: 10%; top: 64%; display: flex; flex-wrap: wrap; justify-content: center; gap: 0.12em; }
+.gbox .gb-lt.two { gap: 0.1em 0.12em; padding: 0 6%; }
+.gbox .gb-lt s { width: 0.36em; height: 0.36em; border-radius: 50%; background: #5a527e; border: 1.5px solid var(--ink); text-decoration: none; transition: background .2s, box-shadow .2s; }
+.gbox .gb-lt s.on { background: #5fd47a; box-shadow: 0 0 6px #5fd47a; }
+.gbox.open { scale: 0; opacity: 0; transition: scale .5s cubic-bezier(.5,-.6,.6,1) .5s, opacity .3s .8s; }
+
+/* ---------- Jefes de constelación (15 nov 2026) ---------- */
+/* Barra de vida: en la cabecera, debajo de la racha (parado) o a su lado (acostado). */
+/* 15 nov 2026 (pedido del usuario): la barra de vida va dentro de la racha, a la derecha con su rayita (como el
+   número del nivel), en todas las pantallas. Con jefe, la racha se estira a todo su lugar (hasta 460 px) y la barra llena lo que sobra:
+   es flexible (se encoge si la racha trae más puntitos; mínimo 36 px), nunca se sale. */
+.hud-mid .combo:has(.foe-bar) { flex: 1; max-width: 460px; }
+.combo .foe-bar { flex: 1; min-width: 0; display: flex; align-items: center; gap: 5px; align-self: stretch; margin: 7px 0 7px 2px; padding-left: calc(9px * var(--k)); border-left: 2px solid #2a1f5c26; transition: opacity .5s, filter .5s; }
+.foe-bar .fb-ico { width: calc(20px * var(--k)); height: calc(20px * var(--k)); display: grid; place-items: center; }
+.foe-bar .fb-ico svg { width: 100%; height: 100%; }
+.foe-bar .fb-hp { flex: 1; min-width: 36px; height: calc(11px * var(--k)); border: 2px solid var(--ink); border-radius: 8px; background: #f1e6d2; overflow: hidden; }
+.foe-bar .fb-hp b { display: block; height: 100%; width: 100%; background: linear-gradient(#ffb24a, #ff7a1f); box-shadow: inset 0 -2px 0 #e05a12; transition: width .45s ease-out; }
+.foe-bar.gone { opacity: .45; filter: grayscale(1); }
+/* Cada jefe con su color en la barra (el Fénix, el naranja de siempre). */
+.foe-bar.foe-ilus .fb-hp b { background: linear-gradient(#7f97ff, #4f6cff); box-shadow: inset 0 -2px 0 #3349d6; }
+.foe-bar.foe-whale .fb-hp b { background: linear-gradient(#8ee07a, #47c27a); box-shadow: inset 0 -2px 0 #2f9e5c; }
+.foe-bar.foe-kraken .fb-hp b { background: linear-gradient(#d68ae8, #b25fd0); box-shadow: inset 0 -2px 0 #8a3fae; }
+/* La criatura en la orilla: respira y, antes de atacar, se agita. */
+.board .foe { position: absolute; z-index: 6; pointer-events: none; display: grid; place-items: center; }
+.board .foe > svg { width: 100%; height: 100%; overflow: visible; filter: drop-shadow(0 3px 0 rgba(42,31,92,.45)); animation: foe-idle 2.6s ease-in-out infinite; }
+.board .foe.warn > svg { animation: foe-warn .22s ease-in-out infinite; }
+@keyframes foe-idle { 50% { translate: 0 -4%; scale: 1.03; } }
+@keyframes foe-warn { 25% { rotate: -6deg; translate: -3% 0; } 75% { rotate: 6deg; translate: 3% 0; } }
+/* Kraken (15 nov 2026, opciones escogidas en dev/kraken-tinta.html): tinta que tapa la carta y chorrea (mancha B); los
+   chorros crecen y las gotas caen sin parar. La limpia una esponja (tiras, .ink-band) o un jalador. */
+.board .card.inked .rk { visibility: hidden; }
+.ink-ov { position: absolute; inset: -4% -6% 0; z-index: 6; pointer-events: none; filter: drop-shadow(0 2px 0 rgba(42,31,92,.35)); }
+.ink-ov svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.ink-band { position: absolute; inset: 0; }
+.ink-ov .drip { transform-box: fill-box; transform-origin: 50% 0; animation: ink-drip 2.6s ease-in-out var(--d, 0s) infinite alternate; }
+.ink-ov .drop { transform-box: fill-box; animation: ink-drop 2.2s ease-in infinite; }
+@keyframes ink-drip { to { scale: 1 1.28; } }
+@keyframes ink-drop { 0% { translate: 0 -6px; scale: .3; opacity: 0; } 20% { translate: 0 0; scale: 1; opacity: 1; } 75% { translate: 0 30px; opacity: 1; } 100% { translate: 0 42px; scale: .7; opacity: 0; } }
+.ink-drop { position: absolute; z-index: 9300; pointer-events: none; }
+.ink-drop svg, .ink-tool svg { display: block; width: 100%; height: auto; overflow: visible; }
+.ink-spat { position: absolute; z-index: 9300; aspect-ratio: 1; margin: -4px 0 0 -4px; border-radius: 50%; pointer-events: none; }
+.ink-tool { position: absolute; left: 0; top: 0; z-index: 8; pointer-events: none; }
+.ink-pool { position: absolute; left: -4%; width: 108%; z-index: 7; background: #1f1438; border-radius: 0 0 12px 12px; pointer-events: none; }
+.ink-foam { position: absolute; z-index: 9; border-radius: 50%; pointer-events: none; background: radial-gradient(circle at 32% 30%, #fff 0 12%, #cdeeffaa 14%, #8fd3ff55 60%, #bfe9ff88 100%); border: 2px solid #6fb8e8; }
+/* Manotazo: el tentáculo se dibuja en toda la mesa (sale de arriba a la derecha) y el ¡PUM! va enfrente. */
+.kraken-arm { position: absolute; left: 0; top: 0; width: 100%; height: 100%; z-index: 9400; overflow: visible; pointer-events: none; filter: drop-shadow(0 5px 0 rgba(42,31,92,.4)); }
+.kraken-pum { position: absolute; left: 50%; top: 42%; z-index: 9500; translate: -50% -50%; pointer-events: none; white-space: nowrap; font: 400 calc(72px * var(--k, 1)) 'Lilita One'; color: #ffd54a; -webkit-text-stroke: 4px var(--ink); paint-order: stroke; text-shadow: 0 7px 0 var(--ink); }
+/* Ilusionista: las que va a cambiar tiemblan. */
+.board .card.foe-warn { animation: shake .25s ease-in-out infinite; }
+/* Fénix (15 nov 2026): una llama (como el emoji) encima del número que va de una orilla a la otra y deja ver medio número; el
+   número de la esquina se esconde. Racha de más de 4 (.fire-low): se hace chica y se va a la orilla de abajo, y se ve
+   el número. Ver cartas (.fire-off): se apaga esos segundos. */
+.board .card.on-fire .rk { visibility: hidden; }
+.fire-ov { position: absolute; inset: 0; z-index: 5; pointer-events: none; display: grid; place-items: center; transition: opacity .3s; }
+.fire-ov .fl { width: 80%; transform-origin: 50% 95%; filter: drop-shadow(0 0 6px #ff8a3dcc); animation: fire-wander 3.4s ease-in-out var(--fd) infinite; transition: width .5s cubic-bezier(.3,1.4,.5,1), translate .5s cubic-bezier(.3,1.4,.5,1); translate: 0 4%; }
+.fire-ov .fl svg { display: block; width: 100%; height: auto; overflow: visible; }
+/* Cada capa de la llama se mueve por su lado (como fuego de verdad), desde su base. */
+.fire-ov svg path { transform-box: fill-box; transform-origin: 50% 100%; }
+.fire-ov .f1 { animation: flick-a .52s ease-in-out var(--fd, 0s) infinite alternate; }
+.fire-ov .f2 { animation: flick-b .4s ease-in-out var(--fd, 0s) infinite alternate; }
+.fire-ov .f3 { animation: flick-c .31s ease-in-out var(--fd, 0s) infinite alternate; }
+.fire-ov .f4 { animation: flick-d .24s ease-in-out infinite alternate; }
+.fire-low .fire-ov .fl { width: 36%; translate: 70% 85%; animation: none; }
+.fire-off .fire-ov { opacity: 0; }
+/* 15 nov 2026 (el usuario escogió «se hace a un lado»): se va a una orilla y deja ver medio número; luego a la otra. */
+@keyframes fire-wander { 0%, 100% { transform: translateX(-34%) rotate(-8deg); } 45%, 55% { transform: translateX(34%) rotate(8deg); } }
+@keyframes flick-a { from { transform: scale(1, .94) skewX(2deg); } to { transform: scale(1.03, 1.06) skewX(-3deg); } }
+@keyframes flick-b { from { transform: scale(.94, 1.04) skewX(-4deg); } to { transform: scale(1.04, .92) skewX(4deg); } }
+@keyframes flick-c { from { transform: scale(1.06, .88) translateX(4%); } to { transform: scale(.92, 1.12) translateX(-5%); } }
+@keyframes flick-d { from { transform: scale(.85, .9); } to { transform: scale(1.1, 1.18); } }
+/* La bola de fuego que cae desde arriba, con su cola. */
+.fire-drop { position: absolute; left: 0; top: 0; z-index: 9300; width: 30px; height: 30px; margin: -15px 0 0 -15px; border-radius: 50%; pointer-events: none; background: radial-gradient(circle at 42% 40%, #fff6c2 0 18%, #ffc83d 38%, #ff6a1f 66%, #ff3d1f00 72%); filter: drop-shadow(0 0 8px #ff8a3d); }
+.fire-drop i { position: absolute; left: 50%; bottom: 55%; width: 16px; height: 58px; translate: -50% 0; border-radius: 50%; background: linear-gradient(to top, #ffb03ddd, #ff6a1f00); }
+/* Ilusionista (15 nov 2026): una estrella cae sobre cada carta; al llegar, anillo de luz y estrellitas. Mientras
+   cae, el número nuevo de la carta no se ve (magic-wait). */
+.magic-drop { position: absolute; left: 0; top: 0; z-index: 9300; width: 34px; height: 34px; margin: -17px 0 0 -17px; pointer-events: none; filter: drop-shadow(0 0 8px #9db0ff) drop-shadow(0 0 16px #ffd54a99); }
+.magic-drop svg { width: 100%; height: 100%; overflow: visible; }
+.magic-ring { position: absolute; z-index: 9300; aspect-ratio: 1; translate: -50% -50%; border-radius: 50%; pointer-events: none; border: 3px solid #9db0ff; box-shadow: 0 0 16px #7fa4ff, inset 0 0 12px #ffd54a88; }
+.magic-star { position: absolute; z-index: 9300; aspect-ratio: 1; margin: -6px 0 0 -6px; pointer-events: none; clip-path: polygon(50% 0, 61% 39%, 100% 50%, 61% 61%, 50% 100%, 39% 61%, 0 50%, 39% 39%); }
+.board .card.magic-wait .front :is(.big, .rk, .cs) { visibility: hidden; }
+/* Ballena: lo que se tragó no se ve (mientras vuela a su boca, sí). */
+.board .card.eaten:not(.gulping) { visibility: hidden; }
+/* Ballena (15 nov 2026): el aire que jala las cartas hacia arriba y el soplido verde al escupirlas. */
+.board .card.gulping { z-index: 9250 !important; }
+.whale-wind { position: absolute; z-index: 9300; border-radius: 99px; pointer-events: none; background: linear-gradient(#ffffff00, #ffffff 40%, #b8f0a4); box-shadow: 0 0 8px #d6f7c8; }
+.whale-gust { position: absolute; inset: 0; z-index: 9290; pointer-events: none; background: linear-gradient(0deg, #8ee07a00 0%, #c8f5b866 35%, #ffffff55 55%, #8ee07a00 80%); }
+.whale-gust.down { background: linear-gradient(180deg, #8ee07a00 0%, #c8f5b866 35%, #ffffff55 55%, #8ee07a00 80%); }
+.whale-dust { position: absolute; z-index: 9300; border-radius: 50%; pointer-events: none; background: #e9fbe0; box-shadow: 0 0 4px #8ee07a; }
+.whale-ring { position: absolute; z-index: 9300; aspect-ratio: 1; translate: -50% -50%; border-radius: 50%; border: 5px solid #b8f0a4; box-shadow: 0 0 12px #8ee07a; pointer-events: none; }
+.whale-puff { position: absolute; z-index: 9300; border-radius: 50%; pointer-events: none; background: radial-gradient(circle at 35% 35%, #ffffff, #c8f5b8 55%, #8ee07a); }
+.tip-pic .foe-pic { width: 100%; height: 100%; display: grid; place-items: center; }
+.tip-pic .foe-pic svg { width: 100%; height: 100%; }
+/* Ventana del jefe (15 nov 2026): la vida con su barrita naranja */
+.foe-all { display: flex; align-items: center; gap: 12px; margin: 12px 0 4px; padding: 10px 14px; border-radius: 16px; background: #fff; border: 2px solid #e3d3b5; text-align: left; font-weight: 700; font-size: 15px; line-height: 1.3; }
+.foe-all > span:last-child b { color: #c22c49; }
+.fa-bar { flex: none; width: 46px; height: 14px; border: 2.5px solid var(--ink); border-radius: 8px; background: #f1e6d2; overflow: hidden; }
+.fa-bar b { display: block; width: 62%; height: 100%; background: linear-gradient(#ffb24a, #ff7a1f); box-shadow: inset 0 -2px 0 #e05a12; animation: fa-hit 2.4s ease-in-out infinite; }
+@keyframes fa-hit { 0%, 30% { width: 80%; } 45%, 65% { width: 55%; } 80%, 100% { width: 80%; } }
+@media (prefers-reduced-motion: reduce) { .board .foe > svg, .board .card.foe-warn, .ink-ov .drip, .ink-ov .drop, .fire-ov .fl, .fire-ov svg path, .fa-bar b { animation: none; } }
+.rd-foe { width: 100%; height: 100%; display: grid; place-items: center; }
+.rd-foe svg { width: 88%; height: 88%; overflow: visible; }
+.devmenu .k-jefe { background: #e0496b; }
