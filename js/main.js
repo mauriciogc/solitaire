@@ -1,6 +1,6 @@
 import { save, prefs, persist, resetProfile, deleteProfile, renameProfile, exportCode, readCode, loadProfile, setDev } from './storage.js';
 import { UNLOCK, EVENTS, FESTIVALS, COLLECTIONS, evSoon, isOn, nextEvent, daysToNextCol, plusCols, STREAK_GOALS, STREAK_STEP, streakGoal, nextIndex, dailyStreak, streakTheme, streakReady, streakHot, streakWin, streakLose, streakPendToFeats, msToMidnight, col, colLeft, colWin, colOffers, colBuy, ev, evLeft, evTicketLeft, evTicketPrice, evBuyTicket, evPrize, evEnter, evWin, evLose, evAlbum, festAlbum, EVENT_PLANETS, EVENT_PER_PLANET, EVENT_LEVELS, festival, festivalLeft, festivalSoon, soonLeft, evPrePrice, evPreOwned, evPreBuy, nextFestival, festEnter, festWin, festLose, festShape, festPrice, festPaid, festBuy, festPre, FEST_PRE, FEST_ENTRY, EV_FIRST } from './events.js';
-import { WORLD_COUNT, LEVELS_PER_WORLD, TOTAL_LEVELS, worldInfo, generateLevel, constBoss, bossPicked, setBossPick, variantLevel, MECH_INTRO, MECH_NAMES, MECHANICS, EXTRA, extraDebut, SCROLL_FROM, tideFirst, holeFirst, doorsFirst, bandaFirst, rocksFirst, boxFirst, BOSS_ORDER, secretId, isSecret, eventLevel, festivalLevel } from './levels.js';
+import { WORLD_COUNT, LEVELS_PER_WORLD, TOTAL_LEVELS, worldInfo, generateLevel, constBoss, bossPicked, setBossPick, variantLevel, MECH_INTRO, MECH_NAMES, MECHANICS, EXTRA, extraDebut, SCROLL_FROM, tideFirst, holeFirst, doorsFirst, bandaFirst, rocksFirst, BOSS_ORDER, secretId, isSecret, eventLevel, festivalLevel } from './levels.js';
 import { Game, faceHTML, backHTML, TIPS, TABLE_TEXT, MECH_KINDS, ART, scrSVG, FOE_ICON, FOE_TITLE, FOE_TEXT, FOE_NAME, FOE_BTN } from './game.js';
 import { maxBet, betFee, betSteps, BET_STEPS, HELPS, DAILY_PATH, dailyState, dailyPieces, DAILY_SHIELD_MAX, starsNeeded, TICKET_PRICE, ticketCost, ticketRefund, coinsFor, bossChest, rollChest, CONST_PRIZE, CONST_OPEN, openCost, constStart, openFree, boosted, secretCoins, rollSecret, openSurprise, MET_OFF, metShopPrice, foeBeatPrize, RESCUE_WEEK, RESCUE_COINS, RESCUE_ITEMS } from './economy.js';
 import { track, missions, missionDef, missionDone, missionsAllDone, autoClaim, ACHIEVEMENTS, ACHIEVEMENT_PRIZES, ACHIEVEMENT_MEDAL, ACHIEVEMENT_TOP, achievementGot, achievementProgress, achievementsVisible } from './missions.js';
@@ -1152,7 +1152,6 @@ function roadItems() {
     { id: 'hoyo', n: holeFirst() + 1, name: 'Agujero negro', text: 'Cada 4 jugadas o robos se traga todas sus cartas y las escupe con los números revueltos.' },
     { id: 'nave', n: MECH_INTRO.ship * LEVELS_PER_WORLD + 1, name: 'Nave ladrona', text: '' },
     { id: 'rocas', n: rocksFirst() + 1, name: 'Asteroides', text: '' },
-    { id: 'caja', n: boxFirst() + 1, name: 'Caja galáctica', text: '' },
     { id: 'astro', n: MECH_INTRO.astro * LEVELS_PER_WORLD + 1, name: 'Astronauta', text: '' },
   ].map((x) => ({ ...x, k: 'mesa', pic: x.id === 'nave' ? icon('nave') : x.id === 'astro' ? icon('astronauta') : tableIcon(x.id), text: TABLE_TEXT[x.id] ? TABLE_TEXT[x.id].join(' ') : x.text }));
   // Pasaporte y secretos (12 nov 2026): los sellos y premios ganados, en el nivel en que ibas; el siguiente sello, en el

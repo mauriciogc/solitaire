@@ -70,8 +70,6 @@
 // Mesas del nivel: level.rocks = { n } cinturón de asteroides (10 nov 2026, ver dropRocks).
 // level.foe = { kind, hp, r } jefe de constelación (15 nov 2026): una criatura que juega contra ti (ver bossStep). Tiene
 // vida (s.hp): cada carta que juegas con racha de 2 o más le quita 1; en 0 se va y regresa lo que tenía.
-// level.box = { combo } caja galáctica (15 nov 2026): se abre jugando sus números en orden (s.bx = cuántos van; ver
-// boxNext). Solo da premio (lo da el juego).
 import { hash } from './rng.js';
 
 export const mod13 = (n) => ((n % 13) + 13) % 13;
@@ -585,10 +583,6 @@ export function play(level, s0, id, low = false, forced = false) {
   s.wand = !!c.wand;
   s.lasso = !!c.lasso;
   s.plays++;
-  // Caja galáctica: el número que quedó en el descarte.
-  const box0 = s0.bx || 0;
-  if (level.box && !s.top.wild) s.bx = boxNext(level.box.combo, box0, s.top.rank);
-  const box = level.box && s.bx !== box0 ? (s.bx === level.box.combo.length ? 'open' : s.bx > box0 ? 'click' : 'reset') : null;
   tick(s);
   // Telescopio: se ven todas las cartas las siguientes SCOPE_TURNS acciones.
   if (c.scope) s.scope = Math.max(s.scope || 0, SCOPE_TURNS);
@@ -642,7 +636,7 @@ export function play(level, s0, id, low = false, forced = false) {
     s.stock.push({ rank: rankOf(x, s), suit: x.suit, ...(x.alt != null && { alt: x.alt }), ...(x.arrow && { arrow: x.arrow }) });
   }
   const boss = bossStep(level, s0, s, true);
-  return { s, ev: { t: 'play', id, rank: r, ...(boss && { boss }), packs, defused, reward, boost, boom, wished, wishes, gone, ...(c.turbo && { turbo: true }), ...(twin != null && { twin }), ...(split && { split }), ...(tri && { tri }), ...(exit != null && { exit }), ...(shipBack && { shipBack }), ...(c.doorKey && { key: true }), ...(cst && { cst }), ...(rockOff.length && { rockOff }), ...(bolted.length && { bolted }), ...(burnt && { burnt }), ...(box && { box }) } };
+  return { s, ev: { t: 'play', id, rank: r, ...(boss && { boss }), packs, defused, reward, boost, boom, wished, wishes, gone, ...(c.turbo && { turbo: true }), ...(twin != null && { twin }), ...(split && { split }), ...(tri && { tri }), ...(exit != null && { exit }), ...(shipBack && { shipBack }), ...(c.doorKey && { key: true }), ...(cst && { cst }), ...(rockOff.length && { rockOff }), ...(bolted.length && { bolted }), ...(burnt && { burnt }) } };
 }
 
 // Abrir la puerta d con una llave. No es jugada ni robo: no mueve la racha ni las cuentas, salvo su premio
@@ -897,15 +891,6 @@ export function blind(level, s0, id) {
   return { s, ev: { t: 'blind', id, ...(boss && { boss }) } };
 }
 
-// ---------- Caja galáctica (15 nov 2026) ----------
-// Con el número jugado r: si es el que sigue, avanza; si es otro de la combinación, se reinicia (o empieza otra vez si
-// es el primero); cualquier otro número no la toca. Robar tampoco.
-export function boxNext(combo, bx, r) {
-  if (bx >= combo.length) return bx;
-  if (r === combo[bx]) return bx + 1;
-  return combo.includes(r) ? (r === combo[0] ? 1 : 0) : bx;
-}
-
 // ---------- Varita (15 nov 2026) ----------
 // Después de jugarla, una carta libre de número fijo sube o baja hasta WAND_MAX (d = −3…3, sin 0). No es jugada ni
 // robo: no mueve la racha ni las cuentas.
@@ -1008,7 +993,7 @@ export function solve(level, s0, limit = 250000, wilds = 0) {
   const dfs = (s, w = wilds) => {
     if (won(s, level)) return true;
     if (++nodes > limit) return false;
-    const key = `${w}|${s.rem.map((b, i) => (b ? 1 : s.cut?.[i] ? s.cut[i] + 1 : 0)).join('')}|${s.stock.map(sig).join(',')}|${sig(s.top)}|${(s.streak <= LAST_REWARD ? s.streak : LAST_REWARD + 1 + ((s.streak - LAST_REWARD) % 3))}${timed ? `|${s.actions}|${s.boom}|${s.freeze || 0}` : ''}${level.ship ? `|${s.shipIn}|${s.stolen.map(sig).join('.')}` : ''}${level.tide ? `|${s.tq}` : ''}${s.master ? '|m' : ''}${turbo ? `|${s.turbo}` : ''}${level.rocks ? `|${s.rq}|${Object.entries(s.rock).join(';')}` : ''}${s.lift ? `|${s.lift}` : ''}${s.shield ? '|S' : ''}${s.burnt ? '|B' : ''}${s.magnet ? '|M' : ''}${s.awake ? `|a${s.awake}` : ''}${s.shift ? `|w${Object.entries(s.shift).join(';')}` : ''}${level.box ? `|x${s.bx || 0}` : ''}${level.foe ? `|b${s.hp}|${s.tickle}|${(s.ink || []).map((t) => `${t.ids}:${t.d}`).join('/')}|${s.belly.map((b) => `${b.id}:${b.at}`).join('/')}|${Object.entries(s.ontop).join('/')}|${s.ash}|${s.melt || ''}` : ''}`;
+    const key = `${w}|${s.rem.map((b, i) => (b ? 1 : s.cut?.[i] ? s.cut[i] + 1 : 0)).join('')}|${s.stock.map(sig).join(',')}|${sig(s.top)}|${(s.streak <= LAST_REWARD ? s.streak : LAST_REWARD + 1 + ((s.streak - LAST_REWARD) % 3))}${timed ? `|${s.actions}|${s.boom}|${s.freeze || 0}` : ''}${level.ship ? `|${s.shipIn}|${s.stolen.map(sig).join('.')}` : ''}${level.tide ? `|${s.tq}` : ''}${s.master ? '|m' : ''}${turbo ? `|${s.turbo}` : ''}${level.rocks ? `|${s.rq}|${Object.entries(s.rock).join(';')}` : ''}${s.lift ? `|${s.lift}` : ''}${s.shield ? '|S' : ''}${s.burnt ? '|B' : ''}${s.magnet ? '|M' : ''}${s.awake ? `|a${s.awake}` : ''}${s.shift ? `|w${Object.entries(s.shift).join(';')}` : ''}${level.foe ? `|b${s.hp}|${s.tickle}|${(s.ink || []).map((t) => `${t.ids}:${t.d}`).join('/')}|${s.belly.map((b) => `${b.id}:${b.at}`).join('/')}|${Object.entries(s.ontop).join('/')}|${s.ash}|${s.melt || ''}` : ''}`;
     if (seen.has(key)) return false;
     seen.add(key);
     const moves = legal(level, s);

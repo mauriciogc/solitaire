@@ -2,7 +2,7 @@ import { save, persist } from './storage.js';
 import { openModal, HEADS, toast, confetti, updateCoins, money, starsHTML, reduced, buzz, sparkle, wait, spendFromWallet, flyToWallet, balloons, lootBubbles, streakWarnHTML, betLoseHTML, shownCoins, popPrize } from './ui.js';
 import { worldInfo, packGroups, MECH_NAMES, LEVELS_PER_WORLD, scrollStrip, scrollSpan, scrollCover, SCROLL_VIEW, SCROLL_SHOW, NEB_SLOTS, GRAV_SHOWN, W, H } from './levels.js';
 import * as E from './engine.js';
-import { price, EV_MARKUP, round5, HELPS, buyable, BOX_PRIZE } from './economy.js';
+import { price, EV_MARKUP, round5, HELPS, buyable } from './economy.js';
 import { helpOff } from './meteor.js';
 import { cardBackURL, icon, star, coin, lockIcon, keyIcon, arrowIcon, curtainIcon, suitSVG, avatarHTML, vineSVG, sproutSVG, ASTRO_ART } from './art.js';
 import { tableHTML } from './biomes.js';
@@ -177,10 +177,9 @@ export const TABLE_TEXT = {
   // Astronauta (14 nov 2026, pedido del usuario: «no carta, un ayudante»): como la nave, va como mesa.
   astro: ['Aquí te acompaña <b>Tito</b>, un astronauta.', 'Tócalo y luego toca una carta libre: vuela por ella y te la <b>guarda</b>. Cuando conecte, tócalo otra vez y la <b>lleva al descarte</b>. Después se va.'],
   // 15 nov 2026 (pedido del usuario): 3 a 8 números; solo enseña el que sigue.
-  caja: ['En la orilla hay una <b>caja galáctica</b> con combinación.', 'Su pantalla te dice el <b>siguiente número</b>: juégalos <b>en orden</b> (pueden ir separados). Si juegas otro de la combinación, <b>se reinicia</b>. Ábrela y te da un premio.'],
   voltea: ['Las cartas van en <b>columnas</b> dentro de una cápsula.', 'Solo juegas la de <b>abajo</b>. Cada <b>5 jugadas o robos</b> la cápsula da <b>media vuelta</b>. Cuando tiembla, ¡cuidado!'],
 };
-const TABLE_NAME = { nave: 'Nave ladrona', mesa: 'Mesa enrollada', gravedad: 'Gravedad', nebulosa: 'Nebulosa', marea: 'Marea', puertas: 'Puertas', banda: 'Banda transportadora', hoyo: 'Agujero negro', rocas: 'Asteroides', caja: 'Caja galáctica', voltea: 'Mesa que se voltea', hangar: 'Hangar', bitacora: 'Bitácora', portal: 'Grúa de feria', astro: 'Astronauta' };
+const TABLE_NAME = { nave: 'Nave ladrona', mesa: 'Mesa enrollada', gravedad: 'Gravedad', nebulosa: 'Nebulosa', marea: 'Marea', puertas: 'Puertas', banda: 'Banda transportadora', hoyo: 'Agujero negro', rocas: 'Asteroides', voltea: 'Mesa que se voltea', hangar: 'Hangar', bitacora: 'Bitácora', portal: 'Grúa de feria', astro: 'Astronauta' };
 const TABLE_HELP = { rocas: helpTip('hlaser', '<b>Láser:</b> rompe todas las piedras.', true), nave: helpTip('hescudo', '<b>Escudo:</b> la nave ya no te roba en todo el nivel.', true), astro: helpTip('hastro', '<b>Astronauta:</b> después también lo compras en tus ayudas.', true) };
 // ---------- Jefes de constelación (15 nov 2026, pedido del usuario) ----------
 // Dibujos de las criaturas (toon, contorno de tinta). El Kraken no se ve: solo su tinta (y su brazo en el manotazo).
@@ -206,9 +205,9 @@ export const FOE_ICON = { fenix: FIRE_ICO, ilus: () => SPARK_SVG, kraken: () => 
 export const FOE_NAME = { fenix: 'Fénix estelar', ilus: 'el Ilusionista', kraken: 'el Kraken', whale: 'la Ballena glotona' };
 export const FOE_TITLE = { fenix: 'Fénix estelar', ilus: 'El Ilusionista', kraken: 'Kraken', whale: 'Ballena glotona' };
 export const FOE_TEXT = {
-  fenix: ['Nunca lo ves: solo su fuego.', 'Cuando <b>tus cartas tiemblan</b>, cae <b>fuego</b> sobre las libres. El fuego se mueve y deja ver su número <b>por partes</b>. Con <b>racha de 5</b> el fuego baja un turno y ves el número.'],
+  fenix: ['Nunca lo ves: solo su fuego.', 'Cuando <b>tus cartas tiemblan</b>, cae <b>fuego</b> sobre las libres, pero <b>las puedes seguir jugando</b>. El fuego se mueve y deja ver su número <b>por partes</b>. Con <b>racha de 5</b> el fuego baja un turno y ves el número.'],
   ilus: ['Nunca lo ves: solo su magia.', 'Cuando <b>todas tus cartas boca arriba tiemblan</b>, en tu siguiente turno <b>cambian de número</b>, como por magia. Juega antes las que te sirven.'],
-  kraken: ['Nunca lo ves: solo su tinta.', 'Cuando <b>tus cartas tiemblan</b>, salpica <b>tinta</b> en varias cartas: no se juegan hasta que estén <b>limpias</b>. Con <b>3 cartas seguidas</b> se lava una mancha. Si robas 3 veces con tinta en la mesa, da un <b>manotazo</b>: revuelve las cartas y limpia la mitad de la tinta.'],
+  kraken: ['Nunca lo ves: solo su tinta.', 'Cuando <b>tus cartas tiemblan</b>, salpica <b>tinta</b> en varias cartas y las <b>bloquea</b>: no se juegan hasta que estén <b>limpias</b>. Con <b>3 cartas seguidas</b> se lava una mancha. Si robas 3 veces con tinta en la mesa, da un <b>manotazo</b>: revuelve las cartas y limpia la mitad de la tinta.'],
   whale: ['Nunca la ves: solo su aire.', 'Cuando <b>tus cartas tiemblan</b>, <b>jala</b> cartas volteadas a su panza y <b>3 turnos</b> después las <b>escupe encima</b> de otras: las de abajo quedan tapadas hasta que juegues las escupidas. Para ganar no se puede quedar con ninguna.'],
 };
 export const FOE_BTN = { fenix: 'orange', ilus: 'blue', kraken: 'purple', whale: 'green' };
@@ -450,7 +449,6 @@ export class Game {
     this.layout();
     this.cards.forEach((c) => !c.removed && this.makeCardEl(c));
     this.makeHole();
-    this.makeBox();
     this.makeFoe();
     this.makeRocks();
     this.makeDoors();
@@ -616,21 +614,6 @@ export class Game {
         onClose: () => {
           this.modalOpen = false;
           if (!reduced()) this.holeEl?.animate([{ scale: 1 }, { scale: 1.3 }, { scale: 1 }], { duration: 500, iterations: 2 });
-          setTimeout(() => this.tips(), 300);
-        },
-        buttons: [{ label: '¡Entendido!', cls: 'green' }],
-      });
-    }
-    if (this.level.box && !save.seen.caja) {
-      save.seen.caja = true;
-      persist();
-      this.modalOpen = true;
-      return openModal({
-        ...TABLE_INTRO.caja,
-        closable: false,
-        onClose: () => {
-          this.modalOpen = false;
-          if (!reduced()) this.boxEl?.animate([{ scale: 1 }, { scale: 1.2, rotate: '-6deg' }, { scale: 1 }], { duration: 500, iterations: 2 });
           setTimeout(() => this.tips(), 300);
         },
         buttons: [{ label: '¡Entendido!', cls: 'green' }],
@@ -1042,7 +1025,6 @@ export class Game {
     this.cards.forEach((c) => c.el && this.place(c));
     this.paintSheets();
     this.placeHole();
-    this.placeBox();
     this.placeFoe();
     this.placeDoors();
     this.placeBeltBox();
@@ -1112,8 +1094,6 @@ export class Game {
       return this.level.doors.map((x, d) => ({ w: W, h, g: x.g, hc: E.doorOpen(this.level, d, this.st) ? x.h : H, ext: x.h - H }));
     }
     if (this.level.hole) return [{ w: 1.9, h: 1.45 }];
-    // Caja galáctica (15 nov 2026): un poco más alta que una carta.
-    if (this.level.box) return [{ w: 1.25, h: 1.6 }];
     // Jefe de constelación: la criatura va en la orilla (los que no se ven, no).
     // El Fénix tampoco (no se ve: solo cae su fuego).
     if (this.level.foe && this.level.foe.kind !== 'kraken' && !FOE_HIDDEN.includes(this.level.foe.kind)) return [{ w: 1.7, h: 1.7 }];
@@ -1343,68 +1323,6 @@ export class Game {
     if (!this.holeEl || !b) return;
     Object.assign(this.holeEl.style, { left: `${b.x * this.u}px`, top: `${b.y * this.u}px`, width: `${b.w * this.u}px`, height: `${b.h * this.u}px` });
   }
-  // ---------- Caja galáctica (15 nov 2026, pedido del usuario) ----------
-  // En la franja de la orilla. Su pantalla enseña el siguiente número de la combinación y abajo una luz por número; cada
-  // acierto hace clic y prende una luz; otro número de la combinación la reinicia (pantalla roja). Abierta, suelta su
-  // premio (BOX_PRIZE) y se va. Deshacer la regresa como estaba (y quita el premio).
-  makeBox() {
-    if (!this.level.box) return;
-    const n = this.level.box.combo.length, b = document.createElement('div');
-    b.className = 'gbox';
-    b.innerHTML = `<svg viewBox="0 0 74 96" aria-hidden="true"><rect x="3" y="8" width="68" height="85" rx="10" fill="#6a4be8" stroke="#2a1f5c" stroke-width="3"/><rect x="3" y="8" width="68" height="20" rx="9" fill="#8a6bff" stroke="#2a1f5c" stroke-width="3"/><circle cx="37" cy="6" r="5" fill="#ffd54a" stroke="#2a1f5c" stroke-width="2"/><path d="M14 84h46" stroke="#ffd54a" stroke-width="4" stroke-linecap="round"/>${[[12, 18], [62, 88], [61, 40]].map(([x, y]) => `<path d="M${x} ${y - 4}l1.2 3 3 1-3 1-1.2 3-1.2-3-3-1 3-1z" fill="#fff"/>`).join('')}</svg><span class="gb-scr"></span><span class="gb-lt${n > 4 ? ' two' : ''}">${'<s></s>'.repeat(n)}</span>`;
-    this.boardEl.append(b);
-    this.boxEl = b;
-    this.boxPaint();
-    this.placeBox();
-  }
-  placeBox() {
-    const b = this.railBox?.[0];
-    if (!this.boxEl || !b) return;
-    Object.assign(this.boxEl.style, { left: `${b.x * this.u}px`, top: `${b.y * this.u}px`, width: `${b.w * this.u}px`, height: `${b.h * this.u}px`, fontSize: `${this.u * 0.42}px` });
-  }
-  boxPaint() {
-    const el = this.boxEl;
-    if (!el) return;
-    const combo = this.level.box.combo, bx = this.st.bx || 0, open = bx >= combo.length;
-    el.classList.toggle('open', open);
-    el.querySelector('.gb-scr').textContent = open ? '' : RANKS[combo[bx]];
-    el.querySelectorAll('.gb-lt s').forEach((s, k) => s.classList.toggle('on', k < bx));
-  }
-  // Lo que pasó con la jugada: clic, se reinicia o se abre (con su premio).
-  boxFx(kind) {
-    const el = this.boxEl;
-    if (!el) return;
-    this.boxPaint();
-    const scr = el.querySelector('.gb-scr');
-    if (kind === 'click') {
-      buzz(10);
-      if (!reduced()) scr.animate([{ scale: 1 }, { scale: 1.35 }, { scale: 1 }], { duration: 300, easing: 'ease-out' });
-    } else if (kind === 'reset') {
-      buzz(30);
-      scr.classList.remove('err');
-      void scr.offsetWidth;
-      scr.classList.add('err');
-      this.shake(el);
-    } else if (kind === 'open') {
-      const p = BOX_PRIZE[this.level.box.combo.length] || BOX_PRIZE[3];
-      const [x, y] = center(el.getBoundingClientRect());
-      if (p.coins) {
-        save.coins += p.coins;
-        flyToWallet('coins', { x, y }, p.coins, shownCoins() - p.coins);
-      }
-      if (p.wild) {
-        save.wild += p.wild;
-        this.updateCounts();
-        squash(this.el.querySelector('.wild-card'));
-      }
-      persist();
-      this.history[this.history.length - 1].boxPrize = p;
-      buzz([20, 40, 20]);
-      if (!reduced()) sparkle({ x, y }, 16);
-      this.showStreak(`¡Caja abierta!${p.coins ? ` +${p.coins}` : ''}${p.wild ? ' + comodín' : ''}`);
-    }
-  }
-
   // ---------- Jefes de constelación (15 nov 2026, pedido del usuario) ----------
   // La criatura va en la orilla (Fénix, Ilusionista y Kraken no se ven); la barra de vida, en la cabecera.
   // Nada de texto ni cuentas en el tablero: antes de atacar tiembla o se agita (bossSoon), y la ventana de la primera
@@ -2550,7 +2468,6 @@ export class Game {
     else if (level.scroll) this.nebUpdate();
     for (const c of this.cards) if (c.scr && c.el && !c.removed) this.paintScr(c);
     this.paintSheets();
-    this.boxPaint();
     this.foePaint();
     this.updateStuck(true);
     this.doorUpdate();
@@ -3113,17 +3030,20 @@ export class Game {
     this.el.append(tab);
     this.wandOn.tab = tab;
     this.wandPlace();
+    // 16 nov 2026 (el usuario): al llegar al tope (±WAND_MAX) su botón se apaga y no responde.
+    const wandTop = () => tab.querySelectorAll('button[data-w="1"], button[data-w="-1"]').forEach((b) => (b.disabled = Math.abs(this.wandOn.d + +b.dataset.w) > E.WAND_MAX));
     tab.addEventListener('pointerdown', (e) => {
       e.stopPropagation();
       const b = e.target.closest('button[data-w]');
       if (!b || this.busy) return;
       if (b.dataset.w === 'ok') return this.wandApply();
       const w = this.wandOn, d = w.d + +b.dataset.w;
-      if (Math.abs(d) > E.WAND_MAX) return (buzz(), this.shake(b));
+      if (Math.abs(d) > E.WAND_MAX) return;
       w.d = d;
       buzz(8);
       this.paintRank(el, E.mod13(w.base + d));
       tab.querySelectorAll('.dots s').forEach((x, k) => x.classList.toggle('on', k < Math.abs(d)));
+      wandTop();
       if (!reduced()) b.animate([{ scale: 1 }, { scale: 0.82 }, { scale: 1 }], { duration: 160 });
     });
     el.classList.add('wand-on');
@@ -3182,26 +3102,69 @@ export class Game {
   // ---------- Lazo (15 nov 2026, pedido del usuario) ----------
   // Después de jugarlo, la carta que toques (libre, tapada o especial) se laza: la cuerda sale del descarte, la amarra
   // y la jala. Una carta de número va al descarte (es una jugada); una especial hace lo suyo y no se deshace.
+  // 16 nov 2026 (el usuario: «que se vea que agarra la carta»): la lazada vuela girando desde el descarte, cae sobre la
+  // carta, se aprieta en su cintura (la mitad de atrás pasa por detrás) y no la suelta: la cuerda la jala hasta el
+  // descarte (ropeTo la sigue mientras vuela).
   async lassoPull(c) {
     const before = this.st, r = E.pull(this.level, before, c.id);
     if (!r) return (buzz(), this.shake(c.el));
     this.busy = true;
-    const w = this.wasteEl.getBoundingClientRect(), to = c.el.getBoundingClientRect(), box = this.el.getBoundingClientRect();
+    let rope = null;
     if (!reduced()) {
-      const [ax, ay] = center(w), [bx, by] = center(to), x0 = box.left, y0 = box.top;
-      const rope = document.createElement('div');
+      const box = this.el.getBoundingClientRect(), x0 = box.left, y0 = box.top;
+      const [ax, ay] = center(this.wasteEl.getBoundingClientRect()).map((v, i) => v - (i ? y0 : x0));
+      const t0 = c.el.getBoundingClientRect(), cw = t0.width, ch = t0.height;
+      rope = document.createElement('div');
       rope.className = 'lasso-rope';
-      rope.innerHTML = `<svg width="${box.width}" height="${box.height}"><path d="M${ax - x0} ${ay - y0}Q${(ax + bx) / 2 - x0 - 40} ${Math.min(ay, by) - y0 - 60} ${bx - x0} ${by - y0 + to.height * 0.35}"/><ellipse cx="${bx - x0}" cy="${by - y0}" rx="${to.width * 0.66}" ry="${to.height * 0.6}"/></svg>`;
+      rope.innerHTML = `<svg width="${box.width}" height="${box.height}"><path class="lr-back"/><path class="lr-line"/><path class="lr-front"/></svg>`;
       this.el.append(rope);
-      requestAnimationFrame(() => rope.classList.add('on'));
-      c.el.classList.add('lassoed');
-      await new Promise((ok) => setTimeout(ok, 480));
+      const [back, line, front] = rope.querySelectorAll('path');
+      // Lazada: elipse partida en dos (atrás, más tenue; adelante, encima de la carta) con la cuerda saliendo del frente.
+      rope.draw = (x, y, rx, ry, sag = 1, behind = false) => {
+        // Ya alrededor de la carta, la mitad de atrás pasa por detrás: no se ve.
+        back.style.opacity = behind ? 0 : '';
+        back.setAttribute('d', `M${x - rx} ${y}A${rx} ${ry} 0 0 1 ${x + rx} ${y}`);
+        front.setAttribute('d', `M${x - rx} ${y}A${rx} ${ry} 0 0 0 ${x + rx} ${y}`);
+        const mx = (ax + x) / 2, my = Math.min(ay, y) - 40 * sag;
+        line.setAttribute('d', `M${ax} ${ay}Q${mx} ${my} ${x} ${y + ry}`);
+      };
+      const run = (ms, f) => new Promise((ok) => {
+        const s0 = performance.now();
+        const step = (t) => { const k = Math.min(1, (t - s0) / ms); f(k); k < 1 ? requestAnimationFrame(step) : ok(); };
+        requestAnimationFrame(step);
+      });
+      const ease = (k) => 1 - (1 - k) ** 3;
+      const cx = () => { const b = c.el.getBoundingClientRect(); return [b.left + b.width / 2 - x0, b.top + b.height / 2 - y0]; };
+      const [bx, by] = cx();
+      const hx = bx, hy = by - ch * 0.95; // arriba de la carta, donde gira antes de caer
+      // 1. Vuela girando (el aro se abre y se cierra como si diera vueltas).
+      await run(380, (k) => {
+        const e = ease(k), x = ax + (hx - ax) * e, y = ay + (hy - ay) * e - Math.sin(Math.PI * k) * 50;
+        rope.draw(x, y, cw * 0.75, ch * (0.1 + 0.12 * Math.abs(Math.cos(k * Math.PI * 3))), 1 - k);
+      });
+      // 2. Cae sobre la carta: en cuanto pasa su orilla de arriba, la rodea (la mitad de atrás queda detrás).
+      await run(190, (k) => { const y = hy + (by - hy) * k * k; rope.draw(hx, y, cw * (0.75 - 0.12 * k), ch * 0.18, 0, y > by - ch * 0.45); });
+      // Amarrada sale por encima de las que la tapan, para que se vea cuál se lleva.
+      c.el.style.zIndex = 9000;
+      // 3. Se aprieta: la carta se encoge en la cintura (al 90%) y el aro se cierra justo en sus orillas.
       buzz(15);
-      rope.classList.add('off');
-      setTimeout(() => rope.remove(), 300);
+      if (c.el.animate) c.el.animate([{ scale: '1 1' }, { scale: '0.86 1.05', offset: 0.6 }, { scale: '0.9 1.03' }], { duration: 220, easing: 'cubic-bezier(.3,1.6,.5,1)', fill: 'forwards' });
+      await run(220, (k) => rope.draw(bx, by, cw * (0.63 - 0.16 * ease(k)), ch * (0.18 - 0.08 * ease(k)), -0.3 * k, true));
+      c.el.classList.add('lassoed');
+      await new Promise((ok) => setTimeout(ok, 140));
+      rope.follow = c.el;
+      rope.ropeTo = () => { const el = rope.follow, b = el?.isConnected && el.getBoundingClientRect(); if (b) rope.draw(b.left + b.width / 2 - x0, b.top + b.height / 2 - y0, b.width * 0.5, b.height * 0.1, -0.3, true); };
     }
+    // La cuerda sigue a la carta mientras la jala al descarte y luego se desvanece.
+    const tow = () => {
+      if (!rope) return;
+      const s0 = performance.now();
+      const step = (t) => { rope.ropeTo(); if (t - s0 < 420 && rope.follow?.isConnected) requestAnimationFrame(step); else (rope.classList.add('off'), setTimeout(() => rope.remove(), 300)); };
+      requestAnimationFrame(step);
+    };
     this.busy = false;
     if (r.ev.special) {
+      if (rope) setTimeout(() => (rope.classList.add('off'), setTimeout(() => rope.remove(), 300)), 150);
       this.history.push({ t: 'pull', before, ev: r.ev, best: this.best, bonus: this.bonus, lock: 'Lo que el lazo saca de una carta especial no se puede deshacer' });
       this.st = r.s;
       this.sync();
@@ -3220,6 +3183,7 @@ export class Game {
     this.flewFrom = c.el ? center(c.el.getBoundingClientRect()) : null;
     c.el?.classList.remove('lassoed');
     this.flyToWaste(c, ev, 0);
+    tow();
     this.afterPlay(before, ev, burnRects);
   }
 
@@ -3671,7 +3635,6 @@ export class Game {
       }
     }
     if (ev.bolted) this.boltFx(ev.bolted);
-    if (ev.box) this.boxFx(ev.box);
     if (ev.boss) this.foeFx(ev.boss);
     if (ev.cst) this.cstFx(ev, this.flewFrom || [0, 0]);
     if (this.cards[ev.id].coin && !ev.split) this.coinCard(this.cards[ev.id]);
@@ -4297,13 +4260,6 @@ export class Game {
     });
     (ev.packs || []).forEach((id, i) => this.unflyPack(this.cards[id], packRects[i]));
     // Constelación juntada: el premio se regresa.
-    // Caja galáctica abierta: el premio se regresa.
-    if (h.boxPrize) {
-      if (h.boxPrize.coins) save.coins = Math.max(0, save.coins - h.boxPrize.coins);
-      if (h.boxPrize.wild) save.wild = Math.max(0, save.wild - h.boxPrize.wild);
-      updateCoins();
-      this.updateCounts();
-    }
     if (h.cstPrize) {
       if (h.cstPrize.coins) save.coins = Math.max(0, save.coins - h.cstPrize.coins);
       else save.helps[h.cstPrize.help] = Math.max(0, (save.helps[h.cstPrize.help] || 0) - 1);

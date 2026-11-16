@@ -1905,6 +1905,9 @@ html:not(.dev-on) .dev-pill { display: none; }
 .devmenu .dpic > .rd-foe { width: 22px; height: 22px; margin: 0 auto; }
 .devmenu .rd-foe.dfoe { display: inline-grid; width: 22px; height: 22px; vertical-align: middle; }
 .devmenu .rd-foe svg { width: 100%; height: 100%; }
+/* La llama del Fénix es más alta que ancha y el ×N de la apuesta más ancho: que quepan en el cuadro de los demás. */
+.devmenu .dpic > .rd-foe svg { width: 20px; height: 20px; }
+.devmenu .dpic > .go-bet.dbet { display: block; width: max-content; margin: 0 auto; font-size: 10px; padding: 0 3px 1px; border-width: 1.5px; border-radius: 6px; }
 .devmenu .dmc { display: grid; place-items: center; height: 22px; }
 .devmenu .dmc .card { position: relative; left: 0 !important; --cw: 14px; rotate: -6deg; }
 .devmenu .dkind { display: inline-grid; place-items: center; width: 18px; height: 18px; font-style: normal; border-radius: 50%; color: #fff; font-size: 11px; line-height: 1; }
@@ -3663,34 +3666,26 @@ s.was { text-decoration: line-through 2px #ff5f7e; opacity: .7; margin-right: .2
 .wand-tab.left { border-left: 2.5px solid var(--ink); border-right: 0; border-radius: 12px 0 0 12px; padding: 5px 7px 5px 5px; transform-origin: right center; }
 .wand-tab button { width: clamp(30px, calc(var(--u, 50px) * 0.62), 40px); height: clamp(26px, calc(var(--u, 50px) * 0.5), 34px); border-radius: 8px; border: 2.2px solid var(--ink); background: #fff; color: var(--ink); font: 400 clamp(17px, calc(var(--u, 50px) * 0.36), 22px)/1 'Lilita One'; display: grid; place-items: center; padding: 0; box-shadow: 0 2px 0 var(--ink); touch-action: manipulation; }
 .wand-tab button.ok { background: #5fd47a; color: #fff; }
+/* Al tope (±3) el botón se apaga: gris, sin sombra y no responde. */
+.wand-tab button:disabled { background: #d9d2ec; color: #a79fc4; border-color: #a79fc4; box-shadow: none; translate: 0 2px; pointer-events: none; }
 .wand-tab button.ok .ico { width: 70%; height: 70%; }
 .wand-tab .dots { display: flex; gap: 3px; }
 .wand-tab .dots s { width: 7px; height: 7px; border-radius: 50%; background: #fff; border: 1.5px solid var(--ink); text-decoration: none; }
 .wand-tab .dots s.on { background: #ffd54a; }
 /* La cuerda del lazo: sale del descarte, se dibuja y amarra la carta. */
-.lasso-rope { position: absolute; inset: 0; z-index: 9400; pointer-events: none; }
+.lasso-rope { position: absolute; inset: 0; z-index: 10000; pointer-events: none; }
 .lasso-rope svg { overflow: visible; }
-.lasso-rope path, .lasso-rope ellipse { fill: none; stroke: #c98a4b; stroke-width: 5; stroke-linecap: round; filter: drop-shadow(0 2px 0 #2a1f5c); }
-.lasso-rope path { stroke-dasharray: 900; stroke-dashoffset: 900; transition: stroke-dashoffset .35s ease-out; }
-.lasso-rope ellipse { opacity: 0; transform-box: fill-box; transform-origin: center; scale: 1.4; transition: opacity .15s .3s, scale .2s .3s; }
-.lasso-rope.on path { stroke-dashoffset: 0; }
-.lasso-rope.on ellipse { opacity: 1; scale: 1; }
+.lasso-rope path { fill: none; stroke: #c98a4b; stroke-width: 5; stroke-linecap: round; filter: drop-shadow(0 2px 0 #2a1f5c); }
+/* La mitad de atrás de la lazada pasa por detrás de la carta: más delgada y oscura. */
+.lasso-rope .lr-back { stroke: #8a5a2c; stroke-width: 3.5; filter: none; opacity: .8; }
 .lasso-rope.off { opacity: 0; transition: opacity .25s; }
 @media (prefers-reduced-motion: reduce) { .board .card.lasso-can, .board .card.wand-can { animation: none; } }
 .back .tb-ico.mk-lasso { background: #fff1dc; box-shadow: inset 0 -3px 0 #e0b07a; }
 .back .tb-ico.mk-wand { background: #f1e8ff; box-shadow: inset 0 -3px 0 #c9a6ff; }
 
-/* ---------- Caja galáctica (15 nov 2026) ---------- */
+/* .gbox: la caja de regalo de las ventanas (main.js). Hasta el 16 nov 2026 se compartía con la caja galáctica. */
 .gbox { position: absolute; z-index: 5; pointer-events: none; transition: scale .4s, opacity .5s; }
 .gbox > svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
-.gbox .gb-scr { position: absolute; left: 17%; right: 17%; top: 33%; height: 25%; border-radius: 6px; background: #1b1440; border: 2.5px solid var(--ink); color: #8ff0b8; font: 400 1.25em/1 'Lilita One'; display: grid; place-items: center; text-shadow: 0 0 8px #5fd47a; }
-.gbox .gb-scr.err { color: #ff5f7e; text-shadow: 0 0 8px #ff5f7e; animation: gb-err .6s; }
-@keyframes gb-err { 0%, 60% { background: #4a1030; } }
-.gbox .gb-lt { position: absolute; left: 10%; right: 10%; top: 64%; display: flex; flex-wrap: wrap; justify-content: center; gap: 0.12em; }
-.gbox .gb-lt.two { gap: 0.1em 0.12em; padding: 0 6%; }
-.gbox .gb-lt s { width: 0.36em; height: 0.36em; border-radius: 50%; background: #5a527e; border: 1.5px solid var(--ink); text-decoration: none; transition: background .2s, box-shadow .2s; }
-.gbox .gb-lt s.on { background: #5fd47a; box-shadow: 0 0 6px #5fd47a; }
-.gbox.open { scale: 0; opacity: 0; transition: scale .5s cubic-bezier(.5,-.6,.6,1) .5s, opacity .3s .8s; }
 
 /* ---------- Jefes de constelación (15 nov 2026) ---------- */
 /* Barra de vida: en la cabecera, debajo de la racha (parado) o a su lado (acostado). */

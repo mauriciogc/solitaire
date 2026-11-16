@@ -157,8 +157,6 @@ export const RESCUE_WEEK = 3;
 export const RESCUE_COINS = [200, 300, 400, 500];
 export const RESCUE_ITEMS = { wild: 1, undo: 3, helps: { ver3: 1 } };
 
-// Caja galáctica (15 nov 2026): premio según cuántos números pide la combinación (de 3 a 8).
-export const BOX_PRIZE = { 3: { coins: 115 }, 4: { coins: 170 }, 5: { coins: 230 }, 6: { coins: 290 }, 7: { wild: 1 }, 8: { wild: 1, coins: 175 } };
 
 // Jefe de constelación (15 nov 2026, pedido del usuario: «que den una caja más grande y más cosas» y «que no se
 // mezcle»): el cofre del planeta da solo lo suyo; acabarle la vida da aparte su cofre de jefe (todo lo del jefe, con
