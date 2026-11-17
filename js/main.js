@@ -1,6 +1,6 @@
 import { save, prefs, persist, resetProfile, deleteProfile, renameProfile, exportCode, readCode, loadProfile, setDev } from './storage.js';
 import { UNLOCK, EVENTS, FESTIVALS, COLLECTIONS, evSoon, isOn, nextEvent, daysToNextCol, plusCols, STREAK_GOALS, STREAK_STEP, streakGoal, nextIndex, dailyStreak, streakTheme, streakReady, streakHot, streakWin, streakLose, streakPendToFeats, msToMidnight, col, colLeft, colWin, colOffers, colBuy, ev, evLeft, evTicketLeft, evTicketPrice, evBuyTicket, evPrize, evEnter, evWin, evLose, evAlbum, festAlbum, EVENT_PLANETS, EVENT_PER_PLANET, EVENT_LEVELS, festival, festivalLeft, festivalSoon, soonLeft, evPrePrice, evPreOwned, evPreBuy, nextFestival, festEnter, festWin, festLose, festShape, festPrice, festPaid, festBuy, festPre, FEST_PRE, FEST_ENTRY, EV_FIRST } from './events.js';
-import { WORLD_COUNT, LEVELS_PER_WORLD, TOTAL_LEVELS, worldInfo, generateLevel, constBoss, bossPicked, setBossPick, variantLevel, MECH_INTRO, MECH_NAMES, MECHANICS, EXTRA, extraDebut, SCROLL_FROM, tideFirst, holeFirst, doorsFirst, bandaFirst, rocksFirst, BOSS_ORDER, secretId, isSecret, eventLevel, festivalLevel } from './levels.js';
+import { WORLD_COUNT, LEVELS_PER_WORLD, TOTAL_LEVELS, worldInfo, generateLevel, constBoss, bossOf, bossPicked, setBossPick, variantLevel, MECH_INTRO, MECH_NAMES, MECHANICS, EXTRA, extraDebut, SCROLL_FROM, tideFirst, holeFirst, doorsFirst, bandaFirst, rocksFirst, BOSS_ORDER, secretId, isSecret, eventLevel, festivalLevel } from './levels.js';
 import { Game, faceHTML, backHTML, TIPS, TABLE_TEXT, MECH_KINDS, ART, scrSVG, FOE_ICON, FOE_TITLE, FOE_NAME, FOE_BTN } from './game.js';
 import { maxBet, betFee, betSteps, BET_STEPS, HELPS, DAILY_PATH, dailyState, dailyPieces, DAILY_SHIELD_MAX, starsNeeded, TICKET_PRICE, ticketCost, ticketRefund, coinsFor, bossChest, rollChest, CONST_PRIZE, CONST_OPEN, openCost, constStart, openFree, boosted, secretCoins, rollSecret, openSurprise, MET_OFF, metShopPrice, foeBeatPrize, RESCUE_WEEK, RESCUE_COINS, RESCUE_ITEMS } from './economy.js';
 import { track, missions, missionDef, missionDone, missionsAllDone, autoClaim, ACHIEVEMENTS, ACHIEVEMENT_PRIZES, ACHIEVEMENT_MEDAL, ACHIEVEMENT_TOP, achievementGot, achievementProgress, achievementsVisible } from './missions.js';
@@ -1042,15 +1042,6 @@ const rk = (r) => R[r] ?? +r - 1;
 const mini = (x, r, s, extra = {}, cls = '') => `<div class="card up ${cls}" style="left:${x}px">${faceHTML({ rank: rk(r), suit: SUITS.indexOf(s), ...extra })}${extra.marks || ''}</div>`;
 // Texto corto de cada carta (Tu camino, Cómo jugar, «Aquí aparece»): el mismo de su ventana (TIPS en game.js).
 const MECH_TEXT = TIPS;
-// Flecha y carta viva: se enseñan los dos casos (arriba y abajo). Candado y cortina: con la carta que los abre.
-const MECH_BOTH = {
-  lock: () => mini(0, '8', 'c', { key: 0 }) + mini(0, '9', 'd', { lock: 0 }),
-  curtain: () => mini(0, '5', 's', { marks: `<span class="curtain-mark">${curtainIcon()}</span>` }, 'curtain-key-demo') + mechCard('curtain'),
-  arrow: () => mini(0, '6', 'd', { arrow: 1 }) + mini(0, '6', 'c', { arrow: -1 }),
-  live: () => mini(0, 'K', 's', { live: 1 }) + mini(0, '4', 'h', { live: -1 }),
-  // Enredadera: con la carta de fuego que la quema.
-  vine: () => mini(0, '3', 'h', { fire: 1 }) + mechCard('vine'),
-};
 // Ayuda → Cartas especiales, en bloques como "Cómo jugar".
 // Grupos de Cómo jugar: los mismos de las ventanas (MECH_KINDS en game.js).
 const MECH_GROUPS = MECH_KINDS;
@@ -1644,7 +1635,34 @@ async function playRescue(need = rescueNeed() || ticketCost(Math.min(save.next |
 // resume: retoma save.run · free: modo dev (sin boletos y sin guardar la partida) · anim: transición
 // bet: apuesta (8 nov 2026; la partida guardada recuerda la suya)
 // paid: lo que pagó al entrar con apuesta ({ tk, fee, gift }), para decírselo si abandona.
-function startLevel(g, { resume = false, free = false, anim = 'up', bet = 1, paid = null } = {}) {
+// Jefe que todavía no está armado (17 nov 2026, el usuario: «antes de entrar se traba»; pasa al entrar directo desde
+// «Ir al tablero» o la galería): se arma en segundo plano con un letrero y luego se entra.
+function prepBoss(g, then) {
+  if (bossWorker) bossWorker.terminate(), (bossWorker = null);
+  const k = bossOf(g)?.kind;
+  const box = document.createElement('div');
+  box.className = 'boss-prep';
+  box.innerHTML = `<div class="bp-card"><span class="bp-ico">${k ? FOE_ICON[k]() : ''}</span><b>Preparando al jefe…</b><span class="bp-dots"><i></i><i></i><i></i></span></div>`;
+  document.body.append(box);
+  const done = () => {
+    box.classList.add('out');
+    setTimeout(() => box.remove(), 220);
+    then();
+  };
+  try {
+    const w = new Worker(new URL('./boss-worker.js', import.meta.url), { type: 'module' });
+    w.onmessage = (e) => (e.data.p != null && setBossPick(e.data.g, e.data.p), w.terminate(), done());
+    w.onerror = () => (w.terminate(), done());
+    w.postMessage(g);
+  } catch {
+    done();
+  }
+}
+function startLevel(g, opts = {}) {
+  if (g < TOTAL_LEVELS && constBoss(g) && !bossPicked(g) && window.Worker && !opts.ready) return prepBoss(g, () => startLevel(g, { ...opts, ready: true }));
+  return startLevelNow(g, opts);
+}
+function startLevelNow(g, { resume = false, free = false, anim = 'up', bet = 1, paid = null } = {}) {
   const old = [...app.children];
   game?.destroy();
   game = null;
@@ -5386,13 +5404,36 @@ const HELP_FOE = {
   clock: '<b>rebobina</b> tus cartas y las <b>congela</b>. No deja deshacer.',
   whale: 'se <b>traga</b> cartas y las <b>escupe</b> encima de otras.',
 };
+// Cómo jugar homologado (17 nov 2026, el usuario: «aplica el diseño de la ficha de los jefes en las otras»): cada
+// sección con su frase de entrada, cada ficha con un solo dibujo chico y texto corto (lo completo sale en su ventana).
+const H = (h, n) => `<h3 class="help-h">${h}</h3>${n ? `<p class="note help-intro">${n}</p>` : ''}`;
+const S = (ill, txt, u) => `<div class="step"${u ? ` data-u="${u}"` : ''}><div class="ill c ill-ico">${ill}</div><p>${txt}</p></div>`;
+const hcard = (k) => `<span class="help-card" style="background-image:${cardBackURL(k)}"></span>`;
+const MECH_INTRO_HELP = { 'Se abren después': 'Esperan algo para poder jugarse.', 'Cambian con los turnos': 'Cambian solas mientras juegas.', 'Reglas al jugar': 'Se juegan distinto a las demás.', 'No se juegan': 'Se destapan, no se juegan.', 'Te ayudan': 'Al jugarlas te dan algo extra.' };
+const CARD_SHORT = {
+  lock: 'se abre al jugar la carta con la <b>llave</b> de su color.', curtain: 'sigue <b>boca abajo</b> hasta jugar la del <b>telón</b>.', ice: 'se <b>derrite</b> con cada carta que juegas.', vine: 'la tapa la <b>enredadera</b>; la carta de <b>fuego</b> la quema.', sleep: 'despierta con su número de cartas <b>seguidas</b>.',
+  live: 'su número <b>sube o baja</b> con cada turno.', ghost: '<b>aparece y desaparece</b>; juégala cuando se vea.', cham: 'a ratos se vuelve <b>comodín</b>.',
+  double: 'vale <b>dos números</b>.', arrow: 'la siguiente tiene que ir hacia donde marca la <b>flecha</b>.', ticket: '<b>dos mitades</b>: juega una y la otra se queda.', domino: 'entras por un número y en el descarte queda <b>el otro</b>.', triple: '<b>3 talones</b>: primero los de las puntas.', twin: 'al jugar una, la <b>otra</b> cae al descarte.',
+  pack: '<b>destápala</b> y te da cartas.', bomb: '<b>destápala</b> antes de que explote.', comet: '<b>destápalo</b> a tiempo y suma a tu racha.',
+  coin: 'te da <b>monedas</b>.', turbo: 'tus <b>3 jugadas</b> siguientes valen doble.', bolt: 'manda cartas <b>enterradas</b> a tu mazo.', cst: 'juega <b>todas</b> las de estrellita seguidas y ganas premio.', magnet: 'tu siguiente robo te da la que <b>más sirve</b>.', rainbow: '3 jugadas pueden <b>saltar dos</b>.', scratch: 'ráscala jugando a su lado; si le atinas antes, <b>monedas</b>.', scope: 'ves <b>todas</b> las cartas 3 turnos.', lasso: 'escoges <b>cualquier carta</b> y va al descarte.', wand: 'le <b>subes o bajas</b> hasta 3 a una carta libre.',
+};
+const TABLE_HELP = [
+  ['nave', 'ship', 'Nave ladrona', 'se lleva cartas de tu <b>mazo</b>; con racha de 4 te regresa una.'], ['mesa', 'mesa', 'Mesa enrollada', 'limpia las primeras y salen más del <b>rollo</b>.'], ['nebulosa', 'nebulosa', 'Nebulosa', 'vacía un grupo y sale <b>otro</b>.'], ['gravedad', 'gravedad', 'Gravedad', 'juegas la de <b>abajo</b> y la columna cae.'],
+  ['hangar', 'hangar', 'Hangar', 'vacía una columna y del <b>hangar</b> sale otra.'], ['bitacora', 'bitacora', 'Bitácora', 'por las <b>escotillas</b> juegas cartas de la hoja de abajo.'], ['portal', 'portal', 'Grúa de feria', 'la <b>garra</b> se lleva la carta de arriba de cada columna.'], ['voltea', 'voltea', 'Mesa que se voltea', 'cada 5 turnos la cápsula da <b>media vuelta</b>.'],
+  ['cohete', 'cohete', 'Cohete', 'limpia y el <b>cohete avanza</b>; cada tramo da monedas.'], ['marea', 'marea', 'Marea', 'robar sube el <b>agua</b> y jugar la baja.'], ['hoyo', 'hoyo', 'Agujero negro', 'cada 4 turnos <b>revuelve</b> los números.'], ['astro', 'astro', 'Astronauta', 'te <b>guarda</b> una carta y luego la lleva al descarte.'],
+  ['rocas', 'rocas', 'Asteroides', 'robar hace caer <b>piedras</b> que tapan cartas.'], ['puertas', 'puertas', 'Puertas', 'juega una <b>carta llave</b> y abre la puerta que quieras.'], ['banda', 'banda', 'Banda transportadora', 'las cartas <b>dan vueltas</b>; atrápalas al pasar.'],
+];
 function openHelp(tab = 'basico', then) {
   const reached = new Set(roadItems().filter((x) => x.n <= roadAt()).map((x) => x.id));
   const prune = (html) => {
     const d = document.createElement('div');
     d.innerHTML = html;
     d.querySelectorAll('[data-u]').forEach((el) => !el.dataset.u.split('|').some((u) => reached.has(u)) && el.remove());
-    d.querySelectorAll('.help-h').forEach((h) => (!h.nextElementSibling || h.nextElementSibling.matches('.help-h')) && h.remove());
+    // Un título sin fichas se va con su frase de entrada.
+    d.querySelectorAll('.help-h').forEach((h) => {
+      const intro = h.nextElementSibling?.matches('.help-intro') ? h.nextElementSibling : null, n = (intro || h).nextElementSibling;
+      if (!n || n.matches('.help-h')) intro?.remove(), h.remove();
+    });
     return d.innerHTML;
   };
   const tabs = ['basico', 'cartas', 'mesas', 'jefes'].filter((t) => t === 'basico' || /class="step"/.test(prune(raw(t))));
@@ -5402,67 +5443,52 @@ function openHelp(tab = 'basico', then) {
     return (
     t === 'basico'
       ? `<div class="steps">
-        <h3 class="help-h">Jugar</h3>
-        <div class="step"><div class="ill">${mini(0, '6', 's')}${mini(37, '7', 'h', {}, 'ring')}${mini(74, '8', 'd')}</div><p>Toca una carta <b>boca arriba</b> que sea <b>uno más o uno menos</b> que la de tu montón.</p></div>
-        <div class="step"><div class="ill">${mini(16, 'K', 'c')}${mini(56, 'A', 'h')}</div><p>La <b>K</b> y el <b>A</b> se conectan.</p></div>
-        <div class="step"><div class="ill">${[0, 1, 2].map((i) => helpBack(14 + i * 6, `top:${8 - i * 3}px`)).join('')}${mini(70, '3', 'h')}</div><p>¿Sin jugada? <b>Toca el mazo</b> y sale otra carta. Ojo: tu racha vuelve a cero.</p></div>
-        <h3 class="help-h">Racha</h3>
-        <div class="step"><div class="ill c dots">${'<i></i>'.repeat(4)}<div class="card gift-card"><div class="inner"><div class="face back"></div></div></div></div><p>Juega cartas <b>seguidas</b> sin tocar el mazo. A las <b>6</b> te cae una carta extra al mazo y a las <b>13</b>, un comodín.</p></div>
-        <div class="step"><div class="ill c pair"><div class="card gift-card"><div class="inner"><div class="face back"></div></div></div><div class="card up"><div class="inner"><div class="face front wild"></div></div></div></div><p>Si sigues: carta extra a las <b>18</b> y <b>23</b>, y a las <b>31</b> un comodín para guardar.</p></div>
-        <div class="step"><div class="ill c">${icon('escoba')}</div><p>A las <b>30</b> pasa la <b>escoba</b> y se lleva todas las cartas del fondo, las más tapadas.</p></div>
-        <h3 class="help-h">Ayudas</h3>
-        <div class="step"><div class="ill c"><span class="help-btn gold">${icon('ayudas')}</span></div><p>El <b>botón dorado</b> abre tus ayudas. Abajo de cada una compras <b>+1</b> con un toque; tocar la carta la usa cuando tú quieras. Solo salen las que sirven en ese nivel.</p></div>
-        <div class="step"><div class="ill c"><div class="card up"><div class="inner"><div class="face front wild"></div></div></div></div><p><b>Comodín:</b> vale cualquier número. Úsalo cuando no tengas jugada.</p></div>
-        <div class="step" data-u="bomb|comet|live|ghost|cham|vine"><div class="ill c"><span class="help-card" style="background-image:${cardBackURL('hreloj')}"></span></div><p><b>Reloj de arena:</b> congela 3 turnos todo lo que cuenta: bombas, cometas, cartas vivas, fantasmas y camaleones.</p></div>
-        <div class="step"><div class="ill c"><span class="help-card" style="background-image:${cardBackURL('hver')}"></span></div><p><b>Ver cartas:</b> voltea todas las cartas de la mesa unos segundos.</p></div>
-        <div class="step" data-u="lock|curtain"><div class="ill c"><span class="help-card" style="background-image:${cardBackURL('hllave')}"></span></div><p><b>Llave maestra:</b> abre todos los candados y cortinas.</p></div>
-        <div class="step" data-u="rocas"><div class="ill c"><span class="help-card" style="background-image:${cardBackURL('hlaser')}"></span></div><p><b>Láser:</b> rompe todas las piedras de los asteroides.</p></div>
-        <div class="step" data-u="ship"><div class="ill c"><span class="help-card" style="background-image:${cardBackURL('hescudo')}"></span></div><p><b>Escudo:</b> la nave ladrona ya no te roba en todo el nivel.</p></div>
-        <div class="step" data-u="magnet"><div class="ill c"><span class="help-card" style="background-image:${cardBackURL('himan')}"></span></div><p><b>Imán:</b> tu siguiente robo saca del mazo la carta que más te sirve, sin cortar tu racha, y la carta que conviene jugar tiembla.</p></div>
-        <div class="step" data-u="wand"><div class="ill c"><span class="help-card" style="background-image:${cardBackURL('hvarita')}"></span></div><p><b>Varita:</b> tocas una carta libre y le subes o bajas hasta 3. También la compras en tus ayudas.</p></div>
-        <div class="step" data-u="scope"><div class="ill c"><span class="help-card" style="background-image:${cardBackURL('htele')}"></span></div><p><b>Telescopio:</b> deja ver todas las cartas del tablero 5 turnos.</p></div>
-        <div class="step" data-u="astro"><div class="ill c"><span class="help-card" style="background-image:${cardBackURL('hastro')}"></span></div><p><b>Astronauta:</b> te guarda una carta y luego la manda al descarte.</p></div>
-        <div class="step"><div class="ill c"><span class="help-btn">${icon('undo')}</span></div><p><b>Deshacer:</b> regresa tu última jugada o la carta que robaste.</p></div>
-        <div class="step"><div class="ill c"><span class="help-five"><b>+5</b></span></div><p>¿Se acabó el mazo? Toca el <b>+5</b> para comprar 5 cartas. Con ellas te llevas solo 1 estrella.</p></div>
-        <h3 class="help-h">Estrellas y boletos</h3>
-        <div class="step"><div class="ill c">${star(true)}${star(true, 'big')}${star(true)}</div><p>Ganas al <b>vaciar la mesa</b>. Si te queda la <b>mitad del mazo</b> o más: 3 estrellas. Una cuarta parte: 2. Menos: 1.</p></div>
-        <div class="step"><div class="ill c">${icon('ticket')}</div><p>Un nivel nuevo cuesta <b>boletos</b>. Si lo ganas, te los regresamos; si pierdes o lo dejas, se gastan.</p></div>
-        <h3 class="help-h">Para ganar más</h3>
-        <div class="step" data-u="meteoro"><div class="ill c">${icon('meteoro')}</div><p><b>Lluvia de meteoritos:</b> monedas <b>al doble</b> y premio con 3 estrellas.</p></div>
-        <div class="step" data-u="estrellas"><div class="ill c">${icon('starFall')}</div><p><b>Lluvia de estrellas:</b> monedas <b>al triple</b> y premios con 3 estrellas.</p></div>
-        <div class="step" data-u="cometas"><div class="ill c">${icon('cometaLluvia')}</div><p><b>Lluvia de cometas:</b> jugar <b>no gasta boletos</b> y ganar te da uno más.</p></div>
-        <div class="step" data-u="aurora"><div class="ill c">${icon('aurora')}</div><p><b>Aurora:</b> fichas de la colección <b>al doble</b>.</p></div>
-        <div class="step" data-u="cristales"><div class="ill c">${icon('cristal')}</div><p><b>Lluvia de cristales:</b> la más rara: ganar te puede dar una <b>ayuda</b>.</p></div>
-        <div class="step" data-u="apuesta2"><div class="ill c"><i class="go-bet dbet b2">×2</i><i class="go-bet dbet b10">×10</i></div><p><b>Apuesta:</b> al tocar <b>Jugar</b> escoge tu ×N. Si ganas, <b>todo</b> lo que da el nivel se multiplica por ese número.</p></div>
+        ${H('Jugar', 'Vacía la mesa jugando cartas en orden.')}
+        ${S(mini(0, '7', 'h', {}, 'ring'), '<b>Juega</b> una carta <b>uno más o uno menos</b> que la de tu montón.')}
+        ${S(`${mini(0, 'K', 'c')}${mini(0, 'A', 'h')}`, '<b>K y A</b> se conectan.')}
+        ${S(helpBack(0, ''), '<b>¿Sin jugada?</b> Toca el mazo. Tu racha vuelve a cero.')}
+        ${H('Racha', 'Juega cartas seguidas sin tocar el mazo.')}
+        ${S('<div class="card gift-card"><div class="inner"><div class="face back"></div></div></div>', '<b>Cartas extra</b> a las 6, 18 y 23; un <b>comodín</b> a las 13.')}
+        ${S('<div class="card up"><div class="inner"><div class="face front wild"></div></div></div>', '<b>A las 31</b>, un comodín para guardar.')}
+        ${S(icon('escoba'), '<b>A las 30</b>, la escoba se lleva las cartas del fondo.')}
+        ${H('Ayudas', 'En el botón dorado. Compras +1 con un toque.')}
+        ${S(`<span class="help-btn gold">${icon('ayudas')}</span>`, '<b>Botón dorado:</b> solo salen las ayudas que sirven.')}
+        ${S('<div class="card up"><div class="inner"><div class="face front wild"></div></div></div>', '<b>Comodín:</b> vale cualquier número.')}
+        ${S(hcard('hreloj'), '<b>Reloj de arena:</b> congela 3 turnos lo que cuenta.', 'bomb|comet|live|ghost|cham|vine')}
+        ${S(hcard('hver'), '<b>Ver cartas:</b> voltea la mesa unos segundos.')}
+        ${S(hcard('hllave'), '<b>Llave maestra:</b> abre candados y cortinas.', 'lock|curtain')}
+        ${S(hcard('hlaser'), '<b>Láser:</b> rompe las piedras.', 'rocas')}
+        ${S(hcard('hescudo'), '<b>Escudo:</b> la nave ya no te roba.', 'ship')}
+        ${S(hcard('himan'), '<b>Imán:</b> tu siguiente robo te da la que más sirve.', 'magnet')}
+        ${S(hcard('hvarita'), '<b>Varita:</b> sube o baja hasta 3 una carta libre.', 'wand')}
+        ${S(hcard('htele'), '<b>Telescopio:</b> ves todas las cartas 5 turnos.', 'scope')}
+        ${S(hcard('hastro'), '<b>Astronauta:</b> te guarda una carta.', 'astro')}
+        ${S(`<span class="help-btn">${icon('undo')}</span>`, '<b>Deshacer:</b> regresa tu última jugada o robo.')}
+        ${S('<span class="help-five"><b>+5</b></span>', '<b>+5:</b> sin mazo, compras 5 cartas (te llevas 1 estrella).')}
+        ${H('Estrellas y boletos', 'Gana estrellas y cuida tus boletos.')}
+        ${S(star(true, 'big'), '<b>Estrellas:</b> con medio mazo o más, 3; con un cuarto, 2; menos, 1.')}
+        ${S(icon('ticket'), '<b>Boletos:</b> si ganas te los regresamos; si pierdes, se gastan.')}
+        ${H('Para ganar más', 'Lluvias y apuestas que suben tus premios.')}
+        ${S(icon('meteoro'), '<b>Lluvia de meteoritos:</b> monedas al doble.', 'meteoro')}
+        ${S(icon('starFall'), '<b>Lluvia de estrellas:</b> monedas al triple.', 'estrellas')}
+        ${S(icon('cometaLluvia'), '<b>Lluvia de cometas:</b> jugar no gasta boletos.', 'cometas')}
+        ${S(icon('aurora'), '<b>Aurora:</b> fichas de la colección al doble.', 'aurora')}
+        ${S(icon('cristal'), '<b>Lluvia de cristales:</b> ganar te puede dar una ayuda.', 'cristales')}
+        ${S('<i class="go-bet dbet b2">×2</i>', '<b>Apuesta:</b> si ganas, todo se multiplica por tu ×N.', 'apuesta2')}
       </div>`
       : t === 'jefes'
         // Jefes de constelación (16 nov 2026, el usuario: «que vaya desbloqueando»): solo los que ya salieron en tu
         // camino (jefe-<tipo> de roadItems).
         ? `<div class="steps">
-        <h3 class="help-h">Jefes de constelación</h3>
-        <p class="note" style="grid-column: 1 / -1; margin: 0">Salen en el último nivel de cada constelación. Cuando tus cartas tiemblan, ¡atacan!</p>
-        ${BOSS_ORDER.map((k) => `<div class="step" data-u="jefe-${k}"><div class="ill c ill-foe"><span class="rd-foe">${FOE_ICON[k]()}</span></div><p><b>${FOE_TITLE[k]}:</b> ${HELP_FOE[k]}</p></div>`).join('')}
+        ${H('Jefes de constelación', 'Salen en el último nivel de cada constelación. Cuando tus cartas tiemblan, ¡atacan!')}
+        ${BOSS_ORDER.map((k) => S(`<span class="rd-foe">${FOE_ICON[k]()}</span>`, `<b>${FOE_TITLE[k]}:</b> ${HELP_FOE[k]}`, `jefe-${k}`)).join('')}
       </div>`
       : t === 'mesas'
         ? `<div class="steps">
-        <h3 class="help-h">Mesas que se descubren</h3>
-        <div class="step" data-u="ship"><div class="ill c">${mechCard('ship')}</div><p><b>Nave ladrona:</b> ${TABLE_TEXT.nave.join(' ')}</p></div>
-        <div class="step" data-u="mesa"><div class="ill"><span class="h-rug"></span>${mini(2, '4', 'c')}${mini(40, '5', 'h')}<span class="h-roll"></span></div><p><b>Mesa enrollada:</b> ${TABLE_TEXT.mesa.join(' ')}</p></div>
-        <div class="step" data-u="nebulosa"><div class="ill">${mini(0, '9', 's')}${mini(34, '10', 'd')}<span class="h-neb"></span></div><p><b>Nebulosa:</b> ${TABLE_TEXT.nebulosa.join(' ')}</p></div>
-        <div class="step" data-u="gravedad"><div class="ill"><span class="h-rail" style="left:10px"></span><span class="h-rail" style="left:58px"></span>${helpBack(14, 'top:0px')}${mini(14, '8', 'c', {}, 'h-low')}${helpBack(62, 'top:0px')}${mini(62, 'J', 'h', {}, 'h-low')}</div><p><b>Gravedad:</b> ${TABLE_TEXT.gravedad.join(' ')}</p></div>
-        <div class="step" data-u="hangar"><div class="ill tbl-ill">${tableIcon('hangar')}</div><p><b>Hangar:</b> ${TABLE_TEXT.hangar.join(' ')}</p></div>
-        <div class="step" data-u="bitacora"><div class="ill tbl-ill">${tableIcon('bitacora')}</div><p><b>Bitácora:</b> ${TABLE_TEXT.bitacora.join(' ')}</p></div>
-        <div class="step" data-u="portal"><div class="ill tbl-ill">${tableIcon('portal')}</div><p><b>Grúa de feria:</b> ${TABLE_TEXT.portal.join(' ')}</p></div>
-        <div class="step" data-u="voltea"><div class="ill tbl-ill">${tableIcon('voltea')}</div><p><b>Mesa que se voltea:</b> ${TABLE_TEXT.voltea.join(' ')}</p></div>
-        <div class="step" data-u="cohete"><div class="ill tbl-ill">${tableIcon('cohete')}</div><p><b>Cohete:</b> ${TABLE_TEXT.cohete.join(' ')}</p></div>
-        <div class="step" data-u="marea"><div class="ill">${mini(10, '7', 's')}${mini(48, '8', 'h')}<span class="h-tide"></span></div><p><b>Marea:</b> ${TABLE_TEXT.marea.join(' ')}</p></div>
-        <div class="step" data-u="hoyo"><div class="ill">${mini(6, '4', 'd')}${mini(44, '9', 's')}<span class="h-hole"></span></div><p><b>Agujero negro:</b> ${TABLE_TEXT.hoyo.join(' ')}</p></div>
-        <div class="step" data-u="astro"><div class="ill c"><span class="help-btn">${icon('astronauta')}</span></div><p><b>Astronauta:</b> tócalo y toca una carta: te la guarda. Tócalo otra vez y la lleva al descarte.</p></div>
-        <div class="step" data-u="rocas"><div class="ill">${mini(10, '7', 's')}${mini(48, '8', 'h', { marks: `<span class="rock-ov">${icon('asteroide')}<b class="outl">3</b></span>` })}</div><p><b>Asteroides:</b> ${TABLE_TEXT.rocas.join(' ')}</p></div>
-        <div class="step" data-u="puertas"><div class="ill"><span class="h-door"><i></i><i></i></span>${mini(56, '6', 'h', { doorKey: 1 })}</div><p><b>Puertas:</b> ${TABLE_TEXT.puertas.join(' ')}</p></div>
-        <div class="step" data-u="banda"><div class="ill"><span class="h-belt"><i></i></span>${mini(24, 'K', 'c', {}, 'h-belt-c')}${mini(58, '2', 'h', {}, 'h-belt-c')}</div><p><b>Banda transportadora:</b> ${TABLE_TEXT.banda.join(' ')}</p></div>
+        ${H('Mesas que se descubren', 'Cada mundo trae mesas nuevas.')}
+        ${TABLE_HELP.map(([k, u, name, txt]) => S(k === 'nave' ? mechCard('ship') : k === 'astro' ? `<span class="help-btn">${icon('astronauta')}</span>` : tableIcon(k), `<b>${name}:</b> ${txt}`, u)).join('')}
       </div>`
-        : `<div class="steps">${MECH_GROUPS.map(([h, ms]) => `<h3 class="help-h">${h}</h3>${ms.map((m) => `<div class="step" data-u="${m}"><div class="ill c${MECH_BOTH[m] ? ' pair' : ''}">${MECH_BOTH[m]?.() || mechCard(m)}</div><p><b>${MECH_NAMES[m]}:</b> ${MECH_TEXT[m]}</p></div>`).join('')}`).join('')}</div>`);
+        : `<div class="steps">${MECH_GROUPS.map(([h, ms]) => `${H(h, MECH_INTRO_HELP[h] || '')}${ms.map((m) => S(mechCard(m), `<b>${MECH_NAMES[m]}:</b> ${CARD_SHORT[m] || MECH_TEXT[m]}`, m)).join('')}`).join('')}</div>`);
   }
   const m = openModal({
     title: 'Ayuda',

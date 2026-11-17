@@ -3917,3 +3917,27 @@ s.was { text-decoration: line-through 2px #ff5f7e; opacity: .7; margin-right: .2
 .rk-streak.fat { height: 5px; background: linear-gradient(90deg, #cfe9ff, #cfe9ff66 50%, transparent); }
 .rk-plus { position: fixed; z-index: 9500; font: 400 30px/1 'Lilita One'; color: #ffd54a; pointer-events: none; }
 @media (prefers-reduced-motion: reduce) { .rk-flame svg, .rk-sky i { animation: none; } }
+
+/* Preparando al jefe (17 nov 2026): mientras se arma su tablero en segundo plano. */
+.boss-prep { position: fixed; inset: 0; z-index: 20000; display: grid; place-items: center; background: rgba(20, 14, 50, .55); animation: bp-in .2s ease-out; }
+.boss-prep.out { opacity: 0; transition: opacity .2s; }
+.boss-prep .bp-card { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 18px 26px 14px; border-radius: 22px; background: var(--cream, #fff8ec); border: 3px solid var(--ink); box-shadow: 0 5px 0 var(--ink); color: var(--ink); font: 400 19px 'Lilita One'; animation: bp-pop .35s cubic-bezier(.3, 1.5, .5, 1); }
+.boss-prep .bp-ico { width: 64px; height: 64px; display: grid; place-items: center; animation: bp-bob 1.2s ease-in-out infinite; }
+.boss-prep .bp-ico svg { width: 100%; height: 100%; overflow: visible; }
+.boss-prep .bp-dots { display: flex; gap: 6px; }
+.boss-prep .bp-dots i { width: 9px; height: 9px; border-radius: 50%; background: var(--ink); animation: bp-dot .9s ease-in-out infinite; }
+.boss-prep .bp-dots i:nth-child(2) { animation-delay: .15s; }
+.boss-prep .bp-dots i:nth-child(3) { animation-delay: .3s; }
+@keyframes bp-in { from { opacity: 0; } }
+@keyframes bp-pop { from { scale: .6; opacity: 0; } }
+@keyframes bp-bob { 50% { translate: 0 -6px; rotate: -6deg; } }
+@keyframes bp-dot { 50% { translate: 0 -5px; opacity: .4; } }
+
+/* Cómo jugar homologado (17 nov 2026): como la ficha de los jefes, un dibujo chico por ficha y una frase por sección. */
+.help-intro { grid-column: 1 / -1; margin: 0 2px; font-size: 13.5px; text-align: left; }
+.step .ill.ill-ico { width: 56px; height: 56px; }
+.step .ill.ill-ico .card { position: relative; left: auto !important; top: 0; }
+.step .ill.ill-ico .card + .card { margin-left: -18px; }
+.step .ill.ill-ico > .ico, .step .ill.ill-ico > svg { width: 44px; height: 44px; }
+.step .ill.ill-ico .help-card { width: 36px; height: 50px; }
+.step .ill.ill-ico .star.big { width: 44px; height: 44px; }
