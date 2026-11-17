@@ -731,6 +731,16 @@ html.dev-on .galaxy .res .me { display: none; }
 .tabs button { display: flex; align-items: center; gap: 6px; height: 38px; padding: 0 12px 0 7px; border-radius: 12px; font-weight: 800; font-size: 14.5px; color: #5d5385; white-space: nowrap; }
 .tabs button .ico { width: 24px; height: 24px; vertical-align: 0; }
 @media (max-width: 440px) { .tabs { flex-wrap: wrap; justify-content: center; } .tabs button { padding: 0 9px 0 5px; gap: 4px; font-size: 13.5px; } }
+/* Ayuda (16 nov 2026, con la pestaña Jefes): en el teléfono parado, 4 columnas iguales con el icono arriba; nunca se
+   parten en dos renglones ni se enciman. Acostado caben en un renglón como siempre. */
+@media (max-width: 440px) {
+  .tabs.help-tabs { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; width: 100%; gap: 4px; }
+  .tabs.help-tabs button { flex-direction: column; justify-content: center; height: auto; min-height: 50px; padding: 4px 2px; gap: 1px; font-size: 12px; }
+  .tabs.help-tabs button .ico { width: 22px; height: 22px; }
+}
+.step .ill.ill-foe { width: 56px; }
+.step .ill .rd-foe { display: grid; place-items: center; width: 50px; height: 50px; }
+.step .ill .rd-foe svg { width: 100%; height: 100%; overflow: visible; }
 .tabs button[aria-selected="true"] { background: var(--cream); color: var(--ink); border: 2px solid var(--ink); box-shadow: inset 0 -3px 0 var(--cream-d), 0 2px 0 var(--ink); }
 .steps { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); text-align: left; }
 .step { display: flex; align-items: center; gap: 12px; padding: 8px 12px; border-radius: 18px; background: #fffaf0; border: 2px solid #e3d3b5; }
@@ -1008,6 +1018,12 @@ html.dev-on .galaxy .res .me { display: none; }
 .toast { position: fixed; left: 50%; top: calc(64px + var(--st)); z-index: 1500; translate: -50% 0; display: flex; align-items: center; gap: 6px; padding: 8px 16px 10px; border-radius: 99px; background: var(--cream); color: var(--ink); border: 2.5px solid var(--ink); box-shadow: 0 3px 0 var(--ink); font-weight: 800; white-space: nowrap; animation: toast 2s var(--ease-out) forwards; pointer-events: none; }
 .toast .ico { width: 22px; height: 22px; }
 @keyframes toast { 0% { opacity: 0; transform: translateY(-8px); } 10%, 85% { opacity: 1; transform: none; } 100% { opacity: 0; } }
+/* Teléfono acostado (16 nov 2026, el usuario: «estorban las cartas»): los avisos salen abajo, en el juego y afuera;
+   entran desde abajo. */
+@media (orientation: landscape) and (max-height: 500px) {
+  .toast { top: auto; bottom: calc(8px + var(--sb)); animation-name: toast-up; }
+}
+@keyframes toast-up { 0% { opacity: 0; transform: translateY(8px); } 10%, 85% { opacity: 1; transform: none; } 100% { opacity: 0; } }
 .confetti { position: fixed; inset: 0; pointer-events: none; z-index: 2000; overflow: hidden; }
 .confetti i { position: absolute; top: -20px; width: 9px; height: 14px; border-radius: 2px; animation: fall linear forwards; }
 @keyframes fall { to { transform: translate(var(--dx), 110vh) rotate(var(--r)); } }
@@ -1073,9 +1089,6 @@ html.dev-on .galaxy .res .me { display: none; }
 .g-pick select option, .g-pick select optgroup { color: #000; }
 .g-boss { display: flex; align-items: center; gap: 4px; padding: 0 12px; border-radius: 12px; background: #fff1; color: #fff; font: 400 14px 'Lilita One'; border: 2px solid transparent; transition: background-color 180ms var(--ease-out); }
 .g-boss .ico { width: 18px; height: 18px; } .g-boss.on { border-color: #e89a17; background: #e89a1733; }
-.g-uses { display: flex; flex-wrap: wrap; gap: 3px; }
-.g-uses i { display: inline-flex; align-items: center; gap: 3px; padding: 1px 7px 1px 2px; border-radius: 99px; background: #ff8a3d33; font: 700 10.5px 'Baloo 2', sans-serif; font-style: normal; }
-.g-uses .ico { width: 15px; height: 15px; }
 .g-clear { padding: 0 14px; border-radius: 12px; background: #ff5f7e33; color: #ffb3c2; font: 400 14px 'Lilita One'; }
 .g-pager { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 8px 12px calc(8px + env(safe-area-inset-bottom)); background: #0003; }
 .g-pager button { width: 52px; height: 40px; display: grid; place-items: center; border-radius: 12px; background: #8a5cf0; transition: opacity 200ms; }
@@ -1087,6 +1100,36 @@ html.dev-on .galaxy .res .me { display: none; }
 .g-planet { grid-column: 1 / -1; display: flex; align-items: center; gap: 6px; margin: 6px 0 -2px; font: 400 16px 'Lilita One'; }
 .g-planet:first-child { margin-top: 0; }
 .g-planet .ico { width: 22px; height: 22px; }
+.g-grid.g-list { display: block; }
+.g-rsec { display: flex; align-items: center; gap: 8px; width: 100%; margin: 10px 0 6px; padding: 8px 10px; border-radius: 12px; background: #0003; color: #fff; font: 400 17px 'Lilita One'; text-align: left; user-select: none; -webkit-user-select: none; }
+.g-rsec:first-child { margin-top: 2px; }
+.g-rsec small { margin-left: auto; font: 800 12px 'Baloo 2', sans-serif; opacity: .6; }
+.g-rsec .dchev { display: grid; width: 18px; height: 18px; transition: rotate 200ms var(--ease-out); }
+.g-rsec .dchev .ico { width: 100%; height: 100%; }
+.g-rsec.open .dchev { rotate: 90deg; }
+.g-secb[hidden] { display: none; }
+.g-rh { user-select: none; -webkit-user-select: none; cursor: pointer; }
+.g-rh * { pointer-events: none; }
+.g-ri .dmc { display: grid; place-items: center; height: 22px; }
+.g-ri .dmc .card { position: relative; left: 0 !important; --cw: 14px; rotate: -6deg; }
+.g-row { margin-bottom: 6px; border-radius: 14px; background: #fff1; overflow: hidden; }
+.g-rh { display: flex; align-items: center; gap: 8px; width: 100%; padding: 10px 12px; color: #fff; text-align: left; }
+.g-rh b { flex: 1; font: 400 16px 'Lilita One'; }
+.g-rh small { font-size: 12px; font-weight: 800; opacity: .6; }
+.g-ri { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 8px; background: #fff; }
+/* Solo el icono del renglón: los de adentro de la carta (flecha, turbo…) van con su tamaño, igual que en el recuento. */
+.g-ri > .ico { width: 22px; height: 22px; }
+.g-ri .rd-foe { display: grid; width: 22px; height: 22px; }
+.g-ri .rd-foe svg { width: 100%; height: 100%; overflow: visible; }
+.g-rh .dchev { display: grid; width: 18px; height: 18px; transition: rotate 200ms var(--ease-out); }
+.g-rh .dchev .ico { width: 100%; height: 100%; }
+.g-row.open .g-rh .dchev { rotate: 90deg; }
+.g-row.open { background: #8a5cf022; box-shadow: inset 0 0 0 2px #8a5cf0; }
+.g-rb .g-grid { overflow: visible; padding: 0 10px 4px; }
+.g-rstat { margin: 4px 12px 12px; font-size: 13px; font-weight: 800; opacity: .8; text-align: center; }
+.g-more, .g-all { padding: 8px 16px; border-radius: 12px; background: #8a5cf0; color: #fff; font: 400 14px 'Lilita One'; box-shadow: 0 2px 0 #0005; }
+.g-all { display: flex; align-items: center; justify-content: center; gap: 6px; }
+.g-all .ico { width: 18px; height: 18px; }
 .g-empty { grid-column: 1 / -1; padding: 30px 10px; text-align: center; opacity: .7; font-weight: 700; }
 .g-grid { flex: 1; overflow-y: auto; overscroll-behavior: contain; padding: 4px 12px 24px; display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; align-content: start; }
 .tile { display: flex; flex-direction: column; gap: 3px; padding: 8px 8px 9px; border-radius: 16px; background: #fff1; text-align: left; transition: background-color 200ms var(--ease-out), scale 160ms var(--ease-out); }
@@ -3783,3 +3826,39 @@ s.was { text-decoration: line-through 2px #ff5f7e; opacity: .7; margin-right: .2
 .rd-foe { width: 100%; height: 100%; display: grid; place-items: center; }
 .rd-foe svg { width: 88%; height: 88%; overflow: visible; }
 .devmenu .k-jefe { background: #e0496b; }
+
+/* ---------- Cohete (16 nov 2026, pedido del usuario): la mesa enrollada como cohete ---------- */
+/* El fondo es el espacio: se esconde el dibujo del planeta y van dos capas de estrellas (se corren al avanzar). */
+.scroll-rocket .table { background: radial-gradient(120% 80% at 70% 0%, #3a2a8a 0%, transparent 60%), radial-gradient(90% 70% at 10% 100%, #2a1a6a 0%, transparent 60%), linear-gradient(170deg, #0b0730, #160f45 55%, #0d0a33); }
+.scroll-rocket .table > :not(.rk-sky) { display: none; }
+.rk-sky { position: absolute; inset: 0; pointer-events: none; }
+/* Las estrellas siempre se mueven despacio hacia atrás: el cohete va viajando aunque no avance. */
+@keyframes rk-drift { to { background-position: -1380px 0, -1311px 51px; } }
+@keyframes rk-drift2 { to { background-position: -1359px 30px, -1314px 5px; } }
+/* 16 nov 2026 (el usuario: «salen muchas capas de puntos, solo deja unas»): pocas estrellas, sueltas. */
+.rk-sky i { position: absolute; inset: 0; animation: rk-drift 60s linear infinite; background: radial-gradient(circle, #fff 0 1.3px, transparent 1.8px) 0 0 / 138px 115px, radial-gradient(circle, #c9bff0 0 1px, transparent 1.5px) 69px 51px / 230px 161px; opacity: .75; }
+.rk-sky i + i { animation-name: rk-drift2; animation-duration: 34s; background: radial-gradient(circle, #ffe9a8 0 2px, transparent 2.6px) 11px 30px / 137px 113px, radial-gradient(circle, #9fd8ff 0 1.6px, transparent 2.2px) 70px 5px / 173px 151px; opacity: .9; }
+.rk-body { position: absolute; z-index: 0; pointer-events: none; filter: drop-shadow(0 6px 0 #0b062a88); }
+.rk-body .rk-svg { position: absolute; inset: 0; overflow: visible; }
+/* Fuego de la cola (16 nov 2026, el usuario: «el fuego ponlo en la parte de atrás de la nave»): ya viene acostado y
+   su base va escondida detrás de la cola (debajo del cuerpo), así sale de la nave; crece hacia la izquierda.
+   Chiquito siempre; al avanzar o despegar, grande. */
+.rk-flame { position: absolute; z-index: -1; left: calc(var(--cw) * -0.8); top: 50%; width: calc(var(--cw) * 1.2); height: calc(var(--cw) * 1.25); translate: 0 -50%; transform-origin: 100% 50%; scale: .75; filter: drop-shadow(0 0 8px #ff8a3d); transition: scale .25s var(--ease-out); }
+.rk-flame svg { display: block; width: 100%; height: 100%; animation: rk-flick .09s linear infinite alternate; transform-origin: 100% 50%; }
+@keyframes rk-flick { to { transform: scaleX(1.25) scaleY(.9); } }
+.rk-body.boost .rk-flame { scale: 1.25; }
+.rk-body.launch .rk-flame { scale: 1.8; }
+.rk-clip { position: absolute; inset: 0; pointer-events: none; z-index: 0; }
+/* Orilla derecha (16 nov 2026, el usuario escogió la nube): una columna de nubes toon tapa el corte; el cohete y las
+   cartas salen de entre ellas. Cada bolita respira despacio (desfasadas con --i); al avanzar echa una bocanada (JS) y
+   al despegar se deshace. */
+.rk-cloud { position: absolute; z-index: 5000; pointer-events: none; transform-origin: 50% 50%; transition: opacity .5s ease-in, scale .5s ease-in; filter: drop-shadow(0 4px 0 #0b062a55); }
+.rk-cloud svg { display: block; overflow: visible; }
+.rk-cloud .pf { transform-box: fill-box; transform-origin: 50% 50%; animation: rk-puff 3.2s ease-in-out infinite alternate; animation-delay: calc(var(--i) * -0.7s); }
+@keyframes rk-puff { to { transform: scale(1.1); } }
+.rk-cloud.empty { opacity: 0; scale: 1.6 1.2; }
+@media (prefers-reduced-motion: reduce) { .rk-cloud .pf { animation: none; } }
+.rk-streak { position: fixed; z-index: 9000; height: 3px; border-radius: 3px; background: linear-gradient(90deg, #fff, #fff8 40%, transparent); pointer-events: none; }
+.rk-streak.fat { height: 5px; background: linear-gradient(90deg, #cfe9ff, #cfe9ff66 50%, transparent); }
+.rk-plus { position: fixed; z-index: 9500; font: 400 30px/1 'Lilita One'; color: #ffd54a; pointer-events: none; }
+@media (prefers-reduced-motion: reduce) { .rk-flame svg, .rk-sky i { animation: none; } }

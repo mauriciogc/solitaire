@@ -339,6 +339,8 @@ const eventOf = (d) => {
 };
 // El evento activo (o null). Al cambiar de mes se empieza de cero.
 // world: hasta qué mundo llegabas al empezar (fija las mecánicas de sus niveles todo el mes).
+// Días del mes con tirada del evento (lo mismo que SLOT_MONTH_DAYS de slot.js, que importa de aquí).
+export const EV_LATE_DAYS = 5;
 export function ev() {
   if (!isOn('mes')) return null;
   const e = eventOf(now());
@@ -347,7 +349,10 @@ export function ev() {
     evRecord();
     // Preventa (9 nov 2026): si compró la entrada en los días de antes, ya empieza pagado y con su boleto.
     const pre = save.evPre === e.id;
-    save.ev = { id: e.id, k: 0, world: save.open || 0, tk: pre ? 1 : 0, at: 0, paid: pre, run: null, tries: {} };
+    // Entró tarde (16 nov 2026, el usuario): si es su primer evento del mes (lo acaba de abrir al subir de nivel) y ya
+    // pasaron los días de la tragamonedas, esta edición también le da su tirada (late; ver editions en slot.js).
+    const late = !save.ev && now().getDate() > EV_LATE_DAYS;
+    save.ev = { id: e.id, k: 0, world: save.open || 0, tk: pre ? 1 : 0, at: 0, paid: pre, run: null, tries: {}, ...(late && { late: 1 }) };
     persist();
   }
   const s = save.ev;
@@ -517,8 +522,8 @@ export function evLose() {
 export { EVENT_PLANETS, EVENT_PER_PLANET, EVENT_LEVELS };
 
 // ---------- Festividades (eventos de 24 h) ----------
-// Un día de fiesta (de 00:00 a 23:59, hora del teléfono): 3 planetas de 3 niveles con tableros especiales que piden
-// 2, 2 y 3 ayudas (ver fiestaLevel). Sin boleto: perder o abandonar solo pide volver a intentarlo. El 3.º nivel de
+// Un día de fiesta (de 00:00 a 23:59, hora del teléfono): 3 planetas de 3 niveles armados con la fecha (muy
+// difíciles y el jefe extremo; ver festivalLevel en levels.js). Sin boleto: perder o abandonar solo pide volver a intentarlo. El 3.º nivel de
 // cada planeta da sus exclusivos (planeta 1: fondo y postal · 2: marco y reverso · 3: avatar, título y nave); si ya
 // los tienes, da ayudas o monedas. Desde un día antes se ve su botón apagado con la cuenta regresiva.
 // date(año) = el día de la fiesta. Si dos caen el mismo día, la segunda se recorre al día siguiente.

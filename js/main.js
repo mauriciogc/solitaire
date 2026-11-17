@@ -1117,6 +1117,7 @@ const ROAD_TABLES = [
   ['bitacora', 'Bitácora', ''],
   ['portal', 'Grúa de feria', ''],
   ['voltea', 'Mesa que se voltea', 'Columnas dentro de una cápsula: solo juegas la de abajo. Cada 5 jugadas o robos da media vuelta.'],
+  ['cohete', 'Cohete', ''],
 ];
 function roadItems() {
   const t = streakTheme();
@@ -2952,12 +2953,12 @@ function openEvIntro(e, go = false) {
       <ul class="evi-rules">
         ${rule('ticket', `Pagas la entrada <b>una vez</b> y reintentas <b>las veces que quieras</b> ${e.days > 1 ? 'mientras dure' : 'hasta la medianoche'}.`)}
         ${rule('flame', `${K.L} niveles <b>difíciles</b>. No cuentan para tu <b>racha</b> ni tu <b>colección</b>.`)}
-        ${rule('gift', `El <b>nivel ${K.N}</b> de cada planeta trae un <b>regalo sorpresa</b>: entre más estrellas, más fácil que sea un exclusivo.`)}
+        ${rule('gift', `El <b>nivel ${K.N}</b> de cada planeta trae un <b>regalo sorpresa</b> que puede ser un <b>exclusivo</b>. Aquí no hay estrellas: lo que cuenta es <b>pasarlo</b>.`)}
         ${rule('flag', `${K.left() > 864e5 ? 'Termina en unos días' : 'Termina hoy a la medianoche'}: te quedan <b>${evDaysOf(K)}</b>.`)}
       </ul>` : `<p class="lead">¡Llegó el evento del mes! Viaja por <b>${EVENT_PLANETS} planetas</b> y gana premios <b>exclusivos</b> que solo salen ahora: disfraces, marcos, reversos, postales, fondos, títulos y naves.</p>
       <ul class="evi-rules">
         ${rule(e.tk, `Cada nivel se juega con tu <b>boleto</b>. Si ganas, lo conservas; si pierdes, llega otro en <b>48 horas</b> o lo compras en ${coin()} <b>${money(evTicketPrice({ ...e, state: { ...e.state, paid: true } }))}</b>.`)}
-        ${rule('gift', `El <b>nivel 5</b> de cada planeta trae un <b>regalo sorpresa</b>: entre más estrellas, más fácil que sea un exclusivo.`)}
+        ${rule('gift', `El <b>nivel 5</b> de cada planeta trae un <b>regalo sorpresa</b> que puede ser un <b>exclusivo</b>. Aquí no hay estrellas: lo que cuenta es <b>pasarlo</b>.`)}
         ${rule('flame', `${EVENT_LEVELS} niveles <b>difíciles</b>. No cuentan para tu <b>racha</b> ni tu <b>colección</b>.`)}
         ${rule('flag', `Tienes <b>${evDays()}</b> para llegar al último planeta. ¡Entra cada día y no dejes pasar tu boleto!`)}
       </ul>`}`,
@@ -3116,8 +3117,10 @@ function startEvent() {
       if (res.items?.length) await openEvPrize(e, res);
       back(res.counted ? res : null);
     },
-    onWin: (stars) => {
-      const r = K.win(stars);
+    // Sin estrellas (16 nov 2026, el usuario: «ahí no hay estrellas, lo importante es pasar»): el regalo cuenta como
+    // de 3★ siempre (antes salía más fácil el exclusivo con más estrellas, y el jugador no las veía).
+    onWin: () => {
+      const r = K.win(3);
       if (!r) return { coins: 0, tickets: 0, prev: 0, items: [], title: '¡Nivel superado!' };
       persist();
       return { ...r, coins: r.coins || 0, tickets: 0, prev: 0, counted: true, title: r.last ? (e.date ? '¡Festividad completada!' : '¡Evento completado!') : `¡Nivel ${r.k + 1} de ${K.L}!` };
@@ -3711,7 +3714,7 @@ const festNow = (f, nx) => ['flag', f ? (f.soon ? `${f.inDays > 1 ? `En ${f.inDa
 const FEST_RULES = () => [
   ['reloj', 'El día de la fiesta, <b>24 horas</b> (algunas duran varios días).'],
   ['planet', '<b>3 planetas</b> de 3 niveles: <b>9 niveles</b> difíciles.'],
-  ['gift', 'Cada planeta termina con un <b>regalo</b>: entre más estrellas, más fácil que sea un <b>exclusivo</b>.'],
+  ['gift', 'Cada planeta termina con un <b>regalo</b> que puede ser un <b>exclusivo</b>. Aquí no hay estrellas: lo importante es <b>pasar</b>.'],
   ['ticket', `Pagas la entrada <b>una vez</b> y reintentas las veces que quieras. <b>3 días antes</b> sale su botón y la entrada cuesta <b>${Math.round(FEST_PRE * 100)}% menos</b>.`],
 ];
 // Cuáles son las nuevas (11 nov 2026, el usuario: «faltó poner cuáles son»): fichas con su icono, nombre y fecha.
@@ -3869,7 +3872,7 @@ const UNLOCK_INFO = {
       rules: [
         ['reloj', 'Dura <b>todo el mes</b>. Si lo empiezas tarde, juega lo que alcances.'],
         ['planet', '<b>5 planetas</b> de 5 niveles: <b>25 niveles</b> difíciles.'],
-        ['gift', 'El último nivel de cada planeta abre un <b>regalo sorpresa</b>: entre más estrellas, más fácil que sea un <b>exclusivo</b>.'],
+        ['gift', 'El último nivel de cada planeta abre un <b>regalo sorpresa</b> que puede ser un <b>exclusivo</b>. Aquí no hay estrellas: lo importante es <b>pasar</b>.'],
         ['ticket', 'Cada nivel se juega con tu <b>boleto</b>: si pierdes, llega otro en <b>48 horas</b> o lo compras.'],
         ['flag', e ? `¡Este mes hay uno: <b>${e.name}</b>! Búscalo a la <b>derecha</b>.` : nx ? `El próximo, <b>${nx.name}</b>, llega en ${inDays(nx.days)}.` : 'Pronto llega el primero.'],
       ],
@@ -5374,6 +5377,13 @@ async function installApp() {
 // ---------- Ayuda ----------
 // 9 nov 2026: la ayuda crece con el jugador. Cada bloque con data-u (id de Tu camino: carta, mesa, meteoro, apuesta2;
 // varios con "|") sale solo si ya lo alcanzó; los títulos que se quedan sin bloques y las pestañas vacías se esconden.
+// Los jefes en Cómo jugar, cortito (16 nov 2026, el usuario: «simplifica su explicación»; lo completo sale en su ventana).
+const HELP_FOE = {
+  fenix: 'cae <b>fuego</b> sobre tus cartas: se juegan igual, pero tapa su número.',
+  ilus: 'tus cartas <b>cambian de número</b>. Juega antes las que te sirven.',
+  kraken: 'mancha cartas con <b>tinta</b>: no se juegan. 3 cartas seguidas limpian una.',
+  whale: 'se <b>traga</b> cartas y las <b>escupe</b> encima de otras.',
+};
 function openHelp(tab = 'basico', then) {
   const reached = new Set(roadItems().filter((x) => x.n <= roadAt()).map((x) => x.id));
   const prune = (html) => {
@@ -5383,7 +5393,7 @@ function openHelp(tab = 'basico', then) {
     d.querySelectorAll('.help-h').forEach((h) => (!h.nextElementSibling || h.nextElementSibling.matches('.help-h')) && h.remove());
     return d.innerHTML;
   };
-  const tabs = ['basico', 'cartas', 'mesas'].filter((t) => t === 'basico' || /class="step"/.test(prune(raw(t))));
+  const tabs = ['basico', 'cartas', 'mesas', 'jefes'].filter((t) => t === 'basico' || /class="step"/.test(prune(raw(t))));
   if (!tabs.includes(tab)) tab = 'basico';
   const body = (t) => prune(raw(t));
   function raw(t) {
@@ -5409,19 +5419,27 @@ function openHelp(tab = 'basico', then) {
         <div class="step" data-u="magnet"><div class="ill c"><span class="help-card" style="background-image:${cardBackURL('himan')}"></span></div><p><b>Imán:</b> tu siguiente robo saca del mazo la carta que más te sirve, sin cortar tu racha, y la carta que conviene jugar tiembla.</p></div>
         <div class="step" data-u="wand"><div class="ill c"><span class="help-card" style="background-image:${cardBackURL('hvarita')}"></span></div><p><b>Varita:</b> tocas una carta libre y le subes o bajas hasta 3. También la compras en tus ayudas.</p></div>
         <div class="step" data-u="scope"><div class="ill c"><span class="help-card" style="background-image:${cardBackURL('htele')}"></span></div><p><b>Telescopio:</b> deja ver todas las cartas del tablero 5 turnos.</p></div>
-        <div class="step" data-u="astro"><div class="ill c"><span class="help-card" style="background-image:${cardBackURL('hastro')}"></span></div><p><b>Astronauta:</b> llega a tu nivel y te guarda una carta libre. Cuando conecte, la manda al descarte.</p></div>
+        <div class="step" data-u="astro"><div class="ill c"><span class="help-card" style="background-image:${cardBackURL('hastro')}"></span></div><p><b>Astronauta:</b> te guarda una carta y luego la manda al descarte.</p></div>
         <div class="step"><div class="ill c"><span class="help-btn">${icon('undo')}</span></div><p><b>Deshacer:</b> regresa tu última jugada o la carta que robaste.</p></div>
         <div class="step"><div class="ill c"><span class="help-five"><b>+5</b></span></div><p>¿Se acabó el mazo? Toca el <b>+5</b> para comprar 5 cartas. Con ellas te llevas solo 1 estrella.</p></div>
         <h3 class="help-h">Estrellas y boletos</h3>
         <div class="step"><div class="ill c">${star(true)}${star(true, 'big')}${star(true)}</div><p>Ganas al <b>vaciar la mesa</b>. Si te queda la <b>mitad del mazo</b> o más: 3 estrellas. Una cuarta parte: 2. Menos: 1.</p></div>
         <div class="step"><div class="ill c">${icon('ticket')}</div><p>Un nivel nuevo cuesta <b>boletos</b>. Si lo ganas, te los regresamos; si pierdes o lo dejas, se gastan.</p></div>
         <h3 class="help-h">Para ganar más</h3>
-        <div class="step" data-u="meteoro"><div class="ill c">${icon('meteoro')}</div><p><b>Lluvia de meteoritos:</b> cae sin aviso por 30 minutos. Las monedas valen <b>el doble</b> y con 3 estrellas te cae un <b>premio sorpresa</b>.</p></div>
-        <div class="step" data-u="estrellas"><div class="ill c">${icon('starFall')}</div><p><b>Lluvia de estrellas:</b> cae sin aviso por 15 minutos. Las monedas valen <b>el triple</b> y cada nivel con 3 estrellas te da un <b>premio sorpresa</b> (hasta 3).</p></div>
-        <div class="step" data-u="cometas"><div class="ill c">${icon('cometaLluvia')}</div><p><b>Lluvia de cometas:</b> cae sin aviso por 20 minutos. Los niveles nuevos <b>no gastan boletos</b>, cada victoria da <b>1 boleto más</b> y tu primer nivel con 3 estrellas te da un <b>premio sorpresa</b>.</p></div>
-        <div class="step" data-u="aurora"><div class="ill c">${icon('aurora')}</div><p><b>Aurora:</b> sale sin aviso por 20 minutos cuando hay colección. Las <b>fichas valen el doble</b> y cada nivel con 3 estrellas te da un <b>premio sorpresa</b> (hasta 2).</p></div>
-        <div class="step" data-u="cristales"><div class="ill c">${icon('cristal')}</div><p><b>Lluvia de cristales:</b> cae sin aviso por 10 minutos, la más rara. Los niveles que ganes te pueden dar una <b>ayuda</b> y tu primer nivel con 3 estrellas te da un <b>premio sorpresa</b>.</p></div>
+        <div class="step" data-u="meteoro"><div class="ill c">${icon('meteoro')}</div><p><b>Lluvia de meteoritos:</b> monedas <b>al doble</b> y premio con 3 estrellas.</p></div>
+        <div class="step" data-u="estrellas"><div class="ill c">${icon('starFall')}</div><p><b>Lluvia de estrellas:</b> monedas <b>al triple</b> y premios con 3 estrellas.</p></div>
+        <div class="step" data-u="cometas"><div class="ill c">${icon('cometaLluvia')}</div><p><b>Lluvia de cometas:</b> jugar <b>no gasta boletos</b> y ganar te da uno más.</p></div>
+        <div class="step" data-u="aurora"><div class="ill c">${icon('aurora')}</div><p><b>Aurora:</b> fichas de la colección <b>al doble</b>.</p></div>
+        <div class="step" data-u="cristales"><div class="ill c">${icon('cristal')}</div><p><b>Lluvia de cristales:</b> la más rara: ganar te puede dar una <b>ayuda</b>.</p></div>
         <div class="step" data-u="apuesta2"><div class="ill c"><i class="go-bet dbet b2">×2</i><i class="go-bet dbet b10">×10</i></div><p><b>Apuesta:</b> al tocar <b>Jugar</b> escoge tu ×N. Si ganas, <b>todo</b> lo que da el nivel se multiplica por ese número.</p></div>
+      </div>`
+      : t === 'jefes'
+        // Jefes de constelación (16 nov 2026, el usuario: «que vaya desbloqueando»): solo los que ya salieron en tu
+        // camino (jefe-<tipo> de roadItems).
+        ? `<div class="steps">
+        <h3 class="help-h">Jefes de constelación</h3>
+        <p class="note" style="grid-column: 1 / -1; margin: 0">Salen en el último nivel de cada constelación. Cuando tus cartas tiemblan, ¡atacan!</p>
+        ${BOSS_ORDER.map((k) => `<div class="step" data-u="jefe-${k}"><div class="ill c ill-foe"><span class="rd-foe">${FOE_ICON[k]()}</span></div><p><b>${FOE_TITLE[k]}:</b> ${HELP_FOE[k]}</p></div>`).join('')}
       </div>`
       : t === 'mesas'
         ? `<div class="steps">
@@ -5434,9 +5452,10 @@ function openHelp(tab = 'basico', then) {
         <div class="step" data-u="bitacora"><div class="ill tbl-ill">${tableIcon('bitacora')}</div><p><b>Bitácora:</b> ${TABLE_TEXT.bitacora.join(' ')}</p></div>
         <div class="step" data-u="portal"><div class="ill tbl-ill">${tableIcon('portal')}</div><p><b>Grúa de feria:</b> ${TABLE_TEXT.portal.join(' ')}</p></div>
         <div class="step" data-u="voltea"><div class="ill tbl-ill">${tableIcon('voltea')}</div><p><b>Mesa que se voltea:</b> ${TABLE_TEXT.voltea.join(' ')}</p></div>
+        <div class="step" data-u="cohete"><div class="ill tbl-ill">${tableIcon('cohete')}</div><p><b>Cohete:</b> ${TABLE_TEXT.cohete.join(' ')}</p></div>
         <div class="step" data-u="marea"><div class="ill">${mini(10, '7', 's')}${mini(48, '8', 'h')}<span class="h-tide"></span></div><p><b>Marea:</b> ${TABLE_TEXT.marea.join(' ')}</p></div>
         <div class="step" data-u="hoyo"><div class="ill">${mini(6, '4', 'd')}${mini(44, '9', 's')}<span class="h-hole"></span></div><p><b>Agujero negro:</b> ${TABLE_TEXT.hoyo.join(' ')}</p></div>
-        <div class="step" data-u="astro"><div class="ill c"><span class="help-btn">${icon('astronauta')}</span></div><p><b>Astronauta:</b> ${TABLE_TEXT.astro.join(' ')}</p></div>
+        <div class="step" data-u="astro"><div class="ill c"><span class="help-btn">${icon('astronauta')}</span></div><p><b>Astronauta:</b> tócalo y toca una carta: te la guarda. Tócalo otra vez y la lleva al descarte.</p></div>
         <div class="step" data-u="rocas"><div class="ill">${mini(10, '7', 's')}${mini(48, '8', 'h', { marks: `<span class="rock-ov">${icon('asteroide')}<b class="outl">3</b></span>` })}</div><p><b>Asteroides:</b> ${TABLE_TEXT.rocas.join(' ')}</p></div>
         <div class="step" data-u="puertas"><div class="ill"><span class="h-door"><i></i><i></i></span>${mini(56, '6', 'h', { doorKey: 1 })}</div><p><b>Puertas:</b> ${TABLE_TEXT.puertas.join(' ')}</p></div>
         <div class="step" data-u="banda"><div class="ill"><span class="h-belt"><i></i></span>${mini(24, 'K', 'c', {}, 'h-belt-c')}${mini(58, '2', 'h', {}, 'h-belt-c')}</div><p><b>Banda transportadora:</b> ${TABLE_TEXT.banda.join(' ')}</p></div>
@@ -5449,7 +5468,8 @@ function openHelp(tab = 'basico', then) {
     color: 'blue',
     wide: true,
     onClose: then,
-    body: `${tabs.length < 2 ? '' : `<div class="tabs" role="tablist">${[['basico', 'help', 'Cómo jugar'], ['cartas', 'wild', 'Cartas especiales'], ['mesas', 'planet', 'Mesas']].filter(([t]) => tabs.includes(t)).map(([t, ico, name]) => `<button role="tab" data-t="${t}" aria-selected="${tab === t}">${icon(ico)}${name}</button>`).join('')}</div>`}<div class="tab-body">${body(tab)}</div>`,
+    // Cuatro pestañas (con Jefes): en el teléfono parado van en 4 columnas iguales, el icono arriba (help-tabs).
+    body: `${tabs.length < 2 ? '' : `<div class="tabs help-tabs" role="tablist">${[['basico', 'help', 'Cómo jugar'], ['cartas', 'wild', 'Cartas'], ['mesas', 'planet', 'Mesas'], ['jefes', 'crown', 'Jefes']].filter(([t]) => tabs.includes(t)).map(([t, ico, name]) => `<button role="tab" data-t="${t}" aria-selected="${tab === t}">${icon(ico)}${name}</button>`).join('')}</div>`}<div class="tab-body">${body(tab)}</div>`,
   });
   m.el.addEventListener('click', (e) => {
     const t = e.target.closest('[data-t]');

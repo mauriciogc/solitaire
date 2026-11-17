@@ -1,6 +1,6 @@
 import { save, persist } from './storage.js';
 import { openModal, HEADS, toast, confetti, updateCoins, money, starsHTML, reduced, buzz, sparkle, wait, spendFromWallet, flyToWallet, balloons, lootBubbles, streakWarnHTML, betLoseHTML, shownCoins, popPrize } from './ui.js';
-import { worldInfo, packGroups, MECH_NAMES, LEVELS_PER_WORLD, scrollStrip, scrollSpan, scrollCover, SCROLL_VIEW, SCROLL_SHOW, NEB_SLOTS, GRAV_SHOWN, W, H } from './levels.js';
+import { worldInfo, packGroups, MECH_NAMES, LEVELS_PER_WORLD, scrollStrip, scrollSpan, scrollCover, SCROLL_VIEW, SCROLL_SHOW, stripGap, NEB_SLOTS, GRAV_SHOWN, W, H } from './levels.js';
 import * as E from './engine.js';
 import { price, EV_MARKUP, round5, HELPS, buyable } from './economy.js';
 import { helpOff } from './meteor.js';
@@ -176,10 +176,13 @@ export const TABLE_TEXT = {
   portal: ['Unas <b>grúas de feria</b> jalan las columnas hacia arriba.', 'Solo juegas la carta de hasta arriba: al tocarla, la <b>garra</b> baja, la agarra y se la lleva. Luego sube la columna.'],
   // Astronauta (14 nov 2026, pedido del usuario: «no carta, un ayudante»): como la nave, va como mesa.
   astro: ['Aquí te acompaña <b>Tito</b>, un astronauta.', 'Tócalo y luego toca una carta libre: vuela por ella y te la <b>guarda</b>. Cuando conecte, tócalo otra vez y la <b>lleva al descarte</b>. Después se va.'],
-  // 15 nov 2026 (pedido del usuario): 3 a 8 números; solo enseña el que sigue.
+  // 16 nov 2026 (pedido del usuario): el tapete, pero cohete.
+  cohete: ['Las cartas van en un <b>cohete</b> muy largo.', 'Limpia las primeras cartas y el cohete <b>avanza</b>: salen más. Cada tramo que vacías te regala <b>monedas</b>.'],
   voltea: ['Las cartas van en <b>columnas</b> dentro de una cápsula.', 'Solo juegas la de <b>abajo</b>. Cada <b>5 jugadas o robos</b> la cápsula da <b>media vuelta</b>. Cuando tiembla, ¡cuidado!'],
 };
-const TABLE_NAME = { nave: 'Nave ladrona', mesa: 'Mesa enrollada', gravedad: 'Gravedad', nebulosa: 'Nebulosa', marea: 'Marea', puertas: 'Puertas', banda: 'Banda transportadora', hoyo: 'Agujero negro', rocas: 'Asteroides', voltea: 'Mesa que se voltea', hangar: 'Hangar', bitacora: 'Bitácora', portal: 'Grúa de feria', astro: 'Astronauta' };
+// Fuego del cohete, ya acostado: la base (con el centro amarillo) a la derecha, pegada a la cola; la punta a la izquierda.
+const ROCKET_FIRE = `<svg class="rk-fire" viewBox="0 0 48 40" aria-hidden="true"><path d="M48 20C34 6 16 8 0 20c16 12 34 14 48 0z" fill="#ff8a3d" stroke="#2a1f5c" stroke-width="2.4"/><path d="M40 20c-7-6-16-5-25 0 9 5 18 6 25 0z" fill="#ffd54a"/></svg>`;
+const TABLE_NAME = { cohete: 'Cohete', nave: 'Nave ladrona', mesa: 'Mesa enrollada', gravedad: 'Gravedad', nebulosa: 'Nebulosa', marea: 'Marea', puertas: 'Puertas', banda: 'Banda transportadora', hoyo: 'Agujero negro', rocas: 'Asteroides', voltea: 'Mesa que se voltea', hangar: 'Hangar', bitacora: 'Bitácora', portal: 'Grúa de feria', astro: 'Astronauta' };
 const TABLE_HELP = { rocas: helpTip('hlaser', '<b>Láser:</b> rompe todas las piedras.', true), nave: helpTip('hescudo', '<b>Escudo:</b> la nave ya no te roba en todo el nivel.', true), astro: helpTip('hastro', '<b>Astronauta:</b> después también lo compras en tus ayudas.', true) };
 // ---------- Jefes de constelación (15 nov 2026, pedido del usuario) ----------
 // Dibujos de las criaturas (toon, contorno de tinta). El Kraken no se ve: solo su tinta (y su brazo en el manotazo).
@@ -351,13 +354,15 @@ const LIVE_DIR = {
 // Reverso. La cortina es un telón de verdad (dos cortinas y su galería) que se recoge al abrirse.
 // Cohete turbo: boca abajo (en el tablero o en el mazo) lleva el cohete al centro y la orilla naranja.
 // Boleto partido: el reverso de siempre con la línea picada y las muescas del boleto.
-// Candado: la orilla del color de su pareja y el candado al centro. La llave no se ve tapada: hay que buscarla.
+// Candado: la orilla del color de su pareja y el candado al centro. La llave igual, con la llave al centro (16 nov
+// 2026, el usuario: «que tenga el icono como las otras»; boca arriba sigue con su llave en la esquina).
 const pairColor = (h) => `hsl(${h},75%,60%)`;
 // 11 nov 2026: igual que el turbo, el rayo (morado), la constelación (dorada), el fantasma (lila) y la carta llave de
 // las puertas (madera): la orilla de su color y su dibujo al centro. Así se reconocen boca abajo.
 const BACK_MARK = (c) =>
   c.turbo ? ['#ff8a3d', 'tb-ico', icon('rocket')]
   : c.lock != null ? [pairColor(LOCK_HUES[c.lock]), 'lk-ico', lockIcon(LOCK_HUES[c.lock])]
+  : c.key != null ? [pairColor(LOCK_HUES[c.key]), 'lk-ico', keyIcon(LOCK_HUES[c.key])]
   : c.bolt ? ['#7a6ae8', 'tb-ico mk-bolt', icon('rayo')]
   : c.fire ? ['#ff6a3d', 'tb-ico mk-fire', icon('flame')]
   : c.magnet ? ['#ff5f7e', 'tb-ico mk-magnet', icon('iman')]
@@ -373,7 +378,7 @@ const BACK_MARK = (c) =>
   : null;
 export const backHTML = (c) => {
   const m = BACK_MARK(c);
-  return `<div class="face back${c.rainbow ? ' rb-back' : ''}"${m ? ` style="--back:${cardBackURL(undefined, m[0])}${c.lock != null ? `;--kh:${LOCK_HUES[c.lock]}` : ''}"` : ''}>${c.curtain != null ? '<i class="drape l"></i><i class="drape r"></i><i class="valance"></i>' : ''}${m ? `<span class="${m[1]}">${m[2]}</span>` : ''}${c.half != null ? '<i class="perf"></i>' : ''}${c.twin != null ? twinEye(c) : ''}</div>`;
+  return `<div class="face back${c.rainbow ? ' rb-back' : ''}"${m ? ` style="--back:${cardBackURL(undefined, m[0])}${c.lock != null || c.key != null ? `;--kh:${LOCK_HUES[c.lock ?? c.key]}` : ''}"` : ''}>${c.curtain != null ? '<i class="drape l"></i><i class="drape r"></i><i class="valance"></i>' : ''}${m ? `<span class="${m[1]}">${m[2]}</span>` : ''}${c.half != null ? '<i class="perf"></i>' : ''}${c.twin != null ? twinEye(c) : ''}</div>`;
 };
 const inner = (c) => `<div class="inner">${faceHTML(c)}${backHTML(c)}</div>`;
 // Marcas que se ven aunque la carta esté boca abajo, para poder planear.
@@ -512,7 +517,7 @@ export class Game {
         buttons: [{ label: '¡A pelear!', cls: FOE_BTN[F.kind] || 'green' }],
       });
     }
-    if (this.level.scroll === 'mesa' && !save.seen.mesa) {
+    if (this.level.scroll === 'mesa' && !this.level.rocket && !save.seen.mesa) {
       save.seen.mesa = true;
       persist();
       this.modalOpen = true;
@@ -628,6 +633,21 @@ export class Game {
         closable: false,
         onClose: () => {
           this.modalOpen = false;
+          setTimeout(() => this.tips(), 300);
+        },
+        buttons: [{ label: '¡Entendido!', cls: 'green' }],
+      });
+    }
+    if (this.level.rocket && !save.seen.cohete) {
+      save.seen.cohete = true;
+      persist();
+      this.modalOpen = true;
+      return openModal({
+        ...TABLE_INTRO.cohete,
+        closable: false,
+        onClose: () => {
+          this.modalOpen = false;
+          if (!reduced()) this.rugEl?.animate([{ translate: '0 0' }, { translate: '-3px 0' }, { translate: '3px 0' }, { translate: '0 0' }], { duration: 300, iterations: 2 });
           setTimeout(() => this.tips(), 300);
         },
         buttons: [{ label: '¡Entendido!', cls: 'green' }],
@@ -830,9 +850,21 @@ export class Game {
     if (level.scroll === 'mesa') {
       el.classList.add('scroll-mesa');
       const tbl = el.querySelector('.table');
-      this.boardEl.insertAdjacentHTML('afterbegin', `<div class="rug" style="${tbl.getAttribute('style')}"></div><div class="strip"></div><div class="roll" style="${tbl.getAttribute('style')}"><i></i></div>`);
-      this.rugEl = this.boardEl.querySelector('.rug');
-      this.rollEl = this.boardEl.querySelector('.roll');
+      // Cohete (16 nov 2026, pedido del usuario): la misma mesa enrollada, pero la alfombra es un cohete toon de una
+      // pieza (rocketSVG) con fuego en la cola, el rollo es bruma de estrellas y el fondo, el espacio.
+      if (level.rocket) {
+        el.classList.add('scroll-rocket');
+        tbl.insertAdjacentHTML('beforeend', '<div class="rk-sky"><i></i><i></i></div>');
+        this.skyEl = tbl.querySelector('.rk-sky');
+        // El cohete va dentro de una capa fija (rk-clip) que lo recorta en la orilla derecha: el recorte no se mueve
+        // con él al avanzar. El corte lo tapa una columna de nubes toon (rk-cloud, 16 nov 2026, el usuario escogió la
+        // nube): el cohete sale de entre las nubes.
+        this.boardEl.insertAdjacentHTML('afterbegin', `<div class="rk-clip"><div class="rk-body"><span class="rk-flame">${ROCKET_FIRE}</span></div></div><div class="strip"></div><div class="rk-cloud"></div>`);
+        this.rugEl = this.boardEl.querySelector('.rk-body');
+        this.rollEl = this.boardEl.querySelector('.rk-cloud');
+      } else this.boardEl.insertAdjacentHTML('afterbegin', `<div class="rug" style="${tbl.getAttribute('style')}"></div><div class="strip"></div><div class="roll" style="${tbl.getAttribute('style')}"><i></i></div>`);
+      this.rugEl ??= this.boardEl.querySelector('.rug');
+      this.rollEl ??= this.boardEl.querySelector('.roll');
       // Las cartas de la tira van en su propia capa, cortada en la orilla del rollo (un solo corte fijo: al avanzar
       // las cartas solo se deslizan y el rollo se las traga o las suelta).
       this.stripEl = this.boardEl.querySelector('.strip');
@@ -2020,7 +2052,10 @@ export class Game {
   scrollBase() {
     if (this.sBase) return this.sBase;
     const gs = this.level.groups;
-    return (this.sBase = { S: scrollStrip(gs), pad: 0.25, rollT: 0.8, cross: Math.max(...gs.map((g) => g.h)) + 0.5 });
+    // Cohete: la tira más pegada (stripGap), aire a la izquierda para que se vea la cola con su fuego entero (16 nov
+    // 2026, el usuario: «el fuego ponlo en la parte de atrás») y sin rollo.
+    const rk = this.level.rocket;
+    return (this.sBase = { S: scrollStrip(gs, stripGap(this.level)), pad: rk ? 1.65 : 0.25, rollT: rk ? 0.3 : 0.8, cross: Math.max(...gs.map((g) => g.h)) + (rk ? 1.3 : 0.5) });
   }
 
   // Lo que depende de la ventana (this.view: cuánta tira se ve) y de cuánto avanzó (o).
@@ -2093,6 +2128,7 @@ export class Game {
 
   paintRoll() {
     if (!this.rollEl) return;
+    if (this.level.rocket) return this.paintRocket();
     const G = this.scrollGeo(), u = this.u;
     const t = G.rollT * u * (G.left > 0 ? 0.55 + 0.45 * Math.min(1, G.left / 8) : 0.35);
     const mid = G.cutAt * u;
@@ -2105,6 +2141,7 @@ export class Game {
   // Al empezar: el rollo sale gordo desde el inicio de la alfombra y rueda hasta su lugar desenrollándola; luego se
   // ponen las cartas encima, de izquierda a derecha, ya como van (sin voltearse).
   async unroll(live) {
+    if (this.level.rocket) return this.rocketIn(live);
     const u = this.u, rug = this.rugEl, roll = this.rollEl;
     const from = parseFloat(rug.style.left) - parseFloat(roll.style.left); // del inicio de la alfombra a su lugar
     const D = 1000, ease = 'cubic-bezier(.3,.1,.25,1)';
@@ -2127,6 +2164,163 @@ export class Game {
     );
     await Promise.all(anims.map((a) => a.finished.catch(() => {})));
     for (const c of live) c.el.classList.remove('noflip');
+  }
+
+  // ---------- Cohete (16 nov 2026, pedido del usuario) ----------
+  // Es la mesa enrollada: la tira de cartas va sobre un cohete larguísimo (cola a la izquierda, punta al final, donde
+  // ya no hay cartas). Al avanzar, el cohete se corre con las cartas, la cola echa fuego y las estrellas pasan. Cada
+  // tramo que vacías regala su parte de las monedas del nivel (rocketGift: 150-222 en total; deshacer las quita). Al
+  // vaciarlo todo, despega.
+  rocketBox(o = this.scrollAt) {
+    const G = this.scrollGeo(o), u = this.u, TAIL = 1.15, NOSE = 3.6;
+    return { left: (G.pad - TAIL - o) * u, width: (TAIL + G.S.end + 0.45 + NOSE) * u, TAIL, NOSE };
+  }
+  paintRocket() {
+    const G = this.scrollGeo(), u = this.u, b = this.rocketBox(), H = G.cross * u;
+    Object.assign(this.rugEl.style, { left: `${b.left}px`, width: `${b.width}px`, top: 0, height: `${H}px` });
+    // 16 nov 2026 (el usuario: «la parte derecha no se debe ver cortada»): en la orilla derecha el cohete y las cartas
+    // se meten en la nube (rk-cloud), que tapa el corte.
+    const key = `${Math.round(b.width)}x${Math.round(H)}`;
+    if (this.rugEl.dataset.k !== key) {
+      this.rugEl.dataset.k = key;
+      this.rugEl.querySelector('svg.rk-svg')?.remove();
+      this.rugEl.insertAdjacentHTML('afterbegin', this.rocketSVG(b, H));
+    }
+    // 16 nov 2026 (el usuario: «quita el difuminado… que quede como está la mesa enrollable, sin su enrollable»): sin
+    // sombra; el cohete y las cartas se cortan en la misma línea, donde la mesa enrollada tiene su rollo.
+    if (!this.rugEl.classList.contains('launch')) this.rugEl.parentNode.style.clipPath = `inset(-50% ${(G.along - G.cutAt) * u}px -50% -100vw)`;
+    this.stripEl.style.clipPath = `inset(-100vh ${(G.along - G.cutAt) * u}px -100vh -100vw)`;
+    // La nube: sobre el corte (casi toda hacia la tira, para no tapar el mazo acostado), del alto del cohete; se vuelve a
+    // dibujar si cambia el tamaño.
+    Object.assign(this.rollEl.style, { left: `${(G.cutAt - 0.75) * u}px`, top: 0, width: `${u}px`, height: `${H}px` });
+    const ck = `${Math.round(u)}x${Math.round(H)}`;
+    if (this.rollEl.dataset.k !== ck) (this.rollEl.dataset.k = ck), (this.rollEl.innerHTML = this.cloudSVG(u, H, u));
+  }
+  // Columna de nubes toon: dos capas de bolitas (lila atrás, blanca adelante), cada una con su contorno de tinta por
+  // fuera (primero todas las orillas, luego todos los rellenos). Cada bolita respira a su ritmo (CSS rk-puff).
+  cloudSVG(W, H, u) {
+    const ink = INKF, R = u * 0.3, n = Math.max(4, Math.round((H - 2 * R) / (u * 0.4))), step = (H - 2 * R) / n;
+    const layer = (dx, fill, k0) => {
+      const ps = Array.from({ length: n + 1 }, (_, i) => {
+        const h = ((i + k0) * 2654435761) >>> 0;
+        return { x: W / 2 + dx + ((h % 100) / 100 - 0.5) * u * 0.16, y: R + i * step, r: R * (0.9 + ((h >>> 8) % 100) / 100 * 0.3), i: i + k0 };
+      });
+      const c = (p, extra) => `<circle class="pf" style="--i:${p.i}" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${(p.r + extra).toFixed(1)}"`;
+      return ps.map((p) => `${c(p, 1.8)} fill="${ink}"/>`).join('') + ps.map((p) => `${c(p, 0)} fill="${fill}"/>`).join('') + ps.map((p) => `<circle class="pf" style="--i:${p.i}" cx="${(p.x - p.r * 0.3).toFixed(1)}" cy="${(p.y - p.r * 0.35).toFixed(1)}" r="${(p.r * 0.28).toFixed(1)}" fill="#fff" opacity="${fill === '#fff' ? 0 : 0.5}"/>`).join('');
+    };
+    return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" aria-hidden="true">${layer(u * 0.14, '#d9cff7', 7)}${layer(-u * 0.04, '#fff', 0)}</svg>`;
+  }
+  // Cohete toon de una sola pieza: aletas, cuerpo con brillo y sombra (sin divisiones), franja y la punta roja,
+  // afilada, con su ventana.
+  rocketSVG(b, H) {
+    const u = this.u, W = b.width, G = this.scrollGeo(), t = u * 0.42, top = t, bot = H - t, bh = bot - top, mid = H / 2;
+    const x0 = u * 0.1, xn = W - b.NOSE * u, r = bh * 0.32, ink = INKF, id = `rk${Math.random().toString(36).slice(2, 7)}`;
+    // Punta afilada (ojiva): sale recta del cuerpo y se cierra en un pico redondito.
+    const N = b.NOSE * u;
+    const body = `M${x0 + r} ${top}H${xn}C${xn + N * 0.5} ${top} ${W - N * 0.22} ${mid - bh * 0.16} ${W - 3} ${mid - bh * 0.02}Q${W} ${mid} ${W - 3} ${mid + bh * 0.02}C${W - N * 0.22} ${mid + bh * 0.16} ${xn + N * 0.5} ${bot} ${xn} ${bot}H${x0 + r}Q${x0} ${bot} ${x0} ${bot - r}V${top + r}Q${x0} ${top} ${x0 + r} ${top}Z`;
+    const fin = (s) => `M${x0 + u * 1.9} ${mid - s * bh / 2}L${x0 + u * 0.55} ${mid - s * (H / 2 - 3)}Q${x0 - u * 0.05} ${mid - s * (H / 2 - 3)} ${x0 + u * 0.05} ${mid - s * (bh / 2 - u * 0.1)}Z`;
+    const wx = xn + N * 0.3, wr = bh * 0.2;
+    const win = `<circle cx="${wx}" cy="${mid}" r="${wr}" fill="#5ac8ff" stroke="${ink}" stroke-width="3"/><circle cx="${wx}" cy="${mid}" r="${wr * 0.7}" fill="#bff3ff"/><path d="M${wx - wr * 0.45} ${mid - wr * 0.3}a${wr * 0.5} ${wr * 0.5} 0 0 1 ${wr * 0.45}-${wr * 0.38}" stroke="#fff" stroke-width="3.5" fill="none" stroke-linecap="round"/>`;
+    return `<svg class="rk-svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" aria-hidden="true"><defs><clipPath id="${id}"><path d="${body}"/></clipPath></defs>
+      <path d="${fin(1)}" fill="#e0496b" stroke="${ink}" stroke-width="3" stroke-linejoin="round"/><path d="${fin(-1)}" fill="#e0496b" stroke="${ink}" stroke-width="3" stroke-linejoin="round"/>
+      <path d="${body}" fill="#eef3fa"/>
+      <g clip-path="url(#${id})"><rect x="0" y="${top}" width="${W}" height="${bh * 0.2}" fill="#fff"/><rect x="0" y="${bot - bh * 0.24}" width="${W}" height="${bh * 0.24}" fill="#cfd9ea"/><rect x="0" y="${bot - bh * 0.17}" width="${xn}" height="${bh * 0.07}" fill="#e0496b"/><path d="M${xn} 0V${H}H${W}V0Z" fill="#e0496b"/><path d="M${xn + N * 0.12} ${top + bh * 0.14}Q${xn + N * 0.55} ${top + bh * 0.12} ${W - N * 0.2} ${mid - bh * 0.1}" stroke="#ff8aa6" stroke-width="${u * 0.1}" fill="none" stroke-linecap="round"/><path d="M${xn} ${top}V${bot}" stroke="${ink}" stroke-width="3"/></g>
+      ${win}<path d="${body}" fill="none" stroke="${ink}" stroke-width="3.5" stroke-linejoin="round"/></svg>`;
+  }
+  // Entrada (16 nov 2026, el usuario: «que entre al revés, porque sale cortado»): llega de reversa desde la derecha,
+  // frenando, con el fuego prendido; luego salen las cartas.
+  async rocketIn(live) {
+    const u = this.u, body = this.rugEl, from = this.boardEl.getBoundingClientRect().width + u * 2;
+    for (const c of live) c.el.style.opacity = 0;
+    body.classList.add('boost');
+    await body.animate([{ translate: `${from}px 0` }, { translate: `${-u * 0.25}px 0`, offset: 0.8 }, { translate: '0 0' }], { duration: 1100, easing: 'cubic-bezier(.2,.7,.3,1)' }).finished.catch(() => {});
+    body.classList.remove('boost');
+    buzz(12);
+    const G = this.scrollGeo(), shown = live.filter((c) => G.cut(c) < 1);
+    for (const c of live) (c.el.style.opacity = ''), c.el.classList.add('noflip'), c.el.classList.toggle('up', this.shownUp(c));
+    shown.sort((a, c) => parseFloat(a.el.style.left) - parseFloat(c.el.style.left) || a.z - c.z);
+    const step = Math.min(35, 1100 / shown.length);
+    await Promise.all(shown.map((c, i) => c.el.animate([{ translate: `0 ${-u * 0.6}px`, scale: 1.25, opacity: 0 }, { translate: '0 0', scale: 1, opacity: 1 }], { duration: 300, delay: i * step, easing: 'cubic-bezier(.3,1.4,.5,1)', fill: 'backwards' }).finished.catch(() => {})));
+    for (const c of live) c.el.classList.remove('noflip');
+  }
+  // Avance (o regreso, al deshacer): el cuerpo se corre igual que las cartas; hacia adelante prende el fuego, pasan
+  // rayas de estrellas y el fondo se corre más lento (como si viajara).
+  rocketMove(before, D, ease) {
+    const d = (this.scrollAt - before) * this.u, b0 = this.rocketBox(before);
+    this.paintRocket();
+    if (!D || !d) return;
+    this.rugEl.animate([{ translate: `${b0.left - this.rocketBox().left}px 0` }, { translate: '0 0' }], { duration: D, easing: ease });
+    if (d < 0) return;
+    this.rugEl.classList.remove('boost');
+    void this.rugEl.offsetWidth;
+    this.rugEl.classList.add('boost');
+    clearTimeout(this.boostT);
+    this.boostT = setTimeout(() => this.rugEl.classList.remove('boost'), D);
+    // La nube echa una bocanada: se infla de lado y regresa.
+    this.rollEl.animate([{ scale: 1 }, { scale: '1.25 1.06', offset: 0.35 }, { scale: 1 }], { duration: Math.max(450, D), easing: 'ease-out' });
+    // Viento (16 nov 2026, el usuario: «que se vea más el efecto del viento… puede temblar un poco el cohete»): rayas
+    // por arriba, por abajo y encima del cohete, y la mesa entera tiembla mientras avanza.
+    const r = this.boardEl.getBoundingClientRect(), vh = window.innerHeight;
+    for (let i = 0; i < 18; i++) {
+      const s = document.createElement('i');
+      s.className = 'rk-streak' + (i % 3 ? '' : ' fat');
+      const y = i % 2 ? r.top + Math.random() * r.height : Math.max(0, r.top - vh * 0.15) + Math.random() * (r.height + vh * 0.3);
+      Object.assign(s.style, { top: `${y}px`, left: `${window.innerWidth + 10}px`, width: `${50 + Math.random() * 110}px` });
+      document.body.append(s);
+      s.animate([{ translate: '0 0', opacity: 0.95 }, { translate: `${-window.innerWidth - 200}px 0`, opacity: 0 }], { duration: 380 + Math.random() * 260, delay: i * 30, easing: 'ease-in', fill: 'both' }).finished.then(() => s.remove());
+    }
+    this.boardEl.animate([{ translate: '0 0' }, { translate: '-1.5px 1px' }, { translate: '1.5px -1px' }, { translate: '-1px -1px' }, { translate: '1px 1px' }, { translate: '0 0' }], { duration: D, easing: 'linear', iterations: 1 });
+    buzz(10);
+  }
+  // Monedas (16 nov 2026, el usuario: «reparte un máximo de 222 monedas a lo largo de todo el tramo»): de 150 a 222
+  // por nivel, repartidas entre los tramos según sus cartas (el último se lleva lo que sobra). Deshacer quita las del
+  // tramo que vuelve a tener cartas. Al vaciarlo todo, el cohete despega.
+  rocketGift(gi) {
+    if (!this.rkGifts) {
+      const gs = this.level.groups, k = gs.map((_, gi) => this.cards.filter((c) => c.group === gi).length), n = this.cards.length;
+      const T = 150 + (((this.level.g * 2654435761 + 977) >>> 0) % 73);
+      this.rkGifts = k.map((m) => Math.floor((T * m) / n));
+      this.rkGifts[gs.length - 1] += T - this.rkGifts.reduce((a, b) => a + b, 0);
+    }
+    return this.rkGifts[gi];
+  }
+  rocketPay() {
+    const gs = this.level.groups, done = new Set(gs.map((_, gi) => gi).filter((gi) => this.cards.every((c) => c.group !== gi || c.removed)));
+    if (!this.rkPaid) return void (this.rkPaid = done);
+    let gain = 0, loss = 0;
+    for (const gi of done) if (!this.rkPaid.has(gi)) (gain += this.rocketGift(gi)), this.rkPaid.add(gi);
+    for (const gi of [...this.rkPaid]) if (!done.has(gi)) (loss += this.rocketGift(gi)), this.rkPaid.delete(gi);
+    if (loss) {
+      save.coins = Math.max(0, save.coins - loss);
+      updateCoins();
+      persist();
+    }
+    if (!gain) return;
+    save.coins += gain;
+    persist();
+    const r = this.boardEl.getBoundingClientRect(), at = { x: r.left + r.width * 0.3, y: r.top + r.height / 2 };
+    flyToWallet('coins', at, gain, shownCoins() - gain);
+    const p = document.createElement('div');
+    p.className = 'rk-plus outl';
+    p.textContent = `+${gain}`;
+    Object.assign(p.style, { left: `${at.x}px`, top: `${at.y}px` });
+    document.body.append(p);
+    p.animate([{ translate: '-50% -50%', scale: 0.4, opacity: 0 }, { translate: '-50% -110%', scale: 1.15, opacity: 1, offset: 0.3 }, { translate: '-50% -180%', scale: 1, opacity: 0 }], { duration: 1400, easing: 'ease-out', fill: 'both' }).finished.then(() => p.remove());
+    buzz([10, 30, 10]);
+    if (done.size === gs.length) this.rocketLaunch();
+  }
+  // Despegue: la cola echa mucho fuego, tiembla y el cohete entero se va hacia la derecha (pasa hasta la cola).
+  rocketLaunch() {
+    if (this.rkLaunching || reduced()) return;
+    const body = this.rugEl;
+    body.parentNode.style.clipPath = 'none'; // al despegar se ve entero (la punta va por delante)
+    this.rollEl.classList.add('empty');
+    body.classList.add('boost', 'launch');
+    // Hasta que la cola (con su fuego) sale por la derecha de la pantalla.
+    const tail = this.boardEl.getBoundingClientRect().left + this.rocketBox().left - this.u * 2;
+    const a = body.animate([{ translate: '0 0' }, { translate: '-2px 1px', offset: 0.08 }, { translate: '2px -1px', offset: 0.16 }, { translate: '0 0', offset: 0.24 }, { translate: `${window.innerWidth - tail + 60}px 0` }], { duration: 2000, delay: 300, easing: 'cubic-bezier(.55,0,.8,.4)', fill: 'forwards' });
+    this.rkLaunching = a.finished.catch(() => {}).then(() => wait(150));
+    buzz([20, 60, 40]);
   }
 
   // ---------- Gravedad ----------
@@ -2411,6 +2605,8 @@ export class Game {
       this.place(c);
       if (D && (f0 < 1 || G.cut(c) < 1)) c.el.animate([{ translate: `${x0 - parseFloat(c.el.style.left)}px 0` }, { translate: '0 0' }], { duration: D, easing: ease });
     }
+    // Cohete: el cuerpo se corre con las cartas, la cola echa fuego y las estrellas pasan.
+    if (this.level.rocket) return this.rocketMove(before, D, ease);
     // La alfombra entera (con su orilla) se corre con las cartas y el rollo gira.
     const d = (o - before) * this.u;
     if (D && d) {
@@ -2463,7 +2659,7 @@ export class Game {
       this.boardEl.classList.toggle('flip-warn', E.flipLeft(st) === 1 && !(st.freeze > 0));
       if (turned) this.flipFx();
     }
-    if (level.scroll === 'mesa') this.scrollUpdate();
+    if (level.scroll === 'mesa') (this.scrollUpdate(), level.rocket && this.rocketPay());
     else if (level.scroll === 'gravedad') !this.flipping && this.gravUpdate();
     else if (level.scroll) this.nebUpdate();
     for (const c of this.cards) if (c.scr && c.el && !c.removed) this.paintScr(c);
@@ -4740,7 +4936,19 @@ export class Game {
   }
 
   checkEnd() {
-    if (E.won(this.st, this.level)) return this.win();
+    if (!E.won(this.st, this.level)) return;
+    // Cohete (16 nov 2026, el usuario: «me encanta que se vaya, pero cuida que sí se vaya»): primero despega completo y
+    // luego sale la ventana.
+    if (this.level.rocket) {
+      if (this.rkWaiting) return;
+      this.rocketPay();
+      if (this.rkLaunching) {
+        this.rkWaiting = true;
+        this.busy = true;
+        return this.rkLaunching.then(() => ((this.busy = false), this.win()));
+      }
+    }
+    return this.win();
   }
 
   // Sin mazo y sin jugadas: la carta +5 y "Finalizar nivel" saltan para que se vean (sin ventana).

@@ -453,7 +453,8 @@ const RESPITE_MIN = 10;
 // 14 nov 2026 (pedido del usuario, calendario nuevo): una mesa cada 50 niveles (51, 101, … 601) y dos cartas en medio
 // (a +20 y +30 de la mesa): enrollada 51, gravedad 101, nebulosa 151, hangar 201, bitácora 251, marea 301, agujero
 // negro 351, puertas 401, banda 451, asteroides 501, grúa 551 y la que se voltea 601.
-export const SCROLL_FROM = { mesa: 50, gravedad: 100, nebulosa: 150, hangar: 200, bitacora: 250, portal: 550, voltea: 600 };
+// 16 nov 2026 (pedido del usuario): el cohete se estrena en el 651 (el lugar de la caja galáctica, que se quitó).
+export const SCROLL_FROM = { mesa: 50, gravedad: 100, nebulosa: 150, hangar: 200, bitacora: 250, portal: 550, voltea: 600, cohete: 650 };
 // Marea (7 nov 2026): el agua sube desde abajo cada 3 robos y baja cada 3 jugadas; lo que queda bajo el agua no se
 // juega. Desde el nivel MAREA_FROM + 1, ~1 de cada 10 normales del camino (sin otra mesa, respiro ni ayudas).
 export const TIDE_FROM = 300; // antes 340 (ver SCROLL_FROM)
@@ -510,7 +511,7 @@ export const rocksKind = (g) => finalTable(g) ? finalTable(g) === 'rocks' : (exF
 // ya se estrenaron (FINAL_TABLES: desde qué nivel), escogida con su hash. Los duros no (su tablero es otro).
 export const FINAL_MIX = 3;
 export const isFinal = (g) => g < TOTAL_LEVELS && g % LEVELS_PER_WORLD === LEVELS_PER_WORLD - 1 && !constBoss(g);
-const FINAL_TABLES = () => [['gravedad', SCROLL_FROM.gravedad], ['nebulosa', SCROLL_FROM.nebulosa], ['hangar', SCROLL_FROM.hangar], ['bitacora', SCROLL_FROM.bitacora], ['tide', TIDE_FROM], ['hole', HOLE_FROM], ['doors', DOORS_FROM], ['banda', BANDA_FROM], ['rocks', ROCKS_FROM], ['portal', SCROLL_FROM.portal], ['voltea', SCROLL_FROM.voltea]];
+const FINAL_TABLES = () => [['gravedad', SCROLL_FROM.gravedad], ['nebulosa', SCROLL_FROM.nebulosa], ['hangar', SCROLL_FROM.hangar], ['bitacora', SCROLL_FROM.bitacora], ['tide', TIDE_FROM], ['hole', HOLE_FROM], ['doors', DOORS_FROM], ['banda', BANDA_FROM], ['rocks', ROCKS_FROM], ['portal', SCROLL_FROM.portal], ['voltea', SCROLL_FROM.voltea], ['cohete', SCROLL_FROM.cohete]];
 export const finalTable = (g) => {
   if (!isFinal(g) || hardHelp(g)) return null;
   const open = FINAL_TABLES().filter(([, f]) => g > f + 5);
@@ -523,6 +524,9 @@ export const HOLE_TAKE = 1; // parte que se traga y revuelve en cada vuelta (10 
 export const DOOR_STEP = 0.3; // paso entre las cartas de la pila de una puerta
 export const NEB_SLOTS = 3;
 export const SCROLL_VIEW = 8.2, SCROLL_GAP = 0.45, SCROLL_SHOW = 0.5;
+// Cohete (16 nov 2026, el usuario: «pega más los grupos… que no se distinga mucho dónde empieza uno y otro»).
+export const ROCKET_GAP = 0.2; // (0.12 juntaba de más las cartas torcidas de tramos vecinos)
+export const stripGap = (L) => (L?.rocket ? ROCKET_GAP : SCROLL_GAP);
 const SCROLL_SPARE = 0.2; // sobrantes extra por carta del tablero
 const SCROLL_PIECES = ['miniPyramid', 'miniInv', 'twoRows', 'twoRows', 'sandwich', 'crown', 'steps', 'stack', 'fan', 'tiltFan', 'arc', 'cross', 'rosette'];
 // Estreno de una carta (el primer nivel de su mundo; el cometa y el cohete ya buscan uno sin mesa en extraDebut): sin
@@ -556,6 +560,7 @@ export function scrollKind(g) {
   if (g >= SCROLL_FROM.hangar && !((hash(g * 4127 + 61) >>> 7) % 12)) return 'hangar';
   if (g >= SCROLL_FROM.bitacora && !((hash(g * 8297 + 19) >>> 6) % 12)) return 'bitacora';
   if (g >= SCROLL_FROM.portal && !((hash(g * 2389 + 503) >>> 9) % 12)) return 'portal';
+  if (g >= SCROLL_FROM.cohete && !((hash(g * 5011 + 409) >>> 8) % 12)) return 'cohete';
   // Los que eran de la plegable, antes de que se abra la marea, llevan una de estas tres (después, ver exFoldKind).
   return exFold(g) && g < TIDE_FROM ? ['mesa', 'gravedad', 'nebulosa'][hash(g * 613 + 29) % 3] : null;
 }
@@ -631,20 +636,20 @@ function bitaSheets(r) {
   return out;
 }
 // Dónde empieza cada tramo en la tira (de izquierda a derecha).
-export function scrollStrip(groups) {
+export function scrollStrip(groups, gap = SCROLL_GAP) {
   const at = [];
-  const end = groups.reduce((s, g, k) => ((at[k] = s), s + g.w + SCROLL_GAP), 0) - SCROLL_GAP;
+  const end = groups.reduce((s, g, k) => ((at[k] = s), s + g.w + gap), 0) - gap;
   return { at, end };
 }
 // Tapas del rollo con una ventana de view: a cada carta la tapan las que empiezan antes de su orilla izquierda
 // + SCROLL_SHOW − view (mientras no se vayan, la carta no asoma lo bastante del rollo).
-function rollCover(cards, groups, view) {
-  const { at } = scrollStrip(groups), span = cards.map((p) => scrollSpan(p, at));
+function rollCover(cards, groups, view, gap = SCROLL_GAP) {
+  const { at } = scrollStrip(groups, gap), span = cards.map((p) => scrollSpan(p, at));
   return cards.map((p, i) => cards.reduce((acc, q, j) => (span[j][0] < span[i][0] + SCROLL_SHOW - view && acc.push(j), acc), []));
 }
 // Tapas de cada carta de una mesa enrollada con una ventana más larga (view ≥ SCROLL_VIEW).
 export function scrollCover(L, view) {
-  const roll = rollCover(L.cards, L.groups, Math.max(SCROLL_VIEW, view));
+  const roll = rollCover(L.cards, L.groups, Math.max(SCROLL_VIEW, view), stripGap(L));
   return L.cards.map((c, i) => [...c.under, ...roll[i]]);
 }
 // Orillas izquierda y derecha de una carta en la tira.
@@ -753,11 +758,10 @@ export const isSecret = (g) => g >= TOTAL_LEVELS && g < TOTAL_LEVELS + WORLD_COU
 // Ningún nivel pide ayudas (6 nov 2026; el sistema de antes, con niveles que sin comodines o +5 no tenían solución,
 // quedó en la rama ayudas-en-duro). Los duros se arman con su escalón (TIERS): siempre se pueden ganar sin ayudas y
 // con el camino acertado dan 3★. Camino (hardHelp 1-3): muy difícil, extremo, demasiado extremo. Evento del mes
-// (EVENT_HELP 1-3) y especiales/festividades (specialHelp 1-4): difícil, muy difícil, extremo, demasiado extremo.
+// (EVENT_HELP 1-3): difícil, muy difícil, extremo. Festividades: muy difícil y el jefe extremo (festivalLevel).
 // Sin archivos: el tablero de cada uno lo escoge el juego al armarlo con una revisión rápida (pickLevel).
 export function generateLevel(g, ev = null) {
   if (ev) return buildLevel(g, ev);
-  if (g >= SPECIAL_ID) return specialLevel(g - SPECIAL_ID);
   if (constBoss(g)) return bossLevel(g);
   const h = hardHelp(g);
   if (h) return pickLevel(`c${g}`, h + 1, (t) => buildLevel(g, null, t, h + 1));
@@ -924,7 +928,7 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
   const index = base % LEVELS_PER_WORLD;
   const r = mulberry32(hash(ev ? ev.seed : t ? g + t * 104729 : g));
   // Todos los niveles usan las formas, piezas, mesas y cartas nuevas (cierre de la Fase 7). Solo los del camino que no
-  // son duros (fresh) tienen respiros; los duros no llevan mesa enrollada (en una pantalla ancha se ve más tira). El evento y los especiales traen su mesa en ev.scroll (ver eventBase, specialBase).
+  // son duros (fresh) tienen respiros; los duros no llevan mesa enrollada (en una pantalla ancha se ve más tira). El evento y las festividades traen su mesa en ev.scroll (ver eventBase, festivalBase).
   const fresh = !ev && !hardHelp(g);
   // Respiro: en cada mundo 1 nivel (a veces 2) sale fácil, para que no todos sean cuesta arriba (ver isRespite).
   const respite = fresh && !secret && isRespite(base);
@@ -932,13 +936,16 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
   // FINAL_MIX veces más probable) y de preferencia una mesa especial (finalTable). No el del jefe de constelación.
   const fin = fresh && !secret && !respite && isFinal(base) ? FINAL_MIX : 1;
   const kind0 = !ev && !secret && !respite ? scrollKind(base) : null;
-  const want = ev ? ev.scroll || null : fresh || kind0 !== 'mesa' ? kind0 : null;
+  const want = ev ? ev.scroll || null : fresh || (kind0 !== 'mesa' && kind0 !== 'cohete') ? kind0 : null;
   // Mesas de columnas (son la gravedad, scroll 'gravedad'): la que se voltea (media vuelta cada FLIP_EVERY acciones,
   // level.flip, c.flipBy; los duros no la llevan: su tablero y sus estrellas salen del camino acertado, que no sabe de
   // la vuelta), los portales (la gravedad al revés: solo se ve distinta) y el hangar (solo se ven HANGAR_SHOW columnas;
   // al vaciar una sale otra, con la regla de la nebulosa). La bitácora es un tablero normal de hojas encimadas.
   const flipOn = want === 'voltea' && !T, portalOn = want === 'portal', hangarOn = want === 'hangar', bitaOn = want === 'bitacora';
-  const scroll = ['voltea', 'portal', 'hangar'].includes(want) ? 'gravedad' : bitaOn ? null : want;
+  // Cohete (16 nov 2026, el usuario: «exactamente las mismas mecánicas del tapete, solo otra animación»): es la mesa
+  // enrollada (scroll 'mesa') con level.rocket; el juego la dibuja como cohete y regala monedas por tramo.
+  const rocketOn = want === 'cohete';
+  const scroll = ['voltea', 'portal', 'hangar'].includes(want) ? 'gravedad' : bitaOn ? null : rocketOn ? 'mesa' : want;
   const d0 = ev ? ev.d : secret ? Math.min(1, difficulty(base) + 0.05) : difficulty(base);
   // Mesa enrollada: la tira es larga y solo se ve un pedazo; el mazo va más amable (y con más sobrantes, abajo).
   // La nebulosa, algo menos (medido con el bot casual).
@@ -961,7 +968,7 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
   // en ~20% y la mesa que se voltea en ~15%: el usuario los quiere así, 13 nov 2026.)
   if (bitaOn && !debut) d *= 0.8;
   // Evento: en cada planeta salen más seguido las formas que más cuestan (medido con el bot casual).
-  const template = (ev?.scroll && (bitaOn ? 'bitacora' : scroll)) || ev?.template || (ev && (index === LEVELS_PER_WORLD - 1 || r() < 0.15 + ev.tight * 0.17) ? pick(r, ['peaks', 'peaks', 'scatter', 'invPyramid']) : (bitaOn ? 'bitacora' : scroll) || (respite ? pick(r, RESPITE_SHAPES) : chooseTemplate(r, ev ? Math.max(3, base) : base, d, true)));
+  const template = (ev?.scroll && (bitaOn ? 'bitacora' : scroll)) || ev?.template || (ev && (index === LEVELS_PER_WORLD - 1 || r() < 0.15 + ev.tight * 0.17) ? pick(r, ['peaks', 'peaks', 'scatter', 'invPyramid']) : (bitaOn ? 'bitacora' : rocketOn ? 'cohete' : scroll) || (respite ? pick(r, RESPITE_SHAPES) : chooseTemplate(r, ev ? Math.max(3, base) : base, d, true)));
 
   const shape = (dd) => (template === 'clusters' ? clusters(r, dd, index === LEVELS_PER_WORLD - 1, true) : [TEMPLATES[template](r, dd)]);
   let raw = bitaOn ? bitaSheets(r) : scroll ? scrollSegments(r, d, hangarOn ? 'hangar' : scroll) : shape(d);
@@ -986,7 +993,7 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
   // o más adelante; o sea, cuando ya se fueron todas las cartas que empiezan antes de eso.
   const tableScroll = scroll === 'mesa', nebula = scroll === 'nebulosa', grav = scroll === 'gravedad';
   const under = tableScroll && coveredBy.map((a) => a.slice());
-  if (tableScroll) rollCover(pos, groups, SCROLL_VIEW).forEach((a, i) => coveredBy[i].push(...a));
+  if (tableScroll) rollCover(pos, groups, SCROLL_VIEW, rocketOn ? ROCKET_GAP : SCROLL_GAP).forEach((a, i) => coveredBy[i].push(...a));
   // Nebulosa: tramos que hay que vaciar antes de que salga cada carta.
   const neb = nebula ? pos.map((p) => Math.max(0, p.group - NEB_SLOTS + 1)) : hangarOn ? pos.map((p) => Math.max(0, p.group - HANGAR_SHOW + 1)) : null;
   const segments = (nebula || grav) && groups.map((_, gi) => pos.reduce((a, p, i) => (p.group === gi && a.push(i), a), []));
@@ -1573,6 +1580,7 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
     g, world, index, d, template, boss, secret, event: !!ev, fresh, ...(respite && { respite }), ...(scroll && { scroll }), ...(tideOn && cards.some((c) => c.wet) && { tide: 1 }), ...(hole && { hole }), ...(vine && { vine }), ...(doors && { doors }), ...(belt && { belt }), ...(rocksOn && { rocks: { n: base === rocksFirst() ? 2 : 2 + (hash(g * 211 + 7) % 2) } }),
     ...(raw.names && { pieces: raw.names }),
     ...((nebula || hangarOn) && { neb: segments }),
+    ...(rocketOn && { rocket: 1 }),
     ...(hangarOn && { hangar: HANGAR_SHOW }),
     ...(portalOn && { portal: 1 }),
     ...(sheets && { sheets, peek }),
@@ -1861,48 +1869,32 @@ function hardMap() {
 }
 export const hardHelp = (g) => hardMap().get(g) || 0;
 
-// ---------- Tableros especiales (para eventos exclusivos) ----------
-// 1,000 tableros aparte, que no salen ni en el camino ni en el evento del mes, ordenados por escalón
-// (specialHelp): 0-249 difícil, 250-499 muy difícil, 500-749 extremo y 750-999 demasiado extremo. Cada uno es de un grupo de
-// mecánicas como el evento (grupo 0-4 = el jugador ya llegó al mundo 9, 12, 16, 20 o 25): solo usan las que ya conoce.
-// Cada 4.º es tablero de jefe. specialLevel(i) arma el tablero (escoge la versión con pickLevel); specials(h, grupo) los busca.
-export const SPECIAL_COUNT = 1000;
-export const SPECIAL_ID = EVENT_ID + EVENT_LEVELS;
-export const specialHelp = (i) => 1 + Math.floor(i / 250);
-export const specialGroup = (i) => i % EVENT_WORLDS.length;
-export const specials = (h, group = null) => [...Array(SPECIAL_COUNT).keys()].filter((i) => specialHelp(i) === h && (group == null || specialGroup(i) === group));
-// Para que no salgan todos con la misma forma, cada uno trae la suya (se turnan). Dispersa y capas no van en los
-// demasiado extremos.
-const SPECIAL_SHAPES = ['pyramid', 'diamond', 'wall', 'invPyramid', 'clusters', 'towers', 'peaks', 'scatter', 'layers'];
-export function specialBase(i, t = 0, tier = 0) {
-  const h = specialHelp(i), boss = i % 4 === 3, shapes = SPECIAL_SHAPES.slice(0, h === 4 ? 7 : 9);
-  // ~1 de cada 12 con mesa especial (de las que ya conoce su grupo), como en el camino.
-  const kinds = helpScrolls(EVENT_WORLDS[specialGroup(i)]), hs = hash(i * 7349 + 101);
-  const scroll = kinds.length && !(hs % 12) ? kinds[(hs >>> 5) % kinds.length] : null;
-  const L = buildLevel(SPECIAL_ID + i, { world: EVENT_WORLDS[specialGroup(i)], index: boss ? LEVELS_PER_WORLD - 1 : 1 + (i % 4) * 2, d: Math.min(1, 0.45 + h * 0.1), tight: h, scroll, template: shapes[i % shapes.length], seed: 8e6 + i * 13 + t * 7919, tier });
-  return { ...L, event: false, special: i, rewardStep: 2 };
-}
-export const specialLevel = (i) => pickLevel(`p${i}`, specialHelp(i), (t) => specialBase(i, t, specialHelp(i)));
-
 // ---------- Festividades (eventos de 24 h) ----------
-// 3 planetas de 3 niveles, todos con tableros especiales: los dos primeros de cada planeta muy difíciles y el jefe extremo
-// (y es tablero de jefe). Usan las mecánicas que ya conoces (grupo según el mundo al empezar). seed cambia con la
-// festividad y el año: cada edición trae otros tableros, y dentro de una no se repiten.
+// 3 planetas de 3 niveles (algunas traen más): los que no son jefe muy difíciles y el jefe extremo (con tablero de jefe).
+// Usan las mecánicas que ya conoces (grupo según el mundo al empezar). Cada nivel se arma al momento con la fecha de la
+// festividad (day, cambia cada año): cada edición trae otros tableros, y dentro de una no se repiten.
+// 16 nov 2026 (el usuario): antes los escogían de una lista de 1,000 tableros especiales (la «reserva»); se quitó.
 export const FESTIVAL_PLANETS = 3;
 export const FESTIVAL_PER_PLANET = 3;
 export const FESTIVAL_LEVELS = FESTIVAL_PLANETS * FESTIVAL_PER_PLANET;
-// Algunas festividades largas traen más (n: niveles por planeta); los que no son jefe muy difíciles y el jefe extremo.
-// Qué tablero especial toca (sin armarlo; el modo dev lo usa para saber qué festividad usa cada uno).
-export function festivalPick(seed, k, world, n = FESTIVAL_PER_PLANET) {
-  const j = k % n, p = Math.floor(k / n), boss = j === n - 1;
-  const pool = specials(boss ? 3 : 2, eventGroup(world)).filter((i) => (i % 4 === 3) === boss);
-  // Las de 3×3 siguen como siempre; las más largas cuentan jefes y no jefes por separado para no repetir tablero.
-  const step = n === FESTIVAL_PER_PLANET ? k : boss ? p : p * (n - 1) + j;
-  return pool[(hash(seed) + step * 7) % pool.length];
+// Para que no salgan todos con la misma forma se turnan (desde una que cambia con la fecha).
+const FESTIVAL_SHAPES = ['pyramid', 'diamond', 'wall', 'invPyramid', 'clusters', 'towers', 'peaks', 'scatter', 'layers'];
+// Id de los niveles de las festividades (después de los del evento): solo para sus semillas.
+export const FESTIVAL_ID = EVENT_ID + EVENT_LEVELS;
+// n: niveles por planeta · t: otro tablero para el mismo nivel (pickLevel escoge cuál) · tier: su escalón (TIERS).
+export function festivalBase(day, k, group, n = FESTIVAL_PER_PLANET, t = 0, tier = 2) {
+  const j = k % n, boss = j === n - 1, hs = hash(day * 7349 + group * 131 + k);
+  // ~1 de cada 12 con mesa especial (de las que ya conoce su grupo), como en el camino.
+  const kinds = helpScrolls(EVENT_WORLDS[group]);
+  const scroll = kinds.length && !(hs % 12) ? kinds[(hs >>> 5) % kinds.length] : null;
+  const template = FESTIVAL_SHAPES[(hash(day * 31 + group) + k) % FESTIVAL_SHAPES.length];
+  const L = buildLevel(FESTIVAL_ID + (day % 4096) * 16 + k, { world: EVENT_WORLDS[group], index: boss ? LEVELS_PER_WORLD - 1 : 1 + j * 2, d: Math.min(1, 0.45 + tier * 0.1), tight: tier, scroll, template, seed: 8e6 + day * 131 + group * 29 + k + t * 7919, tier });
+  return { ...L, event: false, fest: true, rewardStep: 2 };
 }
-export function festivalLevel(seed, k, world, n = FESTIVAL_PER_PLANET) {
-  const p = Math.floor(k / n), boss = k % n === n - 1;
-  return { ...specialLevel(festivalPick(seed, k, world, n)), k, planet: p, boss };
+export function festivalLevel(day, k, world, n = FESTIVAL_PER_PLANET) {
+  const p = Math.floor(k / n), boss = k % n === n - 1, group = eventGroup(world), tier = boss ? 3 : 2;
+  const L = pickLevel(`f${day}.${group}.${k}.${n}`, tier, (t) => festivalBase(day, k, group, n, t, tier));
+  return { ...L, k, planet: p, boss };
 }
 
 // ---------- Mecánicas por mundo ----------

@@ -3,12 +3,12 @@
 import { save, prefs, persist, backupOnce, restoreBackup, setDev, backupInfo } from './storage.js';
 import { missions, missionDone, ACHIEVEMENTS, ACHIEVEMENT_TOP, achievementGot, achievementNeed, achievementsVisible } from './missions.js';
 import { streakWin, streakLose, dailyStreak, nextGoal, col, daysToNextCol, ev, daysToNextEvent, evEnter, evWin, EVENT_PER_PLANET, EVENT_LEVELS, festival, festEnter, festWin, nextFestival, daysToNextFestival, daysToFestival, festShape, isOn, UNLOCK } from './events.js';
-import { TIERS, generateLevel, hardHelp, festivalPick, festivalLevel, eventLevel, eventGroup, EVENT_WORLDS, packGroups, worldInfo, specials, specialGroup, SPECIAL_ID, TOTAL_LEVELS, LEVELS_PER_WORLD, MECH_NAMES, MECHANICS, MECH_INTRO, SCROLL_FROM, EXTRA, extraDebut, tideFirst, holeFirst, doorsFirst, bandaFirst, rocksFirst, BOSS_ORDER, BOSS_NAMES } from './levels.js';
+import { TIERS, generateLevel, hardHelp, scrollKind, festivalLevel, eventLevel, eventGroup, EVENT_WORLDS, packGroups, worldInfo, TOTAL_LEVELS, LEVELS_PER_WORLD, MECH_NAMES, MECHANICS, MECH_INTRO, SCROLL_FROM, EXTRA, extraDebut, tideFirst, holeFirst, doorsFirst, bandaFirst, rocksFirst, BOSS_ORDER, BOSS_NAMES } from './levels.js';
 import { playCasual, solve, initState, BOSS_EVERY, BOSS_FIRST, KRAKEN_TICKLE, KRAKEN_SLAM, WHALE_SPIT } from './engine.js';
 import { openModal, toast, updateCoins, popGoal } from './ui.js';
 import { openSlot, slotWhy, SLOT_PAY, SLOT_PAY_RICH, SLOT_EXTRA, SLOT_MONTH_DAYS } from './slot.js';
 import { mulberry32 } from './rng.js';
-import { FOE_ICON } from './game.js';
+import { FOE_ICON, ART } from './game.js';
 import { icon, miniPlanet } from './art.js';
 import { tableHTML, BIOMES, biomeKey } from './biomes.js';
 import { peek } from './galaxy.js';
@@ -39,10 +39,12 @@ export const dev = {
 };
 
 // Dónde estaba la galería, para volver a la misma página y filtros al salir de un nivel.
-// src: camino · mes (evento del mes) · dia (festividades; fi = 'reserva' para los 1,000 especiales). help (filtro Dificultad): '' todos, '0' normales, 'any' duros, 'n' escalón n (TIERS).
-export const gallery = { start: 0, tpl: 'todas', boss: false, mA: '', mB: '', help: '', active: false, src: 'camino', month: null, fi: null, year: null, grp: null };
+// src: camino · eventos (del mes y festividades). open / evOpen: renglón abierto de cada uno ·
+// all: el camino entero por páginas (desde start) · rows: lo que ya encontró cada renglón del camino.
+export const gallery = { start: 0, active: false, src: 'camino', year: null, grp: null, open: null, evOpen: null, all: false, rows: {} };
 
-const label = (g) => (g >= SPECIAL_ID ? `Especial ${g - SPECIAL_ID + 1} · grupo ${specialGroup(g - SPECIAL_ID) + 1}` : `Mundo ${Math.floor(g / LEVELS_PER_WORLD) + 1} · Nivel ${(g % LEVELS_PER_WORLD) + 1}`);
+// Evento o festividad (traen k): su número dentro del evento; si no, mundo y nivel.
+const label = (L) => (L.k != null ? `Nivel ${L.k + 1} de ${L.fest ? 'la festividad' : 'el evento del mes'}` : `#${L.g + 1} · Mundo ${Math.floor(L.g / LEVELS_PER_WORLD) + 1} · Nivel ${(L.g % LEVELS_PER_WORLD) + 1}`);
 
 function askLevel(current) {
   const v = prompt(`Ir a nivel (1-${TOTAL_LEVELS}). También vale "mundo-nivel", ej. 12-3`, String(current + 1));
@@ -80,9 +82,9 @@ export function attachDevBar(game, { go, toGallery }) {
   // Botón DEV flotante (siempre a la vista, no quita lugar al tablero) que abre el menú como uno de hamburguesa.
   // Tres grupos: ir (galería y niveles), probar (ver, solución, paso, resolver, ganar) e Info. Iconos de trazo, sin emojis.
   const L = game.level;
-  // Evento o festividad (traen k): su número dentro del evento; especial suelto; si no, mundo y nivel.
+  // Evento o festividad (traen k): su número dentro del evento; si no, mundo y nivel.
   const set = L.k != null, num = set ? L.k + 1 : g + 1;
-  const where = set ? (L.special != null ? 'festividad' : 'evento del mes') : L.special != null ? `Especial ${L.special + 1}` : `M${Math.floor(g / LEVELS_PER_WORLD) + 1} · N${(g % LEVELS_PER_WORLD) + 1}`;
+  const where = set ? (L.fest ? 'festividad' : 'evento del mes') : `M${Math.floor(g / LEVELS_PER_WORLD) + 1} · N${(g % LEVELS_PER_WORLD) + 1}`;
   const btn = (d, ico, txt, extra = '') => `<button data-d="${d}" ${extra}>${DI[ico]}${txt ? `<span>${txt}</span>` : ''}</button>`;
   bar.innerHTML = `
     <button class="db-fab" data-d="menu" aria-label="Menú dev" aria-expanded="false">DEV</button>
@@ -144,7 +146,7 @@ function showInfo(L) {
   const ms = Math.round(performance.now() - t0);
   const free = L.cards.filter((c) => !c.coveredBy.length).length;
   const rows = [
-    ['Nivel', `#${L.g + 1} · ${label(L.g)}${L.boss ? ' · JEFE' : ''}`],
+    ['Nivel', `${label(L)}${L.boss ? ' · JEFE' : ''}`],
     ['Forma', `${tplName(L)} (${L.groups.length} grupo${L.groups.length > 1 ? 's' : ''})`],
     ['Dificultad d', L.d.toFixed(2)],
     ['Cartas tablero', `${L.cards.length} (${free} libres al inicio)`],
@@ -167,7 +169,7 @@ function showInfo(L) {
 const PAGE = 24;
 // Tableros y piezas en el orden en que salen en el camino, con el nivel donde aparecen por primera vez
 // (medido recorriendo los 5,200; si cambia el generador, volver a medir).
-const TEMPLATES = [['pyramid', 1], ['peaks', 2], ['clusters', 3], ['star', 10], ['layers', 12], ['wall', 19], ['towers', 23], ['butterfly', 33], ['diamond', 34], ['spiral', 35], ['mesa', 40], ['heart', 42], ['gravedad', 70], ['scatter', 71], ['nebulosa', 100], ['invPyramid', 148], ['hourglass', 169]];
+const TEMPLATES = [['pyramid', 1], ['peaks', 2], ['clusters', 3], ['star', 10], ['layers', 12], ['wall', 19], ['towers', 23], ['butterfly', 33], ['diamond', 34], ['spiral', 35], ['mesa', 40], ['heart', 42], ['gravedad', 70], ['scatter', 71], ['nebulosa', 100], ['invPyramid', 148], ['hourglass', 169], ['cohete', 651]];
 // Fase 7: piezas nuevas (solo salen en niveles sin ayudas) y respiros.
 // Iconos chiquitos de las mesas especiales (para el recuento).
 const SV = (b) => `<svg class="ico" viewBox="0 0 32 32" fill="none" stroke="#2a1f5c" stroke-width="2" stroke-linejoin="round">${b}</svg>`;
@@ -178,6 +180,7 @@ const TABLE_ICONS = {
   bitacora: SV('<rect x="5" y="4" width="22" height="25" rx="2.5" fill="#1d2a62"/><path d="M5 9h22" stroke="#9ff3ff" stroke-width="1.6"/><rect x="11" y="13" width="10" height="12" rx="3" fill="#fff" stroke="#9aa3c7" stroke-width="2.4"/>'),
   portal: SV('<path d="M16 1v6" stroke-width="2"/><rect x="10" y="6" width="12" height="6" rx="2" fill="#ffc83d"/><path d="M13 12q-5 4-3 10M19 12q5 4 3 10" stroke="#c9d0ea" stroke-width="3" stroke-linecap="round"/><rect x="11" y="18" width="10" height="12" rx="2" fill="#fff"/>'),
   voltea: SV('<rect x="5" y="4" width="22" height="24" rx="9" fill="#5b4bb8"/><rect x="10" y="9" width="5" height="7" rx="1.2" fill="#fff"/><rect x="17" y="16" width="5" height="7" rx="1.2" fill="#fff"/><path d="M27 9a12 12 0 0 1-4 15" stroke="#ffd54a" stroke-width="2.4" stroke-linecap="round"/>'),
+  cohete: SV('<path d="M16 2c5 4 7 10 7 16v6H9v-6c0-6 2-12 7-16z" fill="#e9eef7"/><path d="M9 17h14M9 11h14" stroke-width="1.6"/><path d="M9 19l-5 7h5zM23 19l5 7h-5z" fill="#e0496b"/><path d="M12 25l4 6 4-6z" fill="#ffb347"/>'),
   nebulosa: SV('<circle cx="16" cy="16" r="13" fill="#8a5cf0"/><path d="M16 16c0-3 4-3 4 0s-3 6-7 5-6-5-4-9 8-6 12-3" stroke="#fff" stroke-width="2" stroke-linecap="round"/>'),
   // Mesas sobre un tablero normal (8 nov 2026: faltaban en el recuento y en los filtros).
   banda: SV('<rect x="3" y="11" width="26" height="11" rx="3" fill="#5d5a7a"/><rect x="9" y="8" width="6" height="9" rx="1.4" fill="#fff"/><rect x="17" y="8" width="6" height="9" rx="1.4" fill="#fff"/><rect x="1" y="7" width="5" height="18" rx="2" fill="#ffb066"/><rect x="26" y="7" width="5" height="18" rx="2" fill="#ffb066"/>'),
@@ -188,7 +191,7 @@ const TABLE_ICONS = {
 };
 export const tableIcon = (t) => TABLE_ICONS[t] || '';
 const RAIN_NOTE = { comet: '1 vez por semana, 20 minutos sin aviso: jugar no gasta boletos y cada victoria da 1 boleto más.', aurora: '1 vez por semana, 20 minutos sin aviso y solo con colección abierta: fichas ×2 y hasta 2 premios.', crystal: '1 vez cada dos semanas, 10 minutos sin aviso: cada nivel ganado puede dar una ayuda al azar (3★ 70%, 2★ 47%, 1★ 23%; el jugador no lo ve).' };
-const SCROLL_NAMES = { mesa: 'mesa enrollada', gravedad: 'gravedad', nebulosa: 'nebulosa', voltea: 'mesa que se voltea', hangar: 'hangar', bitacora: 'bitácora', portal: 'grúa de feria' };
+const SCROLL_NAMES = { cohete: 'cohete', mesa: 'mesa enrollada', gravedad: 'gravedad', nebulosa: 'nebulosa', voltea: 'mesa que se voltea', hangar: 'hangar', bitacora: 'bitácora', portal: 'grúa de feria' };
 // Mesas que van sobre un tablero normal (no son tira): se filtran por su bandera del nivel.
 // Mesas que son gravedad por dentro (13 nov 2026): se filtran por su bandera.
 const colKind = (L) => (L.flip ? 'voltea' : L.portal ? 'portal' : L.hangar ? 'hangar' : null);
@@ -196,7 +199,7 @@ const COL_TABLES = [['hangar', 'Hangar', SCROLL_FROM.hangar + 1], ['bitacora', '
 const OVERLAY_TABLES = [['marea', 'Marea', tideFirst() + 1, (L) => !!L.tide], ['hoyo', 'Agujero negro', holeFirst() + 1, (L) => !!L.hole], ['puertas', 'Puertas', doorsFirst() + 1, (L) => !!L.doors], ['banda', 'Banda transportadora', bandaFirst() + 1, (L) => !!L.belt], ['rocas', 'Asteroides', rocksFirst() + 1, (L) => !!L.rocks]];
 const PIECES = [['steps', 3], ['cross', 3], ['crown', 8], ['rosette', 13], ['sandwich', 16], ['tiltFan', 21]];
 // Nombres en español de formas y piezas (galería e Info).
-const TPL_NAMES = { pyramid: 'Pirámide', peaks: 'Picos', clusters: 'Grupitos', star: 'Estrella', layers: 'Capas', wall: 'Muro', towers: 'Torres', butterfly: 'Mariposa', diamond: 'Diamante', spiral: 'Espiral', mesa: 'Mesa enrollada', heart: 'Corazón', gravedad: 'Gravedad', scatter: 'Dispersas', nebulosa: 'Nebulosa', invPyramid: 'Pirámide invertida', hourglass: 'Reloj de arena', bitacora: 'Bitácora' };
+const TPL_NAMES = { cohete: 'Cohete', pyramid: 'Pirámide', peaks: 'Picos', clusters: 'Grupitos', star: 'Estrella', layers: 'Capas', wall: 'Muro', towers: 'Torres', butterfly: 'Mariposa', diamond: 'Diamante', spiral: 'Espiral', mesa: 'Mesa enrollada', heart: 'Corazón', gravedad: 'Gravedad', scatter: 'Dispersas', nebulosa: 'Nebulosa', invPyramid: 'Pirámide invertida', hourglass: 'Reloj de arena', bitacora: 'Bitácora' };
 const PIECE_NAMES = { steps: 'escalerita', cross: 'cruz', crown: 'corona', rosette: 'roseta', sandwich: 'sándwich', tiltFan: 'abanico inclinado' };
 // Filtro de tablero, en grupos: formas, mesas especiales y piezas (cada una con el nivel donde sale primero).
 const TPL_GROUPS = [
@@ -229,86 +232,79 @@ function preview(L, W = 150, H = 104) {
     .join('');
 }
 
+// Galería del camino por renglones (16 nov 2026, pedido del usuario: los filtros «comienzan a chafear» y la página se
+// trababa armando cientos de niveles seguidos). Cada renglón (tablero, mesa, pieza, carta, dificultad, jefes) dice
+// desde qué nivel sale; al abrirlo, sus niveles salen de poco en poco (unos milisegundos por cuadro, sin trabar) y
+// «Ver más» busca los siguientes. key: id del renglón · from: nivel (0-based) donde empieza a buscar · ok: si el nivel
+// entra · step: siguiente nivel a revisar.
+const debutOf = (label) => Math.max(0, (+String(label).split('· ').pop().replace(/\D/g, '') || 1) - 1);
+// 16 nov 2026 (el usuario): primero mesas, cartas especiales y jefes; luego lo demás. Cada sección sale cerrada y
+// todo va por orden de aparición (la mesa, con el nivel de su estreno en el calendario).
+const tableDebut = (k) => (SCROLL_FROM[k] != null ? SCROLL_FROM[k] : null);
+const ROW_GROUPS = () => [
+  ['Mesas especiales', TPL_GROUPS[1][1].map(([k, t]) => {
+    const sk = k.replace(/^(cv|ov):/, ''), d = tableDebut(sk);
+    return { key: k, name: t.split(' · ')[0], ico: tableIcon(sk), from: d ?? debutOf(t), ok: (L) => okTpl(L, k), pre: SCROLL_NAMES[sk] && sk !== 'gravedad' ? (g) => scrollKind(g) === sk : null };
+  }).sort((a, b) => a.from - b.from)],
+  ['Cartas especiales', MECH_ORDER.map((m) => ({ key: `m:${m}`, name: MECH_NAMES[m], ico: `<span class="dmc">${ART.mechCard(m)}</span>`, from: mechDebut(m) - 1, ok: (L) => L.meta.mechs.includes(m) }))],
+  ['Jefes', [
+    { key: 'boss', name: 'Nivel final de cada mundo', ico: icon('trophy'), from: LEVELS_PER_WORLD - 1, ok: (L) => !!L.boss, step: (g) => g + LEVELS_PER_WORLD },
+    // 16 nov 2026 (el usuario): un renglón por jefe de constelación, con su dibujo (se turnan cada 100 niveles).
+    ...BOSS_ORDER.map((k, i) => ({ key: `foe:${k}`, name: BOSS_NAMES[k], ico: `<span class="rd-foe">${FOE_ICON[k]()}</span>`, from: (i + 1) * 10 * LEVELS_PER_WORLD - 1, ok: (L) => L.foe?.kind === k, step: (g) => g + BOSS_ORDER.length * 10 * LEVELS_PER_WORLD })),
+  ]],
+  ['Formas', TPL_GROUPS[0][1].map(([k, t]) => ({ key: k, name: t.split(' · ')[0], from: debutOf(t), ok: (L) => okTpl(L, k) })).sort((a, b) => a.from - b.from)],
+  ['Piezas', TPL_GROUPS[2][1].map(([k, t]) => ({ key: k, name: t.split(' · ')[0], from: debutOf(t), ok: (L) => okTpl(L, k) })).sort((a, b) => a.from - b.from)],
+  ['Dificultad', [2, 3, 4].map((i) => ({ key: `h:${i}`, name: TIERS[i].name, from: 0, ok: (L) => L.tier === i, pre: (g) => hardHelp(g) + 1 === i }))],
+];
+const ROW_WANT = 12;
+
 const MONTHS_C = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
 // Grupos de mundos del evento y las festividades (sus niveles cambian según las cartas que ya conoce el jugador).
 const GRP_NAMES = EVENT_WORLDS.map((w, i) => (i ? `Mundos ${w + 1}${EVENT_WORLDS[i + 1] ? `-${EVENT_WORLDS[i + 1]}` : ' en adelante'}` : `Mundos 1-${EVENT_WORLDS[1]}`));
 
 export function galleryScreen({ onPlay, onPlayLevel, onBack }) {
   const st = gallery;
+  st.secs ??= [];
+  if (st.src !== 'camino') st.src = 'eventos';
   const now = new Date().getFullYear();
   const evs = Object.entries(EVENTS).filter(([, e]) => e.ready).map(([m, e]) => [+m, e]).sort((a, b) => a[0] - b[0]);
   st.year ??= now;
   st.grp ??= eventGroup(save.open || 0);
-  st.month ??= (evs.find(([m]) => m >= new Date().getMonth()) || evs[0])[0];
   const festDays = () => festivalDays(st.year, true);
-  st.fi ??= festDays()[0]?.f.key || 'reserva';
   const el = document.createElement('div');
   el.className = 'screen gallery';
-  const SRCS = [['camino', 'Camino'], ['mes', 'Del mes'], ['dia', 'De un día']];
+  // 16 nov 2026 (el usuario: «actualiza filtros de eventos, podrías juntarlos»): el mes y las festividades
+  // van juntos en Eventos, por renglones como el camino.
+  const SRCS = [['camino', 'Camino'], ['eventos', 'Eventos']];
   const hardN = [...Array(TOTAL_LEVELS).keys()].filter((g) => hardHelp(g)).length;
   const fmt = (n) => n.toLocaleString('es-MX');
   const opt = (v, t, cur) => `<option value="${v}"${String(cur) === String(v) ? ' selected' : ''}>${t}</option>`;
-  const pick = (k, title, opts, on = false) => `<label class="${on ? 'on' : ''}"><small>${title}</small><select data-g="${k}">${opts}</select></label>`;
-  // Qué festividad usa cada especial en el año elegido (todos los grupos de mundos).
-  const usesOf = () => {
-    const out = {};
-    for (const { f, day } of festDays()) {
-      const { N, L } = festShape(f);
-      for (const w of EVENT_WORLDS) for (let k = 0; k < L; k++) (out[festivalPick(day, k, w, N)] ??= new Map()).set(f.key, f);
-    }
-    return out;
-  };
-  let useBy = usesOf();
-
-  // Lo que se recorre. Camino y reserva: por páginas (ids). Mes y día: la lista completa, por planeta.
-  const paged = () => st.src === 'camino' || (st.src === 'dia' && st.fi === 'reserva');
-  function eventSet() {
-    if (st.src === 'mes') {
-      const e = EVENTS[st.month];
-      return { look: { ico: e.ico, table: e.key }, planets: e.planets, levels: [...Array(EVENT_LEVELS).keys()].map((k) => eventLevel(st.year * 12 + st.month, k, EVENT_WORLDS[st.grp])) };
-    }
-    const x = festDays().find((o) => o.f.key === st.fi);
-    if (!x) return { look: {}, planets: [], levels: [] };
-    const { N, L } = festShape(x.f);
-    return { look: { ico: x.f.ico, table: x.f.key }, planets: x.f.planets || [], levels: [...Array(L).keys()].map((k) => festivalLevel(x.day, k, EVENT_WORLDS[st.grp], N)), day: x.day };
-  }
-  // Niveles duros por escalón (L.tier; ver TIERS).
-  const hv = (L) => L.tier || 0;
-  const okH = (L) => !st.help || (st.help === '0' ? !hv(L) : st.help === 'any' ? !!hv(L) : hv(L) === +st.help);
-  const okM = (L, m) => !m || (m === 'none' ? !L.meta.mechs.length : L.meta.mechs.includes(m));
-  const ok = (L) => okTpl(L, st.tpl) && okM(L, st.mA) && okM(L, st.mB) && okH(L) && (!st.boss || L.boss);
+  const pick = (k, title, opts) => `<label><small>${title}</small><select data-g="${k}">${opts}</select></label>`;
+  // Renglones de Eventos. Los del mes y las festividades arman su lista completa (set: se juega el tablero tal cual,
+  // por planeta).
+  const evGroups = () => [
+    ['Eventos del mes', evs.map(([m, e]) => ({ key: `ev:${m}`, name: e.name, ico: icon(e.ico), sub: MONTHS_C[m], set: () => ({ look: { ico: e.ico, table: e.key }, planets: e.planets, n: EVENT_LEVELS, make: (k) => eventLevel(st.year * 12 + m, k, EVENT_WORLDS[st.grp]) }) }))],
+    ['Festividades', festDays().map(({ f, day }) => {
+      const d = new Date(day * 864e5), { N, L } = festShape(f);
+      return { key: `fi:${f.key}`, name: f.name, ico: icon(f.ico), sub: `${d.getUTCDate()} ${MONTHS_C[d.getUTCMonth()]}`, set: () => ({ look: { ico: f.ico, table: f.key }, planets: f.planets || [], n: L, make: (k) => festivalLevel(day, k, EVENT_WORLDS[st.grp], N) }) };
+    })],
+  ];
+  const groups = () => (st.src === 'camino' ? ROW_GROUPS() : evGroups());
+  // El renglón abierto, uno por fuente.
+  const OPEN = () => (st.src === 'camino' ? 'open' : 'evOpen');
 
   function controls() {
-    const evText = st.src === 'mes' ? 'La forma de cada tablero es la misma todos los años; con el año solo cambian los números de las cartas.' : '';
-    const what = {
-      camino: `Los ${fmt(TOTAL_LEVELS)} niveles del mapa, en orden (${fmt(hardN)} duros: muy difícil, extremo y demasiado extremo; se ganan sin ayudas con el camino acertado). No cambian con el año.`,
-      mes: `Los ${EVENT_LEVELS} niveles del evento, por planeta. ${evText}`,
-      dia: st.fi === 'reserva'
-        ? `Los 1,000 tableros especiales, fuera del mapa. Las festividades toman de aquí los suyos (los niveles muy difíciles y el jefe extremo); la etiqueta dice cuál lo usa en ${st.year}. Los difíciles y los demasiado extremos quedan para eventos futuros.`
-        : `Sus niveles, por planeta. Cada año le tocan otros tableros (se eligen por la fecha) y cambian con el grupo de mundos.`,
-    }[st.src];
+    const seg = `<div class="g-seg">${SRCS.map(([k, t]) => `<button data-src="${k}" class="${st.src === k ? 'on' : ''}">${t}</button>`).join('')}</div>`;
+    if (st.src === 'camino') {
+      el.querySelector('.g-filters').innerHTML = `${seg}
+      <p class="g-what">Los ${fmt(TOTAL_LEVELS)} niveles del mapa (${fmt(hardN)} duros: muy difícil, extremo y demasiado extremo; se ganan sin ayudas con el camino acertado). No cambian con el año.</p>
+      <button class="g-all" data-g="all">${st.all ? `${icon('prev')}Por renglones` : `${icon('cards')}Todos los niveles, en orden`}</button>`;
+      return;
+    }
     const years = [...Array(6).keys()].map((i) => now - 1 + i);
-    const source = st.src === 'mes'
-      ? pick('month', 'Evento', evs.map(([m, e]) => opt(m, `${e.name} · ${MONTHS_C[m]}`, st.month)).join('')) + pick('year', 'Año', years.map((y) => opt(y, y, st.year)).join('')) + pick('grp', 'Jugador en', GRP_NAMES.map((n, i) => opt(i, n, st.grp)).join(''))
-      : st.src === 'dia'
-        ? pick('fi', 'Festividad', festDays().map(({ f, day }) => { const d = new Date(day * 864e5); return opt(f.key, `${f.name} · ${d.getUTCDate()} ${MONTHS_C[d.getUTCMonth()]}`, st.fi); }).join('') + opt('reserva', 'Reserva: los 1,000 especiales', st.fi)) + pick('year', 'Año', years.map((y) => opt(y, y, st.year)).join('')) + (st.fi === 'reserva' ? '' : pick('grp', 'Jugador en', GRP_NAMES.map((n, i) => opt(i, n, st.grp)).join('')))
-        : '';
-    // Escalones de los niveles duros (ver TIERS): camino 2-4, evento 1-3, especiales 1-4.
-    const tiers = st.src === 'camino' ? [2, 3, 4] : st.src === 'mes' ? [1, 2, 3] : [1, 2, 3, 4];
-    const helps = [['', 'Todos'], ['0', 'Normales'], ['any', 'Duros'], ...tiers.map((i) => [String(i), TIERS[i].name])];
-    const dirty = st.tpl !== 'todas' || st.mA || st.mB || st.boss || st.help;
-    el.querySelector('.g-filters').innerHTML = `
-      <div class="g-seg">${SRCS.map(([k, t]) => `<button data-src="${k}" class="${st.src === k ? 'on' : ''}">${t}</button>`).join('')}</div>
-      ${source ? `<div class="g-pick g-source">${source}</div>` : ''}
-      <p class="g-what">${what}</p>
-      <div class="g-pick">
-        ${pick('tpl', 'Tablero', opt('todas', 'Todos', st.tpl) + TPL_GROUPS.map(([h, list]) => `<optgroup label="${h}">${list.map(([k, t]) => opt(k, t, st.tpl)).join('')}</optgroup>`).join(''), st.tpl !== 'todas')}
-        ${pick('mA', 'Carta especial', opt('', 'Todas', st.mA) + opt('none', 'Sin cartas especiales', st.mA) + MECH_ORDER.map((m) => opt(m, `${MECH_NAMES[m]} · ${mechDebut(m)}`, st.mA)).join(''), !!st.mA)}
-        ${st.mA && st.mA !== 'none' ? pick('mB', 'Junto con', opt('', 'Cualquiera', st.mB) + MECH_ORDER.filter((m) => m !== st.mA).map((m) => opt(m, MECH_NAMES[m], st.mB)).join(''), !!st.mB) : ''}
-        ${pick('help', 'Dificultad', helps.map(([k, t]) => opt(k, t, st.help)).join(''), !!st.help)}
-        <button class="g-boss${st.boss ? ' on' : ''}" data-g="boss" aria-pressed="${st.boss}">${icon('crown')}Solo jefes</button>
-        ${dirty ? '<button class="g-clear" data-g="clear">Limpiar</button>' : ''}
-      </div>`;
+    el.querySelector('.g-filters').innerHTML = `${seg}
+      <div class="g-pick g-source">${pick('year', 'Año', years.map((y) => opt(y, y, st.year)).join(''))}${pick('grp', 'Jugador en', GRP_NAMES.map((n, i) => opt(i, n, st.grp)).join(''))}</div>
+      <p class="g-what">Los del mes tienen la misma forma todos los años (con el año solo cambian los números). Las festividades se arman con su fecha: cada año otros tableros. Los dos cambian con el grupo de mundos del jugador.</p>`;
   }
   el.innerHTML = `
     <header class="top">
@@ -324,73 +320,125 @@ export function galleryScreen({ onPlay, onPlayLevel, onBack }) {
   // Tarjeta: el tablero grande con su número y lo que lo distingue encima; abajo forma, cartas y dificultad.
   // pickI: índice en la lista del mes/día (se juega el tablero tal cual); si no, el id del nivel.
   const tile = (L, pickI) => {
-    const badges = [L.boss && `<i class="gb gb-boss">${icon(L.foe ? 'crown' : 'trophy')}${L.foe ? 'Jefe' : 'Final'}</i>`, L.tier && `<i class="gb gb-tier gb-t${L.tier}">${TIERS[L.tier].name}</i>`, L.respite && '<i class="gb gb-rest">Respiro</i>', (L.scroll || L.sheets) && `<i class="gb gb-mesa">${tableIcon(colKind(L) || (L.sheets ? 'bitacora' : L.scroll))}${{ voltea: 'Se voltea', portal: 'Grúa', hangar: 'Hangar' }[colKind(L)] || (L.sheets ? 'Bitácora' : TPL_NAMES[L.scroll])}</i>`, L.tide && `<i class="gb gb-mesa">${tableIcon('marea')}Marea</i>`].filter(Boolean).join('');
+    const badges = [L.boss && `<i class="gb gb-boss">${icon(L.foe ? 'crown' : 'trophy')}${L.foe ? 'Jefe' : 'Final'}</i>`, L.tier && `<i class="gb gb-tier gb-t${L.tier}">${TIERS[L.tier].name}</i>`, L.respite && '<i class="gb gb-rest">Respiro</i>', (L.scroll || L.sheets) && `<i class="gb gb-mesa">${tableIcon(colKind(L) || (L.sheets ? 'bitacora' : L.rocket ? 'cohete' : L.scroll))}${{ voltea: 'Se voltea', portal: 'Grúa', hangar: 'Hangar' }[colKind(L)] || (L.sheets ? 'Bitácora' : L.rocket ? 'Cohete' : TPL_NAMES[L.scroll])}</i>`, L.tide && `<i class="gb gb-mesa">${tableIcon('marea')}Marea</i>`].filter(Boolean).join('');
     const inSet = pickI != null;
-    const uses = !inSet && L.special != null ? [...(useBy[L.special]?.values() || [])] : [];
-    const num = inSet ? L.k + 1 : L.special != null ? L.special + 1 : L.g + 1;
-    const where = inSet ? `Nivel ${L.k + 1}${L.special != null ? ` · especial ${L.special + 1}` : ''}` : L.special != null ? `Especial ${L.special + 1} · grupo ${specialGroup(L.special) + 1}` : `Mundo ${Math.floor(L.g / LEVELS_PER_WORLD) + 1} · nivel ${(L.g % LEVELS_PER_WORLD) + 1}`;
+    const num = inSet ? L.k + 1 : L.g + 1;
+    const where = inSet ? `Nivel ${L.k + 1}` : `Mundo ${Math.floor(L.g / LEVELS_PER_WORLD) + 1} · nivel ${(L.g % LEVELS_PER_WORLD) + 1}`;
     return `<button class="tile" ${inSet ? `data-pick="${pickI}"` : `data-play="${L.g}"`}>
       <div class="g-pv"><div class="pv">${preview(L)}</div><b class="g-num">${num}</b><div class="g-badges">${badges}</div></div>
       <div class="g-where">${where}</div>
       <div class="g-shape">${tplName(L)}</div>
       <div class="g-stats"><span>${L.cards.length} cartas</span><span>mazo ${L.stock.length}</span><span>d ${L.d.toFixed(2)}</span></div>
-      ${uses.length ? `<div class="g-uses">${uses.map((f) => `<i title="${f.name}">${icon(f.ico)}${f.name}</i>`).join('')}</div>` : ''}
       <div class="g-mechs">${L.meta.mechs.map((m) => `<i class="tag m-${m}">${MECH_NAMES[m]}</i>`).join('')}</div>
       <div class="g-rate" data-rate="${inSet ? `p${pickI}` : L.g}"><i></i><span>bot …</span></div>
     </button>`;
   };
-  let set = null; // lo del mes o día que se está viendo
-  function render() {
-    controls();
-    const pager = el.querySelector('.g-pager');
-    let items = [], html = '';
-    if (paged()) {
-      const specialPool = st.src === 'dia';
-      const end = specialPool ? 1000 : TOTAL_LEVELS;
-      let g = st.start;
-      while (items.length < PAGE && g < end) {
-        const id = specialPool ? SPECIAL_ID + g : g;
-        if (specialPool || !st.boss || id % LEVELS_PER_WORLD === LEVELS_PER_WORLD - 1) {
-          const L = generateLevel(id);
-          if (ok(L)) items.push({ L, key: L.g });
-        }
-        g++;
-        if (g - st.start > 4000) break; // filtros muy estrictos: no colgar la página
-      }
-      st.end = g;
-      pager.hidden = false;
-      el.querySelector('.g-range').textContent = specialPool ? `Especiales ${st.start + 1} – ${g}` : `Niveles ${st.start + 1} – ${g}`;
-      el.querySelector('[data-g="prev"]').disabled = st.start <= 0;
-      el.querySelector('[data-g="next"]').disabled = g >= end;
-      html = items.map(({ L }) => tile(L)).join('');
-    } else {
-      set = eventSet();
-      pager.hidden = true;
-      const per = set.levels.length / Math.max(1, set.planets.length || 1);
-      const byPlanet = {};
-      set.levels.forEach((L, i) => ok(L) && (byPlanet[L.planet ?? Math.floor(i / per)] ??= []).push(i));
-      for (const [p, list] of Object.entries(byPlanet)) {
-        html += `<h3 class="g-planet">${icon(set.look.ico || 'planet')}Planeta ${+p + 1}${set.planets[p] ? ` · ${set.planets[p]}` : ''}</h3>`;
-        html += list.map((i) => tile(set.levels[i], i)).join('');
-        items.push(...list.map((i) => ({ L: set.levels[i], key: `p${i}` })));
-      }
-    }
-    grid.innerHTML = items.length ? html : '<p class="g-empty">No hay niveles con estos filtros por aquí. Prueba con los siguientes o limpia los filtros.</p>';
-    // El % del bot se calcula después, para no bloquear el dibujo.
-    let i = 0;
+  // El % del bot, después y de uno en uno (list: [nivel, data-rate]; se corta si cambias de renglón o de pantalla).
+  const rateAll = (list, box, my) => {
     const next = () => {
-      const it = items[i++];
-      if (!it || !el.isConnected) return;
-      const box = grid.querySelector(`[data-rate="${it.key}"]`);
-      if (box) {
-        const p = casualRate(it.L, 40);
-        box.className = `g-rate ${rateCls(it.L, p)}`;
-        box.querySelector('i').style.width = `${p}%`;
-        box.querySelector('span').textContent = `bot ${p}% · ${rateTag(it.L, p)}`;
+      const it = list.shift();
+      if (!it || (my != null && my !== scanId) || !el.isConnected) return;
+      const b = box.querySelector(`[data-rate="${it[1]}"]`);
+      if (b) {
+        const p = casualRate(it[0], 40);
+        b.className = `g-rate ${rateCls(it[0], p)}`;
+        b.querySelector('i').style.width = `${p}%`;
+        b.querySelector('span').textContent = `bot ${p}% · ${rateTag(it[0], p)}`;
       }
       setTimeout(next, 0);
     };
-    setTimeout(next, 30); // tras montar la pantalla
+    setTimeout(next, 30);
+  };
+  let set = null; // lo del evento o festividad abierto (sus niveles se juegan tal cual)
+  // Los renglones. El abierto busca sus niveles en pedacitos (rowScan) y guarda lo encontrado (st.rows), para que al
+  // volver de jugar uno siga ahí.
+  let scanId = 0;
+  function renderRows() {
+    controls();
+    el.querySelector('.g-pager').hidden = true;
+    grid.classList.add('g-list');
+    const open = st[OPEN()];
+    grid.innerHTML = groups().map(([h, rows]) => `<button class="g-rsec${st.secs.includes(h) ? ' open' : ''}" data-sec="${h}"><span class="dchev">${icon('chev')}</span>${h}<small>${rows.length}</small></button><div class="g-secb"${st.secs.includes(h) ? '' : ' hidden'}>${rows.map((r) => `<section class="g-row${open === r.key ? ' open' : ''}" data-rowk="${r.key}">
+      <button class="g-rh" data-row="${r.key}">${r.ico ? `<span class="g-ri">${r.ico}</span>` : ''}<b>${r.name}</b><small>${r.sub || (r.from ? `desde el ${fmt(r.from + 1)}` : '')}</small><span class="dchev">${icon('chev')}</span></button>
+      <div class="g-rb"></div></section>`).join('')}</div>`).join('');
+    if (open) rowScan(open, false);
+  }
+  function rowScan(key, more) {
+    const row = groups().flatMap(([, rs]) => rs).find((r) => r.key === key), box = grid.querySelector(`[data-rowk="${key}"] .g-rb`);
+    if (!row || !box) return;
+    if (row.set) return setScan(row, box);
+    const end = TOTAL_LEVELS, id = (g) => g;
+    const rs = (st.rows[key] ??= { g: row.from, ids: [], want: ROW_WANT });
+    if (more) rs.want = rs.ids.length + ROW_WANT;
+    const my = ++scanId, step = row.step || ((g) => g + 1);
+    box.innerHTML = `<div class="g-grid g-in"></div><p class="g-rstat"></p>`;
+    const inner = box.querySelector('.g-in'), stat = box.querySelector('.g-rstat');
+    const rates = [];
+    const add = (L) => (inner.insertAdjacentHTML('beforeend', tile(L)), rates.push([L, L.g]));
+    // Lo que ya se había encontrado (también de poco en poco: armar un nivel puede tardar).
+    let k = 0;
+    const tick = () => {
+      if (my !== scanId || !el.isConnected) return;
+      const t0 = performance.now();
+      while (performance.now() - t0 < 12) {
+        if (k < rs.ids.length) add(generateLevel(rs.ids[k++]));
+        else if (rs.ids.length < rs.want && rs.g < end) {
+          if (row.pre && !row.pre(rs.g)) {
+            rs.g = step(rs.g);
+            continue;
+          }
+          const L = generateLevel(id(rs.g));
+          if (row.ok(L)) (rs.ids.push(id(rs.g)), k++, add(L));
+          rs.g = step(rs.g);
+        } else break;
+      }
+      const done = rs.g >= end, full = k >= rs.ids.length && rs.ids.length >= rs.want;
+      stat.innerHTML = full || done
+        ? `${rs.ids.length ? '' : 'No sale en el camino. '}${done ? 'Ya no hay más.' : `<button class="g-more" data-more="${key}">Ver ${ROW_WANT} más</button>`}`
+        : `Buscando… nivel ${fmt(Math.min(rs.g, end))} · ${rs.ids.length} encontrados`;
+      if (!(full || done)) return requestAnimationFrame(tick);
+      rateAll(rates, inner, my);
+    };
+    requestAnimationFrame(tick);
+  }
+  // Un evento o festividad: todos sus niveles, por planeta, de poco en poco.
+  function setScan(row, box) {
+    const S = (set = { ...row.set(), levels: [] }), my = ++scanId;
+    box.innerHTML = `<div class="g-grid g-in"></div><p class="g-rstat"></p>`;
+    const inner = box.querySelector('.g-in'), stat = box.querySelector('.g-rstat');
+    const per = S.n / Math.max(1, S.planets.length);
+    let k = 0, last = null;
+    const tick = () => {
+      if (my !== scanId || !el.isConnected) return;
+      const t0 = performance.now();
+      while (k < S.n && performance.now() - t0 < 12) {
+        const L = (S.levels[k] = S.make(k)), p = L.planet ?? Math.floor(k / per);
+        if (p !== last) (last = p), inner.insertAdjacentHTML('beforeend', `<h3 class="g-planet">${icon(S.look.ico || 'planet')}Planeta ${+p + 1}${S.planets[p] ? ` · ${S.planets[p]}` : ''}</h3>`);
+        inner.insertAdjacentHTML('beforeend', tile(L, k++));
+      }
+      if (k < S.n) return (stat.textContent = `Armando… ${k} de ${S.n}`), requestAnimationFrame(tick);
+      stat.textContent = `${S.n} niveles`;
+      rateAll(S.levels.map((L, i) => [L, `p${i}`]), inner, my);
+    };
+    requestAnimationFrame(tick);
+  }
+
+  function render() {
+    grid.classList.remove('g-list');
+    if (!(st.src === 'camino' && st.all)) return renderRows();
+    // Todos los niveles del camino, en orden, por páginas.
+    controls();
+    const pager = el.querySelector('.g-pager');
+    const items = [];
+    let g = st.start;
+    while (items.length < PAGE && g < TOTAL_LEVELS) items.push(generateLevel(g++));
+    st.end = g;
+    pager.hidden = false;
+    el.querySelector('.g-range').textContent = `Niveles ${st.start + 1} – ${g}`;
+    el.querySelector('[data-g="prev"]').disabled = st.start <= 0;
+    el.querySelector('[data-g="next"]').disabled = g >= TOTAL_LEVELS;
+    grid.innerHTML = items.map((L) => tile(L)).join('');
+    rateAll(items.map((L) => [L, L.g]), grid);
     const y = st.scroll || 0;
     st.scroll = 0;
     requestAnimationFrame(() => (grid.scrollTop = y));
@@ -414,26 +462,42 @@ export function galleryScreen({ onPlay, onPlayLevel, onBack }) {
     if (src) {
       st.src = src;
       st.start = 0;
-      // Cada fuente tiene sus escalones (camino 2-4, mes 1-3, día 1-4): si el elegido no existe ahí, se quita.
-      if ((st.help === '1' && src === 'camino') || (st.help === '4' && src === 'mes')) st.help = '';
+      scanId++;
       return render();
     }
+    const sec = e.target.closest('[data-sec]')?.dataset.sec;
+    if (sec) {
+      const on = !st.secs.includes(sec);
+      st.secs = on ? [...st.secs, sec] : st.secs.filter((x) => x !== sec);
+      const b = e.target.closest('[data-sec]');
+      b.classList.toggle('open', on);
+      b.nextElementSibling.hidden = !on;
+      return;
+    }
+    const rk = e.target.closest('[data-row]')?.dataset.row;
+    if (rk) {
+      const open = (st[OPEN()] = st[OPEN()] === rk ? null : rk);
+      scanId++;
+      grid.querySelectorAll('.g-row').forEach((r) => {
+        const on = r.dataset.rowk === open;
+        r.classList.toggle('open', on);
+        if (!on) r.querySelector('.g-rb').innerHTML = '';
+      });
+      if (open) rowScan(open, false);
+      return;
+    }
+    const mk = e.target.closest('[data-more]')?.dataset.more;
+    if (mk) return rowScan(mk, true);
     const a = e.target.closest('[data-g]')?.dataset.g;
+    if (a === 'all') {
+      st.all = !st.all;
+      st.start = 0;
+      scanId++;
+      return render();
+    }
     if (a === 'back') {
       st.active = false;
       return onBack();
-    }
-    if (a === 'boss') {
-      st.boss = !st.boss;
-      st.start = 0;
-      render();
-    }
-    if (a === 'clear') {
-      st.boss = false;
-      st.tpl = 'todas';
-      st.mA = st.mB = st.help = '';
-      st.start = 0;
-      render();
     }
     if (a === 'prev') {
       st.start = Math.max(0, st.start - PAGE);
@@ -447,25 +511,21 @@ export function galleryScreen({ onPlay, onPlayLevel, onBack }) {
       const n = askLevel(st.start);
       if (n != null) {
         st.src = 'camino';
+        st.all = true;
         st.start = n;
         render();
       }
     }
   });
   el.addEventListener('change', (e) => {
-    const k = e.target.dataset.g, v = e.target.value;
-    if (k === 'tpl' || k === 'mB' || k === 'help' || k === 'fi') st[k] = v;
-    if (k === 'mA') {
-      st.mA = v;
-      if (!v || v === 'none' || st.mB === v) st.mB = '';
-    }
-    if (k === 'month' || k === 'grp') st[k] = +v;
+    const k = e.target.dataset.g, v = +e.target.value;
+    if (k === 'grp') st.grp = v;
     if (k === 'year') {
-      st.year = +v;
-      useBy = usesOf();
-      if (st.fi !== 'reserva' && !festDays().some((o) => o.f.key === st.fi)) st.fi = festDays()[0]?.f.key || 'reserva';
+      st.year = v;
+      // Otro año, otras fechas: la festividad abierta puede ya no estar.
+      if (st.evOpen?.startsWith('fi:') && !festDays().some((o) => `fi:${o.f.key}` === st.evOpen)) st.evOpen = null;
     }
-    st.start = 0;
+    scanId++;
     render();
   });
   render();

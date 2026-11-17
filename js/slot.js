@@ -7,7 +7,7 @@
 // Premio: se escoge primero y luego los planetas que lo forman. Si te falta para la entrada, te da lo que falta más un
 // extra al azar de 90 a 540 (para que no se note exacto). El jackpot (2%) puede salir siempre.
 import { save, persist } from './storage.js';
-import { ev, evSoon, evPreOwned, evPrePrice, evTicketPrice, festival, festivalSoon, festPre, festPaid, festPrice } from './events.js';
+import { ev, evSoon, evPreOwned, evPrePrice, evTicketPrice, festival, festivalSoon, festPre, festPaid, festPrice, EV_LATE_DAYS } from './events.js';
 import { miniPlanet, coin } from './art.js';
 import { money, reduced, flyToWallet, sparkle, confetti, popPrize, updateCoins, buzz } from './ui.js';
 
@@ -25,7 +25,7 @@ const shuffle = (a) => { for (let i = a.length - 1; i > 0; i--) { const j = Math
 
 // Las ediciones que tienen tirada ahora: preventas sin comprar, el día de la festividad y los días 1 al 5 del evento del
 // mes sin pagar. buy: qué ventana de compra se abre después ('fiesta' preventa o entrada · 'mesPre' · 'mes').
-export const SLOT_MONTH_DAYS = 5;
+export const SLOT_MONTH_DAYS = EV_LATE_DAYS;
 function editions() {
   const out = [];
   const add = (x, price, buy) => x && !save.spins?.[x.id] && !out.some((o) => o.id === x.id) && out.push({ id: x.id, name: x.name, price, buy });
@@ -36,7 +36,8 @@ function editions() {
   const n = evSoon();
   if (n && !evPreOwned(n)) add(n, evPrePrice(n), 'mesPre');
   const e = ev(), d = new Date(Date.now() + (save.devDay || 0) * 864e5);
-  if (e && !e.state.paid && d.getDate() <= SLOT_MONTH_DAYS) add(e, evTicketPrice(e), 'mes');
+  // Del 1 al 5, o cualquier día si es su primer evento y lo abrió tarde (subiendo de nivel; e.state.late).
+  if (e && !e.state.paid && (d.getDate() <= SLOT_MONTH_DAYS || e.state.late)) add(e, evTicketPrice(e), 'mes');
   return out.slice(0, 2);
 }
 // La tirada de hoy: { eds, total, mult } o null (no hay).
