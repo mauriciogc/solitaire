@@ -2471,7 +2471,7 @@ p.met-sale { display: flex; align-items: center; justify-content: center; gap: 6
 .sx-jack .coin { width: 19px; height: 19px; }
 /* La palanca: un riel vertical pegado a la máquina, el eje a la mitad, el brazo hacia arriba y la bola roja en la
    punta. Al jalar, el brazo se voltea hacia abajo (scaleY -1) y la bola baja dos veces su largo. */
-.sx-lever { --arm: 64px; position: absolute; right: -50px; top: 50%; width: 46px; height: calc(var(--arm) * 2 + 60px); translate: 0 -50%; cursor: pointer; }
+.sx-lever { --arm: 64px; z-index: 3; position: absolute; right: -50px; top: 50%; width: 46px; height: calc(var(--arm) * 2 + 60px); translate: 0 -50%; cursor: pointer; }
 .sx-track { position: absolute; left: 50%; top: 22px; bottom: 22px; width: 16px; translate: -50% 0; border-radius: 8px; background: #1a1048; border: 3px solid var(--ink); box-shadow: inset 0 3px 0 #0b062a; }
 .sx-pivot { position: absolute; left: 50%; top: 50%; width: 26px; height: 26px; translate: -50% -50%; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #fff, #9188c0); border: 3px solid var(--ink); }
 .sx-arm { position: absolute; left: 50%; bottom: 50%; width: 11px; height: var(--arm); margin-left: -5.5px; border-radius: 6px; background: linear-gradient(90deg, #fff, #b8b0e0); border: 2.5px solid var(--ink); transform-origin: 50% 100%; }
@@ -3971,3 +3971,43 @@ s.was { text-decoration: line-through 2px #ff5f7e; opacity: .7; margin-right: .2
 .step .ill.ill-ico > .ico, .step .ill.ill-ico > svg { width: 44px; height: 44px; }
 .step .ill.ill-ico .help-card { width: 36px; height: 50px; }
 .step .ill.ill-ico .star.big { width: 44px; height: 44px; }
+
+/* Plinko antes del jefe (17 nov 2026, js/plinko.js): genérico para todos los jefes. Lo oscuro va sobre el mapa (el
+   monedero queda encima con .feat-lift); arriba el letrero con la corona y abajo el tablero (acostado, a un lado). */
+.pl-back { position: absolute; inset: 0; z-index: 900; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 60px 14px 14px; background: radial-gradient(circle at 50% 45%, #2a1f6acc, #0b062aee 72%); touch-action: none; }
+.pl-back.land { flex-direction: row; gap: 24px; padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right)); }
+.pl-back.land .pl-head { flex: 0 0 auto; max-width: 46%; }
+.pl-head .sx-title b { white-space: nowrap; }
+@media (max-height: 500px) { .pl-back.land .pl-head .sx-title b { font-size: clamp(24px, 3.6vw, 32px); } .pl-back.land .pl-ico { width: 48px; height: 48px; } }
+.pl-head { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; }
+.pl-head .sx-title b { font-size: clamp(26px, 8vw, 34px); }
+.pl-ico { width: 64px; height: 64px; margin-bottom: 6px; filter: drop-shadow(0 0 12px #ffc83d); animation: pl-crown 1.6s ease-in-out infinite; }
+@keyframes pl-crown { 0%, 100% { translate: 0 0; rotate: -8deg; } 50% { translate: 0 -8px; rotate: 8deg; } }
+.pl-ico .ico, .pl-ico svg { width: 100%; height: 100%; }
+.pl-wrap { position: relative; z-index: 1; flex: none; }
+.pl-board { position: absolute; left: 0; top: 0; width: 332px; height: 400px; transform-origin: 0 0; border-radius: 20px; border: 3px solid var(--ink); overflow: hidden; background: linear-gradient(170deg, #4b3596, #2a1f6a 55%, #1d1650); box-shadow: 0 5px 0 var(--ink), inset 0 0 0 3px #ffc83d88; }
+.pl-pegs { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.pl-pegs circle { fill: #fff; stroke: var(--ink); stroke-width: 1.6; transform-box: fill-box; transform-origin: center; }
+.pl-pegs circle.hit { animation: pl-peg .3s ease-out; }
+@keyframes pl-peg { 0% { fill: #ffd54a; transform: scale(1.9); } 100% { fill: #fff; transform: scale(1); } }
+.pl-launch { position: absolute; top: 6px; left: 166px; width: 44px; height: 30px; translate: -50% 0; z-index: 3; }
+.pl-launch svg { width: 100%; height: 100%; overflow: visible; }
+.pl-hint { position: absolute; left: 0; right: 0; top: 44px; z-index: 4; text-align: center; font: 400 15px 'Lilita One'; opacity: .9; color: #fff; text-shadow: 0 2px 0 var(--ink); animation: pl-hint .9s ease-in-out infinite alternate; pointer-events: none; }
+@keyframes pl-hint { to { translate: 0 -4px; } }
+.pl-ball { position: absolute; left: -10px; top: -10px; width: 20px; height: 20px; border-radius: 50%; z-index: 5; background: radial-gradient(circle at 35% 30%, #fff6c8, #ffb347 45%, #e0561a); border: 2.5px solid var(--ink); box-shadow: 0 0 10px #ffb347; }
+.pl-trail { position: absolute; left: -6px; top: -6px; width: 12px; height: 12px; border-radius: 50%; z-index: 4; pointer-events: none; background: radial-gradient(#fff, #ffd54a 55%, transparent 70%); }
+/* Huecos (17 nov 2026; el usuario: «más simple y que encaje con el tablero»): solo el dibujo del premio y su número,
+   sin círculos, aros ni colores; separadores finos del tono del tablero. Al caer, el hueco se ilumina suave. */
+.pl-slots { position: absolute; left: 0; right: 0; bottom: 0; height: 52px; display: flex; }
+.pl-slot { flex: 1; position: relative; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 2px; padding-bottom: 6px; color: #fff; }
+.pl-slot + .pl-slot::before { content: ''; position: absolute; left: -1px; top: 0; bottom: 6px; width: 2px; border-radius: 1px; background: rgba(255, 255, 255, .22); }
+.pl-pz { width: 26px; height: 26px; display: grid; place-items: center; }
+.pl-pz .ico, .pl-pz svg { width: 100%; height: 100%; }
+/* Deshacer es solo tinta: sobre el tablero oscuro se aclara. */
+.pl-slot.k-undo .pl-pz { filter: invert(1) brightness(1.5); }
+.pl-slot i { font: 400 12px/1 'Lilita One'; font-style: normal; color: #e9e2ff; }
+.pl-slot.win { animation: pl-win .45s ease-out 4 alternate; }
+.pl-slot.win .pl-pz { animation: pl-pop .5s cubic-bezier(.23,1,.32,1); filter: drop-shadow(0 0 8px #ffd54a); }
+@keyframes pl-win { from { background: rgba(255, 213, 74, .22); } to { background: transparent; } }
+@keyframes pl-pop { 0% { scale: 1; } 50% { scale: 1.4; } 100% { scale: 1; } }
+@media (prefers-reduced-motion: reduce) { .pl-ico, .pl-hint, .pl-back .sx-rays, .pl-pegs circle.hit { animation: none; } }

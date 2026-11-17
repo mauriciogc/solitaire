@@ -5695,10 +5695,24 @@ export class Game {
     return true;
   }
 
-  async devAuto() {
+  // ms: entre jugada y jugada (17 nov 2026, el usuario pidió otro más lento: 600). El lento además espera a que
+  // terminen los efectos (jefe, premios, cartas que vuelan): algunos arrancan con retraso, así que pide dos revisiones
+  // seguidas sin nada animándose (las que se repiten para siempre no cuentan), con tope de 8 s.
+  async devAuto(ms = 220) {
     if (this.autoplay) return (this.autoplay = false);
     this.autoplay = true;
-    while (this.autoplay && !this.done && this.devStep()) await new Promise((r) => setTimeout(r, 220));
+    const moving = () => this.busy || !!document.querySelector('.modal-back') || [this.el, document.body].some((el) => el.getAnimations({ subtree: true }).some((a) => a.playState === 'running' && a.effect?.getTiming().iterations !== Infinity));
+    const settle = async () => {
+      const t0 = performance.now();
+      for (let calm = 0; calm < 2 && performance.now() - t0 < 8000; ) {
+        await wait(150);
+        calm = moving() ? 0 : calm + 1;
+      }
+    };
+    while (this.autoplay && !this.done && this.devStep()) {
+      await wait(ms);
+      if (ms > 220) await settle();
+    }
     this.autoplay = false;
   }
 

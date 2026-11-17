@@ -91,7 +91,7 @@ export function attachDevBar(game, { go, toGallery }) {
     <div class="db-menu">
     <div class="db-grp">${btn('gal', 'grid', 'Galería')}</div>
     <div class="db-grp db-nav">${btn('prev', 'prev', '', `aria-label="Nivel anterior" ${g === 0 ? 'disabled' : ''}`)}<button data-d="goto" class="db-lvl" title="Ir a nivel"><b>#${num}</b><small>${where}${L.tier ? ` · ${TIERS[L.tier].name.toLowerCase()}` : ''}</small></button>${btn('next', 'next', '', `aria-label="Nivel siguiente" ${g >= TOTAL_LEVELS - 1 ? 'disabled' : ''}`)}</div>
-    <div class="db-grp">${btn('reveal', 'eye', 'Ver todo')}${btn('sol', 'flag', 'Solución')}${btn('step', 'step', 'Paso')}${btn('auto', 'play', 'Resolver')}${btn('win', 'trophy', 'Ganar')}${btn('streak', 'next', 'Premio de racha')}${btn('broom', 'next', 'A 1 de la escoba')}</div>
+    <div class="db-grp">${btn('reveal', 'eye', 'Ver todo')}${btn('sol', 'flag', 'Solución')}${btn('step', 'step', 'Paso')}${btn('auto', 'play', 'Resolver')}${btn('slow', 'play', 'Resolver lento')}${btn('win', 'trophy', 'Ganar')}${btn('streak', 'next', 'Premio de racha')}${btn('broom', 'next', 'A 1 de la escoba')}</div>
     <div class="db-grp">${btn('info', 'info', 'Info')}</div>
     </div>`;
   const open = (on) => {
@@ -127,6 +127,11 @@ export function attachDevBar(game, { go, toGallery }) {
       auto: () => {
         b.classList.toggle('on', !game.autoplay);
         game.devAuto().then(() => b.classList.remove('on'));
+      },
+      // A la mitad de velocidad.
+      slow: () => {
+        b.classList.toggle('on', !game.autoplay);
+        game.devAuto(600).then(() => b.classList.remove('on'));
       },
       win: () => game.devWin(),
       streak: () => game.devStreak(),
@@ -860,6 +865,8 @@ export function openDevMenu({ onGallery, onPlanets, onFestivals, onGoLevel, onRe
         }
         // Jefe de constelación: su cofre de jefe derrotado se puede volver a cobrar.
         if (save.foeWon) save.foeWon = save.foeWon.filter((x) => x !== g);
+        // Y su plinko de antes de pelear vuelve a salir.
+        if (save.plinko) save.plinko = save.plinko.filter((x) => x !== g);
         if (save.run?.g === g) save.run = null;
         persist();
         toast(`Nivel ${g + 1} otra vez sin ganar`);

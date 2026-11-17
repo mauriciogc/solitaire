@@ -16,6 +16,7 @@ import { themeCSS } from './themes.js';
 import { setCSS, SETS, setOf, setItems, SET_DEAL } from './sets.js';
 import { festivalCSS } from './festival-art.js';
 import { slotDue, openSlot } from './slot.js';
+import { plinko } from './plinko.js';
 import { mulberry32, hash } from './rng.js';
 import { starCSS } from './starshower.js';
 import { PASS_MAX, secretGoal, passFrameOf, passGoal, passPrize, secretPrize, passCount, secretCount, passCSS } from './passport.js';
@@ -1638,29 +1639,60 @@ async function playRescue(need = rescueNeed() || ticketCost(Math.min(save.next |
 // paid: lo que pagó al entrar con apuesta ({ tk, fee, gift }), para decírselo si abandona.
 // Jefe que todavía no está armado (17 nov 2026, el usuario: «antes de entrar se traba»; pasa al entrar directo desde
 // «Ir al tablero» o la galería): se arma en segundo plano con un letrero y luego se entra.
-function prepBoss(g, then) {
+// Arma el jefe en un worker (si ya está, al momento).
+function bossBuild(g) {
+  if (bossPicked(g) || !window.Worker) return Promise.resolve();
   if (bossWorker) bossWorker.terminate(), (bossWorker = null);
-  const k = bossOf(g)?.kind;
+  return new Promise((done) => {
+    try {
+      const w = new Worker(new URL('./boss-worker.js', import.meta.url), { type: 'module' });
+      w.onmessage = (e) => (e.data.p != null && setBossPick(e.data.g, e.data.p), w.terminate(), done());
+      w.onerror = () => (w.terminate(), done());
+      w.postMessage(g);
+    } catch {
+      done();
+    }
+  });
+}
+// Letrero mientras se arma (genérico, 17 nov 2026: el mismo para todos los jefes, con la corona).
+async function prepBoss(build, then) {
   const box = document.createElement('div');
   box.className = 'boss-prep';
-  box.innerHTML = `<div class="bp-card"><span class="bp-ico">${k ? FOE_ICON[k]() : ''}</span><b>Preparando al jefe…</b><span class="bp-dots"><i></i><i></i><i></i></span></div>`;
+  box.innerHTML = `<div class="bp-card"><span class="bp-ico">${icon('crown')}</span><b>Preparando al jefe…</b><span class="bp-dots"><i></i><i></i><i></i></span></div>`;
   document.body.append(box);
-  const done = () => {
-    box.classList.add('out');
-    setTimeout(() => box.remove(), 220);
-    then();
-  };
-  try {
-    const w = new Worker(new URL('./boss-worker.js', import.meta.url), { type: 'module' });
-    w.onmessage = (e) => (e.data.p != null && setBossPick(e.data.g, e.data.p), w.terminate(), done());
-    w.onerror = () => (w.terminate(), done());
-    w.postMessage(g);
-  } catch {
-    done();
-  }
+  await build;
+  box.classList.add('out');
+  setTimeout(() => box.remove(), 220);
+  then();
+}
+// Plinko antes del jefe (17 nov 2026, el usuario): la primera vez que entras al nivel de un jefe de constelación,
+// mientras se arma, sueltas un meteorito por un premio (js/plinko.js). Una sola vez por nivel (save.plinko); al
+// reintentar sale solo el letrero de «Preparando…» si hace falta. Si al caer el premio todavía no está, sigue el letrero.
+async function bossPlinko(g, then) {
+  const build = bossBuild(g), screen = document.querySelector('#app .screen');
+  let ready = false;
+  build.then(() => (ready = true));
+  await plinko(screen, {
+    pay: (p) => {
+      (save.plinko ||= []).push(g);
+      save.coins += p.coins || 0;
+      save.undo += p.undo || 0;
+      save.wild += p.wild || 0;
+      for (const [k, n] of Object.entries(p.helps || {})) save.helps[k] = (save.helps[k] || 0) + n;
+      persist();
+    },
+    show: (p, at) => {
+      if (p.coins) flyToWallet('coins', at, p.coins, shownCoins() - p.coins);
+      else floatBubbles(prizeIcons(p), at);
+    },
+  });
+  if (ready) return then();
+  prepBoss(build, then);
 }
 function startLevel(g, opts = {}) {
-  if (g < TOTAL_LEVELS && constBoss(g) && !bossPicked(g) && window.Worker && !opts.ready) return prepBoss(g, () => startLevel(g, { ...opts, ready: true }));
+  const boss = g < TOTAL_LEVELS && constBoss(g);
+  if (boss && !opts.ready && !opts.resume && !save.plinko?.includes(g) && document.querySelector('#app .screen')) return bossPlinko(g, () => startLevel(g, { ...opts, ready: true }));
+  if (boss && !bossPicked(g) && window.Worker && !opts.ready) return prepBoss(bossBuild(g), () => startLevel(g, { ...opts, ready: true }));
   return startLevelNow(g, opts);
 }
 function startLevelNow(g, { resume = false, free = false, anim = 'up', bet = 1, paid = null } = {}) {
