@@ -1,5 +1,5 @@
 import { mulberry32, hash, randInt, pick, shuffle } from './rng.js';
-import { follows, mod13, HOLE_EVERY, BELT_W, solve, initState, playRank, cutOf, refStep, refReady, play as playCard, draw as drawCard, won, starsFor, playCasual } from './engine.js';
+import { follows, mod13, HOLE_EVERY, BELT_W, solve, initState, playRank, cutOf, refStep, refReady, play as playCard, draw as drawCard, won, starsFor, playCasual, casualRun } from './engine.js';
 
 // Unidades del tablero: una carta mide W x H. Posiciones = esquina superior izquierda.
 export const W = 1;
@@ -799,17 +799,23 @@ export function pickLevel(key, tier, make) {
 
 // ---------- Jefes de constelación (15 nov 2026, pedido del usuario) ----------
 // El último nivel de cada constelación (100, 200…) trae una criatura que juega contra ti (ver bossStep en engine.js).
-// Se turnan de la más sencilla a la más compleja y cada 4 constelaciones vuelven más fuertes (r = la vuelta): la
+// Se turnan de la más sencilla a la más compleja y cada vez que pasan todos vuelven más fuertes (r = la vuelta): la
 // fuego del Fénix cae en más cartas, el Ilusionista y el Kraken atacan más seguido, el Kraken mancha más cartas y la Ballena
 // se traga más. Mesa normal (sin otra mesa) y nunca duro. Se prueba el tablero t hasta que el solucionador lo gana con
 // el jefe; la vida (hp) sube con el tablero y la vuelta. level.foe (level.boss ya es el jefe de cada planeta).
-export const BOSS_ORDER = ['fenix', 'ilus', 'kraken', 'whale'];
-export const BOSS_NAMES = { fenix: 'Fénix estelar', ilus: 'El Ilusionista', kraken: 'Kraken', whale: 'Ballena glotona' };
+// 16 nov 2026 (pedido del usuario): la Medusa de plasma entra en el 300, antes del Kraken (es más sencilla: no bloquea
+// cartas, solo pide el color). Vendrán más; el 100 (Fénix) no se mueve.
+export const BOSS_ORDER = ['fenix', 'ilus', 'medusa', 'kraken', 'whale'];
+export const BOSS_NAMES = { fenix: 'Fénix estelar', ilus: 'El Ilusionista', medusa: 'Medusa de plasma', kraken: 'Kraken', whale: 'Ballena glotona' };
 export const BOSS_MIN = 0.15;
 // Vida del jefe: 60% de las cartas + 2 por vuelta. Si con ella ningún tablero llega a BOSS_MIN, se baja por pasos
 // (15 nov 2026, el usuario: «si son jefes, buscar un tablero que cumpla mayor a 15%»; la Ballena enterraba el 1600):
 // con menos vida se le vence antes y deja de atacar.
-const BOSS_HP = [null, 0.45, 0.35, 0.25];
+// 16 nov 2026 (el usuario: «el 300 no tiene suficientes cartas para matar al enemigo ni haciendo bien todo»): además
+// de ganarse, el jefe se tiene que poder vencer: el solucionador lo vence y el bot casual también, al menos BOSS_KILL de
+// las veces (aunque luego pierda). Antes en tableros chicos la vida casi llegaba a las cartas (el 1900: 16 de 16).
+const BOSS_HP = [null, 0.45, 0.35, 0.25, 0.18];
+export const BOSS_KILL = 0.35;
 export const constBoss = (g) => g < TOTAL_LEVELS && g % (10 * LEVELS_PER_WORLD) === 10 * LEVELS_PER_WORLD - 1;
 export const bossOf = (g) => (constBoss(g) ? { kind: BOSS_ORDER[Math.floor(g / (10 * LEVELS_PER_WORLD)) % BOSS_ORDER.length], r: Math.floor(g / (10 * LEVELS_PER_WORLD) / BOSS_ORDER.length) } : null);
 // Jefe en segundo plano (15 nov 2026): buscar un tablero que pase del 15% puede tardar segundos; js/boss-worker.js lo
@@ -830,22 +836,34 @@ function bossLevel(g) {
   // tableros con cada paso de vida; si ninguno, el más fácil de los que se ganan. Se arma al entrar al nivel.
   let best = null;
   const solved = new Set();
+  // Partidas del bot: [ganadas, veces que venció al jefe].
+  const runs = (x, r, n) => {
+    let w = 0, k = 0;
+    for (let i = 0; i < n; i++) {
+      const o = casualRun(x, r);
+      w += o.win;
+      k += o.kill;
+    }
+    return [w, k];
+  };
   search: for (let k = 0; k < BOSS_HP.length; k++) {
     for (let t = 0; t < 8; t++) {
       const x = make([t, k]);
-      // Con menos vida lo que ya se ganaba se sigue ganando: no se vuelve a resolver.
-      if (!solved.has(t) && !solve(x, initState(x), 60000)) continue;
+      // Que el solucionador gane venciendo al jefe. Con menos vida lo que ya se vencía se sigue venciendo: no se vuelve
+      // a resolver.
+      if (!solved.has(t) && !solve(x, initState(x), 60000, 0, true)) continue;
       solved.add(t);
-      // Prueba rápida (30 partidas) y, si pasa, se confirma con 60 más (con 30 solas, 5 victorias parecían 17% y
-      // eran 10%). Pide un poco más de BOSS_MIN para dejar margen.
-      let n = QUICK, w = quickWins(x);
-      if (w >= QUICK * BOSS_MIN) {
-        const r = mulberry32(x.g * 7 + 3);
-        for (let i = 0; i < 2 * QUICK; i++) w += playCasual(x, r);
-        n = 3 * QUICK;
+      // Prueba rápida (30 partidas) y, si pasa, se confirma con 120 más (con 30 solas, 5 victorias parecían 17% y
+      // eran 10%; 16 nov 2026: con 90, la Medusa del 800 parecía 22% y era 10%). Pide un poco más de BOSS_MIN.
+      let n = QUICK, [w, kl] = runs(x, mulberry32(x.g + 1), QUICK);
+      if (w >= QUICK * BOSS_MIN && kl >= QUICK * BOSS_KILL) {
+        const [w2, k2] = runs(x, mulberry32(x.g * 7 + 3), 4 * QUICK);
+        (w += w2), (kl += k2), (n = 5 * QUICK);
       }
-      if (!best || w / n > best.w) best = { L: x, p: [t, k], w: w / n };
-      if (w >= n * (BOSS_MIN + 0.03)) break search;
+      // El más cercano a pasar las dos cosas (ganar y vencerlo), por si ninguno pasa.
+      const score = Math.min(w / n / (BOSS_MIN + 0.03), kl / n / BOSS_KILL);
+      if (!best || score > best.w) best = { L: x, p: [t, k], w: score };
+      if (score >= 1) break search;
     }
   }
   // Si ninguno se gana con el jefe (no ha pasado), el primero sin él.

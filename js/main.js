@@ -4216,7 +4216,7 @@ function openBossReward(w, res) {
 
 // Jefe derrotado (15 nov 2026, pedido del usuario): después del cofre del planeta, su cofre de jefe, más grande y de
 // su color, con su dibujo al frente. Cae, se sacude cada vez más fuerte, se abre con destello y suelta sus regalos.
-const FOE_CHEST = { fenix: ['#ff7a2a', '#c94d14', '#ffb36b'], ilus: ['#4f6cff', '#3349d6', '#9db0ff'], kraken: ['#b25fd0', '#8a3fae', '#e3a6f0'], whale: ['#47c27a', '#2f9e5c', '#a6ecbf'] };
+const FOE_CHEST = { fenix: ['#ff7a2a', '#c94d14', '#ffb36b'], ilus: ['#4f6cff', '#3349d6', '#9db0ff'], medusa: ['#2fc4dc', '#1f97ad', '#9ff3ff'], kraken: ['#b25fd0', '#8a3fae', '#e3a6f0'], whale: ['#47c27a', '#2f9e5c', '#a6ecbf'] };
 function openFoeReward(fc) {
   return new Promise((done) => {
     const c = FOE_CHEST[fc.kind] || ['#8a5cf0', '#6c3fd4', '#a785ff'];
@@ -5381,6 +5381,7 @@ async function installApp() {
 const HELP_FOE = {
   fenix: 'cae <b>fuego</b> sobre tus cartas: se juegan igual, pero tapa su número.',
   ilus: 'tus cartas <b>cambian de número</b>. Juega antes las que te sirven.',
+  medusa: 'pone <b>chispas</b>: esa carta solo entra sobre una de su <b>mismo color</b>.',
   kraken: 'mancha cartas con <b>tinta</b>: no se juegan. 3 cartas seguidas limpian una.',
   whale: 'se <b>traga</b> cartas y las <b>escupe</b> encima de otras.',
 };

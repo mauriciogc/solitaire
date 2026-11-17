@@ -683,6 +683,7 @@ html.dev-on .galaxy .res .me { display: none; }
 .btn.orange { background: #ff8a3d; box-shadow: inset 0 -5px 0 #e0561a, inset 0 2px 0 #ffc59a, 0 3px 0 var(--ink); }
 .btn.blue { background: #4f6cff; color: #fff; box-shadow: inset 0 -5px 0 #3349d6, inset 0 2px 0 #9db0ff, 0 3px 0 var(--ink); }
 /* Kraken (15 nov 2026): morado, como sus tentáculos. */
+.btn.cyan { background: #2fc4dc; color: #fff; box-shadow: inset 0 -5px 0 #1f97ad, inset 0 2px 0 #9ff3ff, 0 3px 0 var(--ink); }
 .btn.purple { background: #b25fd0; color: #fff; box-shadow: inset 0 -5px 0 #8a3fae, inset 0 2px 0 #e3a6f0, 0 3px 0 var(--ink); }
 .btn.ghost { background: var(--cream); }
 .btn.sq { width: 50px; padding: 0; flex-direction: column; gap: 0; }
@@ -886,6 +887,8 @@ html.dev-on .galaxy .res .me { display: none; }
 .foe-fenix .chest.foe-chest { --fc-ray: #ffa24a; }
 .foe-ilus .chest.foe-chest { --fc-ray: #9db0ff; }
 .foe-kraken .chest.foe-chest { --fc-ray: #e3a6f0; }
+.foe-medusa .chest.foe-chest { --fc-ray: #9ff3ff; }
+.foe-tip.foe-medusa .fa-bar b { background: linear-gradient(#7feeff, #2fc4dc); box-shadow: inset 0 -2px 0 #1f97ad; }
 .foe-whale .chest.foe-chest { --fc-ray: #a6ecbf; }
 .foe-tip.foe-whale .fa-bar b { background: linear-gradient(#8ee07a, #47c27a); box-shadow: inset 0 -2px 0 #2f9e5c; }
 .foe-tip.foe-kraken .fa-bar b { background: linear-gradient(#d68ae8, #b25fd0); box-shadow: inset 0 -2px 0 #8a3fae; }
@@ -1946,6 +1949,13 @@ html:not(.dev-on) .dev-pill { display: none; }
 .devmenu .dpic > .ico { width: 20px; height: 20px; display: block; margin: 0 auto; }
 /* Jefes en el recuento y en las reglas: del tamaño de los otros iconos. */
 .devmenu .dpic > .rd-foe { width: 22px; height: 22px; margin: 0 auto; }
+/* Reglas de los jefes (16 nov 2026): datos generales en renglones y cada jefe en su bloque. */
+.devmenu .dfacts { margin: 4px 10px 10px; padding-left: 18px; font-size: 14px; line-height: 1.35; }
+.devmenu .dfacts li { margin: 3px 0; }
+.devmenu .dfoe-rule { margin: 8px 10px; padding: 6px 10px 8px; border-radius: 12px; background: var(--rl); border: 2px solid #e3d8f7; }
+.devmenu .dfoe-rule h5 { display: flex; align-items: center; gap: 8px; margin: 0 0 4px; font: 400 16px 'Lilita One'; }
+.devmenu .dfoe-rule ul { margin: 0; padding-left: 18px; font-size: 14px; line-height: 1.35; }
+.devmenu .dfoe-rule li { margin: 2px 0; }
 .devmenu .rd-foe.dfoe { display: inline-grid; width: 22px; height: 22px; vertical-align: middle; }
 .devmenu .rd-foe svg { width: 100%; height: 100%; }
 /* La llama del Fénix es más alta que ancha y el ×N de la apuesta más ancho: que quepan en el cuadro de los demás. */
@@ -3745,6 +3755,7 @@ s.was { text-decoration: line-through 2px #ff5f7e; opacity: .7; margin-right: .2
 /* Cada jefe con su color en la barra (el Fénix, el naranja de siempre). */
 .foe-bar.foe-ilus .fb-hp b { background: linear-gradient(#7f97ff, #4f6cff); box-shadow: inset 0 -2px 0 #3349d6; }
 .foe-bar.foe-whale .fb-hp b { background: linear-gradient(#8ee07a, #47c27a); box-shadow: inset 0 -2px 0 #2f9e5c; }
+.foe-bar.foe-medusa .fb-hp b { background: linear-gradient(#7feeff, #2fc4dc); box-shadow: inset 0 -2px 0 #1f97ad; }
 .foe-bar.foe-kraken .fb-hp b { background: linear-gradient(#d68ae8, #b25fd0); box-shadow: inset 0 -2px 0 #8a3fae; }
 /* La criatura en la orilla: respira y, antes de atacar, se agita. */
 .board .foe { position: absolute; z-index: 6; pointer-events: none; display: grid; place-items: center; }
@@ -3801,6 +3812,18 @@ s.was { text-decoration: line-through 2px #ff5f7e; opacity: .7; margin-right: .2
    cae, el número nuevo de la carta no se ve (magic-wait). */
 .magic-drop { position: absolute; left: 0; top: 0; z-index: 9300; width: 34px; height: 34px; margin: -17px 0 0 -17px; pointer-events: none; filter: drop-shadow(0 0 8px #9db0ff) drop-shadow(0 0 16px #ffd54a99); }
 .magic-drop svg { width: 100%; height: 100%; overflow: visible; }
+/* Medusa de plasma (16 nov 2026, opciones escogidas en dev/medusa.html): chispas «B» (arcos que chisporrotean por la
+   orilla), llegada en cadena, arco al robar, destello al descargar. */
+.board .card.zapped { filter: drop-shadow(0 0 5px #5ff0ff) drop-shadow(0 0 2px #5ff0ff); }
+.zap-ov { position: absolute; left: -14%; right: -14%; top: -10%; bottom: -10%; z-index: 7; pointer-events: none; }
+.zap-ov svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.zap-ov path { fill: none; stroke: #e9ffff; stroke-width: 2px; vector-effect: non-scaling-stroke; stroke-linejoin: round; filter: drop-shadow(0 0 2px #5ff0ff) drop-shadow(0 0 4px #5ff0ff); }
+.zap-bolt { position: absolute; left: 0; top: 0; width: 100%; height: 100%; z-index: 9400; overflow: visible; pointer-events: none; }
+.zap-bolt .zb1 { fill: none; stroke: #fff; stroke-linejoin: round; stroke-linecap: round; filter: drop-shadow(0 0 3px #5ff0ff) drop-shadow(0 0 7px #5ff0ff); }
+.zap-bolt .zb2 { fill: none; stroke: #5ff0ff; stroke-width: 1.6; stroke-linejoin: round; opacity: .9; }
+.zap-spk { position: absolute; z-index: 9401; width: 3px; height: 11px; margin: -5px 0 0 -1.5px; border-radius: 2px; background: #fff36b; box-shadow: 0 0 6px #fff36b; pointer-events: none; }
+.zap-spk.c { background: #5ff0ff; box-shadow: 0 0 6px #5ff0ff; }
+.zap-ring { position: absolute; z-index: 9401; aspect-ratio: 1; translate: -50% -50%; border-radius: 50%; pointer-events: none; border: 4px solid #5ff0ff; box-shadow: 0 0 12px #5ff0ff, inset 0 0 10px #5ff0ff; }
 .magic-ring { position: absolute; z-index: 9300; aspect-ratio: 1; translate: -50% -50%; border-radius: 50%; pointer-events: none; border: 3px solid #9db0ff; box-shadow: 0 0 16px #7fa4ff, inset 0 0 12px #ffd54a88; }
 .magic-star { position: absolute; z-index: 9300; aspect-ratio: 1; margin: -6px 0 0 -6px; pointer-events: none; clip-path: polygon(50% 0, 61% 39%, 100% 50%, 61% 61%, 50% 100%, 39% 61%, 0 50%, 39% 39%); }
 .board .card.magic-wait .front :is(.big, .rk, .cs) { visibility: hidden; }

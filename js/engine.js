@@ -149,13 +149,13 @@ export function initState(level, extra = {}) {
     // Asteroides: robos desde la última caída y piedras en el tablero (id -> jugadas que les quedan).
     ...(level.rocks && { rq: 0, rock: {} }),
     // Jefe de constelación: su vida y lo que tiene agarrado (ver bossStep).
-    ...(level.foe && { hp: level.foe.hp, ash: [], melt: [], ink: [], tickle: 0, belly: [], ontop: {}, under: {} }),
+    ...(level.foe && { hp: level.foe.hp, ash: [], melt: [], ink: [], tickle: 0, belly: [], ontop: {}, under: {}, zap: [], zd: 0, zt: 0 }),
     ...extra,
   };
 }
 
 // (Partidas guardadas antes del boleto partido no traen cut.)
-export const cloneState = (s) => ({ ...s, rem: s.rem.slice(), stock: s.stock.slice(), boom: s.boom.slice(), cut: (s.cut || []).slice(), ...(s.awake && { awake: s.awake.slice() }), ...(s.open && { open: s.open.slice() }), ...(s.lift && { lift: s.lift.slice() }), ...(s.rock && { rock: { ...s.rock } }), ...(s.scrGone && { scrGone: s.scrGone.slice() }), ...(s.shift && { shift: { ...s.shift } }), ...(s.ash && { ash: s.ash.slice(), melt: (s.melt || []).slice(), ink: (s.ink || []).map((t) => ({ ...t, ids: t.ids.slice() })), belly: s.belly.map((b) => ({ ...b })), ontop: { ...s.ontop }, under: { ...s.under } }), ...(s.suit && { suit: { ...s.suit } }) });
+export const cloneState = (s) => ({ ...s, rem: s.rem.slice(), stock: s.stock.slice(), boom: s.boom.slice(), cut: (s.cut || []).slice(), ...(s.awake && { awake: s.awake.slice() }), ...(s.open && { open: s.open.slice() }), ...(s.lift && { lift: s.lift.slice() }), ...(s.rock && { rock: { ...s.rock } }), ...(s.scrGone && { scrGone: s.scrGone.slice() }), ...(s.shift && { shift: { ...s.shift } }), ...(s.ash && { ash: s.ash.slice(), melt: (s.melt || []).slice(), ink: (s.ink || []).map((t) => ({ ...t, ids: t.ids.slice() })), belly: s.belly.map((b) => ({ ...b })), ontop: { ...s.ontop }, under: { ...s.under }, zap: (s.zap || []).slice() }), ...(s.suit && { suit: { ...s.suit } }) });
 
 // Mitad del boleto partido que ya se jugó (0 = está entero, 1 = la de arriba, 2 = la de abajo).
 export const cutOf = (c, s) => (c.half != null && s.cut?.[c.id]) || 0;
@@ -328,6 +328,10 @@ export const beltPos = (level, c, s) => (((c.belt - 1 - s.actions) % level.belt.
 export const beltShown = (level, c, s) => !c.belt || !level.belt || beltPos(level, c, s) < level.belt.W;
 export const isOpen = (level, c, s) => faceUp(level, c, s) && lockOpen(level, c, s) && !iceLeft(c, s) && ghostShown(c, s) && !underWater(c, s) && beltShown(level, c, s) && !rockOn(c, s) && !vineOn(level, c, s) && !asleep(c, s) && !inked(c, s);
 // Kraken: carta con tinta (no se juega hasta que quede limpia del todo).
+// Medusa (16 nov 2026): una carta con chispas solo entra sobre una de su mismo color (rojas: corazones y diamantes, palos
+// 1 y 2). El comodín y lo que no tiene palo la dejan entrar.
+export const redSuit = (k) => k === 1 || k === 2;
+export const zapBad = (c, s) => !!s.zap?.includes(c.id) && !!s.top && !s.top.wild && s.top.suit != null && redSuit(s.top.suit) !== redSuit(s.suit?.[c.id] ?? c.suit);
 export const inked = (c, s) => !!s.ink?.some((t) => t.ids.includes(c.id));
 // Cinturón de asteroides (10 nov 2026, pedido del usuario): cada ROCK_EVERY robos caen level.rocks.n piedras (2 o 3)
 // sobre cartas libres; cada una la tapa ROCK_PLAYS turnos (jugadas o robos; 11 nov 2026, antes solo jugadas) o hasta usar la ayuda Láser. Como la marea,
@@ -369,7 +373,7 @@ export function setTide(level, s, d = 0) {
 // Con qué número se jugaría (la carta doble prueba sus dos números; el boleto entero, sus dos mitades). null = no se puede.
 // low: del boleto entero, la mitad de abajo si las dos conectan (la que tocó el jugador).
 export function playRank(level, c, s, low = false) {
-  if (!isOpen(level, c, s)) return null;
+  if (!isOpen(level, c, s) || zapBad(c, s)) return null;
   const r = rankOf(c, s);
   if (chamWild(c, s)) return r;
   if (c.tri) {
@@ -574,6 +578,9 @@ export function play(level, s0, id, low = false, forced = false) {
   s.top = chamWild(c, s0) ? { wild: true } : c.alt != null ? { rank: c.rank, alt: c.alt, suit } : exit != null ? { rank: exit, suit } : { rank: r, suit, ...(c.arrow && { arrow: c.arrow }) };
   // Fénix: una carta con ceniza que se juega ya no la trae.
   if (s.ash?.length) s.ash = s.ash.filter((j) => j !== id);
+  // Medusa: jugarla la descarga.
+  const zapOff = !!s0.zap?.includes(id);
+  if (zapOff) s.zap = s.zap.filter((j) => j !== id);
   // Arcoíris: el descarte lleva las jugadas ±2 que quedan.
   const rb = c.rainbow ? RAINBOW : Math.max(0, (s0.top?.rb || 0) - 1);
   if (rb && !s.top.wild) s.top.rb = rb;
@@ -636,7 +643,7 @@ export function play(level, s0, id, low = false, forced = false) {
     s.stock.push({ rank: rankOf(x, s), suit: x.suit, ...(x.alt != null && { alt: x.alt }), ...(x.arrow && { arrow: x.arrow }) });
   }
   const boss = bossStep(level, s0, s, true);
-  return { s, ev: { t: 'play', id, rank: r, ...(boss && { boss }), packs, defused, reward, boost, boom, wished, wishes, gone, ...(c.turbo && { turbo: true }), ...(twin != null && { twin }), ...(split && { split }), ...(tri && { tri }), ...(exit != null && { exit }), ...(shipBack && { shipBack }), ...(c.doorKey && { key: true }), ...(cst && { cst }), ...(rockOff.length && { rockOff }), ...(bolted.length && { bolted }), ...(burnt && { burnt }) } };
+  return { s, ev: { t: 'play', id, rank: r, ...(boss && { boss }), packs, defused, reward, boost, boom, wished, wishes, gone, ...(c.turbo && { turbo: true }), ...(twin != null && { twin }), ...(split && { split }), ...(tri && { tri }), ...(exit != null && { exit }), ...(shipBack && { shipBack }), ...(c.doorKey && { key: true }), ...(cst && { cst }), ...(rockOff.length && { rockOff }), ...(bolted.length && { bolted }), ...(burnt && { burnt }), ...(zapOff && { zapOff }) } };
 }
 
 // Abrir la puerta d con una llave. No es jugada ni robo: no mueve la racha ni las cuentas, salvo su premio
@@ -709,9 +716,18 @@ export function astroSend(level, s0) {
 //           1, aunque sea la última; cualquier volteada menos las que ella escupió encima de otra) a su panza (s.belly; no cuentan como jugadas)
 //           y WHALE_SPIT acciones después las escupe boca arriba encima de otras (s.ontop / s.under): la de abajo queda
 //           tapada. Para ganar no puede quedar nada en su panza. Si ya no hay mazo ni nada que jugar, escupe todo ya
+//   medusa  Medusa de plasma, no se ve (16 nov 2026, pedido del usuario): pone chispas en cartas libres (s.zap): 2-3 en las
+//           dos primeras vueltas y 3 desde la 3.ª, hasta medusaMax a la vez. Una carta con chispas solo entra sobre una
+//           de su mismo color (zapBad); jugarla la descarga. Con MEDUSA_CALM jugadas seguidas se apaga la más vieja
+//           (s.zt; robar lo reinicia; como la limpieza del Kraken). Cada MEDUSA_HOP robos con chispas en la mesa (s.zd),
+//           la más vieja se pasa a otra libre (se mueve, no se multiplica: el usuario quiso que castigue poco). Sin mazo
+//           ni nada que jugar, se apagan todas
 // Cada cuántas acciones ataca, por vuelta (la primera vez más espaciado; luego más seguido).
-export const BOSS_EVERY = { fenix: [4, 4, 4, 3], ilus: [6, 5, 4, 3], kraken: [7, 6, 5, 4], whale: [5, 4, 4, 4] };
-export const KRAKEN_TICKLE = 3, KRAKEN_SLAM = 3, WHALE_SPIT = 3;
+export const BOSS_EVERY = { fenix: [4, 4, 4, 3], ilus: [6, 5, 4, 3], medusa: [5, 5, 5, 4], kraken: [7, 6, 5, 4], whale: [5, 4, 4, 4] };
+export const KRAKEN_TICKLE = 3, KRAKEN_SLAM = 3, WHALE_SPIT = 3, MEDUSA_HOP = 3, MEDUSA_CALM = 4;
+// Medusa: cuántas chispas puede haber a la vez, por vuelta.
+export const MEDUSA_MAX = [3, 3, 4, 4];
+export const medusaMax = (r) => MEDUSA_MAX[Math.min(3, r)];
 export const bossAlive = (level, s) => !!level.foe && s.hp > 0;
 // Fénix: con racha de 5, 10, 15… el fuego baja un turno (se ve el número) y luego vuelve.
 export const fireLow = (s) => s.streak > 0 && s.streak % 5 === 0;
@@ -747,6 +763,9 @@ const bossKind = (c) => c.rank != null && !special(c) && c.half == null && !c.tr
 // carta»): cualquier carta del tablero que no sea bomba, cometa ni paquete. Lo que cambia números (Ilusionista, manotazo)
 // sigue solo con las de un número (bossKind).
 const bossCover = (c) => c.rank != null && !special(c);
+// Medusa: solo cartas de un número con palo (el camaleón ya entra sobre cualquiera).
+const zapKind = (c) => bossKind(c) && !c.cham && c.suit != null;
+export const medusaCan = (level, s) => level.cards.filter((c) => zapKind(c) && isOpen(level, c, s) && !s.zap?.includes(c.id));
 // Kraken (15 nov 2026, el usuario se quedó atorado): si ya no queda ninguna carta para jugar porque todas las libres
 // tienen tinta, la mancha más vieja se limpia sola (sin esto solo quedaba robar hasta perder).
 function bossStep(level, s0, s, played) {
@@ -755,6 +774,15 @@ function bossStep(level, s0, s, played) {
   if (level.foe?.kind === 'whale' && s.belly?.length && !s.stock.length && !level.cards.some((c) => isOpen(level, c, s))) {
     const r = out || {};
     r.spit = [...(r.spit || []), ...whaleSpit(level, s, true)];
+    return r;
+  }
+  // Medusa: sin mazo y sin nada que jugar por las chispas, se apagan todas (si no, solo quedaba perder).
+  if (level.foe?.kind === 'medusa' && s.hp > 0 && s.zap?.length && !s.stock.length && !legal(level, s).length) {
+    const r = out || {};
+    r.unzap = s.zap;
+    s.zap = [];
+    s.zd = 0;
+    s.zt = 0;
     return r;
   }
   if (level.foe?.kind !== 'kraken' || s.hp <= 0 || !s.ink?.length || out?.wash || level.cards.some((c) => isOpen(level, c, s))) return out;
@@ -771,6 +799,7 @@ function bossAct(level, s0, s, played) {
     out.hit = 1;
   }
   if (B.kind === 'kraken') s.ink ||= [];
+  if (B.kind === 'medusa') (s.zap ||= []), (s.zd ||= 0), (s.zt ||= 0);
   if (B.kind === 'kraken' && s.ink.length) {
     if (played) {
       if (++s.tickle >= KRAKEN_TICKLE) {
@@ -804,10 +833,29 @@ function bossAct(level, s0, s, played) {
       }
     }
   }
+  // Medusa: con MEDUSA_CALM jugadas seguidas se apaga la más vieja; robar reinicia esa cuenta.
+  if (B.kind === 'medusa' && s.zap.length && s.hp > 0) {
+    if (!played) s.zt = 0;
+    else if (++s.zt >= MEDUSA_CALM) {
+      s.zt = 0;
+      out.calm = s.zap.shift();
+    }
+  }
+  // Medusa: cada MEDUSA_HOP robos con chispas en la mesa, la más vieja se pasa a otra libre.
+  if (B.kind === 'medusa' && !played && s.zap.length && s.hp > 0 && ++s.zd >= MEDUSA_HOP) {
+    s.zd = 0;
+    const to = level.cards.filter((c) => zapKind(c) && isOpen(level, c, s) && !s.zap.includes(c.id));
+    if (to.length) {
+      const from = s.zap.shift(), t = to[bossHash(level, s, 5) % to.length].id;
+      s.zap.push(t);
+      out.hop = [from, t];
+    }
+  }
   if (s.hp <= 0) {
-    // Se va: la ceniza se quita, la tinta se lava y la ballena regresa a su lugar lo que se tragó.
+    // Se va: la ceniza se quita, la tinta se lava, las chispas se apagan y la ballena regresa a su lugar lo que se tragó.
     s.ash = [];
     s.ink = [];
+    if (s.zap?.length) (out.unzap = s.zap), (s.zap = []);
     for (const b of s.belly) s.rem[b.id] = false;
     s.belly = [];
     out.gone = true;
@@ -845,6 +893,16 @@ function bossAct(level, s0, s, played) {
         s.shift[c.id] = mod13((s.shift[c.id] || 0) + d);
         return c.id;
       });
+    }
+  } else if (B.kind === 'medusa') {
+    // 2-3 nuevas en las dos primeras vueltas y 3 desde la 3.ª, sin pasar del tope (medusaMax).
+    const free = can.filter((c) => zapKind(c) && !s.zap.includes(c.id));
+    const n = Math.min(free.length, medusaMax(B.r) - s.zap.length, B.r >= 2 ? 3 : 2 + ((h >>> 2) % 2));
+    if (n > 0) {
+      const pick = free.map((c) => c.id).sort((a, b) => hash(a * 59 + h) - hash(b * 59 + h)).slice(0, n);
+      s.zap.push(...pick);
+      s.zd = 0;
+      out.zap = pick;
     }
   } else if (B.kind === 'kraken') {
     const max = 1 + Math.min(2, B.r);
@@ -984,16 +1042,17 @@ const hasTurbo = (level) => level.cards.some((c) => c.turbo) || level.stock.some
 
 // Busca una solución desde un estado (profundidad primero, con memoria). Devuelve [id | 'draw' | 'wild', …] o null.
 // wilds: comodines que puede usar (como en el juego, solo al quedarse sin jugadas).
-export function solve(level, s0, limit = 250000, wilds = 0) {
+// kill: además de ganar, el jefe tiene que quedar vencido (s.hp en 0).
+export function solve(level, s0, limit = 250000, wilds = 0, kill = false) {
   const timed = !!level.foe || !!level.vine || !!level.flip || level.cards.some((c) => c.live || c.bomb || c.comet || c.ghost || c.cham || c.ring || c.belt);
   const turbo = hasTurbo(level);
   const seen = new Set();
   const path = [];
   let nodes = 0;
   const dfs = (s, w = wilds) => {
-    if (won(s, level)) return true;
+    if (won(s, level)) return !kill || s.hp <= 0;
     if (++nodes > limit) return false;
-    const key = `${w}|${s.rem.map((b, i) => (b ? 1 : s.cut?.[i] ? s.cut[i] + 1 : 0)).join('')}|${s.stock.map(sig).join(',')}|${sig(s.top)}|${(s.streak <= LAST_REWARD ? s.streak : LAST_REWARD + 1 + ((s.streak - LAST_REWARD) % 3))}${timed ? `|${s.actions}|${s.boom}|${s.freeze || 0}` : ''}${level.ship ? `|${s.shipIn}|${s.stolen.map(sig).join('.')}` : ''}${level.tide ? `|${s.tq}` : ''}${s.master ? '|m' : ''}${turbo ? `|${s.turbo}` : ''}${level.rocks ? `|${s.rq}|${Object.entries(s.rock).join(';')}` : ''}${s.lift ? `|${s.lift}` : ''}${s.shield ? '|S' : ''}${s.burnt ? '|B' : ''}${s.magnet ? '|M' : ''}${s.awake ? `|a${s.awake}` : ''}${s.shift ? `|w${Object.entries(s.shift).join(';')}` : ''}${level.foe ? `|b${s.hp}|${s.tickle}|${(s.ink || []).map((t) => `${t.ids}:${t.d}`).join('/')}|${s.belly.map((b) => `${b.id}:${b.at}`).join('/')}|${Object.entries(s.ontop).join('/')}|${s.ash}|${s.melt || ''}` : ''}`;
+    const key = `${w}|${s.rem.map((b, i) => (b ? 1 : s.cut?.[i] ? s.cut[i] + 1 : 0)).join('')}|${s.stock.map(sig).join(',')}|${sig(s.top)}|${(s.streak <= LAST_REWARD ? s.streak : LAST_REWARD + 1 + ((s.streak - LAST_REWARD) % 3))}${timed ? `|${s.actions}|${s.boom}|${s.freeze || 0}` : ''}${level.ship ? `|${s.shipIn}|${s.stolen.map(sig).join('.')}` : ''}${level.tide ? `|${s.tq}` : ''}${s.master ? '|m' : ''}${turbo ? `|${s.turbo}` : ''}${level.rocks ? `|${s.rq}|${Object.entries(s.rock).join(';')}` : ''}${s.lift ? `|${s.lift}` : ''}${s.shield ? '|S' : ''}${s.burnt ? '|B' : ''}${s.magnet ? '|M' : ''}${s.awake ? `|a${s.awake}` : ''}${s.shift ? `|w${Object.entries(s.shift).join(';')}` : ''}${level.foe ? `|b${s.hp}|${s.tickle}|${(s.ink || []).map((t) => `${t.ids}:${t.d}`).join('/')}|${s.belly.map((b) => `${b.id}:${b.at}`).join('/')}|${Object.entries(s.ontop).join('/')}|${s.ash}|${s.melt || ''}|z${s.zap || ''}:${s.zd || 0}:${s.zt || 0}` : ''}`;
     if (seen.has(key)) return false;
     seen.add(key);
     const moves = legal(level, s);
@@ -1026,6 +1085,20 @@ export function playCasual(level, r = Math.random) {
     else if (s.stock.length) s = draw(level, s).s;
     else return false;
     if (won(s, level)) return true;
+  }
+}
+
+// Jefes (16 nov 2026, el usuario: «el 300 no tiene suficientes cartas para matar al enemigo»): una partida del bot
+// casual que también dice si venció al jefe en algún momento (aunque luego pierda).
+export function casualRun(level, r = Math.random) {
+  let s = initState(level), kill = false;
+  for (;;) {
+    const moves = legal(level, s);
+    if (moves.length) s = play(level, s, moves[Math.floor(r() * moves.length)].id).s;
+    else if (s.stock.length) s = draw(level, s).s;
+    else return { win: false, kill };
+    if (level.foe && s.hp <= 0) kill = true;
+    if (won(s, level)) return { win: true, kill };
   }
 }
 

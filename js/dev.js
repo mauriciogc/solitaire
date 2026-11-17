@@ -3,8 +3,8 @@
 import { save, prefs, persist, backupOnce, restoreBackup, setDev, backupInfo } from './storage.js';
 import { missions, missionDone, ACHIEVEMENTS, ACHIEVEMENT_TOP, achievementGot, achievementNeed, achievementsVisible } from './missions.js';
 import { streakWin, streakLose, dailyStreak, nextGoal, col, daysToNextCol, ev, daysToNextEvent, evEnter, evWin, EVENT_PER_PLANET, EVENT_LEVELS, festival, festEnter, festWin, nextFestival, daysToNextFestival, daysToFestival, festShape, isOn, UNLOCK } from './events.js';
-import { TIERS, generateLevel, hardHelp, scrollKind, festivalLevel, eventLevel, eventGroup, EVENT_WORLDS, packGroups, worldInfo, TOTAL_LEVELS, LEVELS_PER_WORLD, MECH_NAMES, MECHANICS, MECH_INTRO, SCROLL_FROM, EXTRA, extraDebut, tideFirst, holeFirst, doorsFirst, bandaFirst, rocksFirst, BOSS_ORDER, BOSS_NAMES } from './levels.js';
-import { playCasual, solve, initState, BOSS_EVERY, BOSS_FIRST, KRAKEN_TICKLE, KRAKEN_SLAM, WHALE_SPIT } from './engine.js';
+import { TIERS, generateLevel, hardHelp, scrollKind, festivalLevel, eventLevel, eventGroup, EVENT_WORLDS, packGroups, worldInfo, TOTAL_LEVELS, LEVELS_PER_WORLD, MECH_NAMES, MECHANICS, MECH_INTRO, SCROLL_FROM, EXTRA, extraDebut, tideFirst, holeFirst, doorsFirst, bandaFirst, rocksFirst, BOSS_ORDER, BOSS_NAMES, BOSS_KILL } from './levels.js';
+import { playCasual, solve, initState, BOSS_EVERY, BOSS_FIRST, KRAKEN_TICKLE, KRAKEN_SLAM, WHALE_SPIT, MEDUSA_HOP, MEDUSA_CALM, medusaMax } from './engine.js';
 import { openModal, toast, updateCoins, popGoal } from './ui.js';
 import { openSlot, slotWhy, SLOT_PAY, SLOT_PAY_RICH, SLOT_EXTRA, SLOT_MONTH_DAYS } from './slot.js';
 import { mulberry32 } from './rng.js';
@@ -733,7 +733,7 @@ export function openDevMenu({ onGallery, onPlanets, onFestivals, onGoLevel, onRe
     ...Object.entries(SCROLL_FROM).map(([t, g]) => ({ n: g + 1, k: 'mesa', name: SCROLL_NAMES[t], pic: tableIcon(t) })),
     ...OVERLAY_TABLES.map(([k, name, n]) => ({ n, k: 'mesa', name: name.toLowerCase(), pic: tableIcon(k) })),
     // Jefes de constelación (15 nov 2026): la primera vez de cada uno; luego se turnan cada 100 niveles.
-    ...BOSS_ORDER.map((k, i) => ({ n: (i + 1) * 100, k: 'jefe', name: BOSS_NAMES[k], pic: `<span class="rd-foe">${FOE_ICON[k]()}</span>`, note: 'Último nivel de cada constelación; se turnan y cada 4 constelaciones vuelven más fuertes.' })),
+    ...BOSS_ORDER.map((k, i) => ({ n: (i + 1) * 100, k: 'jefe', name: BOSS_NAMES[k], pic: `<span class="rd-foe">${FOE_ICON[k]()}</span>`, note: 'Último nivel de cada constelación; se turnan y cuando pasan todos vuelven más fuertes.' })),
     ...BET_AT.map(([m, g], i) => ({ n: g + 1, k: 'ev', name: `Apuesta hasta ×${m}`, pic: `<i class="go-bet dbet b${m}">×${m}</i>`, note: `${i ? `Sale su presentación "¡Subiste a ×${m}!"` : 'Sale la presentación "¡Nuevo: Apuestas!" con sus reglas (antes del evento del mes)'}. Su primera partida va forzada a ×${m} y gratis; cuota ${BET_FEE * (m - 1)} monedas, en jefes ${BET_BOSS_FEE[m]} (× el boleto de entrada); con lluvia de meteoritos, los boletos a mitad.` })),
   ].sort((a, b) => a.n - b.n || Object.keys(KINDS).indexOf(a.k) - Object.keys(KINDS).indexOf(b.k));
   // Choques: dos ventanas de desbloqueo (eventos) en el mismo nivel salen una tras otra. Se marcan en rojo.
@@ -762,10 +762,11 @@ export function openDevMenu({ onGallery, onPlanets, onFestivals, onGoLevel, onRe
     <p class="dline">Sin ventana: se oscurece, cruza la nave y suelta <b>4 cápsulas</b> en paracaídas; tocas una, se abre y sus premios salen en burbujas (ya sumados). Las demás se caen sin decir qué traían. Todas traen ${RESCUE_ITEMS.wild} comodín, ${RESCUE_ITEMS.undo} deshacer y 1 ver cartas 3 s; cambian los boletos (de los que pide el nivel a ×1.5) y las monedas: la de más boletos trae más.</p>
     <table class="dtable"><tr><th>Cápsula</th><th>Boletos (aquí)</th><th>Monedas</th></tr>${RESCUE_COINS.map((c, k) => `<tr><td>${k + 1}</td><td>${need0 + Math.round((k * (top0 - need0)) / 3)}</td><td>${c.toLocaleString('es-MX')}</td></tr>`).join('')}</table>`;
   // Jefes de constelación (15 nov 2026, pedido del usuario): cómo se hacen más difíciles cada vez que vuelven. Se
-  // turnan cada 100 niveles y cada 4 constelaciones dan una vuelta (r); lo que sube deja de subir en la vuelta 8.
+  // turnan cada 100 niveles y cuando pasan todos dan una vuelta (r); lo que sube deja de subir en la vuelta 8.
   const foeDoes = (k, r) => ({
     fenix: `Fuego en ${1 + r} a todas las libres`,
     ilus: 'Cambia ±1 o ±2 todas las boca arriba',
+    medusa: `Chispas en ${['1-2', '2', '2-3', '3'][Math.min(3, r)]} libres (hasta ${medusaMax(r)} a la vez)`,
     kraken: `Hasta ${1 + Math.min(2, r)} mancha${r ? 's' : ''} de tinta (${r ? '3-4' : '2-3'} cartas c/u)`,
     whale: ['Jala 1-2', 'Jala 2', 'Jala 2-3', 'Jala 3-4'][Math.min(3, r)],
   })[k];
@@ -773,11 +774,24 @@ export function openDevMenu({ onGallery, onPlanets, onFestivals, onGoLevel, onRe
   for (let g = 99, i = 0; g < TOTAL_LEVELS; g += 100, i++) {
     const k = BOSS_ORDER[i % BOSS_ORDER.length], r = Math.floor(i / BOSS_ORDER.length);
     if (r > 8) break;
-    foeRows.push(`<tr${i % 4 === 0 && i ? ' style="border-top:3px solid #c9bfe6"' : ''}><td>${(g + 1).toLocaleString('es-MX')}</td><td class="dname"><span class="rd-foe dfoe">${FOE_ICON[k]()}</span> ${BOSS_NAMES[k]}</td><td>${r + 1}</td><td>${BOSS_EVERY[k][Math.min(3, r)]}</td><td class="dname">${foeDoes(k, r)}</td><td>+${2 * Math.min(4, r)}</td><td>${foeBeatPrize(r).coins.toLocaleString('es-MX')}</td></tr>`);
+    foeRows.push(`<tr${i % BOSS_ORDER.length === 0 && i ? ' style="border-top:3px solid #c9bfe6"' : ''}><td>${(g + 1).toLocaleString('es-MX')}</td><td class="dname"><span class="rd-foe dfoe">${FOE_ICON[k]()}</span> ${BOSS_NAMES[k]}</td><td>${r + 1}</td><td>${BOSS_EVERY[k][Math.min(3, r)]}</td><td class="dname">${foeDoes(k, r)}</td><td>+${2 * Math.min(4, r)}</td><td>${foeBeatPrize(r).coins.toLocaleString('es-MX')}</td></tr>`);
   }
-  const foeTable = `<p class="dline">El último nivel de cada constelación (cada 100). Cada 4 constelaciones vuelven más fuertes (una <b>vuelta</b> más). El primer ataque llega a las ${BOSS_FIRST} acciones; luego cada «Ataca cada» acciones (el reloj de arena lo detiene).</p>
-    <p class="dline"><b>Vida</b>: 60% de las cartas del tablero + lo de la columna (cada carta en racha le quita 1). <b>Cofre</b>: monedas del cofre de jefe derrotado (además 1 comodín, 3 deshacer, reloj y ver 3 s; la apuesta no lo toca).</p>
-    <p class="dline"><b>Ilusionista</b>: siempre cambia todas las boca arriba (±1 o ±2); lo único que sube es qué tan seguido lo hace. <b>Kraken</b>: la carta con tinta no se juega hasta quedar limpia; con ${KRAKEN_TICKLE} jugadas seguidas se lava la mancha más vieja; con ${KRAKEN_SLAM} robos con tinta, manotazo (revuelve el 90% de las que no tienen tinta y limpia la mitad de las manchadas). Si no queda nada que jugar por la tinta, la mancha más vieja se limpia sola. <b>Ballena</b>: jala cualquier volteada (siempre al menos 1) y la escupe ${WHALE_SPIT} acciones después encima de otra; sin mazo ni nada que jugar, escupe todo ya.</p>
+  // 16 nov 2026 (el usuario: «salen todas juntas en un párrafo, dale formatito»): cada jefe en su bloque, con su
+  // dibujo, su nombre y sus reglas en renglones.
+  const FOE_RULES = {
+    fenix: ['Cae fuego sobre las libres: se juegan igual, pero tapa su número (se ve por partes).', 'Con racha de 5, 10, 15… el fuego baja un turno y se ve el número.', 'Tocar una con fuego que no conecta cuenta como robo.', 'También le quita el hielo y la enredadera a la carta donde cae.'],
+    ilus: ['Cambia ±1 o ±2 todas las boca arriba.', 'Lo único que sube por vuelta es qué tan seguido lo hace.'],
+    medusa: ['Una carta con chispas solo entra sobre una de su mismo color.', 'Jugarla la descarga.', `Con ${MEDUSA_CALM} jugadas seguidas se apaga la más vieja (robar reinicia la cuenta).`, `Cada ${MEDUSA_HOP} robos con chispas, la más vieja se pasa a otra libre (se mueve, no se multiplica).`, 'Sin mazo ni nada que jugar, se apagan todas.'],
+    kraken: ['La carta con tinta no se juega hasta quedar limpia.', `Con ${KRAKEN_TICKLE} jugadas seguidas se lava la mancha más vieja.`, `Con ${KRAKEN_SLAM} robos con tinta, manotazo: revuelve el 90% de las que no tienen tinta y limpia la mitad de las manchadas.`, 'Si no queda nada que jugar por la tinta, la mancha más vieja se limpia sola.'],
+    whale: ['Jala cualquier volteada (siempre al menos 1).', `La escupe ${WHALE_SPIT} acciones después encima de otra: la de abajo queda tapada.`, 'Para ganar no se puede quedar con ninguna; sin mazo ni nada que jugar, escupe todo ya.'],
+  };
+  const foeTable = `<ul class="dfacts">
+      <li><b>Cuándo</b>: el último nivel de cada constelación (cada 100). Cuando pasan los ${BOSS_ORDER.length} vuelven más fuertes (una <b>vuelta</b> más).</li>
+      <li><b>Ataques</b>: el primero llega ${BOSS_FIRST} acciones antes de «Ataca cada»; luego cada «Ataca cada» acciones. El reloj de arena los detiene.</li>
+      <li><b>Vida</b>: 60% de las cartas + lo de la columna; cada carta en racha le quita 1. Si así no se puede vencer (el solucionador venciéndolo y el bot casual venciéndolo al menos ${Math.round(BOSS_KILL * 100)}% de las veces), otro tablero o menos vida: 45%, 35%, 25% o 18% de las cartas.</li>
+      <li><b>Cofre</b>: monedas de la columna, además 1 comodín, 3 deshacer, reloj y ver 3 s (la apuesta no lo toca).</li>
+    </ul>
+    ${BOSS_ORDER.map((k) => `<div class="dfoe-rule"><h5><span class="rd-foe dfoe">${FOE_ICON[k]()}</span>${BOSS_NAMES[k]}</h5><ul>${FOE_RULES[k].map((x) => `<li>${x}</li>`).join('')}</ul></div>`).join('')}
     <table class="dtable"><tr><th>Nivel</th><th>Jefe</th><th>Vuelta</th><th>Ataca cada</th><th>Qué hace</th><th>Vida</th><th>Cofre</th></tr>${foeRows.join('')}</table>
     <p class="dline">Después de la vuelta 9 ya no sube nada (ataques desde la vuelta 4, vida desde la 5, cofre desde la 9).</p>`;
   const countHTML = `<p class="dline ${clashes.length ? 'd-no' : 'd-yes'}">${clashes.length ? `<b>Choque:</b> en el nivel ${clashes.join(', ')} se abren dos cosas a la vez (en rojo).` : 'Sin choques: cada ventana de desbloqueo sale en su propio nivel.'}</p><table class="dtable dorder"><tr><th></th><th></th><th>Qué</th><th>Nivel</th><th>Mundo</th><th>Tú</th></tr>${rows.map(line).join('')}</table>
@@ -789,7 +803,7 @@ export function openDevMenu({ onGallery, onPlanets, onFestivals, onGoLevel, onRe
   // 15 nov 2026 (pedido del usuario): cada regla en su tarjeta, con su icono, título y subtítulo (cómo va hoy).
   const rule = (k, ico, t, sub, html) => `<section class="dsec drule r-${k}"><h4><span class="dr-ico">${ico}</span><span class="dr-t">${t}<small>${sub}</small></span></h4>${html}</section>`;
   const rulesHTML = [
-    rule('foe', `<span class="rd-foe">${FOE_ICON.kraken()}</span>`, 'Jefes de constelación', 'Fénix → Ilusionista → Kraken → Ballena', foeTable),
+    rule('foe', `<span class="rd-foe">${FOE_ICON.kraken()}</span>`, 'Jefes de constelación', BOSS_ORDER.map((k) => BOSS_NAMES[k].replace(/^El /, '')).join(' → '), foeTable),
     rule('slot', icon('tragamonedas'), 'Tragamonedas', slotWhy(), slotTable),
     rule('rescue', icon('nave'), 'Nave de rescate', rescueSub(), rescueTable),
     rule('pass', icon('pasaporte'), 'Pasaporte', `${passCount().toLocaleString('es-MX')} niveles distintos · ${save.pass?.s || 0} de ${PASS_MAX} sellos`, passTable),
