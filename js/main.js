@@ -1,7 +1,7 @@
 import { save, prefs, persist, resetProfile, deleteProfile, renameProfile, exportCode, readCode, loadProfile, setDev } from './storage.js';
 import { UNLOCK, EVENTS, FESTIVALS, COLLECTIONS, evSoon, isOn, nextEvent, daysToNextCol, plusCols, STREAK_GOALS, STREAK_STEP, streakGoal, nextIndex, dailyStreak, streakTheme, streakReady, streakHot, streakWin, streakLose, streakPendToFeats, msToMidnight, col, colLeft, colWin, colOffers, colBuy, ev, evLeft, evTicketLeft, evTicketPrice, evBuyTicket, evPrize, evEnter, evWin, evLose, evAlbum, festAlbum, EVENT_PLANETS, EVENT_PER_PLANET, EVENT_LEVELS, festival, festivalLeft, festivalSoon, soonLeft, evPrePrice, evPreOwned, evPreBuy, nextFestival, festEnter, festWin, festLose, festShape, festPrice, festPaid, festBuy, festPre, FEST_PRE, FEST_ENTRY, EV_FIRST } from './events.js';
 import { WORLD_COUNT, LEVELS_PER_WORLD, TOTAL_LEVELS, worldInfo, generateLevel, constBoss, bossPicked, setBossPick, variantLevel, MECH_INTRO, MECH_NAMES, MECHANICS, EXTRA, extraDebut, SCROLL_FROM, tideFirst, holeFirst, doorsFirst, bandaFirst, rocksFirst, BOSS_ORDER, secretId, isSecret, eventLevel, festivalLevel } from './levels.js';
-import { Game, faceHTML, backHTML, TIPS, TABLE_TEXT, MECH_KINDS, ART, scrSVG, FOE_ICON, FOE_TITLE, FOE_TEXT, FOE_NAME, FOE_BTN } from './game.js';
+import { Game, faceHTML, backHTML, TIPS, TABLE_TEXT, MECH_KINDS, ART, scrSVG, FOE_ICON, FOE_TITLE, FOE_NAME, FOE_BTN } from './game.js';
 import { maxBet, betFee, betSteps, BET_STEPS, HELPS, DAILY_PATH, dailyState, dailyPieces, DAILY_SHIELD_MAX, starsNeeded, TICKET_PRICE, ticketCost, ticketRefund, coinsFor, bossChest, rollChest, CONST_PRIZE, CONST_OPEN, openCost, constStart, openFree, boosted, secretCoins, rollSecret, openSurprise, MET_OFF, metShopPrice, foeBeatPrize, RESCUE_WEEK, RESCUE_COINS, RESCUE_ITEMS } from './economy.js';
 import { track, missions, missionDef, missionDone, missionsAllDone, autoClaim, ACHIEVEMENTS, ACHIEVEMENT_PRIZES, ACHIEVEMENT_MEDAL, ACHIEVEMENT_TOP, achievementGot, achievementProgress, achievementsVisible } from './missions.js';
 import { pauseOffscreen, openModal, toast, updateCoins, money, esc, reduced, wait, flyToWallet, spendFromWallet, sparkle, confetti, starsHTML, warp, buzz, balloons, lootBubbles, floatBubbles, streakWarnHTML, popPrize, popBalloon, countPop, HEADS, betLoseHTML, shownCoins } from './ui.js';
@@ -1173,8 +1173,8 @@ function roadItems() {
     helpStop('ayuda-varita', 'wand', 'hvarita', 'Varita (ayuda)', 'La compras en tus ayudas: tocas una carta libre y le subes o bajas hasta 3.'),
   ];
   // Jefes de constelación (15 nov 2026): la primera vez que sale cada uno (100, 200, 300…), solo cuando ya pasaste ese
-  // nivel (no se anuncian con «?»: son sorpresa).
-  const foes = BOSS_ORDER.map((k, i) => ({ id: `jefe-${k}`, n: (i + 1) * 10 * LEVELS_PER_WORLD, k: 'jefe', kind: 'Jefe nuevo', name: FOE_TITLE[k], pic: `<span class="rd-foe">${FOE_ICON[k]()}</span>`, text: `${FOE_TEXT[k][1]} Sale en el último nivel de cada constelación.` }));
+  // nivel (no se anuncian con «?»: son sorpresa). Con el texto corto de Cómo jugar (17 nov 2026, el usuario).
+  const foes = BOSS_ORDER.map((k, i) => ({ id: `jefe-${k}`, n: (i + 1) * 10 * LEVELS_PER_WORLD, k: 'jefe', kind: 'Jefe nuevo', name: FOE_TITLE[k], pic: `<span class="rd-foe">${FOE_ICON[k]()}</span>`, text: `${HELP_FOE[k][0].toUpperCase()}${HELP_FOE[k].slice(1)} Sale en el último nivel de cada constelación.` }));
   const order = Object.keys(ROAD_KINDS);
   return [...evs, ...bets, ...foes.filter((x) => x.n <= (save.next || 0)), ...cards, ...helps, ...tables, ...pass].sort((a, b) => a.n - b.n || order.indexOf(a.k) - order.indexOf(b.k));
 }
@@ -4216,7 +4216,7 @@ function openBossReward(w, res) {
 
 // Jefe derrotado (15 nov 2026, pedido del usuario): después del cofre del planeta, su cofre de jefe, más grande y de
 // su color, con su dibujo al frente. Cae, se sacude cada vez más fuerte, se abre con destello y suelta sus regalos.
-const FOE_CHEST = { fenix: ['#ff7a2a', '#c94d14', '#ffb36b'], ilus: ['#4f6cff', '#3349d6', '#9db0ff'], medusa: ['#2fc4dc', '#1f97ad', '#9ff3ff'], kraken: ['#b25fd0', '#8a3fae', '#e3a6f0'], whale: ['#47c27a', '#2f9e5c', '#a6ecbf'] };
+const FOE_CHEST = { fenix: ['#ff7a2a', '#c94d14', '#ffb36b'], ilus: ['#4f6cff', '#3349d6', '#9db0ff'], medusa: ['#2fc4dc', '#1f97ad', '#9ff3ff'], kraken: ['#b25fd0', '#8a3fae', '#e3a6f0'], whale: ['#47c27a', '#2f9e5c', '#a6ecbf'], clock: ['#9a6cf0', '#7448d0', '#d9c4ff'] };
 function openFoeReward(fc) {
   return new Promise((done) => {
     const c = FOE_CHEST[fc.kind] || ['#8a5cf0', '#6c3fd4', '#a785ff'];
@@ -5383,6 +5383,7 @@ const HELP_FOE = {
   ilus: 'tus cartas <b>cambian de número</b>. Juega antes las que te sirven.',
   medusa: 'pone <b>chispas</b>: esa carta solo entra sobre una de su <b>mismo color</b>.',
   kraken: 'mancha cartas con <b>tinta</b>: no se juegan. 3 cartas seguidas limpian una.',
+  clock: '<b>rebobina</b> tus cartas y las <b>congela</b>. No deja deshacer.',
   whale: 'se <b>traga</b> cartas y las <b>escupe</b> encima de otras.',
 };
 function openHelp(tab = 'basico', then) {

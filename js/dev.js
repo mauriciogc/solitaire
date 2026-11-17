@@ -3,8 +3,8 @@
 import { save, prefs, persist, backupOnce, restoreBackup, setDev, backupInfo } from './storage.js';
 import { missions, missionDone, ACHIEVEMENTS, ACHIEVEMENT_TOP, achievementGot, achievementNeed, achievementsVisible } from './missions.js';
 import { streakWin, streakLose, dailyStreak, nextGoal, col, daysToNextCol, ev, daysToNextEvent, evEnter, evWin, EVENT_PER_PLANET, EVENT_LEVELS, festival, festEnter, festWin, nextFestival, daysToNextFestival, daysToFestival, festShape, isOn, UNLOCK } from './events.js';
-import { TIERS, generateLevel, hardHelp, scrollKind, festivalLevel, eventLevel, eventGroup, EVENT_WORLDS, packGroups, worldInfo, TOTAL_LEVELS, LEVELS_PER_WORLD, MECH_NAMES, MECHANICS, MECH_INTRO, SCROLL_FROM, EXTRA, extraDebut, tideFirst, holeFirst, doorsFirst, bandaFirst, rocksFirst, BOSS_ORDER, BOSS_NAMES, BOSS_KILL } from './levels.js';
-import { playCasual, solve, initState, BOSS_EVERY, BOSS_FIRST, KRAKEN_TICKLE, KRAKEN_SLAM, WHALE_SPIT, MEDUSA_HOP, MEDUSA_CALM, medusaMax } from './engine.js';
+import { TIERS, generateLevel, hardHelp, scrollKind, festivalLevel, eventLevel, eventGroup, EVENT_WORLDS, packGroups, worldInfo, TOTAL_LEVELS, LEVELS_PER_WORLD, MECH_NAMES, MECHANICS, MECH_INTRO, SCROLL_FROM, EXTRA, extraDebut, tideFirst, holeFirst, doorsFirst, bandaFirst, rocksFirst, BOSS_ORDER, BOSS_NAMES, BOSS_KILL, bossExtra } from './levels.js';
+import { playCasual, solve, initState, BOSS_EVERY, BOSS_FIRST, KRAKEN_TICKLE, KRAKEN_SLAM, WHALE_SPIT, MEDUSA_HOP, MEDUSA_CALM, medusaMax, CLOCK_FREEZE, CLOCK_SEAL, CLOCK_HIT, CLOCK_CARD, clockSeal } from './engine.js';
 import { openModal, toast, updateCoins, popGoal } from './ui.js';
 import { openSlot, slotWhy, SLOT_PAY, SLOT_PAY_RICH, SLOT_EXTRA, SLOT_MONTH_DAYS } from './slot.js';
 import { mulberry32 } from './rng.js';
@@ -769,12 +769,13 @@ export function openDevMenu({ onGallery, onPlanets, onFestivals, onGoLevel, onRe
     medusa: `Chispas en ${['1-2', '2', '2-3', '3'][Math.min(3, r)]} libres (hasta ${medusaMax(r)} a la vez)`,
     kraken: `Hasta ${1 + Math.min(2, r)} mancha${r ? 's' : ''} de tinta (${r ? '3-4' : '2-3'} cartas c/u)`,
     whale: ['Jala 1-2', 'Jala 2', 'Jala 2-3', 'Jala 3-4'][Math.min(3, r)],
+    clock: `Rebobina ${r ? 2 : '1-2'} y congela ${CLOCK_FREEZE}; sello de ${clockSeal(r)}`,
   })[k];
   const foeRows = [];
   for (let g = 99, i = 0; g < TOTAL_LEVELS; g += 100, i++) {
     const k = BOSS_ORDER[i % BOSS_ORDER.length], r = Math.floor(i / BOSS_ORDER.length);
     if (r > 8) break;
-    foeRows.push(`<tr${i % BOSS_ORDER.length === 0 && i ? ' style="border-top:3px solid #c9bfe6"' : ''}><td>${(g + 1).toLocaleString('es-MX')}</td><td class="dname"><span class="rd-foe dfoe">${FOE_ICON[k]()}</span> ${BOSS_NAMES[k]}</td><td>${r + 1}</td><td>${BOSS_EVERY[k][Math.min(3, r)]}</td><td class="dname">${foeDoes(k, r)}</td><td>+${2 * Math.min(4, r)}</td><td>${foeBeatPrize(r).coins.toLocaleString('es-MX')}</td></tr>`);
+    foeRows.push(`<tr${i % BOSS_ORDER.length === 0 && i ? ' style="border-top:3px solid #c9bfe6"' : ''}><td>${(g + 1).toLocaleString('es-MX')}</td><td class="dname"><span class="rd-foe dfoe">${FOE_ICON[k]()}</span> ${BOSS_NAMES[k]}</td><td>${r + 1}</td><td>${BOSS_EVERY[k][Math.min(3, r)]}</td><td class="dname">${foeDoes(k, r)}</td><td>+${bossExtra(r)}</td><td>${foeBeatPrize(r).coins.toLocaleString('es-MX')}</td></tr>`);
   }
   // 16 nov 2026 (el usuario: «salen todas juntas en un párrafo, dale formatito»): cada jefe en su bloque, con su
   // dibujo, su nombre y sus reglas en renglones.
@@ -783,6 +784,7 @@ export function openDevMenu({ onGallery, onPlanets, onFestivals, onGoLevel, onRe
     ilus: ['Cambia ±1 o ±2 todas las boca arriba.', 'Lo único que sube por vuelta es qué tan seguido lo hace.'],
     medusa: ['Una carta con chispas solo entra sobre una de su mismo color.', 'Jugarla la descarga.', `Con ${MEDUSA_CALM} jugadas seguidas se apaga la más vieja (robar reinicia la cuenta).`, `Cada ${MEDUSA_HOP} robos con chispas, la más vieja se pasa a otra libre (se mueve, no se multiplica).`, 'Sin mazo ni nada que jugar, se apagan todas.'],
     kraken: ['La carta con tinta no se juega hasta quedar limpia.', `Con ${KRAKEN_TICKLE} jugadas seguidas se lava la mancha más vieja.`, `Con ${KRAKEN_SLAM} robos con tinta, manotazo: revuelve el 90% de las que no tienen tinta y limpia la mitad de las manchadas.`, 'Si no queda nada que jugar por la tinta, la mancha más vieja se limpia sola.'],
+    clock: ['Rebobina como video las últimas cartas que bajaste de la mesa, aunque después hayas robado (solo sin mecánica o ya liberadas: hielo, enredadera, cortina, candado). El descarte vuelve al de antes solo si seguían arriba.', `Se quedan congeladas ${CLOCK_FREEZE} acciones.`, 'Si lo último fue robar, la robada sube encima de una libre de la mesa (como la Ballena), congelada; la de abajo queda tapada hasta jugarla. El descarte vuelve al de antes.', 'Si todavía no bajas ninguna que se pueda rebobinar, espera a tu siguiente jugada.', `Con ${CLOCK_SEAL} cartas seguidas desde tu último robo (${CLOCK_SEAL + 1} desde la 2.ª vuelta; el comodín cuenta) tu descarte queda sellado: si ataca, se le traba la cinta y pierde ${CLOCK_HIT} de vida.`, `Le pega cada carta desde la 3.ª de la racha y cada una le quita ${CLOCK_CARD} (a los demás, 1 desde la 2.ª).`, 'Mientras esté, no se puede deshacer.', 'Si lo congelado te deja sin ninguna jugada, se descongela con 2 robos (no 3).'],
     whale: ['Jala cualquier volteada (siempre al menos 1).', `La escupe ${WHALE_SPIT} acciones después encima de otra: la de abajo queda tapada.`, 'Para ganar no se puede quedar con ninguna; sin mazo ni nada que jugar, escupe todo ya.'],
   };
   const foeTable = `<ul class="dfacts">

@@ -805,10 +805,11 @@ export function pickLevel(key, tier, make) {
 // el jefe; la vida (hp) sube con el tablero y la vuelta. level.foe (level.boss ya es el jefe de cada planeta).
 // 16 nov 2026 (pedido del usuario): la Medusa de plasma entra en el 300, antes del Kraken (es más sencilla: no bloquea
 // cartas, solo pide el color). Vendrán más; el 100 (Fénix) no se mueve.
-export const BOSS_ORDER = ['fenix', 'ilus', 'medusa', 'kraken', 'whale'];
-export const BOSS_NAMES = { fenix: 'Fénix estelar', ilus: 'El Ilusionista', medusa: 'Medusa de plasma', kraken: 'Kraken', whale: 'Ballena glotona' };
+// El Reloj del vacío entra en el 600 (16 nov 2026): congela cartas y no deja deshacer, más complejo que la Ballena.
+export const BOSS_ORDER = ['fenix', 'ilus', 'medusa', 'kraken', 'whale', 'clock'];
+export const BOSS_NAMES = { fenix: 'Fénix estelar', ilus: 'El Ilusionista', medusa: 'Medusa de plasma', kraken: 'Kraken', whale: 'Ballena glotona', clock: 'Reloj del vacío' };
 export const BOSS_MIN = 0.15;
-// Vida del jefe: 60% de las cartas + 2 por vuelta. Si con ella ningún tablero llega a BOSS_MIN, se baja por pasos
+// Vida del jefe: 60% de las cartas + bossExtra por vuelta. Si con ella ningún tablero llega a BOSS_MIN, se baja por pasos
 // (15 nov 2026, el usuario: «si son jefes, buscar un tablero que cumpla mayor a 15%»; la Ballena enterraba el 1600):
 // con menos vida se le vence antes y deja de atacar.
 // 16 nov 2026 (el usuario: «el 300 no tiene suficientes cartas para matar al enemigo ni haciendo bien todo»): además
@@ -816,6 +817,9 @@ export const BOSS_MIN = 0.15;
 // las veces (aunque luego pierda). Antes en tableros chicos la vida casi llegaba a las cartas (el 1900: 16 de 16).
 const BOSS_HP = [null, 0.45, 0.35, 0.25, 0.18];
 export const BOSS_KILL = 0.35;
+// Vida extra por vuelta: +0, +3, +5, +7 y +9 desde la 5.ª (17 nov 2026, el usuario: «súbele +1 a todos menos el primero»;
+// antes +2 por vuelta).
+export const bossExtra = (r) => (r ? 2 * Math.min(4, r) + 1 : 0);
 export const constBoss = (g) => g < TOTAL_LEVELS && g % (10 * LEVELS_PER_WORLD) === 10 * LEVELS_PER_WORLD - 1;
 export const bossOf = (g) => (constBoss(g) ? { kind: BOSS_ORDER[Math.floor(g / (10 * LEVELS_PER_WORLD)) % BOSS_ORDER.length], r: Math.floor(g / (10 * LEVELS_PER_WORLD) / BOSS_ORDER.length) } : null);
 // Jefe en segundo plano (15 nov 2026): buscar un tablero que pase del 15% puede tardar segundos; js/boss-worker.js lo
@@ -828,7 +832,7 @@ function bossLevel(g) {
   // p = [t, k]: la versión del tablero y el paso de vida.
   const make = ([t, k]) => {
     const L = buildLevel(g, null, t);
-    L.foe = { kind: B.kind, r: B.r, hp: k ? Math.round(L.cards.length * BOSS_HP[k]) : Math.round(L.cards.length * 0.6) + 2 * Math.min(4, B.r) };
+    L.foe = { kind: B.kind, r: B.r, hp: k ? Math.round(L.cards.length * BOSS_HP[k]) : Math.round(L.cards.length * 0.6) + bossExtra(B.r) };
     return L;
   };
   if (picked.has(key)) return picked.get(key) < 0 ? buildLevel(g) : make(picked.get(key));

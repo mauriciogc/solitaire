@@ -3812,6 +3812,38 @@ s.was { text-decoration: line-through 2px #ff5f7e; opacity: .7; margin-right: .2
    cae, el número nuevo de la carta no se ve (magic-wait). */
 .magic-drop { position: absolute; left: 0; top: 0; z-index: 9300; width: 34px; height: 34px; margin: -17px 0 0 -17px; pointer-events: none; filter: drop-shadow(0 0 8px #9db0ff) drop-shadow(0 0 16px #ffd54a99); }
 .magic-drop svg { width: 100%; height: 100%; overflow: visible; }
+/* Reloj del vacío (16 nov 2026, escogido en dev/reloj.html): rebobina como video (la mesa se destiñe con rayas),
+   las cartas regresan congeladas (apagadas, con su doble rojo y azul, y cada tanto quieren moverse y no pueden) y el
+   descarte con 3 seguidas queda en una cápsula de cristal. */
+.game.clk-rw > :not(.clk-vhs) { filter: saturate(.2) contrast(1.15) hue-rotate(-20deg); }
+.clk-vhs { position: absolute; inset: 0; z-index: 9800; pointer-events: none; background: repeating-linear-gradient(0deg, rgba(255,255,255,.08) 0 2px, transparent 2px 6px); mix-blend-mode: screen; overflow: hidden; }
+.clk-vhs > i { position: absolute; left: 0; right: 0; height: 18px; background: linear-gradient(transparent, rgba(255,255,255,.35), transparent); animation: clk-roll .5s linear infinite; }
+@keyframes clk-roll { from { top: -20px; } to { top: 100%; } }
+.clk-flash { position: absolute; inset: 0; z-index: 9810; background: #fff; pointer-events: none; }
+.board .card.clk-frz .inner { filter: saturate(.3) brightness(.75) drop-shadow(-5px 0 0 rgba(255,59,107,.75)) drop-shadow(5px 0 0 rgba(59,214,255,.75)); animation: clk-stuck 2.2s ease-in-out infinite; }
+.board .card.clk-frz .face :is(.rk, b, .big) { text-shadow: 2px 0 rgba(255,59,107,.85), -2px 0 rgba(59,214,255,.85); }
+/* Retenida (17 nov 2026, el usuario: «que se vea más el efecto de retenida»): jala hacia arriba, algo la regresa de
+   golpe y rebota; los colores se separan más en el jalón. */
+@keyframes clk-stuck {
+  0%, 58%, 100% { translate: 0 0; rotate: 0deg; }
+  64% { translate: 0 -5px; rotate: -2deg; }
+  67% { translate: 0 1.5px; rotate: .6deg; }
+  70% { translate: 0 0; rotate: 0deg; }
+  76% { translate: 3px -4px; rotate: 1.8deg; }
+  79% { translate: -1.5px 1px; rotate: -.5deg; }
+  82% { translate: 0 0; rotate: 0deg; }
+}
+.clk-tape { position: absolute; inset: 0; z-index: 8; border-radius: calc(var(--cw, 60px) * 0.12); overflow: hidden; pointer-events: none; background: repeating-linear-gradient(0deg, rgba(42,31,92,.16) 0 2px, transparent 2px 5px); background-size: 100% 5px; animation: clk-lines .25s linear infinite, clk-tug 2.2s ease-in-out infinite; }
+.clk-tape > i { position: absolute; left: 0; right: 0; height: 14%; background: linear-gradient(transparent, rgba(255,255,255,.5), transparent); animation: clk-band .55s steps(9) infinite; }
+@keyframes clk-band { from { top: -15%; } to { top: 105%; } }
+@keyframes clk-lines { from { background-position: 0 0; } to { background-position: 0 5px; } }
+@keyframes clk-tug { 0%, 58%, 70%, 76%, 82%, 100% { box-shadow: none; } 64%, 79% { box-shadow: inset 0 0 0 2px rgba(185,140,255,.7); } }
+.waste.foe-warn > .card { animation: shake .25s ease-in-out infinite; }
+.waste.clk-seal { position: relative; }
+.waste.clk-seal::after { content: ''; position: absolute; inset: -6%; z-index: 5; pointer-events: none; border-radius: 12px; background: linear-gradient(135deg, rgba(200,240,255,.55), rgba(160,210,255,.25) 50%, rgba(220,250,255,.5)); border: 3px solid #bfe9ff; box-shadow: 0 0 12px #8fd3ff; }
+.btn.lilac { background: #9a6cf0; color: #fff; box-shadow: inset 0 -5px 0 #7448d0, inset 0 2px 0 #d9c4ff, 0 3px 0 var(--ink); }
+.foe-bar.foe-clock .fb-hp b, .foe-tip.foe-clock .fa-bar b { background: linear-gradient(#cfa8ff, #9a6cf0); box-shadow: inset 0 -2px 0 #7448d0; }
+.foe-clock .chest.foe-chest { --fc-ray: #d9c4ff; }
 /* Medusa de plasma (16 nov 2026, opciones escogidas en dev/medusa.html): chispas «B» (arcos que chisporrotean por la
    orilla), llegada en cadena, arco al robar, destello al descargar. */
 .board .card.zapped { filter: drop-shadow(0 0 5px #5ff0ff) drop-shadow(0 0 2px #5ff0ff); }

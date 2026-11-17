@@ -206,19 +206,22 @@ const KRAKEN_ICO = (w = 32) => `<svg viewBox="0 0 40 40" width="${w}" height="${
 const WHALE_ICO = () => { const C = [[22, 22, 9], [14, 25, 7], [30, 26, 6.5], [21, 30, 6]]; return `<svg viewBox="0 0 40 40">${C.map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r + 1.6}" fill="${INKF}"/>`).join('')}${C.map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r}" fill="#8ee07a"/>`).join('')}<circle cx="19" cy="19" r="3.4" fill="#c8f5b8"/><path d="M3 12q4-2 7 0M2 19q3-1.6 5 0M33 8q3 1 4 4" stroke="${INKF}" stroke-width="2.2" fill="none" stroke-linecap="round"/><circle cx="26" cy="27" r="1.6" fill="#4caf50"/><circle cx="15" cy="27" r="1.2" fill="#4caf50"/></svg>`; };
 // Icono de la Medusa de plasma (16 nov 2026; el usuario: «no le pongas medusa, pon un rayo»): rayo cian con chispitas.
 const MEDUSA_ICO = () => `<svg viewBox="0 0 40 40"><path d="M24 2 8 22h10l-4 16 18-22H21l5-14z" fill="#5ff0ff" stroke="${INKF}" stroke-width="2.4" stroke-linejoin="round"/><path d="M22 6 13 18" stroke="#fff" stroke-width="2.2" stroke-linecap="round" opacity=".8"/><path d="M5 9l3 2M33 28l3 1M6 30l3-2" stroke="#fff36b" stroke-width="2.4" stroke-linecap="round"/><circle cx="35" cy="9" r="1.8" fill="#fff36b"/></svg>`;
-export const FOE_ICON = { fenix: FIRE_ICO, ilus: () => SPARK_SVG, medusa: MEDUSA_ICO, kraken: () => KRAKEN_ICO(), whale: WHALE_ICO };
-export const FOE_NAME = { fenix: 'Fénix estelar', ilus: 'el Ilusionista', medusa: 'la Medusa de plasma', kraken: 'el Kraken', whale: 'la Ballena glotona' };
-export const FOE_TITLE = { fenix: 'Fénix estelar', ilus: 'El Ilusionista', medusa: 'Medusa de plasma', kraken: 'Kraken', whale: 'Ballena glotona' };
+// Icono del Reloj del vacío (16 nov 2026): reloj lila con sus manecillas y flechita de rebobinar.
+const CLOCK_ICO = () => `<svg viewBox="0 0 40 40"><circle cx="20" cy="21" r="15" fill="#e9dcff" stroke="${INKF}" stroke-width="2.4"/><path d="M20 21V12M20 21l6 4" stroke="${INKF}" stroke-width="2.6" stroke-linecap="round"/><circle cx="20" cy="21" r="1.8" fill="${INKF}"/><path d="M6 9l3 6 5-4" fill="#b98cff" stroke="${INKF}" stroke-width="2" stroke-linejoin="round"/><path d="M14 4h12" stroke="${INKF}" stroke-width="2.4" stroke-linecap="round"/></svg>`;
+export const FOE_ICON = { fenix: FIRE_ICO, ilus: () => SPARK_SVG, medusa: MEDUSA_ICO, kraken: () => KRAKEN_ICO(), whale: WHALE_ICO, clock: CLOCK_ICO };
+export const FOE_NAME = { fenix: 'Fénix estelar', ilus: 'el Ilusionista', medusa: 'la Medusa de plasma', kraken: 'el Kraken', whale: 'la Ballena glotona', clock: 'el Reloj del vacío' };
+export const FOE_TITLE = { fenix: 'Fénix estelar', ilus: 'El Ilusionista', medusa: 'Medusa de plasma', kraken: 'Kraken', whale: 'Ballena glotona', clock: 'Reloj del vacío' };
 export const FOE_TEXT = {
   fenix: ['Nunca lo ves: solo su fuego.', 'Cuando <b>tus cartas tiemblan</b>, cae <b>fuego</b> sobre las libres, pero <b>las puedes seguir jugando</b>. El fuego se mueve y deja ver su número <b>por partes</b>. Con <b>racha de 5</b> el fuego baja un turno y ves el número.'],
   ilus: ['Nunca lo ves: solo su magia.', 'Cuando <b>todas tus cartas boca arriba tiemblan</b>, en tu siguiente turno <b>cambian de número</b>, como por magia. Juega antes las que te sirven.'],
   medusa: ['Nunca la ves: solo sus chispas.', 'Cuando <b>tus cartas tiemblan</b>, pone <b>chispas</b> en algunas. Una carta con chispas solo entra encima de una de su <b>mismo color</b>: roja con roja, negra con negra. Jugarla la <b>descarga</b>. Con <b>4 cartas seguidas</b> se apaga una. Si robas 3 veces, la corriente <b>brinca</b> a otra carta.'],
+  clock: ['Nunca lo ves: solo su tiempo.', 'Cuando <b>tu descarte tiembla</b>, <b>rebobina</b>: tus últimas cartas regresan a su lugar <b>congeladas</b> 3 turnos. Si lo último fue robar, la carta robada <b>sube encima de una carta</b> de la mesa, congelada. Con <b>4 cartas seguidas</b> (5 cuando vuelve más fuerte; el comodín cuenta) tu descarte queda <b>sellado</b>: si ataca, se le traba la cinta y pierde vida. Mientras esté, <b>no puedes deshacer</b>.'],
   kraken: ['Nunca lo ves: solo su tinta.', 'Cuando <b>tus cartas tiemblan</b>, salpica <b>tinta</b> en varias cartas y las <b>bloquea</b>: no se juegan hasta que estén <b>limpias</b>. Con <b>3 cartas seguidas</b> se lava una mancha. Si robas 3 veces con tinta en la mesa, da un <b>manotazo</b>: revuelve las cartas y limpia la mitad de la tinta.'],
   whale: ['Nunca la ves: solo su aire.', 'Cuando <b>tus cartas tiemblan</b>, <b>jala</b> cartas volteadas a su panza y <b>3 turnos</b> después las <b>escupe encima</b> de otras: las de abajo quedan tapadas hasta que juegues las escupidas. Para ganar no se puede quedar con ninguna.'],
 };
-export const FOE_BTN = { fenix: 'orange', ilus: 'blue', medusa: 'cyan', kraken: 'purple', whale: 'green' };
+export const FOE_BTN = { fenix: 'orange', ilus: 'blue', medusa: 'cyan', kraken: 'purple', whale: 'green', clock: 'lilac' };
 // Jefes que no se ven en el tablero (solo lo que hacen): no ocupan la orilla.
-const FOE_HIDDEN = ['fenix', 'ilus', 'medusa', 'kraken', 'whale'];
+const FOE_HIDDEN = ['fenix', 'ilus', 'medusa', 'kraken', 'whale', 'clock'];
 export const FOE_ALL = '<span class="fa-bar" aria-hidden="true"><b></b></span><span>Cada carta que juegas en <b>racha</b> le baja vida. Si se la acabas, se va y te deja un <b>premio más grande</b>.</span>';
 // Lo que el jefe le hace al tablero no se deshace (lo de antes tampoco).
 // La ayuda que sirve contra cada uno, en su ventana: el reloj de arena los detiene.
@@ -241,7 +244,7 @@ const zapEdge = (t) => {
   if ((d -= 140) < 100) return [100 - d, 140];
   return [0, 140 - (d - 100)];
 };
-const foeLock = (ev) => !!(ev?.boss && (ev.boss.ash || ev.boss.ilus || ev.boss.ink || ev.boss.slam || ev.boss.eat || ev.boss.spit || ev.boss.zap || ev.boss.hop));
+const foeLock = (ev) => !!(ev?.boss && (ev.boss.ash || ev.boss.ilus || ev.boss.ink || ev.boss.slam || ev.boss.eat || ev.boss.spit || ev.boss.zap || ev.boss.hop || ev.boss.rewind || ev.boss.crash || ev.boss.raise != null));
 
 // Tinta del Kraken (15 nov 2026, el usuario escogió la «mancha B» de dev/kraken-tinta.html): una mancha que tapa la
 // carta (y su número) con chorros que nacen dentro de ella, se angostan y terminan en gota; gotas que caen sin parar y
@@ -1401,8 +1404,23 @@ export class Game {
     for (const c of this.cards) if (c.el && this.st.ontop?.[c.id] != null && !this.st.rem[c.id]) this.placeSpat(c);
   }
   placeSpat(c) {
+    // Reloj: la carta que regresa en lugar de una especial va donde estaba esa.
+    const sp = this.st.spot?.[c.id];
+    if (sp != null) {
+      const X = this.cards[sp];
+      this.place({ ...X, el: c.el });
+      c.el.style.zIndex = X.z * 100 + X.id;
+      return;
+    }
     const t = this.cards[this.st.ontop[c.id]];
     if (!t?.el || !c.el) return;
+    // Reloj (17 nov 2026, el usuario: «me la puso atrás»; luego «¿encima de quién está?»): la que sube va al frente de
+    // toda la mesa, alineada con su carta (mismo giro, apenas más arriba para que se asome la de abajo) para que no
+    // parezca que tapa a las de al lado.
+    if (this.level.foe?.kind === 'clock') {
+      Object.assign(c.el.style, { left: t.el.style.left, top: `${parseFloat(t.el.style.top) - this.u * 0.08}px`, rotate: t.el.style.rotate || '0deg', zIndex: 5000 + c.id });
+      return;
+    }
     Object.assign(c.el.style, { left: t.el.style.left, top: `${parseFloat(t.el.style.top) - this.u * 0.12}px`, rotate: `${((c.id * 37) % 13) - 6}deg`, zIndex: +t.el.style.zIndex + 1 });
   }
   foePaint() {
@@ -1421,6 +1439,11 @@ export class Game {
     const grab = F.kind === 'kraken' && (st.ink?.length || 0) < 1 + Math.min(2, F.r);
     // Medusa: las libres a las que les puede poner chispas, solo si todavía le caben.
     const zapRoom = F.kind === 'medusa' && (st.zap?.length || 0) < E.medusaMax(F.r);
+    // Reloj: tiembla tu descarte (también si quedó esperando tu siguiente jugada) y el sello de cristal.
+    if (F.kind === 'clock') {
+      this.wasteEl.classList.toggle('foe-warn', st.hp > 0 && (soon || !!st.cpend) && !this.dealing);
+      this.wasteEl.classList.toggle('clk-seal', E.clockSealed(this.level, st));
+    }
     // Ballena: solo las que se puede llevar (no las que ella escupió encima de otra).
     const ilus = !soon ? null : F.kind === 'whale' ? new Set(E.whaleEatable(this.level, st).map((c) => c.id)) : F.kind === 'medusa' ? (zapRoom ? new Set(E.medusaCan(this.level, st).map((c) => c.id)) : null) : F.kind === 'ilus' || F.kind === 'fenix' || grab ? new Set(this.cards.filter((c) => c.el && !c.removed && c.rank != null && !c.pack && !c.bomb && !c.comet && E.isOpen(this.level, c, st)).map((c) => c.id)) : null;
     for (const c of this.cards) {
@@ -1430,6 +1453,17 @@ export class Game {
       if (F.kind === 'kraken') this.inkOn(c, E.inked(c, st), st.ink?.[0]?.ids.includes(c.id) ? st.tickle : 0);
       // Medusa: sus chispas (las que van llegando esperan a su rayo: zapWait).
       if (F.kind === 'medusa') this.zapOn(c, !!st.zap?.includes(c.id) && !st.rem[c.id] && !this.zapWait?.has(c.id));
+      // Reloj: las congeladas (al descongelarse, un destello).
+      if (F.kind === 'clock') {
+        const on = !st.rem[c.id] && E.frozen(c, st);
+        if (!on && c.el.classList.contains('clk-frz') && !reduced()) c.el.animate([{ filter: 'brightness(2.2) saturate(1.6)' }, { filter: 'none' }], { duration: 380, easing: 'ease-out' });
+        c.el.classList.toggle('clk-frz', on);
+        // Encima, la cinta en pausa: rayitas y una franja que pasa (17 nov 2026, el usuario: «aplícale el efecto
+        // rebobinado cuando esté pausada»).
+        const tape = c.el.querySelector(':scope > .clk-tape');
+        if (on && !tape) c.el.insertAdjacentHTML('beforeend', '<i class="clk-tape"><i></i></i>');
+        else if (!on && tape) tape.remove();
+      }
       // Ballena: las que se tragó no se ven; las que escupió van encima de otra.
       c.el.classList.toggle('eaten', !!st.belly?.some((b) => b.id === c.id));
       if (st.ontop?.[c.id] != null && !st.rem[c.id]) this.placeSpat(c);
@@ -1575,6 +1609,10 @@ export class Game {
     // Se lavó una mancha: la limpia la esponja o el jalador, uno y otro (foePaint la quita con inkClean).
     if (b.wash) this.washTool = (this.washK = (this.washK || 0) + 1) % 2 ? 'sponge' : 'squeegee';
     if (b.slam) this.krakenSlam(b.slam, b.unink || []);
+    // Reloj: rebobina como video o se le traba la cinta contra el sello.
+    if (b.rewind?.length) this.clockRewind(b.rewind, !!b.untop);
+    if (b.raise != null) this.clockRaise(b.raise);
+    if (b.crash) this.clockCrash();
     // Medusa: la corriente entra por la orilla y brinca de carta en carta; al robar 3 veces, un arco la pasa a otra.
     if (b.zap) this.zapChain(b.zap);
     if (b.hop) this.zapHop(b.hop);
@@ -1592,6 +1630,91 @@ export class Game {
     if (b.spit) this.whaleSpit(b.spit);
     if (b.gone) this.foeBeaten();
     this.foePaint();
+  }
+  // ---------- Reloj del vacío (16 nov 2026; el usuario escogió en dev/reloj.html) ----------
+  // Rebobinado «C»: la mesa se destiñe con rayas como video rebobinando y las cartas regresan a su lugar (congeladas «B»).
+  // En toda la pantalla (17 nov 2026, el usuario).
+  clockVhs(on) {
+    const v = this.el.querySelector(':scope > .clk-vhs');
+    this.el.classList.toggle('clk-rw', on);
+    if (!on) return v?.remove();
+    if (!v) this.el.insertAdjacentHTML('beforeend', '<i class="clk-vhs"><i></i></i>');
+  }
+  // untop: la que regresa estaba arriba del descarte (si robaste después, el descarte no cambia).
+  clockRewind(ids, untop) {
+    buzz([20, 40, 20]);
+    // Si estaba arriba, mientras llega al descarte se sigue viendo ahí; luego todas regresan.
+    const last = this.level.cards[ids[0]];
+    if (untop) this.wasteShow = { rank: E.rankOf(last, this.st), suit: this.st.suit?.[ids[0]] ?? last.suit };
+    const go = () => {
+      this.clockVhs(!reduced());
+      const from = this.wasteEl.getBoundingClientRect();
+      this.wasteShow = null;
+      this.renderWaste();
+      this.sync();
+      ids.forEach((id, k) => setTimeout(() => {
+        const c = this.cards[id];
+        if (c.el || c.removed) return;
+        if (this.st.spot?.[id] == null) this.returnToBoard(c, from);
+        else this.clockFly(c, from);
+        this.foePaint();
+      }, reduced() ? 0 : 120 + k * 220));
+      setTimeout(() => this.clockVhs(false), reduced() ? 0 : 520 + ids.length * 220);
+    };
+    setTimeout(go, reduced() ? 0 : FLY_MS + 120);
+  }
+  // La que robaste sube del descarte y queda encima de una carta de la mesa (como lo que escupe la Ballena), congelada.
+  clockRaise(id) {
+    buzz([20, 40, 20]);
+    const c = this.cards[id];
+    this.wasteShow = { rank: E.rankOf(c, this.st), suit: this.st.suit?.[id] ?? c.suit };
+    setTimeout(() => {
+      this.clockVhs(!reduced());
+      const from = this.wasteEl.getBoundingClientRect();
+      this.wasteShow = null;
+      this.renderWaste();
+      // Después de un robo todavía no se marcaba que la carta volvió a la mesa.
+      this.sync();
+      if (!c.el && !c.removed) {
+        // Como lo que escupe la Ballena: va encima de su carta (placeSpat) y vuela del descarte hasta ahí.
+        this.clockFly(c, from);
+        this.foePaint();
+      }
+      setTimeout(() => this.clockVhs(false), reduced() ? 0 : 740);
+    }, reduced() ? 0 : FLY_MS + 120);
+  }
+  // Una carta que el Reloj pone en otro lugar (encima de otra o donde estaba una especial): con su número y palo nuevos,
+  // vuela del descarte hasta ahí.
+  clockFly(c, from) {
+    this.makeCardEl(c);
+    c.el.classList.add('up');
+    const box = c.el.querySelector('.inner');
+    if (box) box.outerHTML = `<div class="inner">${faceHTML({ ...c, suit: this.st.suit?.[c.id] ?? c.suit }, E.rankOf(c, this.st))}${backHTML(c)}</div>`;
+    this.placeSpat(c);
+    const el = c.el, [ax, ay] = center(from), [bx, by] = center(el.getBoundingClientRect());
+    toss(el, { x0: ax - bx, y0: ay - by, s0: from.width / this.u }, {}, 360).then(() => {
+      el.getAnimations().forEach((x) => x.cancel());
+      squash(el);
+    });
+  }
+  // Contra el sello: la carta jala hacia atrás tres veces, la mesa brinca a saltos y se corta de golpe.
+  clockCrash() {
+    buzz([30, 30, 60]);
+    if (reduced()) return;
+    setTimeout(async () => {
+      this.clockVhs(true);
+      const top = this.wasteEl.firstElementChild;
+      for (let k = 0; k < 3; k++) {
+        await top?.animate([{ translate: '0 0' }, { translate: '0 -8px' }, { translate: '0 0' }], { duration: 240, easing: 'steps(4)' }).finished;
+        this.wasteEl.animate([{ scale: 1 }, { scale: 1.06 }, { scale: 1 }], { duration: 180 });
+      }
+      await this.el.animate([{ translate: '0 0' }, { translate: '0 -6px' }, { translate: '0 5px' }, { translate: '0 -3px' }, { translate: '0 0' }], { duration: 360, easing: 'steps(5)' }).finished;
+      this.clockVhs(false);
+      const fl = document.createElement('i');
+      fl.className = 'clk-flash';
+      this.el.append(fl);
+      fl.animate([{ opacity: 0.9 }, { opacity: 0 }], { duration: 300 }).finished.then(() => fl.remove());
+    }, FLY_MS + 120);
   }
   // ---------- Medusa de plasma (16 nov 2026; el usuario escogió en dev/medusa.html) ----------
   // Chispas «B»: arcos que chisporrotean por la orilla de la carta. Un solo reloj los vuelve a dibujar todos (zapTick).
@@ -3179,7 +3302,7 @@ export class Game {
   // ---------- Acciones ----------
   tapCard(id, e) {
     const c = this.cards[id];
-    if (!c || c.removed) return;
+    if (!c || c.removed || !c.el) return;
     const { level, st } = this;
     if (this.astroPick) return this.pickHold(c);
     // Lazo y varita esperando: la carta que tocas es la que escoges.
@@ -4565,6 +4688,8 @@ export class Game {
   // Deshacer: se restaura el estado anterior completo y se anima al revés lo que pasó.
   undo() {
     if (this.coach) return;
+    // Reloj del vacío (16 nov 2026, el usuario: «agrega la complejidad de no poder usar el deshacer»): mientras esté.
+    if (this.level.foe?.kind === 'clock' && this.st.hp > 0) return toast('El Reloj del vacío no te deja deshacer');
     if (!this.history.length) return toast('Nada que deshacer');
     // Abrir una puerta no se deshace (9 nov 2026, pedido del usuario): ni eso ni lo de antes.
     if (this.history[this.history.length - 1].t === 'door') return toast('Abrir una puerta no se puede deshacer');
@@ -4917,7 +5042,9 @@ export class Game {
     this.usedWild = true;
     this.history.push({ t: 'wild', before: this.st, best: this.best, bonus: this.bonus });
     // Marea: el comodín cuenta como jugada (baja el agua).
-    this.st = E.setTide(this.level, { ...E.cloneState(this.st), top: { wild: true } }, -1);
+    // Reloj: el comodín cuenta como una carta para el sello.
+    this.st = E.clockWild(this.level, E.setTide(this.level, { ...E.cloneState(this.st), top: { wild: true } }, -1));
+    this.foePaint();
     // Constelación a la mitad: el comodín la apaga (es otra carta en medio).
     if (E.cstStep(this.level, this.st, false) === 'lost') this.cstFx({ cst: 'lost' });
     this.updateStuck(); // con el comodín arriba ya hay jugada: se quita el aviso de atorado

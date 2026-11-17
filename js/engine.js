@@ -149,13 +149,13 @@ export function initState(level, extra = {}) {
     // Asteroides: robos desde la última caída y piedras en el tablero (id -> jugadas que les quedan).
     ...(level.rocks && { rq: 0, rock: {} }),
     // Jefe de constelación: su vida y lo que tiene agarrado (ver bossStep).
-    ...(level.foe && { hp: level.foe.hp, ash: [], melt: [], ink: [], tickle: 0, belly: [], ontop: {}, under: {}, zap: [], zd: 0, zt: 0 }),
+    ...(level.foe && { hp: level.foe.hp, ash: [], melt: [], ink: [], tickle: 0, belly: [], ontop: {}, under: {}, zap: [], zd: 0, zt: 0, wh: [], frz: {}, cpend: false, sc: 0, spot: {} }),
     ...extra,
   };
 }
 
 // (Partidas guardadas antes del boleto partido no traen cut.)
-export const cloneState = (s) => ({ ...s, rem: s.rem.slice(), stock: s.stock.slice(), boom: s.boom.slice(), cut: (s.cut || []).slice(), ...(s.awake && { awake: s.awake.slice() }), ...(s.open && { open: s.open.slice() }), ...(s.lift && { lift: s.lift.slice() }), ...(s.rock && { rock: { ...s.rock } }), ...(s.scrGone && { scrGone: s.scrGone.slice() }), ...(s.shift && { shift: { ...s.shift } }), ...(s.ash && { ash: s.ash.slice(), melt: (s.melt || []).slice(), ink: (s.ink || []).map((t) => ({ ...t, ids: t.ids.slice() })), belly: s.belly.map((b) => ({ ...b })), ontop: { ...s.ontop }, under: { ...s.under }, zap: (s.zap || []).slice() }), ...(s.suit && { suit: { ...s.suit } }) });
+export const cloneState = (s) => ({ ...s, rem: s.rem.slice(), stock: s.stock.slice(), boom: s.boom.slice(), cut: (s.cut || []).slice(), ...(s.awake && { awake: s.awake.slice() }), ...(s.open && { open: s.open.slice() }), ...(s.lift && { lift: s.lift.slice() }), ...(s.rock && { rock: { ...s.rock } }), ...(s.scrGone && { scrGone: s.scrGone.slice() }), ...(s.shift && { shift: { ...s.shift } }), ...(s.ash && { ash: s.ash.slice(), melt: (s.melt || []).slice(), ink: (s.ink || []).map((t) => ({ ...t, ids: t.ids.slice() })), belly: s.belly.map((b) => ({ ...b })), ontop: { ...s.ontop }, under: { ...s.under }, zap: (s.zap || []).slice(), wh: (s.wh || []).slice(), frz: { ...s.frz }, spot: { ...s.spot } }), ...(s.suit && { suit: { ...s.suit } }) });
 
 // Mitad del boleto partido que ya se jugó (0 = está entero, 1 = la de arriba, 2 = la de abajo).
 export const cutOf = (c, s) => (c.half != null && s.cut?.[c.id]) || 0;
@@ -326,12 +326,14 @@ export const underWater = (c, s) => !!c.wet && (s.tide || 0) >= c.wet;
 export const BELT_W = 4; // 8 nov 2026: con 3 el bot casual ganaba 30% (47% en uno normal)
 export const beltPos = (level, c, s) => (((c.belt - 1 - s.actions) % level.belt.K) + level.belt.K) % level.belt.K;
 export const beltShown = (level, c, s) => !c.belt || !level.belt || beltPos(level, c, s) < level.belt.W;
-export const isOpen = (level, c, s) => faceUp(level, c, s) && lockOpen(level, c, s) && !iceLeft(c, s) && ghostShown(c, s) && !underWater(c, s) && beltShown(level, c, s) && !rockOn(c, s) && !vineOn(level, c, s) && !asleep(c, s) && !inked(c, s);
+export const isOpen = (level, c, s) => faceUp(level, c, s) && lockOpen(level, c, s) && !iceLeft(c, s) && ghostShown(c, s) && !underWater(c, s) && beltShown(level, c, s) && !rockOn(c, s) && !vineOn(level, c, s) && !asleep(c, s) && !inked(c, s) && !frozen(c, s);
 // Kraken: carta con tinta (no se juega hasta que quede limpia del todo).
 // Medusa (16 nov 2026): una carta con chispas solo entra sobre una de su mismo color (rojas: corazones y diamantes, palos
 // 1 y 2). El comodín y lo que no tiene palo la dejan entrar.
 export const redSuit = (k) => k === 1 || k === 2;
 export const zapBad = (c, s) => !!s.zap?.includes(c.id) && !!s.top && !s.top.wild && s.top.suit != null && redSuit(s.top.suit) !== redSuit(s.suit?.[c.id] ?? c.suit);
+// Reloj del vacío (16 nov 2026): la carta que rebobinó está congelada hasta la acción s.frz[id].
+export const frozen = (c, s) => (s.frz?.[c.id] || 0) > s.actions;
 export const inked = (c, s) => !!s.ink?.some((t) => t.ids.includes(c.id));
 // Cinturón de asteroides (10 nov 2026, pedido del usuario): cada ROCK_EVERY robos caen level.rocks.n piedras (2 o 3)
 // sobre cartas libres; cada una la tapa ROCK_PLAYS turnos (jugadas o robos; 11 nov 2026, antes solo jugadas) o hasta usar la ayuda Láser. Como la marea,
@@ -578,6 +580,12 @@ export function play(level, s0, id, low = false, forced = false) {
   s.top = chamWild(c, s0) ? { wild: true } : c.alt != null ? { rank: c.rank, alt: c.alt, suit } : exit != null ? { rank: exit, suit } : { rank: r, suit, ...(c.arrow && { arrow: c.arrow }) };
   // Fénix: una carta con ceniza que se juega ya no la trae.
   if (s.ash?.length) s.ash = s.ash.filter((j) => j !== id);
+  // Reloj: las jugadas desde el último robo, con el descarte de antes (solo cartas sin mecánica y de una sola vez).
+  if (level.foe?.kind === 'clock') {
+    s.dl = null;
+    s.wh = !split && !stub && c.twin == null ? [...(s0.wh || []), { id, top: s0.top, after: s.top }].slice(-4) : [];
+    s.sc = (s0.sc || 0) + 1;
+  }
   // Medusa: jugarla la descarga.
   const zapOff = !!s0.zap?.includes(id);
   if (zapOff) s.zap = s.zap.filter((j) => j !== id);
@@ -722,12 +730,41 @@ export function astroSend(level, s0) {
 //           (s.zt; robar lo reinicia; como la limpieza del Kraken). Cada MEDUSA_HOP robos con chispas en la mesa (s.zd),
 //           la más vieja se pasa a otra libre (se mueve, no se multiplica: el usuario quiso que castigue poco). Sin mazo
 //           ni nada que jugar, se apagan todas
+//   clock   Reloj del vacío, no se ve (16 nov 2026, pedido del usuario; escogido en dev/reloj.html): rebobina como video
+//           las últimas cartas que bajaste de la mesa (s.wh), aunque después hayas robado: 1-2 cartas en la 1.ª vuelta y 2 desde la 2.ª
+//           regresan a su lugar (el descarte vuelve al de antes si seguían arriba). Se quedan congeladas CLOCK_FREEZE acciones (s.frz:
+//           hasta qué acción; frozen en isOpen). Solo cartas sin mecánica (clockPlain). Si le toca justo después de un
+//           todavía no bajas ninguna que se pueda rebobinar, espera a tu siguiente jugada (s.cpend). Defensa: con CLOCK_SEAL cartas seguidas
+//           desde tu último robo (s.sc; el comodín cuenta) tu descarte está sellado; si ataca así no rebobina nada, se le traba la cinta y pierde CLOCK_HIT de vida.
+//           Si lo último fue robar, la robada sube encima de una libre de la mesa (s.ontop, clockSlots), congelada, y el descarte
+//           vuelve al de antes (s.dl; 17 nov 2026). Si lo congelado te deja sin ninguna jugada, con un robo se descongela
+//           todo
 // Cada cuántas acciones ataca, por vuelta (la primera vez más espaciado; luego más seguido).
-export const BOSS_EVERY = { fenix: [4, 4, 4, 3], ilus: [6, 5, 4, 3], medusa: [5, 5, 5, 4], kraken: [7, 6, 5, 4], whale: [5, 4, 4, 4] };
+export const BOSS_EVERY = { fenix: [4, 4, 4, 3], ilus: [6, 5, 4, 3], medusa: [5, 5, 5, 4], clock: [6, 5, 5, 4], kraken: [7, 6, 5, 4], whale: [5, 4, 4, 4] };
 export const KRAKEN_TICKLE = 3, KRAKEN_SLAM = 3, WHALE_SPIT = 3, MEDUSA_HOP = 3, MEDUSA_CALM = 4;
 // Medusa: cuántas chispas puede haber a la vez, por vuelta.
 export const MEDUSA_MAX = [3, 3, 4, 4];
 export const medusaMax = (r) => MEDUSA_MAX[Math.min(3, r)];
+// 17 nov 2026 (el usuario): el sello pide 4 seguidas (antes 3, luego 5: «nunca pude»).
+// Sello: 5 en la 1.ª vuelta y 6 desde la 2.ª (clockSeal; 17 nov 2026, el usuario); si ataca contra él, pierde CLOCK_HIT
+// (1.75). Cada carta en racha (desde la 3.ª) le quita CLOCK_CARD (0.85).
+export const CLOCK_FREEZE = 3, CLOCK_SEAL = 5, CLOCK_HIT = 1.75, CLOCK_CARD = 0.85;
+export const clockSeal = (r) => (r ? CLOCK_SEAL + 1 : CLOCK_SEAL);
+// Reloj: tu descarte está sellado con CLOCK_SEAL cartas seguidas desde tu último robo (s.sc; el comodín cuenta como
+// una carta, 16 nov 2026, el usuario: «permite comodines y cuentan como una carta, para blindar»). Va aparte de la racha
+// para no repetir sus premios.
+export const clockSealed = (level, s) => level.foe?.kind === 'clock' && s.hp > 0 && (s.sc || 0) >= clockSeal(level.foe.r);
+// El comodín del inventario (lo usa el juego): suma al sello.
+export const clockWild = (level, s) => (level.foe?.kind === 'clock' ? { ...s, sc: (s.sc || 0) + 1, dl: null, wh: [] } : s);
+// Reloj: solo rebobina cartas sin mecánica (rebobinar una llave, una moneda o una gemela la volvería a cobrar), o con
+// una que ya liberaste: hielo, enredadera, cortina y candado (17 nov 2026, el usuario). Al regresar no vuelven a quedar
+// tapadas (el hielo y la enredadera se marcan en s.melt; la cortina y el candado siguen abiertos por su llave).
+const CLOCK_KEYS = new Set(['id', 'x', 'y', 'z', 'rot', 'group', 'rank', 'suit', 'coveredBy', 'ice', 'vine', 'curtain', 'lock']);
+const clockPlain = (c) => Object.keys(c).every((k) => CLOCK_KEYS.has(k));
+// Reloj: cartas ya jugadas sin mecánica que pueden llevar la que robaste (va encima de otra con s.ontop: así ya no tapa
+// a las que tapaba ni la tapan las suyas, ver moved).
+const BARE = new Set(['id', 'x', 'y', 'z', 'rot', 'group', 'rank', 'suit', 'coveredBy']);
+const clockSlots = (level, s) => level.cards.filter((c) => s.rem[c.id] && Object.keys(c).every((k) => BARE.has(k)) && !(s.wh || []).some((w) => w.id === c.id));
 export const bossAlive = (level, s) => !!level.foe && s.hp > 0;
 // Fénix: con racha de 5, 10, 15… el fuego baja un turno (se ve el número) y luego vuelve.
 export const fireLow = (s) => s.streak > 0 && s.streak % 5 === 0;
@@ -785,21 +822,106 @@ function bossStep(level, s0, s, played) {
     s.zt = 0;
     return r;
   }
+  // Reloj: si lo congelado te deja sin ninguna jugada, te cuesta 2 robos y no 3 (17 nov 2026, el usuario: rebobinó la
+  // única libre y tuvo que pasar 3 turnos; luego «que cueste 2 y no 1»): al primer robo así, a lo congelado le queda una
+  // acción. Sin mazo, se descongela en ese momento.
+  if (level.foe?.kind === 'clock' && s.hp > 0 && out?.raise == null && !out?.rewind && (!played || !s.stock.length) && level.cards.some((c) => !s.rem[c.id] && frozen(c, s)) && !legal(level, s).length) {
+    const r = out || {}, end = s.stock.length ? s.actions + 1 : s.actions;
+    r.thaw = Object.keys(s.frz).map(Number).filter((i) => !s.rem[i] && (s.frz[i] || 0) > end);
+    for (const i of r.thaw) s.frz[i] = end;
+    return r.thaw.length ? r : out;
+  }
   if (level.foe?.kind !== 'kraken' || s.hp <= 0 || !s.ink?.length || out?.wash || level.cards.some((c) => isOpen(level, c, s))) return out;
   const r = out || {};
   r.wash = s.ink.shift().ids;
   s.tickle = 0;
   return r;
 }
+// Reloj: rebobina o, con el descarte sellado, se estrella.
+function clockAct(level, s, out, played) {
+  const B = level.foe;
+  if ((s.sc || 0) >= clockSeal(B.r)) {
+    s.hp = Math.max(0, Math.round((s.hp - CLOCK_HIT) * 100) / 100);
+    out.crash = CLOCK_HIT;
+    return;
+  }
+  // Lo último fue robar (17 nov 2026, el usuario): la robada sube a la mesa y queda encima de una libre (como lo que
+  // escupe la Ballena: s.ontop / s.under), congelada CLOCK_FREEZE acciones; la de abajo queda tapada hasta jugarla. El
+  // descarte vuelve al de antes y el mazo no cambia. La carta de la mesa que la lleva es una ya jugada sin nada
+  // (clockSlots), con su número y palo.
+  const dl = s.dl, slots = dl && s.top && !s.top.wild && s.top.rank === dl.card.rank && s.top.suit === dl.card.suit ? clockSlots(level, s) : [];
+  const under = slots.length ? level.cards.filter((c) => bossCover(c) && isOpen(level, c, s)) : [];
+  if (slots.length && under.length) {
+    const c = slots[bossHash(level, s, 4) % slots.length], u = under[bossHash(level, s, 6) % under.length];
+    s.ontop[c.id] = u.id;
+    s.under[u.id] = c.id;
+    delete s.spot[c.id];
+    s.rem[c.id] = false;
+    s.shift ||= {};
+    s.suit ||= {};
+    s.shift[c.id] = mod13(dl.card.rank - c.rank);
+    s.suit[c.id] = dl.card.suit;
+    s.frz[c.id] = s.actions + CLOCK_FREEZE;
+    s.top = dl.top;
+    s.dl = null;
+    s.wh = (s.wh || []).filter((w) => w.id !== c.id);
+    out.raise = c.id;
+    out.onto = u.id;
+    return;
+  }
+  // Rebobina lo de arriba del descarte (17 nov 2026, el usuario: «deben ser las últimas o la última»): tus últimas
+  // cartas bajadas seguidas, sin robo de por medio (s.wh). Una especial regresa a su lugar como carta normal, sin su
+  // mecánica: la lleva una carta ya jugada sin nada (clockSlots) con su número y palo, puesta donde estaba (s.spot).
+  const can = (s.wh || []).filter((w) => s.rem[w.id]);
+  if (!can.length) {
+    s.wh = [];
+    // Todavía no bajas ninguna: espera tu siguiente jugada.
+    s.cpend = true;
+    return;
+  }
+  const h = bossHash(level, s, 3), n = Math.min(can.length, B.r ? 2 : 1 + ((h >>> 2) % 2));
+  const back = can.slice(-n).reverse(), ids = [];
+  s.wh = can.slice(0, can.length - n);
+  for (const w of back) {
+    if (!s.top || s.top.wild || s.top.rank !== w.after.rank || s.top.suit !== w.after.suit) break;
+    const c = level.cards[w.id];
+    let id = w.id;
+    if (!clockPlain(c)) {
+      const free = clockSlots(level, s).filter((v) => !ids.includes(v.id) && v.id !== w.id);
+      if (!free.length) break;
+      const v = free[bossHash(level, s, 5 + w.id) % free.length];
+      id = v.id;
+      s.shift ||= {};
+      s.suit ||= {};
+      s.shift[id] = mod13(w.after.rank - v.rank);
+      s.suit[id] = w.after.suit ?? c.suit;
+      // Marca de «movida» (no tapa ni la tapan, ver moved) y su lugar.
+      s.ontop[id] = -1;
+      s.spot[id] = w.id;
+    } else if ((c.ice || c.vine != null) && !s.melt.includes(id)) s.melt.push(id);
+    s.top = w.top;
+    s.rem[id] = false;
+    s.frz[id] = s.actions + CLOCK_FREEZE;
+    ids.push(id);
+  }
+  // No se pudo (arriba hay un comodín o no hay carta que la lleve): espera tu siguiente jugada.
+  if (!ids.length) return void (s.cpend = true);
+  s.sc = Math.max(0, (s.sc || 0) - ids.length);
+  out.rewind = ids;
+  out.untop = true;
+}
 function bossAct(level, s0, s, played) {
   if (!level.foe || s0.hp <= 0) return null;
   const B = level.foe, out = {};
-  if (played && s.streak >= 2) {
-    s.hp--;
+  // Cada carta en racha le quita 1 desde la 2.ª. Al Reloj, 0.85 desde la 3.ª (17 nov 2026, el usuario: «que le baje
+  // 0.85»; se redondea a centésimas para que no queden restos).
+  if (played && s.streak >= (B.kind === 'clock' ? 3 : 2)) {
+    s.hp = B.kind === 'clock' ? Math.round((s.hp - CLOCK_CARD) * 100) / 100 : s.hp - 1;
     out.hit = 1;
   }
   if (B.kind === 'kraken') s.ink ||= [];
   if (B.kind === 'medusa') (s.zap ||= []), (s.zd ||= 0), (s.zt ||= 0);
+  if (B.kind === 'clock') (s.wh ||= []), (s.frz ||= {}), (s.spot ||= {});
   if (B.kind === 'kraken' && s.ink.length) {
     if (played) {
       if (++s.tickle >= KRAKEN_TICKLE) {
@@ -856,6 +978,8 @@ function bossAct(level, s0, s, played) {
     s.ash = [];
     s.ink = [];
     if (s.zap?.length) (out.unzap = s.zap), (s.zap = []);
+    if (s.frz && Object.keys(s.frz).length) (out.thaw = Object.keys(s.frz).map(Number)), (s.frz = {});
+    s.cpend = false;
     for (const b of s.belly) s.rem[b.id] = false;
     s.belly = [];
     out.gone = true;
@@ -867,7 +991,18 @@ function bossAct(level, s0, s, played) {
     const spit = whaleSpit(level, s);
     if (spit.length) out.spit = spit;
   }
-  if (s.actions === s0.actions || (s.actions + BOSS_FIRST) % every) return Object.keys(out).length ? out : null;
+  const due = s.actions !== s0.actions && (s.actions + BOSS_FIRST) % every === 0;
+  // Reloj: si le tocó justo después de un robo, ataca en tu siguiente jugada.
+  if (B.kind === 'clock' && (due || (s.cpend && played))) {
+    s.cpend = false;
+    clockAct(level, s, out, played);
+    if (s.hp <= 0) {
+      if (Object.keys(s.frz).length) (out.thaw = Object.keys(s.frz).map(Number)), (s.frz = {});
+      out.gone = true;
+    }
+    return Object.keys(out).length ? out : null;
+  }
+  if (!due) return Object.keys(out).length ? out : null;
   const can = level.cards.filter((c) => bossCover(c) && isOpen(level, c, s));
   const h = bossHash(level, s);
   if (B.kind === 'fenix') {
@@ -1002,6 +1137,9 @@ export function cstStep(level, s, on) {
 
 export function draw(level, s0) {
   const s = cloneState(s0);
+  // Reloj: robar quita el sello y lo de abajo de la robada ya no se rebobina.
+  if (s.sc) s.sc = 0;
+  if (s.wh?.length) s.wh = [];
   // Imán: la carta que más sirve pasa al tope antes de robar (de dónde salió, para animarlo).
   // Si ninguna sirve, no se gasta: robas normal y sigue esperando el siguiente robo. Si sí, la carta jalada no corta la
   // racha (aim = la del tablero que conviene jugar, para señalarla).
@@ -1014,6 +1152,8 @@ export function draw(level, s0) {
   }
   const card = s.stock.shift();
   s.top = card;
+  // Reloj: lo último que hiciste fue robar (la carta y el descarte de antes), por si ataca.
+  if (level.foe?.kind === 'clock') s.dl = { card, top: s0.top };
   s.wand = s.lasso = false;
   tick(s);
   if (!pick) s.streak = 0;
@@ -1052,7 +1192,7 @@ export function solve(level, s0, limit = 250000, wilds = 0, kill = false) {
   const dfs = (s, w = wilds) => {
     if (won(s, level)) return !kill || s.hp <= 0;
     if (++nodes > limit) return false;
-    const key = `${w}|${s.rem.map((b, i) => (b ? 1 : s.cut?.[i] ? s.cut[i] + 1 : 0)).join('')}|${s.stock.map(sig).join(',')}|${sig(s.top)}|${(s.streak <= LAST_REWARD ? s.streak : LAST_REWARD + 1 + ((s.streak - LAST_REWARD) % 3))}${timed ? `|${s.actions}|${s.boom}|${s.freeze || 0}` : ''}${level.ship ? `|${s.shipIn}|${s.stolen.map(sig).join('.')}` : ''}${level.tide ? `|${s.tq}` : ''}${s.master ? '|m' : ''}${turbo ? `|${s.turbo}` : ''}${level.rocks ? `|${s.rq}|${Object.entries(s.rock).join(';')}` : ''}${s.lift ? `|${s.lift}` : ''}${s.shield ? '|S' : ''}${s.burnt ? '|B' : ''}${s.magnet ? '|M' : ''}${s.awake ? `|a${s.awake}` : ''}${s.shift ? `|w${Object.entries(s.shift).join(';')}` : ''}${level.foe ? `|b${s.hp}|${s.tickle}|${(s.ink || []).map((t) => `${t.ids}:${t.d}`).join('/')}|${s.belly.map((b) => `${b.id}:${b.at}`).join('/')}|${Object.entries(s.ontop).join('/')}|${s.ash}|${s.melt || ''}|z${s.zap || ''}:${s.zd || 0}:${s.zt || 0}` : ''}`;
+    const key = `${w}|${s.rem.map((b, i) => (b ? 1 : s.cut?.[i] ? s.cut[i] + 1 : 0)).join('')}|${s.stock.map(sig).join(',')}|${sig(s.top)}|${(s.streak <= LAST_REWARD ? s.streak : LAST_REWARD + 1 + ((s.streak - LAST_REWARD) % 3))}${timed ? `|${s.actions}|${s.boom}|${s.freeze || 0}` : ''}${level.ship ? `|${s.shipIn}|${s.stolen.map(sig).join('.')}` : ''}${level.tide ? `|${s.tq}` : ''}${s.master ? '|m' : ''}${turbo ? `|${s.turbo}` : ''}${level.rocks ? `|${s.rq}|${Object.entries(s.rock).join(';')}` : ''}${s.lift ? `|${s.lift}` : ''}${s.shield ? '|S' : ''}${s.burnt ? '|B' : ''}${s.magnet ? '|M' : ''}${s.awake ? `|a${s.awake}` : ''}${s.shift ? `|w${Object.entries(s.shift).join(';')}` : ''}${level.foe ? `|b${s.hp}|${s.tickle}|${(s.ink || []).map((t) => `${t.ids}:${t.d}`).join('/')}|${s.belly.map((b) => `${b.id}:${b.at}`).join('/')}|${Object.entries(s.ontop).join('/')}|${s.ash}|${s.melt || ''}|z${s.zap || ''}:${s.zd || 0}:${s.zt || 0}|c${(s.wh || []).map((w) => w.id)}:${Object.entries(s.frz || {}).filter(([, a]) => a > s.actions)}:${s.cpend ? 1 : 0}:${s.sc || 0}:${s.dl ? 1 : 0}:${s.suit ? Object.entries(s.suit) : ''}:${Object.entries(s.spot || {})}` : ''}`;
     if (seen.has(key)) return false;
     seen.add(key);
     const moves = legal(level, s);
