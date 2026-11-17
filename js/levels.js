@@ -806,8 +806,10 @@ export function pickLevel(key, tier, make) {
 // 16 nov 2026 (pedido del usuario): la Medusa de plasma entra en el 300, antes del Kraken (es más sencilla: no bloquea
 // cartas, solo pide el color). Vendrán más; el 100 (Fénix) no se mueve.
 // El Reloj del vacío entra en el 600 (16 nov 2026): congela cartas y no deja deshacer, más complejo que la Ballena.
-export const BOSS_ORDER = ['fenix', 'ilus', 'medusa', 'kraken', 'whale', 'clock'];
-export const BOSS_NAMES = { fenix: 'Fénix estelar', ilus: 'El Ilusionista', medusa: 'Medusa de plasma', kraken: 'Kraken', whale: 'Ballena glotona', clock: 'Reloj del vacío' };
+// El Viento solar entra en el 400 (17 nov 2026), después de la Medusa: no bloquea cartas, solo se lleva las de tu
+// descarte justo cuando tienes jugada (más sencillo que Kraken, Ballena y Reloj, que se recorren a 500, 600 y 700).
+export const BOSS_ORDER = ['fenix', 'ilus', 'medusa', 'wind', 'kraken', 'whale', 'clock'];
+export const BOSS_NAMES = { fenix: 'Fénix estelar', ilus: 'El Ilusionista', medusa: 'Medusa de plasma', kraken: 'Kraken', whale: 'Ballena glotona', clock: 'Reloj del vacío', wind: 'Viento solar' };
 export const BOSS_MIN = 0.15;
 // Vida del jefe: 60% de las cartas + bossExtra por vuelta. Si con ella ningún tablero llega a BOSS_MIN, se baja por pasos
 // (15 nov 2026, el usuario: «si son jefes, buscar un tablero que cumpla mayor a 15%»; la Ballena enterraba el 1600):

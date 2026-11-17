@@ -3844,6 +3844,36 @@ s.was { text-decoration: line-through 2px #ff5f7e; opacity: .7; margin-right: .2
 .btn.lilac { background: #9a6cf0; color: #fff; box-shadow: inset 0 -5px 0 #7448d0, inset 0 2px 0 #d9c4ff, 0 3px 0 var(--ink); }
 .foe-bar.foe-clock .fb-hp b, .foe-tip.foe-clock .fa-bar b { background: linear-gradient(#cfa8ff, #9a6cf0); box-shadow: inset 0 -2px 0 #7448d0; }
 .foe-clock .chest.foe-chest { --fc-ray: #d9c4ff; }
+.btn.amber { background: #f2b233; color: var(--ink); box-shadow: inset 0 -5px 0 #c98a10, inset 0 2px 0 #ffe08a, 0 3px 0 var(--ink); }
+.foe-bar.foe-wind .fb-hp b, .foe-tip.foe-wind .fa-bar b { background: linear-gradient(#ffe08a, #f2b233); box-shadow: inset 0 -2px 0 #c98a10; }
+.foe-wind .chest.foe-chest { --fc-ray: #ffe08a; }
+/* Viento solar (17 nov 2026): remolino de tres brazos con contorno de tinta (afuera blanco, adentro dorado y al
+   revés), brillo al centro, chispas doradas que giran y se cierran, y rayas de viento que entran. */
+.wnd-swirl { position: absolute; z-index: 9700; pointer-events: none; }
+.wnd-swirl > svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; overflow: visible; }
+.wnd-swirl > .ws-out { animation: wnd-spin .7s linear infinite; filter: drop-shadow(0 0 8px rgba(255,236,170,.9)); }
+.wnd-swirl > .ws-in { inset: 18%; width: 64%; height: 64%; animation: wnd-spin .45s linear infinite reverse; }
+.wnd-swirl > .ws-glow { position: absolute; inset: 22%; border-radius: 50%; background: radial-gradient(#fff8d6, rgba(255,213,74,.55) 45%, transparent 70%); animation: wnd-pulse .5s ease-in-out infinite alternate; }
+.wnd-swirl > b { position: absolute; left: 50%; top: 50%; width: 7px; height: 7px; margin: -3.5px; border-radius: 50%; background: radial-gradient(#fff, #ffd54a 50%, #ff8a3d); box-shadow: 0 0 6px #ffb347; animation: wnd-orbit .9s linear infinite; animation-delay: var(--d); }
+.wnd-swirl > b.big { width: 11px; height: 11px; margin: -5.5px; border-radius: 0; clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%); background: #ffe27a; }
+@keyframes wnd-spin { to { rotate: -360deg; } }
+@keyframes wnd-pulse { from { scale: .85; opacity: .8; } to { scale: 1.1; opacity: 1; } }
+@keyframes wnd-orbit { from { transform: rotate(var(--a)) translateX(var(--r)) scale(1); opacity: 1; } to { transform: rotate(calc(var(--a) - 540deg)) translateX(calc(var(--r) * .3)) scale(.4); opacity: .2; } }
+.wnd-streak { position: absolute; z-index: 9690; height: 4px; margin-top: -2px; border-radius: 4px; transform-origin: 0 50%; pointer-events: none; background: linear-gradient(90deg, rgba(255,255,255,.95), rgba(255,224,138,.6) 60%, transparent); }
+.wnd-dot { position: absolute; z-index: 9990; border-radius: 50%; pointer-events: none; background: radial-gradient(#fff, #ffd54a 55%, #ff9a3d); box-shadow: 0 0 6px #ffc83d; }
+.wnd-dot.w { background: radial-gradient(#fff, #fff3c8 60%, #ffd98a); box-shadow: 0 0 5px #fff; }
+.wnd-ping { position: absolute; z-index: 9995; width: 36px; height: 36px; pointer-events: none; filter: drop-shadow(0 0 8px #ffd54a); }
+.wnd-ping svg { width: 100%; height: 100%; display: block; }
+.wnd-ring { position: absolute; z-index: 9680; pointer-events: none; border-radius: 50%; border: 4px solid #ffd54a; box-shadow: 0 0 12px #ffc83d, inset 0 0 8px #ffe08a; }
+/* Cartas pesadas (17 nov 2026, el usuario: «que se vea más bonita»; luego «el protector parece como si estuviera
+   atrás» y «tiene algo abajo»): una funda dorada ENCIMA de la carta (marco dorado con su línea de tinta adentro,
+   reflejo arriba y un brillo que pasa), un resplandor alrededor y estrellitas que titilan con aire. */
+.waste.wnd-heavy { position: relative; }
+.waste.wnd-heavy > .card { position: relative; z-index: 2; box-shadow: 0 0 18px 5px rgba(255,200,61,.6); }
+.waste.wnd-heavy > .card .inner::after { content: ''; position: absolute; inset: -2px; z-index: 9; transform: translateZ(1px); border-radius: calc(var(--cw, 60px) * 0.12); pointer-events: none; border: 2.5px solid var(--ink); box-shadow: inset 0 0 0 calc(var(--cw, 60px) * 0.07) #ffd54a, inset 0 0 0 calc(var(--cw, 60px) * 0.07 + 2px) var(--ink), inset 0 calc(var(--cw, 60px) * -0.05) 0 calc(var(--cw, 60px) * 0.07) #e8a317; background: linear-gradient(170deg, rgba(255,255,255,.45), rgba(255,255,255,0) 24%), linear-gradient(115deg, transparent 40%, rgba(255,255,255,.75) 50%, transparent 60%) 0 0 / 300% 100% no-repeat; animation: wnd-shine 2.4s ease-in-out infinite; }
+.waste.wnd-heavy::after { content: ''; position: absolute; z-index: 3; inset: -30% -34%; pointer-events: none; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 140'%3E%3Cg fill='%23ffd54a' stroke='%232a1f5c' stroke-width='1.6'%3E%3Cpath d='M8 10l2.4 6.6L17 19l-6.6 2.4L8 28l-2.4-6.6L-1 19l6.6-2.4z'/%3E%3Cpath d='M92 54l1.8 5L99 61l-5.2 1.8L92 68l-1.8-5.2L85 61l5.2-2z'/%3E%3Cpath d='M14 118l1.6 4.4L20 124l-4.4 1.6L14 130l-1.6-4.4L8 124l4.4-1.6z'/%3E%3C/g%3E%3C/svg%3E") center / 100% 100% no-repeat; animation: wnd-twinkle 1.2s ease-in-out infinite alternate; }
+@keyframes wnd-shine { 0% { background-position: 0 0, 120% 0; } 60%, 100% { background-position: 0 0, -30% 0; } }
+@keyframes wnd-twinkle { from { opacity: .55; scale: .96; } to { opacity: 1; scale: 1.04; } }
 /* Medusa de plasma (16 nov 2026, opciones escogidas en dev/medusa.html): chispas «B» (arcos que chisporrotean por la
    orilla), llegada en cadena, arco al robar, destello al descargar. */
 .board .card.zapped { filter: drop-shadow(0 0 5px #5ff0ff) drop-shadow(0 0 2px #5ff0ff); }

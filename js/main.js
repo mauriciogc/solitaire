@@ -953,7 +953,8 @@ setInterval(() => {
 // fresh: recién desbloqueado y aún sin presentar (no se ve hasta que entra volando con su ventana).
 // revealed: ya entró volando aunque su ventana siga abierta (si el botón se vuelve a pintar, no se esconde).
 const revealed = new Set();
-const fresh = (k) => (save.intro?.[k] || revealed.has(k) ? '' : 'fresh');
+// Con los avisos apagados en dev (devQuiet) no se esconde: si no, el cajón de eventos se quedaba vacío.
+const fresh = (k) => (save.intro?.[k] || revealed.has(k) || (prefs.dev && prefs.devQuiet) ? '' : 'fresh');
 const streakBtn = (prev = null) => {
   if (!isOn('racha')) return '';
   const r = dailyStreak(), t = streakTheme(), old = prev != null;
@@ -1098,7 +1099,7 @@ const ROAD_TABS = [
   ['ev', 'Eventos', 'star', (n) => `Eventos, festividades, apuestas y premios del pasaporte. Llevas <b>${n}</b>.`],
   ['card', 'Cartas', 'card', (n) => `Cartas especiales y ayudas nuevas que salen en los tableros. Llevas <b>${n}</b>.`],
   ['mesa', 'Mesas', 'planet', (n) => `Mesas y cosas que cambian todo el tablero. Llevas <b>${n}</b>.`],
-  ['jefe', 'Jefes', 'crown', (n) => `Criaturas que juegan contra ti en el último nivel de cada constelación. Ya conociste <b>${n}</b>.`],
+  ['jefe', 'Jefes', 'crown', (n) => `Criaturas que juegan contra ti. Ya conociste <b>${n}</b>.`],
 ];
 const ROAD_TABLES = [
   ['mesa', 'Mesa enrollada', 'Limpia las cartas del principio y la mesa avanza: salen más cartas del rollo.'],
@@ -1165,7 +1166,7 @@ function roadItems() {
   ];
   // Jefes de constelación (15 nov 2026): la primera vez que sale cada uno (100, 200, 300…), solo cuando ya pasaste ese
   // nivel (no se anuncian con «?»: son sorpresa). Con el texto corto de Cómo jugar (17 nov 2026, el usuario).
-  const foes = BOSS_ORDER.map((k, i) => ({ id: `jefe-${k}`, n: (i + 1) * 10 * LEVELS_PER_WORLD, k: 'jefe', kind: 'Jefe nuevo', name: FOE_TITLE[k], pic: `<span class="rd-foe">${FOE_ICON[k]()}</span>`, text: `${HELP_FOE[k][0].toUpperCase()}${HELP_FOE[k].slice(1)} Sale en el último nivel de cada constelación.` }));
+  const foes = BOSS_ORDER.map((k, i) => ({ id: `jefe-${k}`, n: (i + 1) * 10 * LEVELS_PER_WORLD, k: 'jefe', kind: 'Jefe nuevo', name: FOE_TITLE[k], pic: `<span class="rd-foe">${FOE_ICON[k]()}</span>`, text: `${HELP_FOE[k][0].toUpperCase()}${HELP_FOE[k].slice(1)}` }));
   const order = Object.keys(ROAD_KINDS);
   return [...evs, ...bets, ...foes.filter((x) => x.n <= (save.next || 0)), ...cards, ...helps, ...tables, ...pass].sort((a, b) => a.n - b.n || order.indexOf(a.k) - order.indexOf(b.k));
 }
@@ -3613,6 +3614,9 @@ function slotBuy(x) {
 async function notices() {
   const gen = ++noticeGen;
   if (tourStep() || save.onboard !== 'done') return;
+  // Modo dev (17 nov 2026, el usuario: «para cuando me mueva no tenga que cerrar todos»): sin avisos fuera del nivel.
+  // Lo que no salió se queda pendiente y sale al prenderlos otra vez.
+  if (prefs.dev && prefs.devQuiet) return;
   if (sideTourDue()) {
     if (!(await calm(gen))) return;
     if (document.querySelector('#app .side.l')) await sideTour();
@@ -4234,7 +4238,7 @@ function openBossReward(w, res) {
 
 // Jefe derrotado (15 nov 2026, pedido del usuario): después del cofre del planeta, su cofre de jefe, más grande y de
 // su color, con su dibujo al frente. Cae, se sacude cada vez más fuerte, se abre con destello y suelta sus regalos.
-const FOE_CHEST = { fenix: ['#ff7a2a', '#c94d14', '#ffb36b'], ilus: ['#4f6cff', '#3349d6', '#9db0ff'], medusa: ['#2fc4dc', '#1f97ad', '#9ff3ff'], kraken: ['#b25fd0', '#8a3fae', '#e3a6f0'], whale: ['#47c27a', '#2f9e5c', '#a6ecbf'], clock: ['#9a6cf0', '#7448d0', '#d9c4ff'] };
+const FOE_CHEST = { fenix: ['#ff7a2a', '#c94d14', '#ffb36b'], ilus: ['#4f6cff', '#3349d6', '#9db0ff'], medusa: ['#2fc4dc', '#1f97ad', '#9ff3ff'], kraken: ['#b25fd0', '#8a3fae', '#e3a6f0'], whale: ['#47c27a', '#2f9e5c', '#a6ecbf'], clock: ['#9a6cf0', '#7448d0', '#d9c4ff'], wind: ['#f2b233', '#c98a10', '#ffe08a'] };
 function openFoeReward(fc) {
   return new Promise((done) => {
     const c = FOE_CHEST[fc.kind] || ['#8a5cf0', '#6c3fd4', '#a785ff'];
@@ -5402,6 +5406,7 @@ const HELP_FOE = {
   medusa: 'pone <b>chispas</b>: esa carta solo entra sobre una de su <b>mismo color</b>.',
   kraken: 'mancha cartas con <b>tinta</b>: no se juegan. 3 cartas seguidas limpian una.',
   clock: '<b>rebobina</b> tus cartas y las <b>congela</b>. No deja deshacer.',
+  wind: 'sopla y se lleva cartas de tu <b>descarte</b> justo cuando tienes jugada. Con 3 seguidas tus cartas <b>pesan</b>.',
   whale: 'se <b>traga</b> cartas y las <b>escupe</b> encima de otras.',
 };
 // Cómo jugar homologado (17 nov 2026, el usuario: «aplica el diseño de la ficha de los jefes en las otras»): cada
@@ -5480,7 +5485,7 @@ function openHelp(tab = 'basico', then) {
         // Jefes de constelación (16 nov 2026, el usuario: «que vaya desbloqueando»): solo los que ya salieron en tu
         // camino (jefe-<tipo> de roadItems).
         ? `<div class="steps">
-        ${H('Jefes de constelación', 'Salen en el último nivel de cada constelación. Cuando tus cartas tiemblan, ¡atacan!')}
+        ${H('Jefes de constelación', 'Cuando tus cartas tiemblan, ¡atacan!')}
         ${BOSS_ORDER.map((k) => S(`<span class="rd-foe">${FOE_ICON[k]()}</span>`, `<b>${FOE_TITLE[k]}:</b> ${HELP_FOE[k]}`, `jefe-${k}`)).join('')}
       </div>`
       : t === 'mesas'

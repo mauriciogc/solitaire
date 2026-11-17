@@ -4,7 +4,7 @@ import { save, prefs, persist, backupOnce, restoreBackup, setDev, backupInfo } f
 import { missions, missionDone, ACHIEVEMENTS, ACHIEVEMENT_TOP, achievementGot, achievementNeed, achievementsVisible } from './missions.js';
 import { streakWin, streakLose, dailyStreak, nextGoal, col, daysToNextCol, ev, daysToNextEvent, evEnter, evWin, EVENT_PER_PLANET, EVENT_LEVELS, festival, festEnter, festWin, nextFestival, daysToNextFestival, daysToFestival, festShape, isOn, UNLOCK } from './events.js';
 import { TIERS, generateLevel, hardHelp, scrollKind, festivalLevel, eventLevel, eventGroup, EVENT_WORLDS, packGroups, worldInfo, TOTAL_LEVELS, LEVELS_PER_WORLD, MECH_NAMES, MECHANICS, MECH_INTRO, SCROLL_FROM, EXTRA, extraDebut, tideFirst, holeFirst, doorsFirst, bandaFirst, rocksFirst, BOSS_ORDER, BOSS_NAMES, BOSS_KILL, bossExtra } from './levels.js';
-import { playCasual, solve, initState, BOSS_EVERY, BOSS_FIRST, KRAKEN_TICKLE, KRAKEN_SLAM, WHALE_SPIT, MEDUSA_HOP, MEDUSA_CALM, medusaMax, CLOCK_FREEZE, CLOCK_SEAL, CLOCK_HIT, CLOCK_CARD, clockSeal } from './engine.js';
+import { playCasual, solve, initState, BOSS_EVERY, BOSS_FIRST, KRAKEN_TICKLE, KRAKEN_SLAM, WHALE_SPIT, MEDUSA_HOP, MEDUSA_CALM, medusaMax, CLOCK_FREEZE, CLOCK_SEAL, CLOCK_HIT, CLOCK_CARD, clockSeal, WIND_HOLD, WIND_HIT } from './engine.js';
 import { openModal, toast, updateCoins, popGoal } from './ui.js';
 import { openSlot, slotWhy, SLOT_PAY, SLOT_PAY_RICH, SLOT_EXTRA, SLOT_MONTH_DAYS } from './slot.js';
 import { mulberry32 } from './rng.js';
@@ -733,7 +733,7 @@ export function openDevMenu({ onGallery, onPlanets, onFestivals, onGoLevel, onRe
     ...Object.entries(SCROLL_FROM).map(([t, g]) => ({ n: g + 1, k: 'mesa', name: SCROLL_NAMES[t], pic: tableIcon(t) })),
     ...OVERLAY_TABLES.map(([k, name, n]) => ({ n, k: 'mesa', name: name.toLowerCase(), pic: tableIcon(k) })),
     // Jefes de constelación (15 nov 2026): la primera vez de cada uno; luego se turnan cada 100 niveles.
-    ...BOSS_ORDER.map((k, i) => ({ n: (i + 1) * 100, k: 'jefe', name: BOSS_NAMES[k], pic: `<span class="rd-foe">${FOE_ICON[k]()}</span>`, note: 'Último nivel de cada constelación; se turnan y cuando pasan todos vuelven más fuertes.' })),
+    ...BOSS_ORDER.map((k, i) => ({ n: (i + 1) * 100, k: 'jefe', name: BOSS_NAMES[k], pic: `<span class="rd-foe">${FOE_ICON[k]()}</span>`, note: 'Se turnan y cuando pasan todos vuelven más fuertes.' })),
     ...BET_AT.map(([m, g], i) => ({ n: g + 1, k: 'ev', name: `Apuesta hasta ×${m}`, pic: `<i class="go-bet dbet b${m}">×${m}</i>`, note: `${i ? `Sale su presentación "¡Subiste a ×${m}!"` : 'Sale la presentación "¡Nuevo: Apuestas!" con sus reglas (antes del evento del mes)'}. Su primera partida va forzada a ×${m} y gratis; cuota ${BET_FEE * (m - 1)} monedas, en jefes ${BET_BOSS_FEE[m]} (× el boleto de entrada); con lluvia de meteoritos, los boletos a mitad.` })),
   ].sort((a, b) => a.n - b.n || Object.keys(KINDS).indexOf(a.k) - Object.keys(KINDS).indexOf(b.k));
   // Choques: dos ventanas de desbloqueo (eventos) en el mismo nivel salen una tras otra. Se marcan en rojo.
@@ -770,6 +770,7 @@ export function openDevMenu({ onGallery, onPlanets, onFestivals, onGoLevel, onRe
     kraken: `Hasta ${1 + Math.min(2, r)} mancha${r ? 's' : ''} de tinta (${r ? '3-4' : '2-3'} cartas c/u)`,
     whale: ['Jala 1-2', 'Jala 2', 'Jala 2-3', 'Jala 3-4'][Math.min(3, r)],
     clock: `Rebobina ${r ? 2 : '1-2'} y congela ${CLOCK_FREEZE}; sello de ${clockSeal(r)}`,
+    wind: `Se lleva ${r ? '2-3' : '1-2'} del descarte`,
   })[k];
   const foeRows = [];
   for (let g = 99, i = 0; g < TOTAL_LEVELS; g += 100, i++) {
@@ -785,6 +786,7 @@ export function openDevMenu({ onGallery, onPlanets, onFestivals, onGoLevel, onRe
     medusa: ['Una carta con chispas solo entra sobre una de su mismo color.', 'Jugarla la descarga.', `Con ${MEDUSA_CALM} jugadas seguidas se apaga la más vieja (robar reinicia la cuenta).`, `Cada ${MEDUSA_HOP} robos con chispas, la más vieja se pasa a otra libre (se mueve, no se multiplica).`, 'Sin mazo ni nada que jugar, se apagan todas.'],
     kraken: ['La carta con tinta no se juega hasta quedar limpia.', `Con ${KRAKEN_TICKLE} jugadas seguidas se lava la mancha más vieja.`, `Con ${KRAKEN_SLAM} robos con tinta, manotazo: revuelve el 90% de las que no tienen tinta y limpia la mitad de las manchadas.`, 'Si no queda nada que jugar por la tinta, la mancha más vieja se limpia sola.'],
     clock: ['Rebobina como video las últimas cartas que bajaste de la mesa, aunque después hayas robado (solo sin mecánica o ya liberadas: hielo, enredadera, cortina, candado). El descarte vuelve al de antes solo si seguían arriba.', `Se quedan congeladas ${CLOCK_FREEZE} acciones.`, 'Si lo último fue robar, la robada sube encima de una libre de la mesa (como la Ballena), congelada; la de abajo queda tapada hasta jugarla. El descarte vuelve al de antes.', 'Si todavía no bajas ninguna que se pueda rebobinar, espera a tu siguiente jugada.', `Con ${CLOCK_SEAL} cartas seguidas desde tu último robo (${CLOCK_SEAL + 1} desde la 2.ª vuelta; el comodín cuenta) tu descarte queda sellado: si ataca, se le traba la cinta y pierde ${CLOCK_HIT} de vida.`, `Le pega cada carta desde la 3.ª de la racha y cada una le quita ${CLOCK_CARD} (a los demás, 1 desde la 2.ª).`, 'Mientras esté, no se puede deshacer.', 'Si lo congelado te deja sin ninguna jugada, se descongela con 2 robos (no 3).'],
+    wind: ['Cuando le toca, sopla solo si tu descarte tiene jugada en la mesa; si no, espera (tu descarte sigue temblando).', 'Se lleva cartas del descarte: 1-2 en la 1.ª vuelta y 2-3 desde la 2.ª. Si es 1, va al fondo del mazo; si son más, la de arriba se pierde y las demás van al fondo.', `Con ${WIND_HOLD} cartas seguidas desde tu último robo (el comodín cuenta) tus cartas pesan: sopla, no se lleva nada y pierde ${WIND_HIT} de vida.`, 'Lo que hace no se deshace.'],
     whale: ['Jala cualquier volteada (siempre al menos 1).', `La escupe ${WHALE_SPIT} acciones después encima de otra: la de abajo queda tapada.`, 'Para ganar no se puede quedar con ninguna; sin mazo ni nada que jugar, escupe todo ya.'],
   };
   const foeTable = `<ul class="dfacts">
@@ -820,6 +822,7 @@ export function openDevMenu({ onGallery, onPlanets, onFestivals, onGoLevel, onRe
         { l: 'Galería de niveles', cls: 'gold', fn: onGallery },
         { l: 'Ir al tablero', cls: 'gold', title: 'Escribe un nivel y juega su tablero (gratis, sin guardar), como desde la galería', fn: onGoLevel },
         { l: 'Galería de planetas', cls: 'gold', title: 'Cada tipo de planeta: verlo en el mapa o jugar en su mesa', fn: onPlanets },
+        { l: `Avisos fuera del nivel: ${prefs.devQuiet ? 'no' : 'sí'}`, title: 'Apaga las ventanas que salen solas en el mapa (desbloqueos, festejos, nave de rescate, tragamonedas…) para moverte sin cerrarlas; lo pendiente sale al prenderlos', fn: () => { prefs.devQuiet = !prefs.devQuiet; persist(); updateCoins(); toast(`Avisos fuera del nivel: ${prefs.devQuiet ? 'no' : 'sí'}`); onRefresh(); } },
         { l: `Boosters infinitos: ${prefs.devInfinite ? 'sí' : 'no'}`, fn: () => { prefs.devInfinite = !prefs.devInfinite; persist(); toast(`Boosters infinitos: ${prefs.devInfinite ? 'sí' : 'no'}`); } },
         { l: '+20,000 monedas', fn: () => ((save.coins += 20000), persist(), updateCoins()) },
         // 9 nov 2026: para ver todo sin avanzar niveles (dev es caja de pruebas: al apagarlo vuelve tu partida).

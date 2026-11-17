@@ -149,13 +149,13 @@ export function initState(level, extra = {}) {
     // Asteroides: robos desde la última caída y piedras en el tablero (id -> jugadas que les quedan).
     ...(level.rocks && { rq: 0, rock: {} }),
     // Jefe de constelación: su vida y lo que tiene agarrado (ver bossStep).
-    ...(level.foe && { hp: level.foe.hp, ash: [], melt: [], ink: [], tickle: 0, belly: [], ontop: {}, under: {}, zap: [], zd: 0, zt: 0, wh: [], frz: {}, cpend: false, sc: 0, spot: {} }),
+    ...(level.foe && { hp: level.foe.hp, ash: [], melt: [], ink: [], tickle: 0, belly: [], ontop: {}, under: {}, zap: [], zd: 0, zt: 0, wh: [], frz: {}, cpend: false, sc: 0, spot: {}, wp: [], ws: 0, wpend: false }),
     ...extra,
   };
 }
 
 // (Partidas guardadas antes del boleto partido no traen cut.)
-export const cloneState = (s) => ({ ...s, rem: s.rem.slice(), stock: s.stock.slice(), boom: s.boom.slice(), cut: (s.cut || []).slice(), ...(s.awake && { awake: s.awake.slice() }), ...(s.open && { open: s.open.slice() }), ...(s.lift && { lift: s.lift.slice() }), ...(s.rock && { rock: { ...s.rock } }), ...(s.scrGone && { scrGone: s.scrGone.slice() }), ...(s.shift && { shift: { ...s.shift } }), ...(s.ash && { ash: s.ash.slice(), melt: (s.melt || []).slice(), ink: (s.ink || []).map((t) => ({ ...t, ids: t.ids.slice() })), belly: s.belly.map((b) => ({ ...b })), ontop: { ...s.ontop }, under: { ...s.under }, zap: (s.zap || []).slice(), wh: (s.wh || []).slice(), frz: { ...s.frz }, spot: { ...s.spot } }), ...(s.suit && { suit: { ...s.suit } }) });
+export const cloneState = (s) => ({ ...s, rem: s.rem.slice(), stock: s.stock.slice(), boom: s.boom.slice(), cut: (s.cut || []).slice(), ...(s.awake && { awake: s.awake.slice() }), ...(s.open && { open: s.open.slice() }), ...(s.lift && { lift: s.lift.slice() }), ...(s.rock && { rock: { ...s.rock } }), ...(s.scrGone && { scrGone: s.scrGone.slice() }), ...(s.shift && { shift: { ...s.shift } }), ...(s.ash && { ash: s.ash.slice(), melt: (s.melt || []).slice(), ink: (s.ink || []).map((t) => ({ ...t, ids: t.ids.slice() })), belly: s.belly.map((b) => ({ ...b })), ontop: { ...s.ontop }, under: { ...s.under }, zap: (s.zap || []).slice(), wh: (s.wh || []).slice(), frz: { ...s.frz }, spot: { ...s.spot }, wp: (s.wp || []).slice() }), ...(s.suit && { suit: { ...s.suit } }) });
 
 // Mitad del boleto partido que ya se jugó (0 = está entero, 1 = la de arriba, 2 = la de abajo).
 export const cutOf = (c, s) => (c.half != null && s.cut?.[c.id]) || 0;
@@ -586,6 +586,8 @@ export function play(level, s0, id, low = false, forced = false) {
     s.wh = !split && !stub && c.twin == null ? [...(s0.wh || []), { id, top: s0.top, after: s.top }].slice(-4) : [];
     s.sc = (s0.sc || 0) + 1;
   }
+  // Viento: cartas seguidas desde tu último robo (con WIND_HOLD tu descarte pesa y no se lo lleva).
+  if (level.foe?.kind === 'wind') s.ws = (s0.ws || 0) + 1;
   // Medusa: jugarla la descarga.
   const zapOff = !!s0.zap?.includes(id);
   if (zapOff) s.zap = s.zap.filter((j) => j !== id);
@@ -739,8 +741,20 @@ export function astroSend(level, s0) {
 //           Si lo último fue robar, la robada sube encima de una libre de la mesa (s.ontop, clockSlots), congelada, y el descarte
 //           vuelve al de antes (s.dl; 17 nov 2026). Si lo congelado te deja sin ninguna jugada, con un robo se descongela
 //           todo
+//   wind    Viento solar, no se ve (17 nov 2026, pedido del usuario; escogido en dev/viento.html): cuando le toca,
+//           sopla solo si tu descarte tiene jugada en la mesa (si no, espera: s.wpend). Se lleva cartas del descarte
+//           (s.wp = las de debajo del tope): 1-2 en la 1.ª vuelta y 2-3 desde la 2.ª. Si es 1, va al fondo del mazo; si
+//           son 2-3, la de arriba se pierde en el espacio y las demás van al fondo. Te queda la de abajo. Defensa:
+//           con WIND_HOLD cartas seguidas desde tu último robo (s.ws; el comodín cuenta) tu descarte pesa: sopla, no
+//           se lleva nada y pierde WIND_HIT de vida
 // Cada cuántas acciones ataca, por vuelta (la primera vez más espaciado; luego más seguido).
-export const BOSS_EVERY = { fenix: [4, 4, 4, 3], ilus: [6, 5, 4, 3], medusa: [5, 5, 5, 4], clock: [6, 5, 5, 4], kraken: [7, 6, 5, 4], whale: [5, 4, 4, 4] };
+export const BOSS_EVERY = { fenix: [4, 4, 4, 3], ilus: [6, 5, 4, 3], medusa: [5, 5, 5, 4], clock: [6, 5, 5, 4], kraken: [7, 6, 5, 4], whale: [5, 4, 4, 4], wind: [6, 5, 5, 4] };
+// Viento: cartas seguidas para que tu descarte pese, lo que pierde si sopla contra él y cuántas de debajo del tope
+// recuerda (se lleva hasta 3).
+export const WIND_HOLD = 3, WIND_HIT = 2, WIND_KEEP = 6;
+export const windHeavy = (level, s) => level.foe?.kind === 'wind' && s.hp > 0 && (s.ws || 0) >= WIND_HOLD;
+// ¿Tu descarte tiene jugada? (el Viento solo sopla así). Con comodín arriba no sopla.
+const windAim = (level, s) => !!s.top && !s.top.wild && (s.wp || []).length > 0 && legal(level, s).length > 0;
 export const KRAKEN_TICKLE = 3, KRAKEN_SLAM = 3, WHALE_SPIT = 3, MEDUSA_HOP = 3, MEDUSA_CALM = 4;
 // Medusa: cuántas chispas puede haber a la vez, por vuelta.
 export const MEDUSA_MAX = [3, 3, 4, 4];
@@ -755,7 +769,8 @@ export const clockSeal = (r) => (r ? CLOCK_SEAL + 1 : CLOCK_SEAL);
 // para no repetir sus premios.
 export const clockSealed = (level, s) => level.foe?.kind === 'clock' && s.hp > 0 && (s.sc || 0) >= clockSeal(level.foe.r);
 // El comodín del inventario (lo usa el juego): suma al sello.
-export const clockWild = (level, s) => (level.foe?.kind === 'clock' ? { ...s, sc: (s.sc || 0) + 1, dl: null, wh: [] } : s);
+// Viento: el comodín también suma al peso.
+export const clockWild = (level, s) => (level.foe?.kind === 'clock' ? { ...s, sc: (s.sc || 0) + 1, dl: null, wh: [] } : level.foe?.kind === 'wind' ? { ...s, ws: (s.ws || 0) + 1 } : s);
 // Reloj: solo rebobina cartas sin mecánica (rebobinar una llave, una moneda o una gemela la volvería a cobrar), o con
 // una que ya liberaste: hielo, enredadera, cortina y candado (17 nov 2026, el usuario). Al regresar no vuelven a quedar
 // tapadas (el hielo y la enredadera se marcan en s.melt; la cortina y el candado siguen abiertos por su llave).
@@ -806,6 +821,8 @@ export const medusaCan = (level, s) => level.cards.filter((c) => zapKind(c) && i
 // Kraken (15 nov 2026, el usuario se quedó atorado): si ya no queda ninguna carta para jugar porque todas las libres
 // tienen tinta, la mancha más vieja se limpia sola (sin esto solo quedaba robar hasta perder).
 function bossStep(level, s0, s, played) {
+  // Viento: lo que había en el descarte queda debajo de lo nuevo (solo recuerda WIND_KEEP).
+  if (level.foe?.kind === 'wind' && s0.top && s.top !== s0.top) s.wp = [...(s.wp || []), s0.top].slice(-WIND_KEEP);
   const out = bossAct(level, s0, s, played);
   // Ballena: sin mazo y sin nada que jugar ya no pasarían acciones para que escupa: escupe todo ya.
   if (level.foe?.kind === 'whale' && s.belly?.length && !s.stock.length && !level.cards.some((c) => isOpen(level, c, s))) {
@@ -836,6 +853,25 @@ function bossStep(level, s0, s, played) {
   r.wash = s.ink.shift().ids;
   s.tickle = 0;
   return r;
+}
+// Viento: se lleva cartas del descarte o, si pesa, no puede y pierde vida.
+function windAct(level, s, out) {
+  if (windHeavy(level, s)) {
+    s.hp = Math.max(0, s.hp - WIND_HIT);
+    out.hold = WIND_HIT;
+    return;
+  }
+  const r = level.foe.r, h = bossHash(level, s, 8), n = Math.min(s.wp.length, (r ? 2 : 1) + ((h >>> 2) % 2));
+  // De arriba hacia abajo; el tope que queda no lleva la obligación de la flecha ni el arcoíris.
+  const plainTop = (c) => (c.wild ? { wild: true } : { rank: c.rank, suit: c.suit, ...(c.alt != null && { alt: c.alt }) });
+  const take = [s.top, ...s.wp.slice(-(n - 1) || s.wp.length).reverse()].slice(0, n);
+  s.wp = s.wp.slice(0, s.wp.length - (n - 1));
+  s.top = plainTop(s.wp.pop());
+  // Si es 1 va al fondo del mazo; con 2-3 la de arriba se pierde y las demás van al fondo.
+  const lost = n > 1;
+  s.stock.push(...take.slice(lost ? 1 : 0).map(plainTop));
+  s.ws = Math.max(0, (s.ws || 0) - n);
+  out.gust = { take: take.map(plainTop), lost };
 }
 // Reloj: rebobina o, con el descarte sellado, se estrella.
 function clockAct(level, s, out, played) {
@@ -992,6 +1028,13 @@ function bossAct(level, s0, s, played) {
     if (spit.length) out.spit = spit;
   }
   const due = s.actions !== s0.actions && (s.actions + BOSS_FIRST) % every === 0;
+  // Viento: le tocó, pero sopla solo cuando tu descarte tiene jugada; si no, espera.
+  if (B.kind === 'wind' && (due || s.wpend)) {
+    s.wpend = !windAim(level, s);
+    if (!s.wpend) windAct(level, s, out);
+    if (s.hp <= 0) (s.wpend = false), (out.gone = true);
+    return Object.keys(out).length ? out : null;
+  }
   // Reloj: si le tocó justo después de un robo, ataca en tu siguiente jugada.
   if (B.kind === 'clock' && (due || (s.cpend && played))) {
     s.cpend = false;
@@ -1140,6 +1183,8 @@ export function draw(level, s0) {
   // Reloj: robar quita el sello y lo de abajo de la robada ya no se rebobina.
   if (s.sc) s.sc = 0;
   if (s.wh?.length) s.wh = [];
+  // Viento: robar quita el peso.
+  if (s.ws) s.ws = 0;
   // Imán: la carta que más sirve pasa al tope antes de robar (de dónde salió, para animarlo).
   // Si ninguna sirve, no se gasta: robas normal y sigue esperando el siguiente robo. Si sí, la carta jalada no corta la
   // racha (aim = la del tablero que conviene jugar, para señalarla).
@@ -1192,7 +1237,7 @@ export function solve(level, s0, limit = 250000, wilds = 0, kill = false) {
   const dfs = (s, w = wilds) => {
     if (won(s, level)) return !kill || s.hp <= 0;
     if (++nodes > limit) return false;
-    const key = `${w}|${s.rem.map((b, i) => (b ? 1 : s.cut?.[i] ? s.cut[i] + 1 : 0)).join('')}|${s.stock.map(sig).join(',')}|${sig(s.top)}|${(s.streak <= LAST_REWARD ? s.streak : LAST_REWARD + 1 + ((s.streak - LAST_REWARD) % 3))}${timed ? `|${s.actions}|${s.boom}|${s.freeze || 0}` : ''}${level.ship ? `|${s.shipIn}|${s.stolen.map(sig).join('.')}` : ''}${level.tide ? `|${s.tq}` : ''}${s.master ? '|m' : ''}${turbo ? `|${s.turbo}` : ''}${level.rocks ? `|${s.rq}|${Object.entries(s.rock).join(';')}` : ''}${s.lift ? `|${s.lift}` : ''}${s.shield ? '|S' : ''}${s.burnt ? '|B' : ''}${s.magnet ? '|M' : ''}${s.awake ? `|a${s.awake}` : ''}${s.shift ? `|w${Object.entries(s.shift).join(';')}` : ''}${level.foe ? `|b${s.hp}|${s.tickle}|${(s.ink || []).map((t) => `${t.ids}:${t.d}`).join('/')}|${s.belly.map((b) => `${b.id}:${b.at}`).join('/')}|${Object.entries(s.ontop).join('/')}|${s.ash}|${s.melt || ''}|z${s.zap || ''}:${s.zd || 0}:${s.zt || 0}|c${(s.wh || []).map((w) => w.id)}:${Object.entries(s.frz || {}).filter(([, a]) => a > s.actions)}:${s.cpend ? 1 : 0}:${s.sc || 0}:${s.dl ? 1 : 0}:${s.suit ? Object.entries(s.suit) : ''}:${Object.entries(s.spot || {})}` : ''}`;
+    const key = `${w}|${s.rem.map((b, i) => (b ? 1 : s.cut?.[i] ? s.cut[i] + 1 : 0)).join('')}|${s.stock.map(sig).join(',')}|${sig(s.top)}|${(s.streak <= LAST_REWARD ? s.streak : LAST_REWARD + 1 + ((s.streak - LAST_REWARD) % 3))}${timed ? `|${s.actions}|${s.boom}|${s.freeze || 0}` : ''}${level.ship ? `|${s.shipIn}|${s.stolen.map(sig).join('.')}` : ''}${level.tide ? `|${s.tq}` : ''}${s.master ? '|m' : ''}${turbo ? `|${s.turbo}` : ''}${level.rocks ? `|${s.rq}|${Object.entries(s.rock).join(';')}` : ''}${s.lift ? `|${s.lift}` : ''}${s.shield ? '|S' : ''}${s.burnt ? '|B' : ''}${s.magnet ? '|M' : ''}${s.awake ? `|a${s.awake}` : ''}${s.shift ? `|w${Object.entries(s.shift).join(';')}` : ''}${level.foe ? `|b${s.hp}|${s.tickle}|${(s.ink || []).map((t) => `${t.ids}:${t.d}`).join('/')}|${s.belly.map((b) => `${b.id}:${b.at}`).join('/')}|${Object.entries(s.ontop).join('/')}|${s.ash}|${s.melt || ''}|z${s.zap || ''}:${s.zd || 0}:${s.zt || 0}|c${(s.wh || []).map((w) => w.id)}:${Object.entries(s.frz || {}).filter(([, a]) => a > s.actions)}:${s.cpend ? 1 : 0}:${s.sc || 0}:${s.dl ? 1 : 0}:${s.suit ? Object.entries(s.suit) : ''}:${Object.entries(s.spot || {})}|v${(s.wp || []).map(sig)}:${s.ws || 0}:${s.wpend ? 1 : 0}` : ''}`;
     if (seen.has(key)) return false;
     seen.add(key);
     const moves = legal(level, s);

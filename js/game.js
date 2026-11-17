@@ -208,20 +208,24 @@ const WHALE_ICO = () => { const C = [[22, 22, 9], [14, 25, 7], [30, 26, 6.5], [2
 const MEDUSA_ICO = () => `<svg viewBox="0 0 40 40"><path d="M24 2 8 22h10l-4 16 18-22H21l5-14z" fill="#5ff0ff" stroke="${INKF}" stroke-width="2.4" stroke-linejoin="round"/><path d="M22 6 13 18" stroke="#fff" stroke-width="2.2" stroke-linecap="round" opacity=".8"/><path d="M5 9l3 2M33 28l3 1M6 30l3-2" stroke="#fff36b" stroke-width="2.4" stroke-linecap="round"/><circle cx="35" cy="9" r="1.8" fill="#fff36b"/></svg>`;
 // Icono del Reloj del vacío (16 nov 2026): reloj lila con sus manecillas y flechita de rebobinar.
 const CLOCK_ICO = () => `<svg viewBox="0 0 40 40"><circle cx="20" cy="21" r="15" fill="#e9dcff" stroke="${INKF}" stroke-width="2.4"/><path d="M20 21V12M20 21l6 4" stroke="${INKF}" stroke-width="2.6" stroke-linecap="round"/><circle cx="20" cy="21" r="1.8" fill="${INKF}"/><path d="M6 9l3 6 5-4" fill="#b98cff" stroke="${INKF}" stroke-width="2" stroke-linejoin="round"/><path d="M14 4h12" stroke="${INKF}" stroke-width="2.4" stroke-linecap="round"/></svg>`;
-export const FOE_ICON = { fenix: FIRE_ICO, ilus: () => SPARK_SVG, medusa: MEDUSA_ICO, kraken: () => KRAKEN_ICO(), whale: WHALE_ICO, clock: CLOCK_ICO };
-export const FOE_NAME = { fenix: 'Fénix estelar', ilus: 'el Ilusionista', medusa: 'la Medusa de plasma', kraken: 'el Kraken', whale: 'la Ballena glotona', clock: 'el Reloj del vacío' };
-export const FOE_TITLE = { fenix: 'Fénix estelar', ilus: 'El Ilusionista', medusa: 'Medusa de plasma', kraken: 'Kraken', whale: 'Ballena glotona', clock: 'Reloj del vacío' };
+// Icono del Viento solar (17 nov 2026): remolino blanco con chispas doradas (el usuario escogió el remolino y las
+// chispas del viento solar, sin el sol de la esquina).
+const WIND_ICO = () => `<svg viewBox="0 0 40 40"><g fill="none" stroke-linecap="round"><path d="M20 21m-14 0a14 14 0 1 1 7.4 12.4" stroke="${INKF}" stroke-width="6.4"/><path d="M20 21m-14 0a14 14 0 1 1 7.4 12.4" stroke="#fff" stroke-width="3.4"/><path d="M20 21m-8 0a8 8 0 1 1 4.2 7" stroke="${INKF}" stroke-width="6"/><path d="M20 21m-8 0a8 8 0 1 1 4.2 7" stroke="#ffe08a" stroke-width="3"/><path d="M20 21m-2.6 0a2.6 2.6 0 1 1 1.4 2.3" stroke="${INKF}" stroke-width="3"/></g>${star4(34, 7, 4.6, '#ffd54a', 1.6)}${star4(5, 33, 3.6, '#ffb347', 1.4)}<circle cx="35" cy="31" r="2" fill="#ffd54a" stroke="${INKF}" stroke-width="1.2"/><circle cx="6" cy="9" r="1.6" fill="#ffd54a"/></svg>`;
+export const FOE_ICON = { fenix: FIRE_ICO, ilus: () => SPARK_SVG, medusa: MEDUSA_ICO, kraken: () => KRAKEN_ICO(), whale: WHALE_ICO, clock: CLOCK_ICO, wind: WIND_ICO };
+export const FOE_NAME = { fenix: 'Fénix estelar', ilus: 'el Ilusionista', medusa: 'la Medusa de plasma', kraken: 'el Kraken', whale: 'la Ballena glotona', clock: 'el Reloj del vacío', wind: 'el Viento solar' };
+export const FOE_TITLE = { fenix: 'Fénix estelar', ilus: 'El Ilusionista', medusa: 'Medusa de plasma', kraken: 'Kraken', whale: 'Ballena glotona', clock: 'Reloj del vacío', wind: 'Viento solar' };
 export const FOE_TEXT = {
   fenix: ['Nunca lo ves: solo su fuego.', 'Cuando <b>tus cartas tiemblan</b>, cae <b>fuego</b> sobre las libres, pero <b>las puedes seguir jugando</b>. El fuego se mueve y deja ver su número <b>por partes</b>. Con <b>racha de 5</b> el fuego baja un turno y ves el número.'],
   ilus: ['Nunca lo ves: solo su magia.', 'Cuando <b>todas tus cartas boca arriba tiemblan</b>, en tu siguiente turno <b>cambian de número</b>, como por magia. Juega antes las que te sirven.'],
   medusa: ['Nunca la ves: solo sus chispas.', 'Cuando <b>tus cartas tiemblan</b>, pone <b>chispas</b> en algunas. Una carta con chispas solo entra encima de una de su <b>mismo color</b>: roja con roja, negra con negra. Jugarla la <b>descarga</b>. Con <b>4 cartas seguidas</b> se apaga una. Si robas 3 veces, la corriente <b>brinca</b> a otra carta.'],
   clock: ['Nunca lo ves: solo su tiempo.', 'Cuando <b>tu descarte tiembla</b>, <b>rebobina</b>: tus últimas cartas regresan a su lugar <b>congeladas</b> 3 turnos. Si lo último fue robar, la carta robada <b>sube encima de una carta</b> de la mesa, congelada. Con <b>4 cartas seguidas</b> (5 cuando vuelve más fuerte; el comodín cuenta) tu descarte queda <b>sellado</b>: si ataca, se le traba la cinta y pierde vida. Mientras esté, <b>no puedes deshacer</b>.'],
   kraken: ['Nunca lo ves: solo su tinta.', 'Cuando <b>tus cartas tiemblan</b>, salpica <b>tinta</b> en varias cartas y las <b>bloquea</b>: no se juegan hasta que estén <b>limpias</b>. Con <b>3 cartas seguidas</b> se lava una mancha. Si robas 3 veces con tinta en la mesa, da un <b>manotazo</b>: revuelve las cartas y limpia la mitad de la tinta.'],
+  wind: ['Nunca lo ves: solo su soplo.', 'Cuando <b>tu descarte tiembla</b> y tienes jugada, sopla y se lleva cartas de tu <b>descarte</b>. Si se lleva <b>una</b>, se va al <b>fondo del mazo</b>. Si se lleva <b>más</b>, la de arriba <b>se pierde en el espacio</b> y las demás van al fondo. Con <b>3 cartas seguidas</b> (el comodín cuenta) tu descarte <b>pesa</b>: sopla, no se lleva nada y pierde vida.'],
   whale: ['Nunca la ves: solo su aire.', 'Cuando <b>tus cartas tiemblan</b>, <b>jala</b> cartas volteadas a su panza y <b>3 turnos</b> después las <b>escupe encima</b> de otras: las de abajo quedan tapadas hasta que juegues las escupidas. Para ganar no se puede quedar con ninguna.'],
 };
-export const FOE_BTN = { fenix: 'orange', ilus: 'blue', medusa: 'cyan', kraken: 'purple', whale: 'green', clock: 'lilac' };
+export const FOE_BTN = { fenix: 'orange', ilus: 'blue', medusa: 'cyan', kraken: 'purple', whale: 'green', clock: 'lilac', wind: 'amber' };
 // Jefes que no se ven en el tablero (solo lo que hacen): no ocupan la orilla.
-const FOE_HIDDEN = ['fenix', 'ilus', 'medusa', 'kraken', 'whale', 'clock'];
+const FOE_HIDDEN = ['fenix', 'ilus', 'medusa', 'kraken', 'whale', 'clock', 'wind'];
 export const FOE_ALL = '<span class="fa-bar" aria-hidden="true"><b></b></span><span>Cada carta que juegas en <b>racha</b> le baja vida. Si se la acabas, se va y te deja un <b>premio más grande</b>.</span>';
 // Lo que el jefe le hace al tablero no se deshace (lo de antes tampoco).
 // La ayuda que sirve contra cada uno, en su ventana: el reloj de arena los detiene.
@@ -244,7 +248,7 @@ const zapEdge = (t) => {
   if ((d -= 140) < 100) return [100 - d, 140];
   return [0, 140 - (d - 100)];
 };
-const foeLock = (ev) => !!(ev?.boss && (ev.boss.ash || ev.boss.ilus || ev.boss.ink || ev.boss.slam || ev.boss.eat || ev.boss.spit || ev.boss.zap || ev.boss.hop || ev.boss.rewind || ev.boss.crash || ev.boss.raise != null));
+const foeLock = (ev) => !!(ev?.boss && (ev.boss.ash || ev.boss.ilus || ev.boss.ink || ev.boss.slam || ev.boss.eat || ev.boss.spit || ev.boss.zap || ev.boss.hop || ev.boss.rewind || ev.boss.crash || ev.boss.raise != null || ev.boss.gust || ev.boss.hold));
 
 // Tinta del Kraken (15 nov 2026, el usuario escogió la «mancha B» de dev/kraken-tinta.html): una mancha que tapa la
 // carta (y su número) con chorros que nacen dentro de ella, se angostan y terminan en gota; gotas que caen sin parar y
@@ -1444,6 +1448,13 @@ export class Game {
       this.wasteEl.classList.toggle('foe-warn', st.hp > 0 && (soon || !!st.cpend) && !this.dealing);
       this.wasteEl.classList.toggle('clk-seal', E.clockSealed(this.level, st));
     }
+    // Viento: tiembla tu descarte (también si espera a que tengas jugada); con 3 seguidas, tus cartas pesan (doradas).
+    if (F.kind === 'wind') {
+      this.wasteEl.classList.toggle('foe-warn', st.hp > 0 && (soon || !!st.wpend) && !this.dealing);
+      const heavy = E.windHeavy(this.level, st);
+      if (heavy && !this.wasteEl.classList.contains('wnd-heavy')) setTimeout(() => this.windStamp(), FLY_MS);
+      this.wasteEl.classList.toggle('wnd-heavy', heavy);
+    }
     // Ballena: solo las que se puede llevar (no las que ella escupió encima de otra).
     const ilus = !soon ? null : F.kind === 'whale' ? new Set(E.whaleEatable(this.level, st).map((c) => c.id)) : F.kind === 'medusa' ? (zapRoom ? new Set(E.medusaCan(this.level, st).map((c) => c.id)) : null) : F.kind === 'ilus' || F.kind === 'fenix' || grab ? new Set(this.cards.filter((c) => c.el && !c.removed && c.rank != null && !c.pack && !c.bomb && !c.comet && E.isOpen(this.level, c, st)).map((c) => c.id)) : null;
     for (const c of this.cards) {
@@ -1600,7 +1611,7 @@ export class Game {
     const F = this.level.foe;
     if (!F || !b) return;
     const bar = this.el.querySelector('.foe-bar');
-    if (b.hit && bar && !reduced()) {
+    if ((b.hit || b.hold) && bar && !reduced()) {
       bar.animate([{ translate: '0 0' }, { translate: '-4px 0' }, { translate: '4px 0' }, { translate: '0 0' }], { duration: 260 });
       this.foeEl?.animate([{ filter: 'brightness(1)' }, { filter: 'brightness(2.2)' }, { filter: 'brightness(1)' }], { duration: 300 });
     }
@@ -1613,6 +1624,9 @@ export class Game {
     if (b.rewind?.length) this.clockRewind(b.rewind, !!b.untop);
     if (b.raise != null) this.clockRaise(b.raise);
     if (b.crash) this.clockCrash();
+    // Viento: sopla y se lleva cartas del descarte, o tus cartas pesan y no puede.
+    if (b.gust) this.windGust(b.gust);
+    if (b.hold) this.windHold();
     // Medusa: la corriente entra por la orilla y brinca de carta en carta; al robar 3 veces, un arco la pasa a otra.
     if (b.zap) this.zapChain(b.zap);
     if (b.hop) this.zapHop(b.hop);
@@ -1630,6 +1644,166 @@ export class Game {
     if (b.spit) this.whaleSpit(b.spit);
     if (b.gone) this.foeBeaten();
     this.foePaint();
+  }
+  // ---------- Viento solar (17 nov 2026; el usuario escogió en dev/viento.html) ----------
+  // Remolino «B» sobre el descarte con chispas doradas (las del viento solar, sin su sol). 17 nov 2026 (el usuario:
+  // «el remolino podríamos hacerlo más vistoso»): tres brazos en espiral con contorno de tinta, uno adentro que gira al
+  // revés, un brillo dorado al centro, rayas de viento que entran a la mesa y chispas que dan vueltas y se cierran.
+  windSwirl() {
+    const r = this.wasteEl.getBoundingClientRect(), box = this.el.getBoundingClientRect(), s = r.width * 2.5;
+    const cx = r.left - box.left + r.width / 2, cy = r.top - box.top + r.height / 2;
+    const w = document.createElement('i');
+    w.className = 'wnd-swirl';
+    Object.assign(w.style, { left: `${cx - s / 2}px`, top: `${cy - s / 2}px`, width: `${s}px`, height: `${s}px` });
+    // Un brazo en espiral (de afuera hacia el centro), girado a.
+    const arm = (a, r0, r1, turns) => {
+      let d = '';
+      for (let k = 0; k <= 24; k++) {
+        const t = k / 24, rr = r1 - (r1 - r0) * t, q = a + t * turns * Math.PI * 2;
+        d += `${k ? 'L' : 'M'}${(50 + Math.cos(q) * rr).toFixed(1)} ${(50 + Math.sin(q) * rr).toFixed(1)}`;
+      }
+      return d;
+    };
+    const arms = (r0, r1, turns, col, wd) => [0, 1, 2].map((k) => { const d = arm((k * Math.PI * 2) / 3, r0, r1, turns); return `<path d="${d}" stroke="${INKF}" stroke-width="${wd + 3}"/><path d="${d}" stroke="${col}" stroke-width="${wd}"/>`; }).join('');
+    w.innerHTML = `<i class="ws-glow"></i><svg class="ws-out" viewBox="0 0 100 100"><g fill="none" stroke-linecap="round" stroke-linejoin="round">${arms(10, 46, 0.55, '#fff', 4.2)}</g></svg><svg class="ws-in" viewBox="0 0 100 100"><g fill="none" stroke-linecap="round" stroke-linejoin="round">${arms(4, 28, 0.6, '#ffe08a', 3.4)}</g><circle cx="50" cy="50" r="6" fill="#fff6c8" stroke="${INKF}" stroke-width="2.4"/></svg>`;
+    // Chispas doradas en espiral: cada una da vueltas alrededor del remolino y se va cerrando.
+    for (let i = 0; i < 22; i++) {
+      const p = document.createElement('b');
+      p.style.setProperty('--a', `${(i / 22) * 360}deg`);
+      p.style.setProperty('--d', `${-(i % 7) * 0.13}s`);
+      p.style.setProperty('--r', `${(s / 2) * (0.55 + (i % 5) * 0.1)}px`);
+      if (i % 3 === 0) p.className = 'big';
+      w.append(p);
+    }
+    this.el.append(w);
+    w.animate([{ scale: 0, rotate: '90deg', opacity: 0 }, { scale: 1.12, rotate: '-10deg', opacity: 1, offset: 0.7 }, { scale: 1, rotate: '0deg', opacity: 1 }], { duration: 380, easing: 'ease-out', fill: 'forwards' });
+    // Rayas de viento que entran desde las orillas hacia el remolino.
+    let on = true;
+    (async () => {
+      while (on && this.el.isConnected) {
+        const l = document.createElement('i'), a = Math.random() * Math.PI * 2, d0 = Math.max(box.width, box.height) * 0.55, len = 40 + Math.random() * 60;
+        l.className = 'wnd-streak';
+        Object.assign(l.style, { left: `${cx}px`, top: `${cy}px`, width: `${len}px`, rotate: `${a}rad` });
+        this.el.append(l);
+        l.animate([{ translate: `${Math.cos(a) * d0}px ${Math.sin(a) * d0}px`, opacity: 0 }, { opacity: 0.9, offset: 0.3 }, { translate: `${Math.cos(a) * s * 0.3}px ${Math.sin(a) * s * 0.3}px`, opacity: 0 }], { duration: 420, easing: 'ease-in' }).finished.then(() => l.remove());
+        await wait(55);
+      }
+    })();
+    return async () => {
+      on = false;
+      await w.animate([{ scale: 1, opacity: 1, rotate: '0deg' }, { scale: 1.7, opacity: 0, rotate: '-60deg' }], { duration: 360, easing: 'ease-in', fill: 'forwards' }).finished;
+      w.remove();
+    };
+  }
+  // Se lleva cartas del descarte (take, de arriba hacia abajo): si son varias, la de arriba sale girando al espacio y las
+  // demás vuelan al fondo del mazo.
+  windGust({ take, lost }) {
+    buzz([20, 30, 20]);
+    // Mientras cae tu carta, el descarte la enseña; luego el viento se la lleva.
+    this.wasteShow = take[0];
+    setTimeout(async () => {
+      if (reduced()) {
+        this.wasteShow = null;
+        this.renderWaste();
+        this.renderStock();
+        return;
+      }
+      await this.wasteEl.firstElementChild?.animate([{ rotate: '0deg' }, { rotate: '-7deg', translate: '-3px -2px' }, { rotate: '5deg' }, { rotate: '0deg' }], { duration: 360 }).finished;
+      const stop = this.windSwirl();
+      await wait(260);
+      const from = this.wasteEl.getBoundingClientRect();
+      const runs = take.map((c, k) => wait(k * 240).then(() => {
+        // Debajo se asoma la siguiente (o la que te queda).
+        this.wasteShow = take[k + 1] || null;
+        this.renderWaste();
+        const f = this.flyer(c, from, true);
+        return lost && !k ? this.windSpace(f, from) : this.windBottom(f, from);
+      }));
+      await Promise.all(runs);
+      this.renderStock();
+      await stop();
+    }, reduced() ? 0 : FLY_MS + 120);
+  }
+  // Primero el remolino la jala: da una vuelta en espiral alrededor del descarte, ladeándose (fotogramas desde el centro).
+  windSpin(R, turns = 1, a0 = 0) {
+    const fr = [];
+    for (let k = 0; k <= 10; k++) {
+      const t = k / 10, a = a0 - t * turns * Math.PI * 2, rr = R * Math.sin(t * Math.PI * 0.5);
+      fr.push({ translate: `${(Math.cos(a) * rr).toFixed(1)}px ${(Math.sin(a) * rr * 0.55).toFixed(1)}px`, rotate: `${-t * 300}deg`, scale: `${1 - t * 0.15}`, offset: t * 0.5 });
+    }
+    return fr;
+  }
+  // Estela dorada: chispas que se quedan atrás mientras vuela (dur ms).
+  windTrail(f, dur, gold = true) {
+    const box = this.el.getBoundingClientRect(), t0 = performance.now();
+    const go = () => {
+      if (!f.isConnected || performance.now() - t0 > dur) return;
+      const q = f.getBoundingClientRect(), p = document.createElement('i'), sz = 5 + Math.random() * 7;
+      p.className = `wnd-dot${gold ? '' : ' w'}`;
+      Object.assign(p.style, { left: `${q.left - box.left + q.width / 2 - sz / 2 + (Math.random() - 0.5) * q.width * 0.4}px`, top: `${q.top - box.top + q.height / 2 - sz / 2 + (Math.random() - 0.5) * q.height * 0.4}px`, width: `${sz}px`, height: `${sz}px` });
+      this.el.append(p);
+      p.animate([{ scale: 1, opacity: 1 }, { scale: 0, opacity: 0, translate: `${(Math.random() - 0.5) * 20}px ${8 + Math.random() * 14}px` }], { duration: 520, easing: 'ease-out' }).finished.then(() => p.remove());
+      setTimeout(go, 32);
+    };
+    go();
+  }
+  // Al espacio (17 nov 2026, el usuario: «la que se va, más vistosa»): el remolino la jala en espiral, sale disparada
+  // hacia arriba con estela dorada, se hace chiquita y al final brilla como estrella y desaparece.
+  async windSpace(f, from) {
+    const R = from.width * 0.75, top = from.top + from.height / 2;
+    const dx = Math.min(innerWidth - from.right, from.width * 3) + from.width * 0.5, dy = -top - from.height;
+    const dur = 1250;
+    f.style.zIndex = 9999;
+    this.windTrail(f, dur);
+    await f.animate([...this.windSpin(R, 1.1), { translate: `${dx * 0.35}px ${dy * 0.45}px`, rotate: '-560deg', scale: '0.6', offset: 0.75 }, { translate: `${dx}px ${dy}px`, rotate: '-760deg', scale: '0.12', offset: 1 }], { duration: dur, easing: 'cubic-bezier(.45,0,.75,.6)', fill: 'forwards' }).finished;
+    // Destello de estrella donde se pierde (si quedó a la vista).
+    const q = f.getBoundingClientRect(), box = this.el.getBoundingClientRect();
+    f.remove();
+    const x = Math.min(Math.max(q.left + q.width / 2, 20), innerWidth - 20), y = Math.max(q.top + q.height / 2, 24);
+    const st = document.createElement('i');
+    st.className = 'wnd-ping';
+    st.innerHTML = `<svg viewBox="0 0 40 40">${star4(20, 20, 18, '#ffd54a', 2.4)}</svg>`;
+    Object.assign(st.style, { left: `${x - box.left - 18}px`, top: `${y - box.top - 18}px` });
+    this.el.append(st);
+    st.animate([{ scale: 0, rotate: '0deg', opacity: 1 }, { scale: 1.3, rotate: '90deg', opacity: 1, offset: 0.45 }, { scale: 0, rotate: '180deg', opacity: 0 }], { duration: 560, easing: 'ease-out' }).finished.then(() => st.remove());
+    sparkle({ x, y }, 8);
+  }
+  // Al fondo del mazo: el remolino la da media vuelta, vuela girando con su estela, llega boca abajo y se mete abajo.
+  async windBottom(f, from) {
+    const t = (this.stockEls?.[0] || this.stockEl).getBoundingClientRect(), [ax, ay] = center(from), [bx, by] = center(t);
+    f.style.zIndex = 9998;
+    const dur = 950;
+    this.windTrail(f, dur * 0.8, false);
+    const spin = this.windSpin(from.width * 0.6, 0.7, Math.PI);
+    await f.animate([...spin, { translate: `${(bx - ax) * 0.5}px ${(by - ay) * 0.5 - from.height * 0.7}px`, rotate: '-430deg', scale: '1', offset: 0.75 }, { translate: `${bx - ax}px ${by - ay}px`, rotate: '-540deg', scale: `${t.width / from.width}`, offset: 1 }], { duration: dur, easing: 'cubic-bezier(.3,0,.3,1)', fill: 'forwards' }).finished;
+    f.classList.remove('up');
+    await f.animate([{ opacity: 1, translate: `${bx - ax}px ${by - ay}px` }, { opacity: 0, translate: `${bx - ax}px ${by - ay + 6}px` }], { duration: 180, fill: 'forwards' }).finished;
+    f.remove();
+    this.stockEl.animate([{ translate: '0 0' }, { translate: '0 3px' }, { translate: '0 0' }], { duration: 200 });
+  }
+  // Tus cartas pesan: el remolino las agita tres veces, no se mueven y el Viento pierde vida.
+  windHold() {
+    buzz([30, 30, 60]);
+    if (reduced()) return;
+    setTimeout(async () => {
+      const stop = this.windSwirl(), top = this.wasteEl.firstElementChild;
+      for (let k = 0; k < 3; k++) await top?.animate([{ rotate: '0deg', translate: '0 0' }, { rotate: '-6deg', translate: '-4px -3px' }, { rotate: '0deg', translate: '0 0' }], { duration: 300 }).finished;
+      this.windStamp();
+      await stop();
+    }, FLY_MS + 120);
+  }
+  // Pesan (17 nov 2026, el usuario: «la parte de cubrirla que se vea más bonita»): la carta se asienta con un golpe
+  // dorado (aro y chispas); luego queda bañada en oro con un brillo que pasa y estrellitas (CSS .wnd-heavy).
+  windStamp() {
+    if (reduced()) return;
+    const el = this.wasteEl, r = el.getBoundingClientRect(), box = this.el.getBoundingClientRect();
+    el.firstElementChild?.animate([{ translate: '0 -14px', scale: '1.08' }, { translate: '0 0', scale: '1.1 .88', offset: 0.45 }, { scale: '.97 1.03', offset: 0.7 }, { translate: '0 0', scale: '1' }], { duration: 460, easing: 'ease-out' });
+    const ring = document.createElement('i');
+    ring.className = 'wnd-ring';
+    Object.assign(ring.style, { left: `${r.left - box.left + r.width / 2 - r.width}px`, top: `${r.bottom - box.top - r.width * 0.3}px`, width: `${r.width * 2}px`, height: `${r.width * 0.6}px` });
+    this.el.append(ring);
+    ring.animate([{ scale: 0.3, opacity: 1 }, { scale: 1.3, opacity: 0 }], { duration: 520, delay: 180, easing: 'ease-out', fill: 'backwards' }).finished.then(() => ring.remove());
+    setTimeout(() => sparkle({ x: r.left + r.width / 2, y: r.bottom - 4 }, 10), 200);
   }
   // ---------- Reloj del vacío (16 nov 2026; el usuario escogió en dev/reloj.html) ----------
   // Rebobinado «C»: la mesa se destiñe con rayas como video rebobinando y las cartas regresan a su lugar (congeladas «B»).
