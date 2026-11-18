@@ -3736,10 +3736,6 @@ s.was { text-decoration: line-through 2px #ff5f7e; opacity: .7; margin-right: .2
 .back .tb-ico.mk-lasso { background: #fff1dc; box-shadow: inset 0 -3px 0 #e0b07a; }
 .back .tb-ico.mk-wand { background: #f1e8ff; box-shadow: inset 0 -3px 0 #c9a6ff; }
 
-/* .gbox: la caja de regalo de las ventanas (main.js). Hasta el 16 nov 2026 se compartía con la caja galáctica. */
-.gbox { position: absolute; z-index: 5; pointer-events: none; transition: scale .4s, opacity .5s; }
-.gbox > svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
-
 /* ---------- Jefes de constelación (15 nov 2026) ---------- */
 /* Barra de vida: en la cabecera, debajo de la racha (parado) o a su lado (acostado). */
 /* 15 nov 2026 (pedido del usuario): la barra de vida va dentro de la racha, a la derecha con su rayita (como el
