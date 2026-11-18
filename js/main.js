@@ -1,7 +1,7 @@
 import { save, prefs, persist, resetProfile, deleteProfile, renameProfile, exportCode, readCode, loadProfile, setDev } from './storage.js';
 import { UNLOCK, EVENTS, FESTIVALS, COLLECTIONS, evSoon, isOn, nextEvent, daysToNextCol, plusCols, STREAK_GOALS, STREAK_STEP, streakGoal, nextIndex, dailyStreak, streakTheme, streakReady, streakHot, streakWin, streakLose, streakPendToFeats, msToMidnight, col, colLeft, colWin, colOffers, colBuy, ev, evLeft, evTicketLeft, evTicketPrice, evBuyTicket, evPrize, evEnter, evWin, evLose, evAlbum, festAlbum, EVENT_PLANETS, EVENT_PER_PLANET, EVENT_LEVELS, festival, festivalLeft, festivalSoon, soonLeft, evPrePrice, evPreOwned, evPreBuy, nextFestival, festEnter, festWin, festLose, festShape, festPrice, festPaid, festBuy, festPre, FEST_PRE, FEST_ENTRY, EV_FIRST } from './events.js';
-import { WORLD_COUNT, LEVELS_PER_WORLD, TOTAL_LEVELS, worldInfo, generateLevel, constBoss, bossOf, bossPicked, setBossPick, variantLevel, MECH_INTRO, MECH_NAMES, MECHANICS, EXTRA, extraDebut, SCROLL_FROM, tideFirst, holeFirst, doorsFirst, bandaFirst, rocksFirst, BOSS_ORDER, secretId, isSecret, eventLevel, festivalLevel } from './levels.js';
-import { Game, faceHTML, backHTML, TIPS, TABLE_TEXT, MECH_KINDS, ART, scrSVG, FOE_ICON, FOE_TITLE, FOE_NAME, FOE_BTN } from './game.js';
+import { WORLD_COUNT, LEVELS_PER_WORLD, TOTAL_LEVELS, worldInfo, generateLevel, constBoss, bossOf, bossPicked, setBossPick, variantLevel, MECH_INTRO, MECH_NAMES, MECHANICS, EXTRA, extraDebut, SCROLL_FROM, tideFirst, holeFirst, doorsFirst, bandaFirst, rocksFirst, zeroFirst, orbitFirst, pongFirst, BOSS_ORDER, secretId, isSecret, eventLevel, festivalLevel } from './levels.js';
+import { Game, faceHTML, backHTML, TIPS, TABLE_TEXT, MECH_KINDS, ART, slMark, FOE_ICON, FOE_TITLE, FOE_NAME, FOE_BTN } from './game.js';
 import { maxBet, betFee, betSteps, BET_STEPS, HELPS, DAILY_PATH, dailyState, dailyPieces, DAILY_SHIELD_MAX, starsNeeded, TICKET_PRICE, ticketCost, ticketRefund, coinsFor, bossChest, rollChest, CONST_PRIZE, CONST_OPEN, openCost, constStart, openFree, boosted, secretCoins, rollSecret, openSurprise, MET_OFF, metShopPrice, foeBeatPrize, RESCUE_WEEK, RESCUE_COINS, RESCUE_ITEMS } from './economy.js';
 import { track, missions, missionDef, missionDone, missionsAllDone, autoClaim, ACHIEVEMENTS, ACHIEVEMENT_PRIZES, ACHIEVEMENT_MEDAL, ACHIEVEMENT_TOP, achievementGot, achievementProgress, achievementsVisible } from './missions.js';
 import { pauseOffscreen, openModal, toast, updateCoins, money, esc, reduced, wait, flyToWallet, spendFromWallet, sparkle, confetti, starsHTML, warp, buzz, balloons, lootBubbles, floatBubbles, streakWarnHTML, popPrize, popBalloon, countPop, HEADS, betLoseHTML, shownCoins } from './ui.js';
@@ -1060,7 +1060,8 @@ function mechCard(m, x = 0) {
   if (m === 'bomb') return `<div class="card bomb-card up" style="left:${x}px"><div class="inner"><div class="face front"></div></div><span class="bomb-face">${icon('bomb')}<b>3</b></span></div>`;
   if (m === 'live') return mini(x, 'K', 's', { live: 1 });
   if (m === 'ticket') return `<div class="card up" style="left:${x}px">${faceHTML({ rank: 4, half: 9, suit: 1 })}</div>`;
-  if (m === 'scratch') return mini(x, '8', 'c', { marks: `<span class="scr-ov">${scrSVG(`demo${x}`, 2)}</span>` });
+  if (m === 'slock') return `<div class="card" style="left:${x}px;--back:${cardBackURL()}"><div class="inner">${backHTML({})}</div>${slMark(1, 1)}</div>`;
+  if (m === 'paint') return mini(x, '7', 'h', { paint: 1 });
   if (m === 'domino') return `<div class="card up" style="left:${x}px">${faceHTML({ rank: 4, dom: 9, suit: 0 })}</div>`;
   if (m === 'triple') return `<div class="card up" style="left:${x}px">${faceHTML({ rank: 6, tri: [11, 2], suit: 2 })}</div>`;
   if (m === 'turbo') return mini(x, '7', 'h', { turbo: true });
@@ -1146,6 +1147,9 @@ function roadItems() {
     { id: 'hoyo', n: holeFirst() + 1, name: 'Agujero negro', text: 'Cada 4 jugadas o robos se traga todas sus cartas y las escupe con los números revueltos.' },
     { id: 'nave', n: MECH_INTRO.ship * LEVELS_PER_WORLD + 1, name: 'Nave ladrona', text: '' },
     { id: 'rocas', n: rocksFirst() + 1, name: 'Asteroides', text: '' },
+    { id: 'zero', n: zeroFirst() + 1, name: 'Gravedad cero', text: '' },
+    { id: 'orbit', n: orbitFirst() + 1, name: 'Planetas en órbita', text: '' },
+    { id: 'pong', n: pongFirst() + 1, name: 'Ping-pong', text: '' },
     { id: 'astro', n: MECH_INTRO.astro * LEVELS_PER_WORLD + 1, name: 'Astronauta', text: '' },
   ].map((x) => ({ ...x, k: 'mesa', pic: x.id === 'nave' ? icon('nave') : x.id === 'astro' ? icon('astronauta') : tableIcon(x.id), text: TABLE_TEXT[x.id] ? TABLE_TEXT[x.id].join(' ') : x.text }));
   // Pasaporte y secretos (12 nov 2026): los sellos y premios ganados, en el nivel en que ibas; el siguiente sello, en el
@@ -4428,7 +4432,7 @@ function openPostcard(w) {
     name: info.name, hue: info.hue, tier, wd: { w, place: info.place },
     sub: `Mundo ${w + 1} · ${regionName(regionOf(w))}`,
     line: `<span class="pv-stars">${starsHTML(Math.round((stars / 30) * 3))}<em>${stars}/30</em></span>`,
-    stamp: [`${pct}%`, TIER[tier]], seal: sealHTML(w),
+    stamp: [`${pct}%`, TIER[tier]], seal: sealHTML(w), pass: true,
     photo: { kicker: `POSTAL DE · MUNDO ${w + 1}`, sub: regionName(regionOf(w)), stars, secret: (save.secret[w] || 0) >= 3, file: `postal-mundo-${w + 1}` },
   });
 }
@@ -4443,8 +4447,8 @@ function openEvPostcard(x) {
     photo: { kicker: `POSTAL DE · ${K.stamp.toUpperCase()} ${x.year}`, sub: x.e.planets.at(-1), stars: null, secret: false, file: `postal-${x.e.key}-${x.year}` },
   });
 }
-// Sellos del pasaporte y de secretos que ya ganaste (12 nov 2026): van en todas las postales en grande, encima del
-// planeta. Se pueden ocultar (save.pcPass === false) y la foto sale igual que como los dejaste.
+// Sellos del pasaporte y de secretos que ya ganaste (12 nov 2026): van en las postales de mundo en grande, encima del
+// planeta (17 nov 2026, el usuario: no en las de eventos ni festividades: pc.pass). Se pueden ocultar (save.pcPass === false) y la foto sale igual que como los dejaste.
 const passSeals = () => [
   ...Array.from({ length: save.pass?.s || 0 }, (_, i) => { const F = passFrameOf(i + 1); return { ico: F[4], pc: F[3], n: i + 1 }; }),
   ...Array.from({ length: save.pass?.x || 0 }, (_, i) => ({ ico: 'starSecret', pc: '#8a5cf0', n: secretGoal(i + 1) })),
@@ -4478,7 +4482,7 @@ const passSealsHTML = (key) => {
 };
 // pc: { name, hue, tier, wd (para PlanetView), sub, line (estrellas o lo que va debajo), stamp: [grande, chico], seal, photo }
 async function showPostcard(pc) {
-  const frame = equipped('frame'), seals = passSeals().length;
+  const frame = equipped('frame'), seals = pc.pass ? passSeals().length : 0;
   let view = null;
   const m = openModal({
     title: esc(pc.name),
@@ -4584,7 +4588,7 @@ async function savePostcard(view, pc, btn) {
     g.restore();
   }
   // Sellos del pasaporte y de secretos (si no los quitaste): en la orilla de arriba del planeta, de derecha a izquierda.
-  if (save.pcPass !== false) {
+  if (pc.pass && save.pcPass !== false) {
     const list = passSeals(), at = sealSpots(list.length, pc.name);
     const img = (ico) => new Promise((ok) => { const im = new Image(); im.onload = () => ok(im); im.onerror = () => ok(null); im.src = iconURL(ico, 1).slice(5, -2); });
     const pics = await Promise.all(list.map((x) => img(x.ico)));
@@ -5448,17 +5452,18 @@ const S = (ill, txt, u) => `<div class="step"${u ? ` data-u="${u}"` : ''}><div c
 const hcard = (k) => `<span class="help-card" style="background-image:${cardBackURL(k)}"></span>`;
 const MECH_INTRO_HELP = { 'Se abren después': 'Esperan algo para poder jugarse.', 'Cambian con los turnos': 'Cambian solas mientras juegas.', 'Reglas al jugar': 'Se juegan distinto a las demás.', 'No se juegan': 'Se destapan, no se juegan.', 'Te ayudan': 'Al jugarlas te dan algo extra.' };
 const CARD_SHORT = {
-  lock: 'se abre al jugar la carta con la <b>llave</b> de su color.', curtain: 'sigue <b>boca abajo</b> hasta jugar la del <b>telón</b>.', ice: 'se <b>derrite</b> con cada carta que juegas.', vine: 'la tapa la <b>enredadera</b>; la carta de <b>fuego</b> la quema.', sleep: 'despierta con su número de cartas <b>seguidas</b>.',
+  lock: 'se abre al jugar la carta con la <b>llave</b> de su color.', slock: 'juega cartas de su <b>palo</b> para romper sus cadenas; te da monedas.', curtain: 'sigue <b>boca abajo</b> hasta jugar la del <b>telón</b>.', ice: 'se <b>derrite</b> con cada carta que juegas.', vine: 'la tapa la <b>enredadera</b>; la carta de <b>fuego</b> la quema.', sleep: 'despierta con su número de cartas <b>seguidas</b>.',
   live: 'su número <b>sube o baja</b> con cada turno.', ghost: '<b>aparece y desaparece</b>; juégala cuando se vea.', cham: 'a ratos se vuelve <b>comodín</b>.',
   double: 'vale <b>dos números</b>.', arrow: 'la siguiente tiene que ir hacia donde marca la <b>flecha</b>.', ticket: '<b>dos mitades</b>: juega una y la otra se queda.', domino: 'entras por un número y en el descarte queda <b>el otro</b>.', triple: '<b>3 talones</b>: primero los de las puntas.', twin: 'al jugar una, la <b>otra</b> cae al descarte.',
   pack: '<b>destápala</b> y te da cartas.', bomb: '<b>destápala</b> antes de que explote.', comet: '<b>destápalo</b> a tiempo y suma a tu racha.',
-  coin: 'te da <b>monedas</b>.', turbo: 'tus <b>3 jugadas</b> siguientes valen doble.', bolt: 'manda cartas <b>enterradas</b> a tu mazo.', cst: 'juega <b>todas</b> las de estrellita seguidas y ganas premio.', magnet: 'tu siguiente robo te da la que <b>más sirve</b>.', rainbow: '3 jugadas pueden <b>saltar dos</b>.', scratch: 'ráscala jugando a su lado; si le atinas antes, <b>monedas</b>.', scope: 'ves <b>todas</b> las cartas 3 turnos.', lasso: 'escoges <b>cualquier carta</b> y va al descarte.', wand: 'le <b>subes o bajas</b> hasta 3 a una carta libre.',
+  coin: 'te da <b>monedas</b>.', turbo: 'tus <b>3 jugadas</b> siguientes valen doble.', bolt: 'manda cartas <b>enterradas</b> a tu mazo.', cst: 'juega <b>todas</b> las de estrellita seguidas y ganas premio.', magnet: 'tu siguiente robo te da la que <b>más sirve</b>.', rainbow: '3 jugadas pueden <b>saltar dos</b>.', paint: 'llena tu descarte de pintura: 3 de su <b>color</b> seguidas y te da una carta.', scope: 'ves <b>todas</b> las cartas 3 turnos.', lasso: 'escoges <b>cualquier carta</b> y va al descarte.', wand: 'le <b>subes o bajas</b> hasta 3 a una carta libre.',
 };
 const TABLE_HELP = [
   ['nave', 'ship', 'Nave ladrona', 'se lleva cartas de tu <b>mazo</b>; con racha de 4 te regresa una.'], ['mesa', 'mesa', 'Mesa enrollada', 'limpia las primeras y salen más del <b>rollo</b>.'], ['nebulosa', 'nebulosa', 'Nebulosa', 'vacía un grupo y sale <b>otro</b>.'], ['gravedad', 'gravedad', 'Gravedad', 'juegas la de <b>abajo</b> y la columna cae.'],
   ['hangar', 'hangar', 'Hangar', 'vacía una columna y del <b>hangar</b> sale otra.'], ['bitacora', 'bitacora', 'Bitácora', 'por las <b>escotillas</b> juegas cartas de la hoja de abajo.'], ['portal', 'portal', 'Grúa de feria', 'la <b>garra</b> se lleva la carta de arriba de cada columna.'], ['voltea', 'voltea', 'Mesa que se voltea', 'cada 5 turnos la cápsula da <b>media vuelta</b>.'],
   ['cohete', 'cohete', 'Cohete', 'limpia y el <b>cohete avanza</b>; cada tramo da monedas.'], ['marea', 'marea', 'Marea', 'robar sube el <b>agua</b> y jugar la baja.'], ['hoyo', 'hoyo', 'Agujero negro', 'cada 4 turnos <b>revuelve</b> los números.'], ['astro', 'astro', 'Astronauta', 'te <b>guarda</b> una carta y luego la lleva al descarte.'],
   ['rocas', 'rocas', 'Asteroides', 'robar hace caer <b>piedras</b> que tapan cartas.'], ['puertas', 'puertas', 'Puertas', 'juega una <b>carta llave</b> y abre la puerta que quieras.'], ['banda', 'banda', 'Banda transportadora', 'las cartas <b>dan vueltas</b>; atrápalas al pasar.'],
+  ['zero', 'zero', 'Gravedad cero', 'al jugar, una carta <b>flota</b> encima de otra.'], ['orbit', 'orbit', 'Planetas en órbita', 'la carta con un <b>planeta</b> encima no se juega.'], ['pong', 'pong', 'Ping-pong', 'la pelota pone enfrente la carta de <b>abajo</b>.'],
 ];
 function openHelp(tab = 'basico', then) {
   const reached = new Set(roadItems().filter((x) => x.n <= roadAt()).map((x) => x.id));

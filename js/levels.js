@@ -1,5 +1,5 @@
 import { mulberry32, hash, randInt, pick, shuffle } from './rng.js';
-import { follows, mod13, HOLE_EVERY, BELT_W, solve, initState, playRank, cutOf, refStep, refReady, play as playCard, draw as drawCard, won, starsFor, playCasual, casualRun } from './engine.js';
+import { follows, mod13, HOLE_EVERY, BELT_W, solve, initState, playRank, cutOf, refStep, refReady, play as playCard, draw as drawCard, won, starsFor, playCasual, casualRun, SL_NEED, PAINT_N } from './engine.js';
 
 // Unidades del tablero: una carta mide W x H. Posiciones = esquina superior izquierda.
 export const W = 1;
@@ -505,13 +505,55 @@ export const rocksFirst = () => {
   return rocksDebut;
 };
 export const rocksKind = (g) => finalTable(g) ? finalTable(g) === 'rocks' : (exFoldKind(g) ? exFoldKind(g) === 'rocks' : !cardDebut(g) && !tideKind(g) && !holeKind(g) && !doorsKind(g) && !bandaKind(g) && (g === rocksFirst() || (g > rocksFirst() && !ovDebut(g) && !((hash(g * 5303 + 89) >>> 5) % 6))));
+// Gravedad cero (701), planetas en órbita (751) y ping-pong (801) (17 nov 2026, pedido del usuario; escogidas en
+// dev/ideas-dinamicas-2.html): mesas sobre un tablero normal, como los asteroides (ver zeroStep, orbitOn y pongStep en
+// engine.js). Desde su estreno, ~1 de cada 6 normales que no traen otra mesa.
+export const ZERO_FROM = 700, ORBIT_FROM = 750, PONG_FROM = 800;
+const firstOf = {};
+const ovTaken = (g) => tideKind(g) || holeKind(g) || doorsKind(g) || bandaKind(g) || rocksKind(g);
+const ovFirst = (k, from, prev) => {
+  if (firstOf[k] == null) for (firstOf[k] = from; cardDebut(firstOf[k]) || exFold(firstOf[k]) || scrollKind(firstOf[k]) || hardHelp(firstOf[k]) || isRespite(firstOf[k]) || ovTaken(firstOf[k]) || prev(firstOf[k]); firstOf[k]++);
+  return firstOf[k];
+};
+const ovKind = (k, first, salt, prev) => (g) => (finalTable(g) ? finalTable(g) === k : exFoldKind(g) ? exFoldKind(g) === k : !cardDebut(g) && !ovTaken(g) && !prev(g) && (g === first() || (g > first() && !ovDebut(g) && !((hash(g * salt + 101) >>> 5) % 6))));
+export const zeroFirst = () => ovFirst('zero', ZERO_FROM, () => false);
+export const zeroKind = ovKind('zero', zeroFirst, 6007, () => false);
+export const orbitFirst = () => ovFirst('orbit', ORBIT_FROM, zeroKind);
+export const orbitKind = ovKind('orbit', orbitFirst, 7349, zeroKind);
+export const pongFirst = () => ovFirst('pong', PONG_FROM, (g) => zeroKind(g) || orbitKind(g));
+export const pongKind = ovKind('pong', pongFirst, 8191, (g) => zeroKind(g) || orbitKind(g));
+// Planetas en órbita: de 1 a 3 planetas (17 nov 2026, el usuario: «¿siempre solo salen dos?»; según el tamaño del grupo)
+// dan vueltas por el grupo más grande (sus cartas en orden alrededor del centro) y empiezan repartidos. El primero, si el
+// grupo es de 12+, es grande: tapa su carta y la de junto (la más cercana); los demás tapan una. Cada parada = las
+// cartas que tapa; todos avanzan una carta por acción.
+function orbitPath(cards, g) {
+  const by = new Map();
+  for (const c of cards) if (c.door == null && c.belt == null) by.set(c.group, [...(by.get(c.group) || []), c]);
+  const list = [...by.values()].sort((a, b) => b.length - a.length)[0];
+  if (!list || list.length < 6) return null;
+  const cx = list.reduce((a, c) => a + c.x, 0) / list.length, cy = list.reduce((a, c) => a + c.y, 0) / list.length;
+  const ring = list.map((c) => [c.id, Math.atan2(c.y - cy, c.x - cx)]).sort((a, b) => a[1] - b[1]).map(([id]) => id);
+  const near = (id) => {
+    const c = cards[id];
+    let best = null, bd = 1.3;
+    for (const x of list) if (x.id !== id && Math.hypot(x.x - c.x, x.y - c.y) < bd) (bd = Math.hypot(x.x - c.x, x.y - c.y)), (best = x.id);
+    return best;
+  };
+  const h = hash(g * 389 + 11), L = ring.length;
+  const k = Math.min(3, 1 + (L >= 12 ? 1 : 0) + (L >= 32 || (L >= 22 && (h >>> 4) % 2) ? 1 : 0));
+  return Array.from({ length: k }, (_, j) => {
+    const size = j === 0 && L >= 12 ? 2 : 1;
+    const stops = ring.map((id) => (size === 2 && near(id) != null ? [id, near(id)] : [id]));
+    return { stops, off: (h + Math.floor((j * L) / k)) % L, size };
+  });
+}
 // Caja galáctica (15 nov 2026): descartada el 16 nov 2026 por el usuario (no le gustó; no volver a proponer cajas
 // con combinación). Su nivel 651 quedó como nivel normal.
 // Nivel final de cada planeta (el 10, menos el del jefe de constelación): de preferencia una mesa especial de las que
 // ya se estrenaron (FINAL_TABLES: desde qué nivel), escogida con su hash. Los duros no (su tablero es otro).
 export const FINAL_MIX = 3;
 export const isFinal = (g) => g < TOTAL_LEVELS && g % LEVELS_PER_WORLD === LEVELS_PER_WORLD - 1 && !constBoss(g);
-const FINAL_TABLES = () => [['gravedad', SCROLL_FROM.gravedad], ['nebulosa', SCROLL_FROM.nebulosa], ['hangar', SCROLL_FROM.hangar], ['bitacora', SCROLL_FROM.bitacora], ['tide', TIDE_FROM], ['hole', HOLE_FROM], ['doors', DOORS_FROM], ['banda', BANDA_FROM], ['rocks', ROCKS_FROM], ['portal', SCROLL_FROM.portal], ['voltea', SCROLL_FROM.voltea], ['cohete', SCROLL_FROM.cohete]];
+const FINAL_TABLES = () => [['zero', ZERO_FROM], ['orbit', ORBIT_FROM], ['pong', PONG_FROM], ['gravedad', SCROLL_FROM.gravedad], ['nebulosa', SCROLL_FROM.nebulosa], ['hangar', SCROLL_FROM.hangar], ['bitacora', SCROLL_FROM.bitacora], ['tide', TIDE_FROM], ['hole', HOLE_FROM], ['doors', DOORS_FROM], ['banda', BANDA_FROM], ['rocks', ROCKS_FROM], ['portal', SCROLL_FROM.portal], ['voltea', SCROLL_FROM.voltea], ['cohete', SCROLL_FROM.cohete]];
 export const finalTable = (g) => {
   if (!isFinal(g) || hardHelp(g)) return null;
   const open = FINAL_TABLES().filter(([, f]) => g > f + 5);
@@ -539,12 +581,12 @@ const cardDebut = (g) => g % LEVELS_PER_WORLD === 0 && MECHANICS.some((m) => !EX
 // agujero negro, puertas, banda o asteroides), escogida por nivel; antes, enrollada, gravedad o nebulosa.
 // 14 nov 2026 (calendario nuevo): los estrenos de las mesas que van sobre un tablero normal y de las cartas de regalo
 // caen justo en el primer nivel de su mundo (301, 401…; 221, 271): ahí no sale otra mesa al azar.
-const ovDebut = (g) => g === TIDE_FROM || g === HOLE_FROM || g === DOORS_FROM || g === BANDA_FROM || g === ROCKS_FROM;
+const ovDebut = (g) => g === TIDE_FROM || g === HOLE_FROM || g === DOORS_FROM || g === BANDA_FROM || g === ROCKS_FROM || g === ZERO_FROM || g === ORBIT_FROM || g === PONG_FROM;
 const reserved = (g) => ovDebut(g) || constBoss(g) || EXTRA.some((m) => MECH_INTRO[m] * LEVELS_PER_WORLD === g);
 const exFold = (g) => g >= 208 && g < TOTAL_LEVELS && !cardDebut(g) && !reserved(g) && !((hash(g * 3571 + 211) >>> 7) % 12);
 const exFoldKind = (g) => {
   if (!exFold(g) || g < TIDE_FROM) return null;
-  const open = [['tide', tideFirst], ['hole', holeFirst], ['doors', doorsFirst], ['banda', bandaFirst], ['rocks', rocksFirst]].filter(([, first]) => g > first());
+  const open = [['tide', tideFirst], ['hole', holeFirst], ['doors', doorsFirst], ['banda', bandaFirst], ['rocks', rocksFirst], ['zero', zeroFirst], ['orbit', orbitFirst], ['pong', pongFirst]].filter(([, first]) => g > first());
   return open.length ? open[hash(g * 787 + 43) % open.length][0] : null;
 };
 export function scrollKind(g) {
@@ -886,11 +928,17 @@ function softLevel(g) {
   const key = `s${g}`;
   if (picked.has(key)) return buildLevel(g, null, picked.get(key));
   let best = null;
-  for (let t = 0; t < 12; t++) {
-    const L = buildLevel(g, null, t), w = quickWins(L);
+  // Estreno de gravedad cero, planetas o ping-pong (17 nov 2026): la versión tiene que traer su mesa (si no se podía
+  // ganar con ella, el nivel se quedaba sin la mesa que anuncia el camino).
+  const ov = g === zeroFirst() ? 'zero' : g === orbitFirst() ? 'orbit' : g === pongFirst() ? 'pong' : null;
+  for (let t = 0; t < (ov ? 40 : 12); t++) {
+    const L = buildLevel(g, null, t);
+    if (ov && !L[ov]) continue;
+    const w = quickWins(L);
     if (!best || w > best.w) best = { L, t, w };
     if (w >= QUICK * 0.15) break;
   }
+  best ||= { L: buildLevel(g), t: 0 };
   picked.set(key, best.t);
   return best.L;
 }
@@ -982,6 +1030,13 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
   const doorsOn = overlay && doorsKind(base);
   const banda = overlay && !doorsOn && bandaKind(base);
   const rocksOn = overlay && !holeOn && !doorsOn && !banda && rocksKind(base);
+  const zeroOn = overlay && !holeOn && !doorsOn && !banda && !rocksOn && zeroKind(base);
+  const orbitOn = overlay && !holeOn && !doorsOn && !banda && !rocksOn && !zeroOn && orbitKind(base);
+  const pongOn = overlay && !holeOn && !doorsOn && !banda && !rocksOn && !zeroOn && !orbitOn && pongKind(base);
+  // Las tres de cartas que se mueven (17 nov 2026): un poco más amables, y su estreno más.
+  if (zeroOn) d *= base === zeroFirst() ? 0.4 : 0.85;
+  if (orbitOn) d *= base === orbitFirst() ? 0.4 : 0.85;
+  if (pongOn) d *= base === pongFirst() ? 0.4 : 0.85;
   // Agujero negro y banda ya cuestan por sí mismas: el tablero va un poco más amable (como las otras mesas). Las
   // puertas, apenas (sus pilas no cuentan si no las abres). La banda pesa más (al bot le costaba 31% contra 47%): la mitad.
   if (holeOn) d *= base === holeFirst() ? 0.25 : 0.6; // su estreno, más amable
@@ -1130,8 +1185,8 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
     }
   }
 
-  // Raspadita, telescopio y gemelas: solas en los 5 primeros niveles de su mundo (se ponen al final de buildLevel).
-  if ((world === MECH_INTRO.scratch || world === MECH_INTRO.scope || world === MECH_INTRO.twin || world === MECH_INTRO.lasso || world === MECH_INTRO.wand) && index < 5) [...mech].filter((x) => x !== 'comet').forEach((x) => mech.delete(x));
+  // Candado de palo, pintura, telescopio y gemelas: solas en los 5 primeros niveles de su mundo (se ponen al final de buildLevel).
+  if ((world === MECH_INTRO.slock || world === MECH_INTRO.paint || world === MECH_INTRO.scope || world === MECH_INTRO.twin || world === MECH_INTRO.lasso || world === MECH_INTRO.wand) && index < 5) [...mech].filter((x) => x !== 'comet').forEach((x) => mech.delete(x));
 
   // Carta regalo: una carta especial (sin número) que se activa sola al quedar destapada del todo
   // y manda 2-5 cartas al final del mazo. Va tapada y en el primer 40% del orden de retirada.
@@ -1226,7 +1281,7 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
   for (const id of [...bombIds, ...cometIds]) delete cards[id].rank;
   for (const [id, x] of doms) cards[id].dom = x;
   if (flipOn) for (const c of cards) c.flipBy = flipBy[c.id];
-  const SPECIAL = ['lock', 'key', 'pack', 'ice', 'alt', 'arrow', 'curtain', 'curtainKey', 'bomb', 'live', 'comet', 'turbo', 'half', 'dom', 'tri', 'scr', 'ghost', 'coin', 'cham', 'ring', 'doorKey', 'belt', 'bolt', 'shield', 'vine', 'fire', 'sleep', 'rainbow', 'magnet', 'twin', 'scope', 'lasso', 'wand'];
+  const SPECIAL = ['lock', 'key', 'pack', 'ice', 'alt', 'arrow', 'curtain', 'curtainKey', 'bomb', 'live', 'comet', 'turbo', 'half', 'dom', 'tri', 'sl', 'paint', 'ghost', 'coin', 'cham', 'ring', 'doorKey', 'belt', 'bolt', 'shield', 'vine', 'fire', 'sleep', 'rainbow', 'magnet', 'twin', 'scope', 'lasso', 'wand'];
   const plain = (id) => SPECIAL.every((f) => cards[id][f] == null);
 
   // Boleto partido (1-2): la referencia juega primero la mitad de arriba (su número de la cadena) y la de abajo al final
@@ -1601,7 +1656,7 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
     }
   }
   const level = {
-    g, world, index, d, template, boss, secret, event: !!ev, fresh, ...(respite && { respite }), ...(scroll && { scroll }), ...(tideOn && cards.some((c) => c.wet) && { tide: 1 }), ...(hole && { hole }), ...(vine && { vine }), ...(doors && { doors }), ...(belt && { belt }), ...(rocksOn && { rocks: { n: base === rocksFirst() ? 2 : 2 + (hash(g * 211 + 7) % 2) } }),
+    g, world, index, d, template, boss, secret, event: !!ev, fresh, ...(respite && { respite }), ...(scroll && { scroll }), ...(tideOn && cards.some((c) => c.wet) && { tide: 1 }), ...(hole && { hole }), ...(vine && { vine }), ...(doors && { doors }), ...(belt && { belt }), ...(zeroOn && { zero: 1 }), ...(pongOn && { pong: 1 }), ...(rocksOn && { rocks: { n: base === rocksFirst() ? 2 : 2 + (hash(g * 211 + 7) % 2) } }),
     ...(raw.names && { pieces: raw.names }),
     ...((nebula || hangarOn) && { neb: segments }),
     ...(rocketOn && { rocket: 1 }),
@@ -1627,7 +1682,11 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
   if (ev) level.rewardStep = 2;
   if (mech.has('ship')) level.ship = 1;
   // Primero el camino acertado (instantáneo); el solucionador solo si ese no llega a tiempo.
-  const check = () => (!level.flip && !level.ship && !level.tide && !level.hole && !level.belt && !level.rocks && !level.vine && !cards.some((c) => c.live || c.bomb || c.ghost)) || refLeft(level) >= 0 || !!solve(level, initState(level), 60000);
+  if (orbitOn) {
+    const o = orbitPath(cards, g);
+    if (o) level.orbit = o;
+  }
+  const check = () => (!level.flip && !level.ship && !level.tide && !level.hole && !level.belt && !level.rocks && !level.zero && !level.orbit && !level.pong && !level.vine && !cards.some((c) => c.live || c.bomb || c.ghost)) || refLeft(level) >= 0 || !!solve(level, initState(level), 60000);
   // Mesa que se voltea: si no se puede ganar, se queda como gravedad.
   if (level.flip && !check()) {
     delete level.flip;
@@ -1644,8 +1703,11 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
     delete level.hole;
     for (const c of cards) if (c.ring) (c.rank = ranks[c.id]), delete c.ring;
   }
-  // Los asteroides también se quitan si no se puede ganar.
+  // Los asteroides también se quitan si no se puede ganar (y las mesas de cartas que se mueven).
   if (level.rocks && !check()) delete level.rocks;
+  if (level.zero && !check()) delete level.zero;
+  if (level.orbit && !check()) delete level.orbit;
+  if (level.pong && !check()) delete level.pong;
   // La marea es lo primero que se quita (luego la nave y el fantasma).
   if (level.tide && !check()) {
     delete level.tide;
@@ -1658,6 +1720,11 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
   if (!check()) {
     for (const c of cards) if (c.live) (c.rank = ranks[c.id]), delete c.live;
     for (let extra = 4; !check() && extra <= 40; extra *= 2) for (const c of cards) if (c.bomb) c.bomb += extra;
+  }
+  // Enredadera: si aun así no se gana, se quita con su fuego (17 nov 2026: el 2781 salió con cometa y sin solución).
+  if (level.vine && !check()) {
+    delete level.vine;
+    for (const c of cards) delete c.vine, delete c.fire;
   }
   // Niveles duros: estrellas contra el camino acertado (level.stars = cartas que deben quedar para 2★ y 3★).
   // 3★ = terminar con lo que deja la referencia menos T.miss; 2★ = la mitad de eso; 1★ = ganar.
@@ -1726,7 +1793,7 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
     // Astronauta (14 nov 2026, pedido del usuario): llega al nivel para guardarte una carta. Solo ayuda (el
     // solucionador no lo usa): no se comprueba. Solo en mesas normales.
     const ras = mulberry32(hash(g * 4919 + t * 127 + 97));
-    if (world >= MECH_INTRO.astro && !level.tide && !level.belt && !level.doors && !level.hole && !level.rocks && !level.neb && (world === MECH_INTRO.astro || ras() < ASTRO_ODDS * fin)) level.astro = 1;
+    if (world >= MECH_INTRO.astro && !level.tide && !level.belt && !level.doors && !level.hole && !level.rocks && !level.zero && !level.orbit && !level.pong && !level.neb && (world === MECH_INTRO.astro || ras() < ASTRO_ODDS * fin)) level.astro = 1;
     // Constelación: 3 (o 4) cartas que la referencia juega una tras otra sin robar. Pueden traer otra mecánica (hielo,
     // candado…), menos el boleto partido (se juega en dos veces).
     const rcs = mulberry32(hash(g * 3301 + t * 73 + 47));
@@ -1762,12 +1829,17 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
       // Con mesas que la referencia no sigue (asteroides, marea…) sí puede estorbar: se comprueba y si no, se quita.
       if (!(refLeft(level) >= 0 || solve(level, initState(level), 60000))) for (const c of cards) delete c.sleep;
     }
-    // Arcoíris (13 nov 2026): al jugarlo, las 3 jugadas siguientes pueden ser ±2. Solo ayuda: no se comprueba.
+    // Arcoíris (13 nov 2026): al jugarlo, las 3 jugadas siguientes pueden ser ±2. Casi siempre solo ayuda, pero se comprueba.
     const rar = mulberry32(hash(g * 3767 + t * 97 + 67));
     if (world >= MECH_INTRO.rainbow && (world === MECH_INTRO.rainbow || rar() < RAINBOW_ODDS * fin)) {
       const ks = [];
       for (let k = 0; k < np; k++) if (plain(play[k])) ks.push(k);
-      if (ks.length) cards[play[pick(rar, ks)]].rainbow = 1;
+      if (ks.length) {
+        const c = cards[play[pick(rar, ks)]];
+        c.rainbow = 1;
+        // 17 nov 2026: con enredadera y cometa el 2781 se quedaba sin solución; se comprueba y si no, se quita.
+        if (!(refLeft(level) >= 0 || (!T && solve(level, initState(level), 60000)))) delete c.rainbow;
+      }
     }
     // Imán (13 nov 2026): al jugarlo, tu siguiente robo saca del mazo la carta que deja jugar más cartas del tablero.
     // Cambia lo que robas, así que la referencia puede no servir: se comprueba y si no se gana, se quita.
@@ -1782,27 +1854,52 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
       }
     }
   }
-  // Raspadita (13 nov 2026, pedido del usuario): una carta tapada al empezar, en la segunda parte de la referencia; su
-  // número no se ve y cada carta pegada a ella (c.scr, hasta 6) que juegas le abre una ventanita. Se juega normal: solo
-  // ayuda (y da monedas si te arriesgas antes de verla toda), así que no se comprueba. No en mesas que se recorren.
-  {
-    const rsc = mulberry32(hash(g * 5737 + t * 113 + 29));
-    if (!scroll && world >= MECH_INTRO.scratch && (world === MECH_INTRO.scratch || rsc() < SCR_ODDS * fin)) {
-      // Pegadas = las de los lados (13 nov 2026: contando las que la tapan, al quedar libre ya se veía casi toda). Solo las
-      // de verdad junto a ella, a menos de 1.2 de centro a centro (14 nov 2026: contaba las de dos filas abajo y la punta
-      // de una pirámide salía «raspada» sin nada a los lados).
-      const side = (c) => cards.filter((x) => x.id !== c.id && x.group === c.group && x.door == null && !coveredBy[c.id].includes(x.id) && !x.coveredBy.includes(c.id) && Math.hypot(x.x - c.x, x.y - c.y) < 1.2).map((x) => x.id).slice(0, 4);
-      // Nunca sola (13 nov 2026, el usuario: como la punta de una pirámide no sirve): al menos 2 de los lados se juegan
-      // antes que ella en la referencia, para que de verdad se raspe.
-      const kOf = new Map(play.map((id, k) => [id, k]));
-      const ks = [];
-      for (let k = Math.floor(np * 0.3); k < np; k++) if (plain(play[k]) && coveredBy[play[k]].length && side(cards[play[k]]).filter((j) => kOf.get(j) < k).length >= 2) ks.push(play[k]);
-      // Su estreno siempre la trae (15 nov 2026: al recorrerla al 721, ese tablero no tenía ninguna con 2 a los lados).
-      if (!ks.length && world === MECH_INTRO.scratch && index === 0) for (let k = Math.floor(np * 0.3); k < np; k++) if (plain(play[k]) && coveredBy[play[k]].length && side(cards[play[k]]).some((j) => kOf.get(j) < k)) ks.push(play[k]);
-      if (ks.length) {
-        const c = cards[pick(rsc, ks)];
-        c.scr = side(c);
+  // Candado de palo (17 nov 2026, pedido del usuario): una carta tapada de la segunda parte de la referencia con un
+  // candado de un palo que la referencia ya jugó SL_NEED veces antes de llegar a ella. 1-2 por nivel. Si aun así no se
+  // gana (mesas que la referencia no sigue), se quita. No en mesas que se recorren.
+  const rsk = mulberry32(hash(g * 5737 + t * 113 + 29));
+  if (!scroll && world >= MECH_INTRO.slock && (world === MECH_INTRO.slock || rsk() < SL_ODDS * fin)) {
+    const cnt = [0, 0, 0, 0], ks = [];
+    for (let i = 0; i < seq.length; i++) {
+      const x = seq[i], c = cards[x.id];
+      if (!x.tail && i >= seq.length * 0.35 && plain(x.id) && coveredBy[x.id].length && !ks.some(([id]) => id === x.id)) {
+        const ok = [0, 1, 2, 3].filter((k) => cnt[k] >= SL_NEED);
+        if (ok.length) ks.push([x.id, ok]);
       }
+      if (c.suit != null) cnt[c.suit]++;
+    }
+    for (let w = 1 + (ks.length > 3 && rsk() < 0.35 ? 1 : 0); w > 0 && ks.length; w--) {
+      const [id, ok] = ks.splice(Math.floor(rsk() * ks.length), 1)[0];
+      cards[id].sl = pick(rsk, ok);
+    }
+    if (cards.some((c) => c.sl != null)) {
+      level.sl = 1;
+      // Al abrirse da monedas como la carta moneda.
+      level.slCoins = Math.round(Math.min(60, 10 + 2 * Math.floor(base / (LEVELS_PER_WORLD * 10))) * 1.15);
+      if (!(refLeft(level) >= 0 || (!T && solve(level, initState(level), 60000)))) {
+        for (const c of cards) delete c.sl;
+        delete level.sl, delete level.slCoins;
+      }
+    }
+  }
+  // Pintura (17 nov 2026, pedido del usuario): de preferencia donde la referencia juega justo después 3 cartas seguidas
+  // (sin robar) de su mismo color, para que se pueda llenar. La carta de regalo cambia el mazo: se comprueba.
+  const rpt = mulberry32(hash(g * 6421 + t * 131 + 37));
+  if (!scroll && world >= MECH_INTRO.paint && (world === MECH_INTRO.paint || rpt() < PAINT_ODDS * fin)) {
+    const red = (id) => cards[id].suit === 1 || cards[id].suit === 2;
+    const good = [], any = [];
+    for (let i = 0; i < seq.length; i++) {
+      const x = seq[i];
+      if (x.tail || !plain(x.id) || cards[x.id].sl != null) continue;
+      if (i < seq.length * 0.7) any.push(x.id);
+      const next = seq.slice(i + 1, i + 1 + PAINT_N);
+      if (next.length === PAINT_N && next.every((y) => !y.dn && !y.tail && cards[y.id].suit != null && red(y.id) === red(x.id))) good.push(x.id);
+    }
+    const ids = good.length ? good : world === MECH_INTRO.paint ? any : [];
+    if (ids.length) {
+      const c = cards[pick(rpt, ids)];
+      c.paint = 1;
+      if (!(refLeft(level) >= 0 || (!T && solve(level, initState(level), 60000)))) delete c.paint;
     }
   }
   level.meta.mechs = MECHANICS.filter((m) => cards.some((c) => c[MECH_FIELD[m]] != null) || (m === 'turbo' && stock.some((c) => c.turbo)) || (m === 'ship' && level.ship) || (m === 'astro' && level.astro));
@@ -1871,7 +1968,7 @@ export const hardCount = (c) => Math.round(3 + (c * 37) / 51); // c desde 0
 // arcoíris cayeron en duros y el 121 salía sin gemelas): el duro pasa al siguiente nivel que no sea estreno, así cada
 // constelación tiene los mismos. Se arma la primera vez que se pide (MECH_INTRO y los *_FROM se definen después).
 let HARD = null;
-const debutLevels = () => new Set([...MECHANICS.filter((m) => !EXTRA.includes(m)).map((m) => MECH_INTRO[m] * LEVELS_PER_WORLD), ...Object.values(SCROLL_FROM), TIDE_FROM, HOLE_FROM, DOORS_FROM, BANDA_FROM, ROCKS_FROM, ...Array.from({ length: TOTAL_LEVELS / CONST_LEVELS }, (_, c) => (c + 1) * CONST_LEVELS - 1)]);
+const debutLevels = () => new Set([...MECHANICS.filter((m) => !EXTRA.includes(m)).map((m) => MECH_INTRO[m] * LEVELS_PER_WORLD), ...Object.values(SCROLL_FROM), TIDE_FROM, HOLE_FROM, DOORS_FROM, BANDA_FROM, ROCKS_FROM, ZERO_FROM, ORBIT_FROM, PONG_FROM, ...Array.from({ length: TOTAL_LEVELS / CONST_LEVELS }, (_, c) => (c + 1) * CONST_LEVELS - 1)]);
 function hardMap() {
   if (HARD) return HARD;
   HARD = new Map();
@@ -1922,10 +2019,10 @@ export function festivalLevel(day, k, world, n = FESTIVAL_PER_PLANET) {
 }
 
 // ---------- Mecánicas por mundo ----------
-export const MECHANICS = ['lock', 'pack', 'ice', 'double', 'arrow', 'curtain', 'bomb', 'live', 'ticket', 'comet', 'turbo', 'ghost', 'ship', 'coin', 'cham', 'bolt', 'cst', 'vine', 'magnet', 'rainbow', 'sleep', 'domino', 'triple', 'scratch', 'scope', 'twin', 'astro', 'lasso', 'wand'];
-const MECH_FIELD = { lock: 'lock', pack: 'pack', ice: 'ice', double: 'alt', arrow: 'arrow', curtain: 'curtain', bomb: 'bomb', live: 'live', ticket: 'half', comet: 'comet', turbo: 'turbo', ghost: 'ghost', ship: 'ship', coin: 'coin', cham: 'cham', bolt: 'bolt', cst: 'cst', vine: 'vine', magnet: 'magnet', rainbow: 'rainbow', sleep: 'sleep', domino: 'dom', triple: 'tri', scratch: 'scr', scope: 'scope', twin: 'twin', astro: 'astro', lasso: 'lasso', wand: 'wand' };
+export const MECHANICS = ['lock', 'pack', 'ice', 'double', 'arrow', 'curtain', 'bomb', 'live', 'ticket', 'comet', 'turbo', 'ghost', 'ship', 'coin', 'cham', 'bolt', 'cst', 'vine', 'magnet', 'rainbow', 'sleep', 'domino', 'triple', 'slock', 'paint', 'scope', 'twin', 'astro', 'lasso', 'wand'];
+const MECH_FIELD = { lock: 'lock', pack: 'pack', ice: 'ice', double: 'alt', arrow: 'arrow', curtain: 'curtain', bomb: 'bomb', live: 'live', ticket: 'half', comet: 'comet', turbo: 'turbo', ghost: 'ghost', ship: 'ship', coin: 'coin', cham: 'cham', bolt: 'bolt', cst: 'cst', vine: 'vine', magnet: 'magnet', rainbow: 'rainbow', sleep: 'sleep', domino: 'dom', triple: 'tri', slock: 'sl', paint: 'paint', scope: 'scope', twin: 'twin', astro: 'astro', lasso: 'lasso', wand: 'wand' };
 // Van con su sorteo, fuera de chooseMechanics (si entraran, cambiarían todos los niveles ya probados).
-const OWN_DRAW = ['ticket', 'ghost', 'ship', 'coin', 'cham', 'bolt', 'cst', 'vine', 'magnet', 'rainbow', 'sleep', 'domino', 'triple', 'scratch', 'scope', 'twin', 'astro', 'lasso', 'wand'];
+const OWN_DRAW = ['ticket', 'ghost', 'ship', 'coin', 'cham', 'bolt', 'cst', 'vine', 'magnet', 'rainbow', 'sleep', 'domino', 'triple', 'slock', 'paint', 'scope', 'twin', 'astro', 'lasso', 'wand'];
 // Mundo (índice desde 0) en el que se presenta cada una.
 // 8 nov 2026: corridas para que cada estreno quede a 10 niveles o más del anterior (antes lock 1, pack 2, ice 4, double 7,
 // arrow 11, curtain 15, bomb 19, live 24, ticket 20, comet 12, turbo 16, ghost 29, ship 34, coin 26, cham 32).
@@ -1941,10 +2038,11 @@ const OWN_DRAW = ['ticket', 'ghost', 'ship', 'coin', 'cham', 'bolt', 'cst', 'vin
 // boleto partido 321, viva 331, moneda 371, fantasma 381, camaleón 421, nave 431, rayo 471, constelación 481,
 // enredadera 521, imán 531, arcoíris 571, dormida 581, dominó 621, triple 631 y raspadita 651. Antes: { lock: 1, pack: 2, ice: 6, double: 12, arrow: 17, curtain: 22, bomb: 27, live: 33, ticket: 28, comet: 19, turbo: 24, ghost: 39, ship: 44, coin: 36, cham: 42, bolt: 47, cst: 49, vine: 52, magnet: 54, rainbow: 56, sleep: 58, domino: 60, triple: 62, scratch: 63, scope: 7, twin: 8, astro: 14 };
 // 15 nov 2026 (pedido del usuario): lazo 67 (671) y varita 68 (681); la raspadita se recorre al final, 72 (721). La caja
-// galáctica (mesa del 651) se quitó el 16 nov 2026.
-export const MECH_INTRO = { lock: 1, pack: 2, ice: 7, scope: 8, twin: 12, double: 13, astro: 17, arrow: 18, comet: 22, curtain: 23, turbo: 27, bomb: 28, ticket: 32, live: 33, coin: 37, ghost: 38, cham: 42, ship: 43, bolt: 47, cst: 48, vine: 52, magnet: 53, rainbow: 57, sleep: 58, domino: 62, triple: 63, lasso: 67, wand: 68, scratch: 72 };
+// galáctica (mesa del 651) se quitó el 16 nov 2026. 17 nov 2026 (pedido del usuario): se quitó la raspadita; en su
+// lugar, candado de palo 72 (721) y pintura 73 (731).
+export const MECH_INTRO = { lock: 1, pack: 2, ice: 7, scope: 8, twin: 12, double: 13, astro: 17, arrow: 18, comet: 22, curtain: 23, turbo: 27, bomb: 28, ticket: 32, live: 33, coin: 37, ghost: 38, cham: 42, ship: 43, bolt: 47, cst: 48, vine: 52, magnet: 53, rainbow: 57, sleep: 58, domino: 62, triple: 63, lasso: 67, wand: 68, slock: 72, paint: 73 };
 export const MECH_NAMES = {
-  lock: 'Candado', pack: 'Carta regalo', ice: 'Hielo', double: 'Carta doble', arrow: 'Flecha', curtain: 'Cortina', bomb: 'Bomba', live: 'Carta viva', ticket: 'Boleto partido', comet: 'Cometa', turbo: 'Cohete turbo', ghost: 'Fantasma', ship: 'Nave ladrona', coin: 'Carta moneda', cham: 'Camaleón', bolt: 'Rayo', cst: 'Constelación', vine: 'Enredadera', magnet: 'Imán', rainbow: 'Arcoíris', sleep: 'Carta dormida', domino: 'Dominó', triple: 'Boleto triple', scratch: 'Raspadita', scope: 'Telescopio', twin: 'Cartas gemelas', astro: 'Astronauta', lasso: 'Lazo', wand: 'Varita',
+  lock: 'Candado', pack: 'Carta regalo', ice: 'Hielo', double: 'Carta doble', arrow: 'Flecha', curtain: 'Cortina', bomb: 'Bomba', live: 'Carta viva', ticket: 'Boleto partido', comet: 'Cometa', turbo: 'Cohete turbo', ghost: 'Fantasma', ship: 'Nave ladrona', coin: 'Carta moneda', cham: 'Camaleón', bolt: 'Rayo', cst: 'Constelación', vine: 'Enredadera', magnet: 'Imán', rainbow: 'Arcoíris', sleep: 'Carta dormida', domino: 'Dominó', triple: 'Boleto triple', slock: 'Candado de palo', paint: 'Pintura', scope: 'Telescopio', twin: 'Cartas gemelas', astro: 'Astronauta', lasso: 'Lazo', wand: 'Varita',
 };
 // Cartas de regalo (cometa y cohete turbo): no entran al sorteo de mecánicas, van aparte (buildLevel).
 // En el camino sin ayudas cada una sale de 1 a 4 veces en cada tramo de 30-35 niveles (extraPlan, pedido 6 nov 2026).
@@ -1969,8 +2067,8 @@ export const VINE_ODDS = 0.12;
 export const MAGNET_ODDS = 0.1, RAINBOW_ODDS = 0.1, SLEEP_ODDS = 0.12;
 // Dominó y boleto triple (13 nov 2026): con su sorteo, como el boleto partido.
 export const DOM_ODDS = 0.12, TRI_ODDS = 0.1;
-// Raspadita (13 nov 2026): al final de buildLevel, como el imán.
-export const SCR_ODDS = 0.1;
+// Candado de palo y pintura (17 nov 2026): al final de buildLevel, con su sorteo.
+export const SL_ODDS = 0.1, PAINT_ODDS = 0.1;
 // Telescopio, gemelas y astronauta (14 nov 2026): al final de buildLevel, con su sorteo.
 export const SCOPE_ODDS = 0.1, TWIN_ODDS = 0.12, ASTRO_ODDS = 0.1;
 // Lazo y varita (15 nov 2026): al final de buildLevel, con su sorteo.
@@ -2039,7 +2137,7 @@ export function variantLevel(level, v) {
   const r = mulberry32(hash(level.g * 7919 + v));
   const k = randInt(r, 1, 12);
   const perm = shuffle(r, [0, 1, 2, 3]);
-  const map = (c) => (c.rank == null ? { ...c } : { ...c, rank: (c.rank + k) % 13, suit: perm[c.suit], ...(c.alt != null && { alt: (c.alt + k) % 13 }), ...(c.half != null && { half: (c.half + k) % 13 }), ...(c.dom != null && { dom: (c.dom + k) % 13 }), ...(c.tri && { tri: c.tri.map((x) => (x + k) % 13) }) });
+  const map = (c) => (c.rank == null ? { ...c } : { ...c, rank: (c.rank + k) % 13, suit: perm[c.suit], ...(c.alt != null && { alt: (c.alt + k) % 13 }), ...(c.half != null && { half: (c.half + k) % 13 }), ...(c.dom != null && { dom: (c.dom + k) % 13 }), ...(c.tri && { tri: c.tri.map((x) => (x + k) % 13) }), ...(c.sl != null && { sl: perm[c.sl] }) });
   const mapCard = (c) => ({ ...map(c), ...(c.pack && { pack: c.pack.map(map) }) });
   return { ...level, variant: v, cards: level.cards.map(mapCard), stock: level.stock.map(map), waste0: map(level.waste0) };
 }

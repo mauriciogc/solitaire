@@ -4,7 +4,7 @@ import { worldInfo, packGroups, MECH_NAMES, LEVELS_PER_WORLD, scrollStrip, scrol
 import * as E from './engine.js';
 import { price, EV_MARKUP, round5, HELPS, buyable } from './economy.js';
 import { helpOff } from './meteor.js';
-import { cardBackURL, icon, star, coin, lockIcon, keyIcon, arrowIcon, curtainIcon, suitSVG, avatarHTML, vineSVG, sproutSVG, ASTRO_ART } from './art.js';
+import { cardBackURL, icon, star, coin, lockIcon, keyIcon, arrowIcon, curtainIcon, suitSVG, SUITS as SUIT_PATH, avatarHTML, vineSVG, sproutSVG, ASTRO_ART } from './art.js';
 import { tableHTML } from './biomes.js';
 import { Coach } from './coach.js';
 import { track, missionDef } from './missions.js';
@@ -20,16 +20,18 @@ const FLY_EASE = 'cubic-bezier(0.33, 0.6, 0.35, 1)';
 // Explicación de cada carta especial (11 nov 2026, homologadas a pedido del usuario: simples y por grupos). Es el
 // mismo texto en su ventana al aparecer, en Tu camino y en Cómo jugar. Cada una: qué hace y, si hace falta, cuándo.
 export const MECH_KINDS = [
-  ['Se abren después', ['lock', 'curtain', 'ice', 'vine', 'sleep']],
+  ['Se abren después', ['lock', 'slock', 'curtain', 'ice', 'vine', 'sleep']],
   ['Cambian con los turnos', ['live', 'ghost', 'cham']],
   ['Reglas al jugar', ['double', 'arrow', 'ticket', 'domino', 'triple', 'twin']],
   ['No se juegan', ['pack', 'bomb', 'comet']],
-  ['Te ayudan', ['coin', 'turbo', 'bolt', 'cst', 'magnet', 'rainbow', 'scratch', 'scope', 'lasso', 'wand']],
+  ['Te ayudan', ['coin', 'turbo', 'bolt', 'cst', 'magnet', 'rainbow', 'paint', 'scope', 'lasso', 'wand']],
 ];
 // Dibujos que viven en main.js y dev.js (la carta de ejemplo y el icono de cada mesa): main.js los pone al arrancar.
 export const ART = { mechCard: () => '', tableIcon: () => '' };
 export const TIPS = {
   lock: 'No se juega hasta que juegues la carta con la <b>llave</b> del mismo color.',
+  // 17 nov 2026 (pedido del usuario): candado con la forma de un palo; al abrirse da monedas.
+  slock: 'Está boca abajo y <b>encadenada</b>; su candadito tiene la forma de un <b>palo</b>. Cada carta de ese palo que juegas del tablero <b>rompe una cadena</b>. Con 3 rotas el candado se abre, la carta se voltea y te da <b>monedas</b>.',
   curtain: 'Sigue <b>boca abajo</b> hasta que juegues la carta con el <b>telón</b>.',
   ice: 'No se juega hasta que se <b>derrite</b>: cada carta que juegas del tablero le quita 1.',
   live: 'Su número <b>sube (↑) o baja (↓)</b> con cada jugada o robo. Juégala cuando encaje.',
@@ -38,13 +40,14 @@ export const TIPS = {
   double: 'Vale <b>dos números</b>: juégala con cualquiera y sigue desde cualquiera.',
   arrow: 'Después de jugarla, la siguiente tiene que ser <b>uno más (↑)</b> o <b>uno menos (↓)</b>.',
   ticket: 'Tiene <b>dos mitades</b>: juega una y la otra se queda para después.',
-  scratch: 'No se ve su número: cada carta que juegas <b>pegada a ella</b> le abre una ventanita. Si te arriesgas a jugarla antes de verla toda y le atinas, te da <b>monedas</b>. Si no conecta, se destapa: pierdes sus monedas y se corta tu racha.',
   domino: 'Tiene <b>dos números</b>: entra por cualquiera y en el descarte se queda <b>el otro</b>.',
   triple: 'Tiene <b>3 talones</b>: arranca el de una <b>punta</b> cuando encaje. El de en medio sale cuando ya quedó en la orilla.',
   pack: 'No se juega: <b>destápala</b> y mete cartas extra a tu mazo.',
   bomb: 'No se juega: <b>destápala</b> antes de que su cuenta llegue a 0. Si no, explota y quema 3 cartas de tu mazo.',
   comet: 'No se juega: <b>destápalo</b> antes de que su cuenta llegue a 0 y suma puntos a tu racha. Si no, se va.',
   coin: 'Se juega normal y te da <b>monedas</b>.',
+  // 17 nov 2026 (pedido del usuario): sin nada nuevo en la mesa; se pinta la orilla del descarte.
+  paint: 'Se juega normal y tu descarte se empieza a <b>llenar de pintura</b> de su color. Cada carta que juegas de ese <b>color</b> lo llena más; con <b>3 seguidas</b>, la brocha pinta una <b>carta extra</b> para tu mazo. Si juegas otro color o robas, se vacía.',
   turbo: 'Se juega normal y tus <b>3 jugadas siguientes</b> valen doble en la racha. Si robas, se apaga.',
   bolt: 'Se juega normal y manda de <b>1 a 3</b> cartas enterradas a tu mazo.',
   cst: 'Juega <b>todas</b> las de estrellita seguidas y ganas un premio. Si robas o juegas otra en medio, se apaga.',
@@ -68,6 +71,7 @@ export const TIP_HELP = {
   wand: ['varita', 'hvarita', '<b>Varita:</b> también la compras en tus ayudas, para usarla cuando quieras.'],
   scope: ['tele', 'htele', '<b>Telescopio:</b> también lo compras en tus ayudas y deja ver todo <b>5 turnos</b>.'],
   lock: ['llave', 'hllave', '<b>Llave maestra:</b> abre todos los candados y cortinas.'],
+  slock: ['llave', 'hllave', '<b>Llave maestra:</b> abre todos los candados y cortinas.'],
   curtain: ['llave', 'hllave', '<b>Llave maestra:</b> abre todos los candados y cortinas.'],
   comet: ['reloj', 'hreloj', '<b>Reloj de arena:</b> congela 3 turnos todo lo que cuenta.'],
   bomb: ['reloj', 'hreloj', '<b>Reloj de arena:</b> congela 3 turnos todo lo que cuenta.'],
@@ -75,7 +79,7 @@ export const TIP_HELP = {
   ghost: ['reloj', 'hreloj', '<b>Reloj de arena:</b> congela 3 turnos todo lo que cuenta.'],
   vine: ['reloj', 'hreloj', '<b>Reloj de arena:</b> congela 3 turnos todo lo que cuenta.'],
 };
-const MECH_FIELD = { lasso: 'lasso', wand: 'wand', lock: 'lock', pack: 'pack', ice: 'ice', double: 'alt', arrow: 'arrow', curtain: 'curtain', bomb: 'bomb', live: 'live', ticket: 'half', comet: 'comet', turbo: 'turbo', ghost: 'ghost', ship: 'ship', coin: 'coin', cham: 'cham', bolt: 'bolt', cst: 'cst', vine: 'vine', magnet: 'magnet', rainbow: 'rainbow', sleep: 'sleep', domino: 'dom', triple: 'tri', scratch: 'scr', scope: 'scope', twin: 'twin' };
+const MECH_FIELD = { lasso: 'lasso', wand: 'wand', lock: 'lock', pack: 'pack', ice: 'ice', double: 'alt', arrow: 'arrow', curtain: 'curtain', bomb: 'bomb', live: 'live', ticket: 'half', comet: 'comet', turbo: 'turbo', ghost: 'ghost', ship: 'ship', coin: 'coin', cham: 'cham', bolt: 'bolt', cst: 'cst', vine: 'vine', magnet: 'magnet', rainbow: 'rainbow', sleep: 'sleep', domino: 'dom', triple: 'tri', slock: 'sl', paint: 'paint', scope: 'scope', twin: 'twin' };
 // Constelación (10 nov 2026, pedido del usuario): al juntarla, CST_HELP de las veces una ayuda y si no monedas, de 50 a
 // 200 (casi siempre de las bajas: el promedio queda en ~100, unas 2 veces lo que paga un nivel ahí).
 const CST_HELP = 0.15;
@@ -146,7 +150,7 @@ export function faceHTML(c, rank = c.rank) {
   // arriba a la derecha, en el lugar del palo; la constelación, su estrellita abajo a la derecha, dentro de la carta.
   const mk = c.bolt ? 'rayo' : c.fire ? 'flame' : c.magnet ? 'iman' : c.scope ? 'telescopio' : c.lasso ? 'lazoVaquero' : c.wand ? 'varitaEstrella' : c.rainbow ? 'arcoiris' : c.ghost ? 'ghost' : c.doorKey ? 'llavePuerta' : null;
   const suit = c.key != null ? '' : c.coin ? `<span class="cs coin-cs">${icon('monedas')}</span>` : mk ? `<span class="cs mk-cs">${icon(mk)}</span>` : `<span class="${cs}">${s}</span>`;
-  return `<div class="face front${red}${kind}"${tint}>${corner}${suit}${badge}<span class="big${r === '10' ? ' ten' : ''}${SIXNINE(r)}">${r}</span>${arrow}${c.cst ? `<span class="cst-mk">${icon('star')}</span>` : ''}${c.cham ? `${CHAM_FACE('cham-eyes')}<span class="cham-ov">${CHAM_FACE('cham-face')}</span>` : ''}${c.twin != null ? twinEye(c) : ''}</div>`;
+  return `<div class="face front${red}${kind}"${tint}>${corner}${suit}${badge}<span class="big${r === '10' ? ' ten' : ''}${SIXNINE(r)}">${r}</span>${arrow}${c.cst ? `<span class="cst-mk">${icon('star')}</span>` : ''}${c.paint ? `<span class="paint-mk">${PAINT_ICO}</span>` : ''}${c.cham ? `${CHAM_FACE('cham-eyes')}<span class="cham-ov">${CHAM_FACE('cham-face')}</span>` : ''}${c.twin != null ? twinEye(c) : ''}</div>`;
 }
 // Gemelas (14 nov 2026; el usuario: «una perforación abajo al centro y ahí su nodo con la otra, más delgada»): un ojal
 // abajo al centro con su nudo, del color de la pareja (hay hasta 3), de frente y boca abajo.
@@ -178,11 +182,15 @@ export const TABLE_TEXT = {
   astro: ['Aquí te acompaña <b>Tito</b>, un astronauta.', 'Tócalo y luego toca una carta libre: vuela por ella y te la <b>guarda</b>. Cuando conecte, tócalo otra vez y la <b>lleva al descarte</b>. Después se va.'],
   // 16 nov 2026 (pedido del usuario): el tapete, pero cohete.
   cohete: ['Las cartas van en un <b>cohete</b> muy largo.', 'Limpia las primeras cartas y el cohete <b>avanza</b>: salen más. Cada tramo que vacías te regala <b>monedas</b>.'],
+  // 17 nov 2026 (pedido del usuario; escogidas en dev/ideas-dinamicas-2.html): cartas que se mueven.
+  zero: ['Aquí no hay <b>gravedad</b>: las cartas flotan.', 'Cada vez que juegas una, otra carta <b>flota</b> y cae encima de otra: destapa lo que tenía abajo y tapa a la nueva.'],
+  orbit: ['Unos <b>planetas</b> dan vueltas sobre la mesa.', 'La carta que tiene un planeta encima <b>no se juega</b>. Con cada jugada o robo avanzan: destapan unas y tapan otras.'],
+  pong: ['Aquí juegan <b>ping-pong</b>.', 'Cada <b>4 jugadas o robos</b> la pelota cruza la mesa y voltea el orden: la carta de abajo pasa <b>enfrente</b> y la de enfrente se va atrás. Cuando tiemblan las raquetas, ¡ahí viene!'],
   voltea: ['Las cartas van en <b>columnas</b> dentro de una cápsula.', 'Solo juegas la de <b>abajo</b>. Cada <b>5 jugadas o robos</b> la cápsula da <b>media vuelta</b>. Cuando tiembla, ¡cuidado!'],
 };
 // Fuego del cohete, ya acostado: la base (con el centro amarillo) a la derecha, pegada a la cola; la punta a la izquierda.
 const ROCKET_FIRE = `<svg class="rk-fire" viewBox="0 0 48 40" aria-hidden="true"><path d="M48 20C34 6 16 8 0 20c16 12 34 14 48 0z" fill="#ff8a3d" stroke="#2a1f5c" stroke-width="2.4"/><path d="M40 20c-7-6-16-5-25 0 9 5 18 6 25 0z" fill="#ffd54a"/></svg>`;
-const TABLE_NAME = { cohete: 'Cohete', nave: 'Nave ladrona', mesa: 'Mesa enrollada', gravedad: 'Gravedad', nebulosa: 'Nebulosa', marea: 'Marea', puertas: 'Puertas', banda: 'Banda transportadora', hoyo: 'Agujero negro', rocas: 'Asteroides', voltea: 'Mesa que se voltea', hangar: 'Hangar', bitacora: 'Bitácora', portal: 'Grúa de feria', astro: 'Astronauta' };
+const TABLE_NAME = { zero: 'Gravedad cero', orbit: 'Planetas en órbita', pong: 'Ping-pong', cohete: 'Cohete', nave: 'Nave ladrona', mesa: 'Mesa enrollada', gravedad: 'Gravedad', nebulosa: 'Nebulosa', marea: 'Marea', puertas: 'Puertas', banda: 'Banda transportadora', hoyo: 'Agujero negro', rocas: 'Asteroides', voltea: 'Mesa que se voltea', hangar: 'Hangar', bitacora: 'Bitácora', portal: 'Grúa de feria', astro: 'Astronauta' };
 const TABLE_HELP = { rocas: helpTip('hlaser', '<b>Láser:</b> rompe todas las piedras.', true), nave: helpTip('hescudo', '<b>Escudo:</b> la nave ya no te roba en todo el nivel.', true), astro: helpTip('hastro', '<b>Astronauta:</b> después también lo compras en tus ayudas.', true) };
 // ---------- Jefes de constelación (15 nov 2026, pedido del usuario) ----------
 // Dibujos de las criaturas (toon, contorno de tinta). El Kraken no se ve: solo su tinta (y su brazo en el manotazo).
@@ -401,8 +409,8 @@ const BACK_MARK = (c) =>
   : c.cst ? ['#ffc83d', 'tb-ico mk-cst', icon('star')]
   : c.ghost ? ['#b9aef0', 'tb-ico mk-ghost', icon('ghost')]
   : c.doorKey ? ['#c9893a', 'tb-ico mk-door', icon('llavePuerta')]
-  // Raspadita (13 nov 2026, el usuario: «no sé cuál es»): orilla plateada y su plata con el «?» al centro.
-  : c.scr ? ['#a9b1c7', 'tb-ico mk-scr', SCR_ICO]
+  // Pintura (17 nov 2026): orilla rosa con la brocha al centro.
+  : c.paint ? ['#ff5f7e', 'tb-ico mk-paint', PAINT_ICO]
   : null;
 export const backHTML = (c) => {
   const m = BACK_MARK(c);
@@ -410,7 +418,6 @@ export const backHTML = (c) => {
 };
 const inner = (c) => `<div class="inner">${faceHTML(c)}${backHTML(c)}</div>`;
 // Marcas que se ven aunque la carta esté boca abajo, para poder planear.
-// Raspadita (13 nov 2026): plata con SCR_WIN ventanitas redondas que se abren con cada carta pegada que juegas.
 // Grúa de feria (13 nov 2026, el usuario escogió la grúa en lugar del portal): la garra de cada columna.
 // Lo que tarda la garra en bajar, agarrar y subir (g-claw-grab en el CSS).
 const CLAW_MS = 700;
@@ -418,12 +425,43 @@ const CLAW_FRONT = `<i class="g-claw"><svg viewBox="0 0 60 64"><path d="M30 -60V
 // 14 nov 2026 (el usuario: más realismo): la pinza derecha va aparte, detrás de la carta que agarra (z-index en el CSS).
 // Es la izquierda en espejo (la de antes, girada con CSS, quedaba encimada en la izquierda y no se veía).
 const CLAW = `<i class="g-claw rear"><svg viewBox="0 0 60 64"><g transform="translate(60 0) scale(-1 1)"><g class="cl-l"><path d="M24 24Q12 34 15 50Q17 56 22 55" fill="none" stroke="#2a1f5c" stroke-width="7" stroke-linecap="round"/><path d="M24 24Q12 34 15 50Q17 56 22 55" fill="none" stroke="#c9d0ea" stroke-width="3.6" stroke-linecap="round"/></g></g></svg></i>${CLAW_FRONT}`;
-const SCR_ICO = '<svg class="ico" viewBox="0 0 32 32"><rect x="6" y="3" width="20" height="26" rx="4" fill="#d6dbe8" stroke="#2a1f5c" stroke-width="2.4"/><path d="M10 8l12 0M10 24l7 0" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/><text x="16" y="21" text-anchor="middle" font-family="Lilita One" font-size="13" fill="#7a8299">?</text></svg>';
-const SCR_SPOTS = [[66, 34, 15], [32, 98, 15], [52, 66, 16], [70, 112, 14]];
-export const scrSVG = (id, open = 0) => `<svg viewBox="0 0 100 140" preserveAspectRatio="none"><defs><linearGradient id="sg${id}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#cfd5e4"/><stop offset=".35" stop-color="#f3f5fb"/><stop offset=".6" stop-color="#a9b1c7"/><stop offset="1" stop-color="#dfe3ee"/></linearGradient><mask id="sm${id}"><rect width="100" height="140" fill="#fff"/>${SCR_SPOTS.map(([x, y, r], k) => `<circle class="h" cx="${x}" cy="${y}" r="${k < open ? r : 0}" data-r="${r}" fill="#000"/>`).join('')}</mask></defs><g mask="url(#sm${id})"><rect x="4" y="4" width="92" height="132" rx="9" fill="url(#sg${id})"/><path d="M14 22l14-7M72 128l14-7M18 120l8-5" stroke="#fff" stroke-width="3" stroke-linecap="round"/><text x="50" y="82" text-anchor="middle" font-family="Lilita One" font-size="34" fill="#8a92aa">?</text></g></svg>`;
+// Pintura (17 nov 2026; el usuario pidió un bote en vez de la brocha): el bote de pintura (en la esquina boca arriba y al
+// centro boca abajo). La brocha que pinta la carta extra va aparte (PAINT_BRUSH).
+const PAINT_ICO = '<svg class="ico" viewBox="0 0 32 32"><path d="M7 12h18l-2.4 15a3 3 0 0 1-3 2.6h-7.2a3 3 0 0 1-3-2.6z" fill="#e9e3ff" stroke="#2a1f5c" stroke-width="2.2" stroke-linejoin="round"/><path d="M9 9a7 3 0 0 0 14 0" fill="none" stroke="#2a1f5c" stroke-width="2"/><ellipse cx="16" cy="12" rx="9" ry="3.2" fill="#ff5f7e" stroke="#2a1f5c" stroke-width="2.2"/><path d="M11 14q1 5-1 8M20 14q1.5 3 0 5" stroke="#ff5f7e" stroke-width="2.6" stroke-linecap="round"/><path d="M9 11c0-6 14-6 14 0" fill="none" stroke="#2a1f5c" stroke-width="1.8"/></svg>';
+// Planetas en órbita (17 nov 2026; rehechos el mismo día: el anillo se veía chueco). El anillo va en dos mitades: la de
+// atrás antes del planeta y la de enfrente después, las dos en el mismo grupo girado.
+const RING = (front, col) => `<g transform="rotate(-16 30 30)">${[[6.2, '#2a1f5c'], [2.8, col]].map(([w, c]) => `<path d="${front ? 'M2 30a28 8 0 0 0 56 0' : 'M2 30a28 8 0 0 1 56 0'}" fill="none" stroke="${c}" stroke-width="${w}" stroke-linecap="round"/>`).join('')}</g>`;
+const PLANET_SVG = [
+  `<svg viewBox="0 0 60 60" overflow="visible">${RING(0, '#ffd54a')}<circle cx="30" cy="30" r="18" fill="#ff8aa6" stroke="#2a1f5c" stroke-width="2.6"/><path d="M15 25q15 5 30-2" fill="none" stroke="#ffc0cf" stroke-width="3" stroke-linecap="round"/><circle cx="24" cy="22" r="3.6" fill="#fff" opacity=".55"/>${RING(1, '#ffd54a')}</svg>`,
+  '<svg viewBox="0 0 60 60"><circle cx="30" cy="30" r="22" fill="#7fd8ff" stroke="#2a1f5c" stroke-width="2.8"/><path d="M13 23c6 2 9-2 15 0s7 5 14 3M11 36c8-2 11 4 19 2s9-6 17-2" fill="none" stroke="#c9f0ff" stroke-width="3" stroke-linecap="round"/><circle cx="38" cy="39" r="4" fill="#4aa8de"/><circle cx="22" cy="20" r="4.5" fill="#fff" opacity=".55"/></svg>',
+  '<svg viewBox="0 0 60 60"><circle cx="30" cy="30" r="22" fill="#9be08a" stroke="#2a1f5c" stroke-width="2.8"/><path d="M14 30c4-6 10-4 13-8s9-3 12 1M20 42c4-3 9-1 13-4" fill="none" stroke="#5fb85a" stroke-width="3.4" stroke-linecap="round"/><circle cx="40" cy="36" r="3.5" fill="#5fb85a"/><circle cx="22" cy="20" r="4.5" fill="#fff" opacity=".55"/></svg>',
+];
+// Franjas de pintura en el descarte (la carta pintura pinta 1 y cada una de su color, otra).
+const PAINT_BANDS = 4;
+const PAINT_BRUSH = '<svg viewBox="0 0 40 64"><rect x="15" y="0" width="10" height="30" rx="4" fill="#c98a4a" stroke="#2a1f5c" stroke-width="2.4"/><rect x="11" y="28" width="18" height="8" rx="2" fill="#c9d0ea" stroke="#2a1f5c" stroke-width="2.2"/><path d="M10 36h20l2 18c-2 6-22 6-24 0z" fill="var(--pc,#ff5f7e)" stroke="#2a1f5c" stroke-width="2.4" stroke-linejoin="round"/></svg>';
+// Candado de palo (17 nov 2026, pedido del usuario): un candado con la forma del palo y abajo SL_NEED palitos que se
+// prenden con cada carta de ese palo que juegas (se ve boca arriba o boca abajo, para planear).
+const SL_COL = ['#3d3470', '#ff4f74', '#ff4f74', '#3d3470'];
+export const slSVG = (k) => `<svg viewBox="0 0 40 46"><path d="M12 19v-7a8 8 0 0 1 16 0v7" fill="none" stroke="#2a1f5c" stroke-width="6"/><path d="M12 19v-7a8 8 0 0 1 16 0v7" fill="none" stroke="#ffd54a" stroke-width="2.6"/><g transform="translate(3 13) scale(1.42)"><path d="${SUIT_PATH[SUITS[k]]}" fill="${SL_COL[k]}" stroke="#2a1f5c" stroke-width="1.5" stroke-linejoin="round"/></g><circle cx="20" cy="28" r="2.6" fill="${k === 1 || k === 2 ? '#2a1f5c' : '#ffd54a'}"/><path d="M20 29v5" stroke="${k === 1 || k === 2 ? '#2a1f5c' : '#ffd54a'}" stroke-width="2.6" stroke-linecap="round"/></svg>`;
+// 17 nov 2026 (el usuario): ya no lleva palitos; la carta va boca abajo y encadenada (3 cadenas en X y en medio), con el
+// candadito de su palo donde se cruzan. Cada carta de ese palo que juegas rompe una; sin cadenas, el candado se va y la
+// carta se voltea. Cuántas pide (SL_NEED) solo lo dice su ventana.
+const chainLinks = (x1, y1, x2, y2, n) => {
+  const a = (Math.atan2(y2 - y1, x2 - x1) * 180) / Math.PI;
+  let out = '';
+  for (let i = 0; i <= n; i++) {
+    const t = i / n, x = x1 + (x2 - x1) * t, y = y1 + (y2 - y1) * t, h = i % 2 ? 4.4 : 9.6;
+    const link = (w, col) => `<rect x="-8.5" y="${-h / 2}" width="17" height="${h}" rx="${h / 2}" fill="none" stroke="${col}" stroke-width="${w}"/>`;
+    out += `<g transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${a.toFixed(1)})">${link(4.8, '#2a1f5c')}${link(2.2, i % 2 ? '#9aa3c7' : '#dfe4f3')}</g>`;
+  }
+  return out;
+};
+const SL_CHAINS = [[-6, 14, 106, 126], [106, 14, -6, 126], [-8, 70, 108, 70]];
+const SL_CHAIN_SVG = SL_CHAINS.map(([a, b, c, d], i) => `<g class="ch c${i}">${chainLinks(a, b, c, d, i === 2 ? 9 : 12)}</g>`);
+export const slMark = (k, broken = 0) => `<span class="sl-ov s${k}"><svg class="sl-chains" viewBox="0 0 100 140" aria-hidden="true">${SL_CHAIN_SVG.map((g, i) => (i < broken ? g.replace('class="ch ', 'class="ch gone ') : g)).join('')}</svg><i class="sl-lock">${slSVG(k)}</i></span>`;
 const marks = (c) =>
   (c.ice ? `<span class="ice-ov"><b></b></span>` : '') +
-  (c.scr ? `<span class="scr-ov">${scrSVG(`c${c.id}`)}</span>` : '') +
+  (c.sl != null ? slMark(c.sl) : '') +
   (c.curtainKey != null ? `<span class="curtain-mark">${curtainIcon()}</span>` : '') +
   (c.wet ? '<span class="tide-ov"><i></i></span>' : '') +
   // Enredadera: la capa de hojas (se ve cuando la tapa) y el brote que se asoma cuando está por crecer aquí.
@@ -484,6 +522,7 @@ export class Game {
     this.makeHole();
     this.makeFoe();
     this.makeRocks();
+    this.makeMovers();
     this.makeDoors();
     this.makeBelt();
     this.renderPiles();
@@ -647,6 +686,22 @@ export class Game {
         onClose: () => {
           this.modalOpen = false;
           if (!reduced()) this.holeEl?.animate([{ scale: 1 }, { scale: 1.3 }, { scale: 1 }], { duration: 500, iterations: 2 });
+          setTimeout(() => this.tips(), 300);
+        },
+        buttons: [{ label: '¡Entendido!', cls: 'green' }],
+      });
+    }
+    // Gravedad cero, planetas y ping-pong (17 nov 2026): su ventana la primera vez.
+    const mv = this.level.zero ? 'zero' : this.level.orbit ? 'orbit' : this.level.pong ? 'pong' : null;
+    if (mv && !save.seen[mv]) {
+      save.seen[mv] = true;
+      persist();
+      this.modalOpen = true;
+      return openModal({
+        ...TABLE_INTRO[mv],
+        closable: false,
+        onClose: () => {
+          this.modalOpen = false;
           setTimeout(() => this.tips(), 300);
         },
         buttons: [{ label: '¡Entendido!', cls: 'green' }],
@@ -1088,6 +1143,7 @@ export class Game {
     this.placeFoe();
     this.placeDoors();
     this.placeBeltBox();
+    this.placeMovers(false);
     this.renderStock();
     this.coach?.update();
   }
@@ -2273,6 +2329,175 @@ export class Game {
   // 11 nov 2026 (pedido del usuario: estorbaba y no servía, ya saben que es cada 4 robos, como la nave o la marea): sin
   // franja ni cuenta en la orilla; las piedras caen desde arriba del tablero.
   makeRocks() {}
+
+  // ---------- Gravedad cero, planetas en órbita y ping-pong (17 nov 2026, pedido del usuario) ----------
+  // Sin textos ni cuentas en la mesa: las cartas flotan, los planetas pasan y las raquetas tiemblan antes del peloteo.
+  makeMovers() {
+    const L = this.level;
+    this.boardEl.classList.toggle('zero-board', !!L.zero);
+    if (L.orbit) {
+      this.planets = L.orbit.map((p, i) => {
+        const el = document.createElement('div');
+        el.className = `orbit-planet p${i}`;
+        el.innerHTML = PLANET_SVG[i % PLANET_SVG.length];
+        this.boardEl.append(el);
+        return { p, el, ang: null, rad: 0, at: null };
+      });
+    }
+    // Ping-pong (17 nov 2026): dos raquetas en las orillas de la pantalla; sacan una vez cada una (el usuario: «siempre
+    // sale del mismo lado»; un rato fue una sola y pidió de regreso las dos).
+    if (L.pong) {
+      this.pads = ['l', 'r'].map((k) => {
+        const el = document.createElement('i');
+        el.className = `pong-pad ${k}`;
+        this.boardEl.append(el);
+        return el;
+      });
+    }
+    this.placeMovers(false);
+  }
+  // Centro de una carta en el tablero (px), con su lugar de siempre.
+  homeXY(id) {
+    const c = this.cards[id], o = this.offsets?.[c.group];
+    return o ? [(o.x + c.x + 0.5) * this.u, (o.y + c.y + 0.7) * this.u] : [0, 0];
+  }
+  placeMovers(anim = true) {
+    const L = this.level, st = this.st;
+    if (L.zero) this.zeroPaint(anim);
+    if (this.planets) {
+      for (const P of this.planets) {
+        const all = P.p.stops.flat().map((id) => this.homeXY(id));
+        const cx = all.reduce((a, q) => a + q[0], 0) / all.length, cy = all.reduce((a, q) => a + q[1], 0) / all.length;
+        const pts = E.orbitAt(P.p, st).map((id) => this.homeXY(id));
+        const tx = pts.reduce((a, q) => a + q[0], 0) / pts.length, ty = pts.reduce((a, q) => a + q[1], 0) / pts.length;
+        const ang = Math.atan2(ty - cy, tx - cx), rad = Math.hypot(tx - cx, ty - cy);
+        // Del tamaño justo para tapar sus cartas (las dos, si es el grande).
+        const spread = pts.length > 1 ? Math.hypot(pts[0][0] - pts[1][0], pts[0][1] - pts[1][1]) : 0;
+        const D = Math.max(this.u * 1.35, spread + this.u * 1.25);
+        Object.assign(P.el.style, { width: `${D}px`, height: `${D}px` });
+        const set = (a, r) => Object.assign(P.el.style, { left: `${cx + Math.cos(a) * r - D / 2}px`, top: `${cy + Math.sin(a) * r - D / 2}px` });
+        const key = st.actions;
+        if (!anim || P.ang == null || reduced() || P.at === key) set(ang, rad);
+        else {
+          // Avanza por su vuelta (siempre hacia el mismo lado), como un planeta.
+          const a0 = P.ang, r0 = P.rad, da = (((ang - a0) % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI) || 0, t0 = performance.now(), T = 650;
+          const go = (t) => {
+            const q = Math.min(1, (t - t0) / T), e = q < 0.5 ? 2 * q * q : 1 - Math.pow(-2 * q + 2, 2) / 2;
+            set(a0 + da * e, r0 + (rad - r0) * e);
+            if (q < 1 && P.el.isConnected) requestAnimationFrame(go);
+          };
+          requestAnimationFrame(go);
+        }
+        P.ang = ang, P.rad = rad, P.at = key;
+      }
+      for (const c of this.cards) c.el?.classList.toggle('orbit-hid', E.orbitOn(L, c, st) && !st.rem[c.id]);
+    }
+    if (this.pads && !this.pongBusy) {
+      // Tiembla la que va a sacar, una acción antes.
+      this.padsAt();
+      const next = (Math.floor(st.actions / E.PONG_EVERY) + 1) % 2, warn = E.pongLeft(st) === 1 && !(st.freeze > 0) && !this.dealing;
+      this.pads.forEach((el, k) => el.classList.toggle('warn', warn && k === next));
+    }
+  }
+  // Gravedad cero: la que flotó va encima de su carta (despacito); si se deshace, regresa a su lugar.
+  zeroPaint(anim) {
+    const st = this.st;
+    for (const c of this.cards) {
+      if (!c.el || st.rem[c.id]) continue;
+      const on = st.ontop?.[c.id] != null;
+      if (on || c.zMoved) c.el.classList.toggle('zfly', !!anim && !reduced());
+      if (on) this.placeSpat(c), (c.zMoved = true);
+      else if (c.zMoved) this.place(c), (c.el.style.zIndex = c.z * 100 + c.id), (c.zMoved = false);
+    }
+  }
+  // Las raquetas pegadas a las orillas de la pantalla, a media altura del tablero. Devuelve de dónde sale la pelota en
+  // cada lado (px del tablero).
+  padsAt() {
+    const b = this.boardEl.getBoundingClientRect(), w = this.wrapEl.getBoundingClientRect();
+    const pw = Math.max(10, this.u * 0.24), h = this.u * 1.4, bh = parseFloat(this.boardEl.style.height) || b.height;
+    const L = w.left - b.left + 6, R = w.right - b.left - pw - 6;
+    this.pads.forEach((el, k) => Object.assign(el.style, { width: `${pw}px`, height: `${h}px`, left: `${k ? R : L}px`, top: `${bh / 2 - h / 2}px` }));
+    return { x: [L + pw, R], y: bh / 2 };
+  }
+  // Ping-pong: la pelota sale de una raqueta (se turnan), pasa por cada pareja (al pegarle, la carta da la vuelta y
+  // enseña la de abajo) y llega a la otra.
+  pongFx(pairs) {
+    const ids = pairs.flat();
+    this.pongHold = new Set(ids);
+    const done = () => {
+      if (!this.pongHold) return;
+      this.pongHold = null;
+      this.pongBusy = false;
+      for (const id of ids) this.repaintFace(this.cards[id]);
+      this.sync();
+      this.placeMovers(true);
+    };
+    if (reduced() || !this.pads) return done();
+    const side = Math.floor(this.st.actions / E.PONG_EVERY) % 2, at = this.padsAt(), serve = this.pads[side], catcher = this.pads[1 - side];
+    this.pads.forEach((el) => el.classList.remove('warn'));
+    this.pongBusy = true;
+    const ball = document.createElement('i');
+    ball.className = 'pong-ball';
+    const bd = Math.max(16, this.u * 0.4);
+    Object.assign(ball.style, { width: `${bd}px`, height: `${bd}px`, margin: `${-bd / 2}px 0 0 ${-bd / 2}px` });
+    this.boardEl.append(ball);
+    // Las parejas en el orden en que las cruza (de la raqueta a la pared).
+    const order = pairs.map((p) => ({ p, xy: this.homeXY(p[0]) })).sort((a, b) => (side ? b.xy[0] - a.xy[0] : a.xy[0] - b.xy[0]));
+    const pts = [[at.x[side], at.y], ...order.map((o) => o.xy), [at.x[1 - side], at.y]];
+    let i = 0;
+    buzz(20);
+    serve.animate([{ scale: '1 1' }, { scale: '1.4 1.15' }, { scale: '1 1' }], 220);
+    // Como meteoro (17 nov 2026, el usuario: «un poco de aire o fuego»): deja una estela de chispas de fuego.
+    const trail = () => {
+      if (!ball.isConnected) return;
+      const x = parseFloat(getComputedStyle(ball).left), y = parseFloat(getComputedStyle(ball).top), d = bd * (0.45 + Math.random() * 0.45);
+      const t = document.createElement('i');
+      t.className = 'pong-spark';
+      Object.assign(t.style, { left: `${x - d / 2}px`, top: `${y - d / 2}px`, width: `${d}px`, height: `${d}px` });
+      this.boardEl.append(t);
+      t.animate([{ opacity: 0.95, scale: 1, translate: '0 0' }, { opacity: 0, scale: 0.2, translate: `${(Math.random() - 0.5) * 10}px ${(Math.random() - 0.5) * 10}px` }], { duration: 420, easing: 'ease-out' }).finished.then(() => t.remove());
+      setTimeout(trail, 28);
+    };
+    trail();
+    const flipCard = (a, b) => {
+      this.pongHold?.delete(a), this.pongHold?.delete(b);
+      this.repaintFace(this.cards[b]);
+      const el = this.cards[a].el;
+      if (!el) return this.repaintFace(this.cards[a]);
+      // Da la vuelta: se cierra de lado, cambia de cara y se abre ya con la de abajo.
+      el.animate([{ scale: '1 1' }, { scale: '0 1.06' }], { duration: 160, easing: 'ease-in', fill: 'forwards' }).finished.then(() => {
+        this.repaintFace(this.cards[a]);
+        return el.animate([{ scale: '0 1.06' }, { scale: '1.08 1' }, { scale: '1 1' }], { duration: 260, easing: 'ease-out', fill: 'forwards' }).finished;
+      }).then(() => el.getAnimations().forEach((x) => x.cancel()));
+    };
+    const hop = () => {
+      if (!ball.isConnected) return done();
+      if (i >= pts.length - 1) {
+        catcher.animate([{ scale: '1 1' }, { scale: '1.4 1.15' }, { scale: '1 1' }], 220);
+        ball.animate([{ opacity: 1, scale: 1 }, { opacity: 0, scale: 0.4 }], 250).finished.then(() => ball.remove());
+        return done();
+      }
+      const [x0, y0] = pts[i], [x1, y1] = pts[i + 1];
+      ball.animate([{ left: `${x0}px`, top: `${y0}px` }, { left: `${x1}px`, top: `${y1}px` }], { duration: 280, easing: 'linear', fill: 'forwards' }).finished.then(() => {
+        i++;
+        if (i <= order.length) {
+          const [a, b] = order[i - 1].p;
+          flipCard(a, b);
+          const r = this.boardEl.getBoundingClientRect();
+          sparkle({ x: r.left + x1, y: r.top + y1 }, 5);
+        }
+        hop();
+      });
+    };
+    hop();
+  }
+  // Cara de una carta con su número y palo de ahora (ping-pong).
+  repaintFace(c) {
+    if (!c?.el) return;
+    const box = c.el.querySelector('.inner');
+    if (box) box.outerHTML = `<div class="inner">${faceHTML({ ...c, suit: this.st.suit?.[c.id] ?? c.suit }, E.rankOf(c, this.st))}${backHTML(c)}</div>`;
+    c.el.dataset.sh = E.rankOf(c, this.st);
+  }
   // Piedras en las cartas: caen girando desde arriba (las nuevas) y se rompen en pedacitos al llegar a 0.
   paintRocks() {
     // 11 nov 2026 (pedido del usuario): caen de arriba con su fuego, de grandes a chicas; el láser las rompe con un rayo
@@ -3106,7 +3331,9 @@ export class Game {
     if (level.scroll === 'mesa') (this.scrollUpdate(), level.rocket && this.rocketPay());
     else if (level.scroll === 'gravedad') !this.flipping && this.gravUpdate();
     else if (level.scroll) this.nebUpdate();
-    for (const c of this.cards) if (c.scr && c.el && !c.removed) this.paintScr(c);
+    if (level.sl) for (const c of this.cards) if (c.sl != null && c.el && !c.removed) this.paintSl(c);
+    if (level.zero || level.orbit || level.pong) this.placeMovers(true);
+    this.paintWaste();
     this.paintSheets();
     this.foePaint();
     this.updateStuck(true);
@@ -3233,7 +3460,7 @@ export class Game {
       if (st.shift?.[c.id] != null || el.dataset.sh) {
         const r = E.rankOf(c, st);
         // (Las que revuelve el manotazo esperan al golpe: slamHold.)
-        if (el.dataset.sh !== String(r) && this.wandOn?.id !== c.id && !this.slamHold?.has(c.id)) {
+        if (el.dataset.sh !== String(r) && this.wandOn?.id !== c.id && !this.slamHold?.has(c.id) && !this.pongHold?.has(c.id)) {
           el.dataset.sh = r;
           this.paintRank(el, r);
         }
@@ -3497,9 +3724,9 @@ export class Game {
     // Medusa: con chispas y de otro color que el descarte (sin las chispas sí entraría).
     if (E.zapBad(c, st) && E.playRank(level, c, { ...st, zap: [] }) != null) return this.zapDeny(c);
     if (E.playRank(level, c, st) == null) {
-      if (c.scr && E.isOpen(level, c, st) && E.scrOpen(c, st) < E.SCR_WIN) return this.scrMiss(c);
       buzz();
-      if (E.faceUp(level, c, st)) {
+      if (E.slLeft(c, st) && E.isFree(c, st, level)) this.tell('slock', 'Rompe sus cadenas: juega cartas de su palo');
+      else if (E.faceUp(level, c, st)) {
         if (!E.lockOpen(level, c, st)) this.tell('lock', 'Juega la carta con la llave del mismo color');
         else if (E.iceLeft(c, st)) this.tell('ice', `Juega ${E.iceLeft(c, st)} carta(s) más para derretir el hielo`);
         else if (st.top?.arrow) this.tell('arrow', `La flecha pide un ${RANKS[E.mod13(st.top.rank + st.top.arrow)]}`);
@@ -3509,48 +3736,160 @@ export class Game {
     this.play(c, !!e && this.lowHalf(c, e));
   }
 
-  // Raspadita: te arriesgaste y no conectaba. Tiembla, cuenta como un robo (se corta la racha) y se destapa: se le cae
-  // la plata y ya no da monedas (14 nov 2026, el usuario). No se deshace.
-  scrMiss(c) {
-    const before = this.st;
-    const { s, ev } = E.miss(this.level, before, c.id);
-    this.history.push({ t: 'miss', before, ev, best: this.best, bonus: this.bonus, lock: true });
-    this.st = s;
-    this.sync();
-    buzz(30);
-    this.shake(c.el);
-    this.showStreak('¡No era! Sin monedas y sin racha');
-    this.showCombo();
-    this.refresh();
-    this.save();
-    this.checkEnd();
+  // Candado de palo: se prende un palito por cada carta de su palo que juegas; con SL_NEED se abre (se levanta y se va).
+  // Deshacer lo regresa (solo cambia la clase).
+  paintSl(c) {
+    const ov = c.el.querySelector('.sl-ov');
+    if (!ov) return;
+    const left = E.slLeft(c, this.st), broke = E.SL_NEED - left;
+    ov.querySelectorAll('.sl-chains .ch').forEach((ch, k) => {
+      const gone = k < broke;
+      if (gone && !ch.classList.contains('gone') && !this.dealing && !reduced()) {
+        // Se truena: chispas donde se rompe y un temblorcito de la carta.
+        const r = c.el.getBoundingClientRect();
+        sparkle({ x: r.left + r.width * (k === 1 ? 0.7 : 0.3), y: r.top + r.height * (k === 2 ? 0.5 : 0.35) }, 6);
+        c.el.animate([{ translate: '0 0' }, { translate: '-3px 0' }, { translate: '3px 0' }, { translate: '0 0' }], 260);
+        buzz(20);
+      }
+      ch.classList.toggle('gone', gone);
+    });
+    const open = !left;
+    if (open && !ov.classList.contains('open') && !this.dealing && !reduced()) {
+      const [x, y] = center(c.el.getBoundingClientRect());
+      sparkle({ x, y }, 10);
+    }
+    ov.classList.toggle('open', open);
   }
 
-  // Raspadita: ventanitas abiertas (una por carta pegada que ya jugaste); al verla toda se le cae la plata.
-  paintScr(c) {
-    const n = E.scrOpen(c, this.st), ov = c.el.querySelector('.scr-ov');
-    if (!ov) return;
-    // Le fallaste: la plata se cae entera (sin ventanitas ni brillos).
-    if (this.st.scrGone?.includes(c.id)) return ov.classList.add('lost');
-    const was = +(ov.dataset.n || 0);
-    ov.dataset.n = n;
-    ov.querySelectorAll('circle.h').forEach((h, k) => {
-      const to = k < n ? +h.dataset.r : 0, from = +h.getAttribute('r');
-      if (to === from) return;
-      if (reduced() || this.dealing || to < from) return h.setAttribute('r', to);
-      const t0 = performance.now();
-      const step = (t) => {
-        const q = Math.min(1, (t - t0) / 420);
-        h.setAttribute('r', (to * q).toFixed(2));
-        if (q < 1) requestAnimationFrame(step);
-      };
-      requestAnimationFrame(step);
-    });
-    if (n > was && !this.dealing && !reduced()) {
-      const [x, y] = center(c.el.getBoundingClientRect());
-      sparkle({ x, y }, 6);
+  // Pintura (17 nov 2026, rehecha dos veces a pedido del usuario: «que sí se vea… como la esponja, pero pintando»): encima
+  // de la carta de arriba del descarte va una capa de 4 franjas (de abajo hacia arriba). Al jugar la carta pintura la
+  // brocha pinta la de abajo y cada carta de su color, la siguiente; con la última la brocha pinta la carta extra y esa
+  // vuela al mazo. Si se lava (otro color o robar), sale la esponja y limpia todo. Todo espera a que la carta jugada
+  // llegue al descarte («todavía no llega y ya está pintando»).
+  paintLand() {
+    return Math.max(0, (this.playedAt || 0) + FLY_MS + 80 - performance.now());
+  }
+  paintBox() {
+    const top = this.wasteEl?.querySelector(':scope > .card:last-child') || this.wasteEl;
+    if (!top) return null;
+    const r = top.getBoundingClientRect(), sc = this.el.getBoundingClientRect();
+    return { x: r.left - sc.left, y: r.top - sc.top, w: r.width, h: r.height, r };
+  }
+  paintOv() {
+    if (!this.paintEl) {
+      this.paintEl = document.createElement('i');
+      this.paintEl.className = 'paint-ov';
+      this.paintEl.innerHTML = `<i class="pbs">${Array.from({ length: PAINT_BANDS }, (_, k) => `<i class="pb" style="bottom:${(k * 100) / PAINT_BANDS}%;clip-path:inset(0 100% 0 0)"></i>`).join('')}</i>`;
+      this.el.append(this.paintEl);
     }
-    ov.classList.toggle('done', n >= E.SCR_WIN);
+    const b = this.paintBox();
+    if (b) Object.assign(this.paintEl.style, { left: `${b.x}px`, top: `${b.y}px`, width: `${b.w}px`, height: `${b.h}px` });
+    this.paintEl.style.setProperty('--pc', this.paintCol || '#ff5f7e');
+    return this.paintEl;
+  }
+  paintBands(n) {
+    this.paintOv().querySelectorAll('.pb').forEach((b, k) => (b.style.clipPath = k < n ? 'inset(0 0 0 0)' : 'inset(0 100% 0 0)'));
+    this.paintShown = n;
+  }
+  paintGone() {
+    this.paintEl?.remove();
+    this.paintEl = null;
+    this.paintShown = 0;
+  }
+  paintWaste() {
+    clearTimeout(this.paintT);
+    const wait = this.paintLand();
+    if (wait) return (this.paintT = setTimeout(() => this.paintWaste(), wait));
+    if (this.paintBusy) return;
+    const p = this.st.paint, want = p ? Math.min(PAINT_BANDS - 1, p.n + 1) : 0, had = this.paintShown || 0;
+    if (p) this.paintCol = p.red ? '#ff5f7e' : '#7b5cff';
+    const full = this.paintDone;
+    this.paintDone = null;
+    if (!want && !had && !full) return this.paintGone();
+    if (reduced() || this.dealing) return want ? this.paintBands(want) : this.paintGone();
+    if (full) return this.paintFull(full.pos);
+    if (want > had) return this.brushBands(had, want);
+    if (!want) return this.spongeBands();
+    this.paintBands(want);
+  }
+  // La brocha pinta las franjas de from a to (cada una de lado a lado, en zigzag).
+  async brushBands(from, to, then) {
+    this.paintBusy = true;
+    const ov = this.paintOv(), b = this.paintBox(), bands = ov.querySelectorAll('.pb');
+    const tool = document.createElement('i'), tw = b.w * 0.42;
+    tool.className = 'paint-tool';
+    tool.innerHTML = PAINT_BRUSH;
+    tool.style.width = `${tw}px`;
+    tool.style.setProperty('--pc', this.paintCol);
+    ov.append(tool);
+    for (let k = from; k < to; k++) {
+      const y = b.h * (1 - (k + 0.5) / PAINT_BANDS) - tw * 1.45, ltr = k % 2 === 0, xa = -tw * 0.5, xb = b.w - tw * 0.5;
+      const t = tool.animate([{ left: `${ltr ? xa : xb}px`, top: `${y}px`, rotate: ltr ? '-14deg' : '14deg' }, { left: `${ltr ? xb : xa}px`, top: `${y}px`, rotate: ltr ? '10deg' : '-10deg' }], { duration: 300, easing: 'ease-in-out', fill: 'forwards' });
+      bands[k].animate([{ clipPath: ltr ? 'inset(0 100% 0 0)' : 'inset(0 0 0 100%)' }, { clipPath: 'inset(0 0 0 0)' }], { duration: 300, easing: 'ease-in-out', fill: 'forwards' }).finished.then(() => (bands[k].style.clipPath = 'inset(0 0 0 0)'));
+      // Gotitas de pintura que salpican.
+      for (let q = 0; q < 2; q++) setTimeout(() => this.paintDrop(ov, Math.random() * b.w, b.h * (1 - (k + 0.3) / PAINT_BANDS)), 80 + q * 110);
+      await t.finished;
+    }
+    this.paintShown = to;
+    if (then) await then(tool, b);
+    await tool.animate([{ opacity: 1 }, { opacity: 0, translate: '14px -24px' }], { duration: 220, fill: 'forwards' }).finished;
+    tool.remove();
+    this.paintBusy = false;
+    this.paintWaste();
+  }
+  paintDrop(ov, x, y) {
+    if (!ov.isConnected) return;
+    const d = document.createElement('i'), s = 4 + Math.random() * 5;
+    d.className = 'paint-drop';
+    Object.assign(d.style, { left: `${x - s / 2}px`, top: `${y - s / 2}px`, width: `${s}px`, height: `${s}px` });
+    ov.append(d);
+    d.animate([{ scale: 0, translate: '0 0' }, { scale: 1, translate: `${(Math.random() - 0.5) * 14}px -10px`, offset: 0.4 }, { scale: 0.6, translate: `${(Math.random() - 0.5) * 18}px 12px`, opacity: 0 }], { duration: 600, easing: 'ease-out' }).finished.then(() => d.remove());
+  }
+  // Se llenó: la brocha pinta lo que falta, da un brochazo de lado a lado y de ahí sale la carta extra pintada.
+  paintFull(pos) {
+    const slot = this.stockEls[this.stockEls.length - 1 - pos];
+    if (slot) slot.style.opacity = 0;
+    this.brushBands(this.paintShown || 0, PAINT_BANDS, async (tool, b) => {
+      await tool.animate([{ left: `${b.w * 0.6}px`, top: `${b.h * 0.1}px`, rotate: '25deg' }, { left: `${-b.w * 0.2}px`, top: `${b.h * 0.45}px`, rotate: '-25deg' }], { duration: 320, easing: 'ease-in-out', fill: 'forwards' }).finished;
+      const r = this.paintEl.getBoundingClientRect();
+      this.paintGone();
+      sparkle({ x: r.left + r.width / 2, y: r.top + r.height / 2 }, 10);
+      if (!slot) return;
+      const to = slot.getBoundingClientRect();
+      const f = this.flyer({}, { left: r.left, top: r.top, width: to.width }, false);
+      f.classList.add('gift-card', 'painted-card');
+      f.style.setProperty('--pc', this.paintCol);
+      f.animate([{ scale: 1 }, { scale: 1.12, rotate: '6deg' }, { scale: 1, rotate: '0deg' }], { duration: 320, easing: 'cubic-bezier(0.34, 1.45, 0.64, 1)', fill: 'forwards' })
+        .finished.then(() => {
+          const t = slot.getBoundingClientRect();
+          return this.intoSlot(f, slot, t.left - parseFloat(f.style.left), t.top - parseFloat(f.style.top), 0);
+        })
+        .then(() => squash(slot));
+    });
+  }
+  // Se lavó: la esponja talla en zigzag de arriba abajo y cada franja se borra por donde pasa (como la del Kraken).
+  async spongeBands() {
+    this.paintBusy = true;
+    const ov = this.paintOv(), b = this.paintBox(), bands = ov.querySelectorAll('.pb'), n = this.paintShown || 0;
+    const tool = document.createElement('i'), tw = b.w * 0.75;
+    tool.className = 'paint-tool';
+    tool.innerHTML = SPONGE;
+    tool.style.width = `${tw}px`;
+    ov.append(tool);
+    for (let k = n - 1, i = 0; k >= 0; k--, i++) {
+      const y = b.h * (1 - (k + 0.5) / PAINT_BANDS) - tw * 0.35, ltr = i % 2 === 0, xa = -tw * 0.4, xb = b.w - tw * 0.6;
+      const t = tool.animate([{ left: `${ltr ? xa : xb}px`, top: `${y}px`, rotate: '-8deg' }, { left: `${ltr ? xb : xa}px`, top: `${y}px`, rotate: '8deg' }], { duration: 240, easing: 'ease-in-out', fill: 'forwards' });
+      bands[k].animate([{ clipPath: 'inset(0 0 0 0)' }, { clipPath: ltr ? 'inset(0 0 0 100%)' : 'inset(0 100% 0 0)' }], { duration: 240, easing: 'ease-in-out', fill: 'forwards' });
+      for (let q = 0; q < 3; q++) setTimeout(() => this.foam(ov, Math.random() * b.w, y + tw * 0.3), q * 70);
+      await t.finished;
+    }
+    await tool.animate([{ opacity: 1 }, { opacity: 0, translate: '20px -20px' }], { duration: 220, fill: 'forwards' }).finished;
+    this.paintGone();
+    this.paintBusy = false;
+    this.paintWaste();
+  }
+  paintFx(p) {
+    if (p.done) this.paintDone = { pos: p.pos };
   }
 
   // Bitácora (13 nov 2026): de 2 a 7 hojas. Cada página va entre su hoja de cartas y la siguiente, con escotillas
@@ -3619,15 +3958,13 @@ export class Game {
   }
 
   play(c, low = false) {
+    this.playedAt = performance.now();
     this.magnetAimOff();
     if (this.wandOn) this.wandClose(null, true);
-    if (c.scr) c.el?.querySelector('.scr-ov')?.remove();
     const before = this.st;
     const { s, ev } = E.play(this.level, before, c.id, low);
     const burnRects = this.burnRects(ev.boom);
-    // Raspadita: si esta jugada la raspa (o es ella), ya no se deshace.
-    const scraped = c.scr || this.level.cards.some((x) => x.scr && !before.rem[x.id] && E.scrOpen(x, s) > E.scrOpen(x, before));
-    this.history.push({ t: 'play', before, ev, best: this.best, bonus: this.bonus, ...(scraped && { lock: true }), ...(foeLock(ev) && { lock: FOE_LOCK }) });
+    this.history.push({ t: 'play', before, ev, best: this.best, bonus: this.bonus, ...(foeLock(ev) && { lock: FOE_LOCK }) });
     this.st = s;
     this.sync();
     this.best = Math.max(this.best, s.streak);
@@ -4266,18 +4603,18 @@ export class Game {
     if (pc?.scope) toast(`${icon('telescopio')} ¡Telescopio! Ves todas las cartas ${E.SCOPE_TURNS} turnos`);
     if (pc?.lasso && this.st.lasso) toast(`${icon('lazoVaquero')} ¡Lazo! Toca la carta que quieras`);
     if (pc?.wand && this.st.wand) toast(`${icon('varitaEstrella')} ¡Varita! Toca una carta libre`);
-    // Raspadita jugada antes de verla toda: monedas (entre menos se veía, más). Deshacer las quita.
-    if (pc?.scr) {
-      const pay = E.scrPay(pc, before);
-      if (pay) {
-        save.coins += pay;
-        persist();
-        const [x, y] = center(this.wasteEl.getBoundingClientRect());
-        flyToWallet('coins', { x, y }, pay, shownCoins() - pay);
-        this.showStreak(`¡Le atinaste! +${pay} monedas`);
-        this.history[this.history.length - 1].scrPay = pay;
-      }
+    // Candado de palo: al abrirse, sus monedas saltan al monedero (deshacer las quita).
+    if (ev.slOpen && this.level.slCoins) {
+      const pay = ev.slOpen.length * this.level.slCoins;
+      save.coins += pay;
+      persist();
+      const [x, y] = center(this.cards[ev.slOpen[0]].el.getBoundingClientRect());
+      setTimeout(() => flyToWallet('coins', { x, y }, pay, shownCoins() - pay), 300);
+      this.showStreak(`¡Candado abierto! +${pay} monedas`);
+      this.history[this.history.length - 1].slPay = pay;
     }
+    if (ev.paint) this.paintFx(ev.paint);
+    if (ev.pong) this.pongFx(ev.pong);
     if (ev.bolted) this.boltFx(ev.bolted);
     // Medusa: la jugaste sobre su color y se descarga.
     if (ev.zapOff) this.zapFlash(this.flewFrom);
@@ -4748,6 +5085,7 @@ export class Game {
   }
 
   draw() {
+    this.playedAt = performance.now();
     if (this.coach && !this.coach.allows('stock')) return;
     if (this.wandOn) this.wandClose(null, true);
     if (!this.stock.length) {
@@ -4780,6 +5118,8 @@ export class Game {
     if (ev.turbo) this.launchTurbo(ev);
     if (ev.cst) this.cstFx(ev);
     if (ev.rocks) toast(`${icon('asteroide')} ¡Cayeron asteroides!`), buzz(30);
+    if (ev.paint) this.paintFx(ev.paint);
+    if (ev.pong) this.pongFx(ev.pong);
     if (ev.boss) this.foeFx(ev.boss);
     this.refresh();
     if (missed.length) setTimeout(() => this.warnMissed(missed), FLY_MS);
@@ -4918,7 +5258,7 @@ export class Game {
       // Carta moneda: se devuelven las monedas.
       const cc = this.cards[ev.id];
       if (cc.coin && !ev.split) (save.coins = Math.max(0, save.coins - cc.coin)), updateCoins();
-      if (h.scrPay) (save.coins = Math.max(0, save.coins - h.scrPay)), updateCoins();
+      if (h.slPay) (save.coins = Math.max(0, save.coins - h.slPay)), updateCoins();
       if (ev.split) this.unsplitTicket(this.cards[ev.id], ev, wasteRect);
       else if (ev.tri?.left) this.untearStub(this.cards[ev.id], ev, wasteRect);
       else this.returnToBoard(this.cards[ev.id], wasteRect);
@@ -4975,7 +5315,7 @@ export class Game {
   helpKeys() {
     const { level, st } = this, left = (c) => !st.rem[c.id] && c.el;
     const useful = {
-      reloj: this.cards.some((c) => left(c) && (c.bomb || c.comet || c.live || c.ghost || c.cham || c.ring || c.belt)) || !!level.rocks || E.vineLeft(level, st) != null || E.bossAlive(level, st),
+      reloj: this.cards.some((c) => left(c) && (c.bomb || c.comet || c.live || c.ghost || c.cham || c.ring || c.belt)) || !!level.rocks || !!level.orbit || !!level.pong || E.vineLeft(level, st) != null || E.bossAlive(level, st),
       laser: !!level.rocks,
       escudo: !!level.ship && !st.shield,
       // El imán se vende cuando ya conoces la carta imán (nivel 531).

@@ -3,7 +3,7 @@
 import { save, prefs, persist, backupOnce, restoreBackup, setDev, backupInfo } from './storage.js';
 import { missions, missionDone, ACHIEVEMENTS, ACHIEVEMENT_TOP, achievementGot, achievementNeed, achievementsVisible } from './missions.js';
 import { streakWin, streakLose, dailyStreak, nextGoal, col, daysToNextCol, ev, daysToNextEvent, evEnter, evWin, EVENT_PER_PLANET, EVENT_LEVELS, festival, festEnter, festWin, nextFestival, daysToNextFestival, daysToFestival, festShape, isOn, UNLOCK } from './events.js';
-import { TIERS, generateLevel, hardHelp, scrollKind, festivalLevel, eventLevel, eventGroup, EVENT_WORLDS, packGroups, worldInfo, TOTAL_LEVELS, LEVELS_PER_WORLD, MECH_NAMES, MECHANICS, MECH_INTRO, SCROLL_FROM, EXTRA, extraDebut, tideFirst, holeFirst, doorsFirst, bandaFirst, rocksFirst, BOSS_ORDER, BOSS_NAMES, BOSS_KILL, bossExtra } from './levels.js';
+import { TIERS, generateLevel, hardHelp, scrollKind, festivalLevel, eventLevel, eventGroup, EVENT_WORLDS, packGroups, worldInfo, TOTAL_LEVELS, LEVELS_PER_WORLD, MECH_NAMES, MECHANICS, MECH_INTRO, SCROLL_FROM, EXTRA, extraDebut, tideFirst, holeFirst, doorsFirst, bandaFirst, rocksFirst, zeroFirst, orbitFirst, pongFirst, BOSS_ORDER, BOSS_NAMES, BOSS_KILL, bossExtra } from './levels.js';
 import { playCasual, solve, initState, BOSS_EVERY, BOSS_FIRST, KRAKEN_TICKLE, KRAKEN_SLAM, WHALE_SPIT, MEDUSA_HOP, MEDUSA_CALM, medusaMax, CLOCK_FREEZE, CLOCK_SEAL, CLOCK_HIT, CLOCK_CARD, clockSeal, WIND_HOLD, WIND_HIT } from './engine.js';
 import { openModal, toast, updateCoins, popGoal } from './ui.js';
 import { openSlot, slotWhy, SLOT_PAY, SLOT_PAY_RICH, SLOT_EXTRA, SLOT_MONTH_DAYS } from './slot.js';
@@ -192,6 +192,10 @@ const TABLE_ICONS = {
   puertas: SV('<rect x="5" y="4" width="22" height="25" rx="3" fill="#b5763f"/><path d="M16 4v25" stroke-width="1.6"/><circle cx="13" cy="17" r="1.6" fill="#2a1f5c"/><circle cx="19" cy="17" r="1.6" fill="#2a1f5c"/>'),
   hoyo: SV('<circle cx="16" cy="16" r="13" fill="#8a5cf0"/><circle cx="16" cy="16" r="9" fill="#ff8a3d"/><circle cx="16" cy="16" r="5.5" fill="#05030f"/>'),
   rocas: SV('<path d="M8 8l8-3 7 5 1 8-5 6-9 1-5-6z" fill="#a99bbd"/><circle cx="12" cy="13" r="2.4" fill="#7a6c94"/><circle cx="18" cy="18" r="1.8" fill="#7a6c94"/><path d="M25 5l3-2M27 10l3 0" stroke-width="1.8" stroke-linecap="round"/>'),
+  // 17 nov 2026: cartas que se mueven.
+  zero: SV('<rect x="4" y="12" width="10" height="14" rx="2" fill="#fff" transform="rotate(-10 9 19)"/><rect x="16" y="5" width="10" height="14" rx="2" fill="#fff" transform="rotate(8 21 12)"/><path d="M6 6l1 2 2 1-2 1-1 2-1-2-2-1 2-1zM27 24l.8 1.6 1.6.8-1.6.8-.8 1.6-.8-1.6-1.6-.8 1.6-.8z" fill="#9fe6ff" stroke-width="1"/>'),
+  orbit: SV('<ellipse cx="16" cy="17" rx="13" ry="5" stroke-dasharray="2 2"/><circle cx="16" cy="16" r="5" fill="#ffc23a"/><circle cx="27" cy="17" r="4" fill="#ff8aa6"/><circle cx="6" cy="15" r="3" fill="#7fd8ff"/>'),
+  pong: SV('<rect x="2" y="9" width="4" height="14" rx="2" fill="#ff8aa6"/><rect x="26" y="9" width="4" height="14" rx="2" fill="#7fd8ff"/><circle cx="16" cy="12" r="3" fill="#ffe9a8"/><path d="M8 20q8-12 16 0" stroke-dasharray="2 2"/>'),
   marea: SV('<rect x="5" y="3" width="22" height="26" rx="3" fill="#fff6e6"/><path d="M5 18c4-3 7 3 11 0s7 3 11 0v8a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3z" fill="#4aa8de"/>'),
 };
 export const tableIcon = (t) => TABLE_ICONS[t] || '';
@@ -201,7 +205,7 @@ const SCROLL_NAMES = { cohete: 'cohete', mesa: 'mesa enrollada', gravedad: 'grav
 // Mesas que son gravedad por dentro (13 nov 2026): se filtran por su bandera.
 const colKind = (L) => (L.flip ? 'voltea' : L.portal ? 'portal' : L.hangar ? 'hangar' : null);
 const COL_TABLES = [['hangar', 'Hangar', SCROLL_FROM.hangar + 1], ['bitacora', 'Bitácora', SCROLL_FROM.bitacora + 1], ['portal', 'Grúa de feria', SCROLL_FROM.portal + 1], ['voltea', 'Mesa que se voltea', SCROLL_FROM.voltea + 1]];
-const OVERLAY_TABLES = [['marea', 'Marea', tideFirst() + 1, (L) => !!L.tide], ['hoyo', 'Agujero negro', holeFirst() + 1, (L) => !!L.hole], ['puertas', 'Puertas', doorsFirst() + 1, (L) => !!L.doors], ['banda', 'Banda transportadora', bandaFirst() + 1, (L) => !!L.belt], ['rocas', 'Asteroides', rocksFirst() + 1, (L) => !!L.rocks]];
+const OVERLAY_TABLES = [['marea', 'Marea', tideFirst() + 1, (L) => !!L.tide], ['hoyo', 'Agujero negro', holeFirst() + 1, (L) => !!L.hole], ['puertas', 'Puertas', doorsFirst() + 1, (L) => !!L.doors], ['banda', 'Banda transportadora', bandaFirst() + 1, (L) => !!L.belt], ['rocas', 'Asteroides', rocksFirst() + 1, (L) => !!L.rocks], ['zero', 'Gravedad cero', zeroFirst() + 1, (L) => !!L.zero], ['orbit', 'Planetas en órbita', orbitFirst() + 1, (L) => !!L.orbit], ['pong', 'Ping-pong', pongFirst() + 1, (L) => !!L.pong]];
 const PIECES = [['steps', 3], ['cross', 3], ['crown', 8], ['rosette', 13], ['sandwich', 16], ['tiltFan', 21]];
 // Nombres en español de formas y piezas (galería e Info).
 const TPL_NAMES = { cohete: 'Cohete', pyramid: 'Pirámide', peaks: 'Picos', clusters: 'Grupitos', star: 'Estrella', layers: 'Capas', wall: 'Muro', towers: 'Torres', butterfly: 'Mariposa', diamond: 'Diamante', spiral: 'Espiral', mesa: 'Mesa enrollada', heart: 'Corazón', gravedad: 'Gravedad', scatter: 'Dispersas', nebulosa: 'Nebulosa', invPyramid: 'Pirámide invertida', hourglass: 'Reloj de arena', bitacora: 'Bitácora' };

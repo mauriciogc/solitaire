@@ -3612,13 +3612,35 @@ p.met-sale { display: flex; align-items: center; justify-content: center; gap: 6
 .prof .stat span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @media (max-width: 520px) { .prof .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } .prof .stat .ico { width: 24px; height: 24px; } .prof .stat b { font-size: 17px; } }
 
-/* Raspadita (13 nov 2026): plata encima de la cara con ventanitas que se abren; boca abajo no se ve. */
-.scr-ov { position: absolute; inset: 0; z-index: 3; pointer-events: none; border-radius: inherit; overflow: hidden; transition: opacity .45s, transform .45s; }
-.scr-ov svg { width: 100%; height: 100%; display: block; }
-.card:not(.up) .scr-ov { display: none; }
-.scr-ov.done { opacity: 0; transform: scale(1.25) rotate(8deg); }
-/* Raspadita a la que le fallaste (14 nov 2026): la plata se cae de la carta. */
-.scr-ov.lost { opacity: 0; transform: translateY(70%) rotate(-14deg); transition: opacity .5s .15s, transform .6s cubic-bezier(.5, 0, .9, .6); }
+/* Candado de palo (17 nov 2026, rehecho el mismo día a pedido del usuario): boca abajo y encadenada, con el candadito de
+   su palo donde se cruzan las cadenas. Cada cadena rota se cae; sin cadenas el candado salta y la carta se voltea.
+   Deshacer solo quita las clases. */
+.sl-ov { position: absolute; inset: 0; z-index: 3; pointer-events: none; }
+.sl-ov .sl-chains { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; filter: drop-shadow(0 1.5px 0 rgba(42,31,92,.45)); }
+.sl-ov .ch { transform-box: fill-box; transform-origin: center; transition: opacity .45s .15s, transform .6s cubic-bezier(.5, 0, .9, .6); }
+.sl-ov .ch.gone { opacity: 0; transform: translateY(40%) rotate(10deg) scale(.9); }
+.sl-ov .sl-lock { position: absolute; left: 50%; top: 50%; width: 42%; translate: -50% -50%; filter: drop-shadow(0 2px 0 rgba(42,31,92,.4)); transition: opacity .45s .1s, transform .55s cubic-bezier(.3, 1.4, .5, 1); }
+.sl-ov .sl-lock svg { width: 100%; display: block; }
+.sl-ov.open .sl-lock { opacity: 0; transform: translateY(-80%) rotate(-25deg) scale(1.3); }
+/* Pintura (17 nov 2026, rehecha a pedido del usuario): el bote abajo a la izquierda; la carta de arriba del descarte se
+   llena de pintura de abajo hacia arriba (--pn 0-2; llena al completarse) y la brocha pinta la carta extra. */
+.card .paint-mk { position: absolute; left: 4%; bottom: 3%; width: calc(var(--cw) * 0.32); aspect-ratio: 1; pointer-events: none; }
+.card .paint-mk .ico { width: 100%; height: 100%; }
+.mk-paint .ico { width: 100%; height: 100%; }
+/* Capa de pintura del descarte (17 nov 2026, rehecha: «como la esponja, pero pintando»): 4 franjas de abajo hacia arriba
+   que la brocha pinta de lado a lado y la esponja borra. */
+.paint-ov { position: absolute; z-index: 40; pointer-events: none; border-radius: 9%/6.5%; }
+.paint-ov .pbs { position: absolute; inset: 0; opacity: .82; mix-blend-mode: multiply; }
+.paint-ov .pb { position: absolute; left: 0; right: 0; height: 25.5%; background: var(--pc); }
+.paint-ov .pb:first-child { border-radius: 0 0 14% 14%/0 0 40% 40%; }
+.paint-ov .pb:last-child { border-radius: 14% 14% 0 0/40% 40% 0 0; }
+.paint-ov .paint-tool { position: absolute; left: 0; top: 0; z-index: 3; pointer-events: none; }
+.paint-ov .paint-tool svg { display: block; width: 100%; height: auto; overflow: visible; }
+.paint-ov .paint-drop { position: absolute; z-index: 2; border-radius: 50%; background: var(--pc); border: 1.5px solid var(--ink); }
+.paint-ov .ink-foam { z-index: 4; }
+.paint-brush { position: absolute; z-index: 9000; pointer-events: none; }
+.paint-brush svg { width: 100%; display: block; }
+.card.painted-card::after { content: ''; position: absolute; inset: 0; z-index: 5; border-radius: calc(var(--cw, 60px) * 0.12); background: var(--pc); mix-blend-mode: multiply; opacity: .7; pointer-events: none; }
 /* Bitácora (13 nov 2026): hojas azul de noche con cuadrícula; la de encima con escotillas de orilla metálica. Sencillas
    a propósito (el usuario: que acostado se vea bien). */
 .bita-page { position: absolute; pointer-events: none; }
@@ -4007,3 +4029,28 @@ s.was { text-decoration: line-through 2px #ff5f7e; opacity: .7; margin-right: .2
 @keyframes pl-win { from { background: rgba(255, 213, 74, .22); } to { background: transparent; } }
 @keyframes pl-pop { 0% { scale: 1; } 50% { scale: 1.4; } 100% { scale: 1; } }
 @media (prefers-reduced-motion: reduce) { .pl-ico, .pl-hint, .pl-back .sx-rays, .pl-pegs circle.hit { animation: none; } }
+
+/* Gravedad cero, planetas en órbita y ping-pong (17 nov 2026, pedido del usuario). Sin textos en la mesa. */
+/* Gravedad cero: las cartas flotan (cada una a su paso) y la que se mueve vuela despacito a su carta nueva. */
+.zero-board .card .inner { animation: zero-bob 2.6s ease-in-out infinite; }
+.zero-board .card:nth-child(2n) .inner { animation-duration: 3.1s; animation-delay: -1.2s; }
+.zero-board .card:nth-child(3n) .inner { animation-duration: 3.5s; animation-delay: -2.1s; }
+@keyframes zero-bob { 50% { translate: 0 -4%; rotate: 1.5deg; } }
+.card.zfly { transition: left 1s cubic-bezier(.35,0,.25,1), top 1s cubic-bezier(.35,0,.25,1), rotate 1s ease-in-out !important; }
+/* Planetas: encima de las cartas; la que tiene un planeta encima se ve apagada. */
+.orbit-planet { position: absolute; z-index: 6000; pointer-events: none; filter: drop-shadow(0 4px 0 rgba(42,31,92,.35)); }
+.orbit-planet svg { width: 100%; height: 100%; display: block; animation: orbit-spin 9s linear infinite; }
+.orbit-planet.p0 svg { animation: none; }
+.orbit-planet.p1 svg { animation-duration: 6s; animation-direction: reverse; }
+@keyframes orbit-spin { to { rotate: 360deg; } }
+.card.orbit-hid { filter: grayscale(.85) brightness(.62); }
+.orbit-planet.p2 svg { animation-duration: 7.5s; }
+/* Ping-pong: raquetas a los lados del tablero; tiemblan una acción antes del peloteo. */
+.pong-pad { position: absolute; z-index: 6000; border-radius: 99px; background: linear-gradient(90deg, #ff8aa6, #ff5f7e); border: 2.5px solid var(--ink); box-shadow: 0 3px 0 var(--ink); pointer-events: none; }
+.pong-pad.r { background: linear-gradient(90deg, #7fd8ff, #4aa8de); }
+.pong-pad.warn { animation: shake .25s ease-in-out infinite; }
+.pong-ball { position: absolute; z-index: 6100; margin: calc(var(--cw) * -0.16) 0 0 calc(var(--cw) * -0.16); border-radius: 50%; background: radial-gradient(circle at 38% 32%, #fff 0 22%, #ffe46a 45%, #ff8a3d 78%, #e0496b); border: 2.5px solid var(--ink); box-shadow: 0 0 10px 3px rgba(255, 170, 60, .85), 0 0 22px 6px rgba(255, 95, 60, .45); pointer-events: none; animation: pong-glow .3s ease-in-out infinite alternate; }
+@keyframes pong-glow { to { box-shadow: 0 0 14px 5px rgba(255, 200, 80, .95), 0 0 28px 9px rgba(255, 95, 60, .5); } }
+/* Estela de la pelota: chispas de fuego que se apagan. */
+.pong-spark { position: absolute; z-index: 6050; pointer-events: none; border-radius: 50%; background: radial-gradient(circle, #fff6b0 0 25%, #ffb03a 55%, rgba(255, 90, 60, 0) 75%); }
+@media (prefers-reduced-motion: reduce) { .zero-board .card .inner, .orbit-planet svg { animation: none; } }
