@@ -1076,7 +1076,7 @@ const achievementsBtn = () => {
   return `<button class="iconbtn tb press prog logros-btn ${fresh('logros')}" data-a="logros" style="--p:${open.length ? p.toFixed(3) : 1}" aria-label="Logros" title="Logros">${icon('trophy')}${medals ? `<small class="rn">${medals}</small>` : ''}</button>`;
 };
 // 8 nov 2026: con más de 3 botones, cada lado se agrupa en un botón dorado con lo más urgente (listo > arde > nuevo) y
-// cuántos tienen algo listo; tocarlo abre su cajón (tarjeta oscura sin título; menú: 3 o 4 renglones y hasta 3 columnas; eventos: 2 renglones y hasta 4 columnas,
+// cuántos tienen algo listo; tocarlo abre su cajón (tarjeta oscura sin título; menú: máximo 3 renglones, las columnas que hagan falta; eventos: 2 renglones y hasta 4 columnas,
 // cada botón con su nombre abajo) y
 // tocar afuera lo cierra.
 // La festividad del día entra a la columna de eventos.
@@ -1085,10 +1085,10 @@ const evCols = (n) => Math.min(4, Math.ceil(n / 2));
 const grouped = (k, label, html) => {
   const n = (html.match(/<button /g) || []).length;
   if (n < GROUP_FROM) return html;
-  // Menú: de 3 o 4 renglones y máximo 3 columnas (hasta 6 en 3 renglones, 7-8 en 4 de 2, más en 3 columnas).
+  // Menú: máximo 3 renglones; con más botones crecen las columnas (19 nov 2026, el usuario).
   // Eventos: máximo 2 renglones, para que el cajón no llegue al botón de jugar: hasta 3 columnas y, si son 7 u 8 (raro:
   // festividades pegadas con su preventa), 4 (14 nov 2026, el usuario).
-  const cols = k === 'r' ? evCols(n) : n <= 6 ? Math.ceil(n / 3) : n <= 8 ? 2 : 3;
+  const cols = k === 'r' ? evCols(n) : Math.ceil(n / 3);
   return `<button class="iconbtn tb press grp-btn" data-a="grp-${k}" aria-label="${label}" aria-expanded="false" title="${label}">${icon(k === 'l' ? 'menu' : 'star')}<span class="grp-n" hidden></span></button><div class="grp-drawer" style="--gc:${cols}">${html}</div>`;
 };
 const eventButtons = (res) => {
@@ -1206,6 +1206,7 @@ function roadItems() {
     ['racha', UNLOCK.racha, t.name, t.ico, 'Gana niveles seguidos, junta estrellas y llévate premios cada día.'],
     ['mis', UNLOCK.mis, 'Misiones del día', 'misiones', 'Cada día 3 misiones con monedas, y un cofre si cumples las 3.'],
     ['logros', UNLOCK.logros, 'Logros', 'trophy', 'Todo suma para siempre: bronce, plata, oro, platino y diamante.'],
+    ['carrera', UNLOCK.carrera, 'Carrera de 7', 'carrera', 'Gana 7 niveles nuevos seguidos al primer intento contra 4 viajeros: el lugar se decide por estrellas.'],
     ['meteoro', MET_FROM, 'Lluvia de meteoritos', 'meteoro', 'Cae sin aviso 30 minutos: doble de monedas y un premio sorpresa.'],
     ['estrellas', STAR_FROM, 'Lluvia de estrellas', 'starFall', 'Cae sin aviso 15 minutos: triple de monedas y hasta 3 premios.'],
     ['cometas', SHOWERS.comet.from, 'Lluvia de cometas', 'cometaLluvia', 'Cae sin aviso 20 minutos: niveles sin gastar boletos, 1 boleto más por victoria y un premio sorpresa.'],

@@ -179,7 +179,7 @@ export const TABLE_TEXT = {
   bitacora: ['Hojas de <b>bitácora</b> encimadas.', 'Por las <b>escotillas</b> se ven cartas de la hoja de abajo: esas se juegan cuando quieras. Vacía la hoja de encima y se arranca.'],
   portal: ['Unas <b>grúas de feria</b> jalan las columnas hacia arriba.', 'Solo juegas la carta de hasta arriba: al tocarla, la <b>garra</b> baja, la agarra y se la lleva. Luego sube la columna.'],
   // Astronauta (14 nov 2026, pedido del usuario: «no carta, un ayudante»): como la nave, va como mesa.
-  astro: ['Aquí te acompaña <b>Tito</b>, un astronauta.', 'Tócalo y luego toca una carta libre: vuela por ella y te la <b>guarda</b>. Cuando conecte, tócalo otra vez y la <b>lleva al descarte</b>. Después se va.'],
+  astro: ['Aquí te acompaña <b>Peter</b>, un astronauta.', 'Tócalo y luego toca una carta libre: vuela por ella y te la <b>guarda</b>. Cuando conecte, tócalo otra vez y la <b>lleva al descarte</b>. Después se va.'],
   // 16 nov 2026 (pedido del usuario): el tapete, pero cohete.
   cohete: ['Las cartas van en un <b>cohete</b> muy largo.', 'Limpia las primeras cartas y el cohete <b>avanza</b>: salen más. Cada tramo que vacías te regala <b>monedas</b>.'],
   // 17 nov 2026 (pedido del usuario; escogidas en dev/ideas-dinamicas-2.html): cartas que se mueven.
@@ -926,7 +926,7 @@ export class Game {
         <button class="tool tb wild-card" data-a="wild" aria-label="Ayudas" title="Ayudas">${icon('ayudas')}<b class="badge" data-n="wild"></b></button>
       </footer>
       <i class="astro-base" hidden>${icon('planet')}</i>
-      <button class="astro" data-a="astro" aria-label="Tito, el astronauta" title="Tito, el astronauta" hidden><span class="astro-me"><svg viewBox="0 0 64 72" aria-hidden="true">${ASTRO_ART}</svg><span class="astro-hold"></span></span></button>`;
+      <button class="astro" data-a="astro" aria-label="Peter, el astronauta" title="Peter, el astronauta" hidden><span class="astro-me"><svg viewBox="0 0 64 72" aria-hidden="true">${ASTRO_ART}</svg><span class="astro-hold"></span></span></button>`;
     this.boardEl = el.querySelector('.board');
     this.wrapEl = el.querySelector('.board-wrap');
     // Mesa enrollada: encima de la mesa del planeta va una alfombra de su color (--rug) que se desenrolla.
@@ -1121,7 +1121,7 @@ export class Game {
   layout() {
     const r = this.wrapEl.getBoundingClientRect();
     if (!r.width) return;
-    // Tito se acomoda otra vez cuando cambia el tamaño (después de que se acomoda el tablero).
+    // Peter se acomoda otra vez cuando cambia el tamaño (después de que se acomoda el tablero).
     if (this.astroEl && !this.astroEl.hidden) requestAnimationFrame(() => this.astroPlace());
     requestAnimationFrame(() => this.paintTwins());
     this.wrapSize = `${Math.round(r.width)}x${Math.round(r.height)}`;
@@ -4192,9 +4192,10 @@ export class Game {
     el.classList.toggle('ready', id != null && E.canSend(st));
     if (!on) this.astroPickOff();
   }
-  // Dónde espera Tito (14 nov 2026, el usuario: «a un lado del deshacer, con un planeta fijo y de ahí que se mueva»):
-  // un planetita junto a deshacer (sin mover la bandeja: va encima, en el hueco libre) y Tito parado en él. Acostado y en
-  // PC a la derecha de deshacer; parado, a la izquierda si cabe, si no, encima de deshacer.
+  // Dónde espera Peter (14 nov 2026, el usuario: «a un lado del deshacer, con un planeta fijo y de ahí que se mueva»):
+  // un planetita junto a deshacer (sin mover la bandeja: va encima, en el hueco libre) y Peter parado en él. A la izquierda
+  // de deshacer si cabe (19 nov 2026, el usuario: acostado a la derecha quedaba muy pegado), si no a la derecha, si no
+  // encima de deshacer.
   astroPlace() {
     const el = this.astroEl, base = this.astroBase, box = this.el.getBoundingClientRect();
     const R = (q) => this.el.querySelector(q)?.getBoundingClientRect();
@@ -4203,21 +4204,21 @@ export class Game {
     const side = window.matchMedia('(orientation: landscape) and (max-height: 500px)').matches;
     const p = side ? 36 : 40, w = side ? 44 : 50, h = w * 1.12;
     const fits = ([x, y]) => x >= box.left + 2 && x + p <= box.right - 2 && y >= box.top && y + p <= box.bottom - 2;
-    // Acostado, un poco más abajo que deshacer (14 nov 2026, el usuario: que Tito no toque el mazo).
+    // Acostado, un poco más abajo que deshacer (14 nov 2026, el usuario: que Peter no toque el mazo).
     const low = side ? Math.min(box.bottom - p - 4, un.bottom - p * 0.4) : un.bottom - p;
     const right = [un.right + 8, low], left = [un.left - p - 8, low], top = [un.left + (un.width - p) / 2, un.top - p - 2];
     const busy = ['.stock', '.waste', '.wild-card'].map(R).filter(Boolean);
     const hit = (x, y, ww, hh) => busy.some((r) => x < r.right && x + ww > r.left && y < r.bottom && y + hh > r.top);
-    // Libre el planeta y también Tito parado en él.
+    // Libre el planeta y también Peter parado en él.
     const free = ([x, y]) => fits([x, y]) && !hit(x, y, p, p) && !hit(x + p / 2 - w / 2, y - h * 0.82, w, h * 0.82);
-    const [bx, by] = [...(side || box.width > box.height ? [right, left] : [left, right]), top].find(free) || top;
+    const [bx, by] = [left, right, top].find(free) || top;
     base.style.cssText = `left:${bx - box.left}px;top:${by - box.top}px;width:${p}px`;
     el.style.width = `${w}px`;
     el.style.setProperty('--aw', `${w}px`);
     el.style.left = `${bx + p / 2 - w / 2 - box.left}px`;
     el.style.top = `${by - h * 0.82 - box.top}px`;
   }
-  // Tito vuela de su lugar al centro de rect (con las manos a la altura de la carta).
+  // Peter vuela de su lugar al centro de rect (con las manos a la altura de la carta).
   astroFly(to, ms = 450) {
     const a = this.astroEl.getBoundingClientRect(), [ax, ay] = center(a), [bx, by] = center(to);
     const dx = bx - ax, dy = by - ay - a.height * 0.15;
@@ -4231,7 +4232,7 @@ export class Game {
     this.astroEl.getAnimations().forEach((x) => x.cancel());
     return this.astroEl.animate([{ translate: from }, { translate: '0 0' }], { duration: ms, easing: 'cubic-bezier(.4,0,.3,1)' }).finished;
   }
-  // Al terminar las ventanas del nivel (14 nov 2026, pedido del usuario): Tito brilla y saluda para que lo veas.
+  // Al terminar las ventanas del nivel (14 nov 2026, pedido del usuario): Peter brilla y saluda para que lo veas.
   astroHello() {
     const el = this.astroEl;
     if (!el || el.hidden || this.astroGreeted) return;
@@ -4241,7 +4242,7 @@ export class Game {
     if (!save.seen.astroHi) {
       save.seen.astroHi = true;
       persist();
-      toast(`${icon('astronauta')} ¡Hola! Soy Tito: tócame y te traigo una carta`);
+      toast(`${icon('astronauta')} ¡Hola! Soy Peter: tócame y te traigo una carta`);
     }
   }
   tapAstro() {
@@ -4251,15 +4252,15 @@ export class Game {
       if (E.canSend(st)) return this.sendHeld();
       buzz();
       this.shake(this.astroEl);
-      return toast(`${icon('astronauta')} Tito espera: su carta todavía no conecta con el descarte`);
+      return toast(`${icon('astronauta')} Peter espera: su carta todavía no conecta con el descarte`);
     }
     if (this.astroPick) return this.astroPickOff();
     const can = this.cards.filter((c) => !c.removed && c.el && E.canHold(level, c, st));
-    if (!can.length) return toast(`${icon('astronauta')} Ahorita no hay carta libre que Tito pueda traer`);
+    if (!can.length) return toast(`${icon('astronauta')} Ahorita no hay carta libre que Peter pueda traer`);
     this.astroPick = true;
     this.astroEl.classList.add('picking');
     can.forEach((c) => c.el.classList.add('astro-can'));
-    toast(`${icon('astronauta')} Toca la carta que quieres que Tito vaya a traer`);
+    toast(`${icon('astronauta')} Toca la carta que quieres que Peter vaya a traer`);
   }
   astroPickOff() {
     if (!this.astroPick) return;
@@ -4267,7 +4268,7 @@ export class Game {
     this.astroEl?.classList.remove('picking');
     this.boardEl.querySelectorAll('.astro-can').forEach((e) => e.classList.remove('astro-can'));
   }
-  // Tito vuela por la carta, la agarra (se encoge a sus manos) y regresa con ella.
+  // Peter vuela por la carta, la agarra (se encoge a sus manos) y regresa con ella.
   async pickHold(c) {
     const r = E.hold(this.level, this.st, c.id);
     this.astroPickOff();
@@ -4301,7 +4302,7 @@ export class Game {
     this.busy = false;
     this.save();
   }
-  // Tito lleva su carta al descarte (es una jugada), la suelta y se va volando.
+  // Peter lleva su carta al descarte (es una jugada), la suelta y se va volando.
   async sendHeld() {
     const before = this.st, r = E.astroSend(this.level, before);
     if (!r) return;
@@ -4324,7 +4325,7 @@ export class Game {
     this.landWaste();
     buzz(12);
     if (ev.twin != null) this.pullTwin(null, this.cards[ev.twin]);
-    toast(`${icon('astronauta')} ¡Ahí va! Tito se despide`);
+    toast(`${icon('astronauta')} ¡Ahí va! Peter se despide`);
     this.busy = false;
     // Se va volando hacia arriba (y se esconde al terminar).
     this.astroLeaving = true;
@@ -5496,7 +5497,7 @@ export class Game {
     this.st = k === 'reloj' ? E.useClock(st) : k === 'laser' ? E.useLaser(st) : k === 'escudo' ? E.useShield(st) : k === 'iman' ? E.useMagnet(st) : k === 'varita' ? E.useWandHelp(st) : k === 'tele' ? E.useScope(st) : k === 'astro' ? E.useAstro(st) : E.useMaster(st);
     if (k === 'laser') this.laserHit = true;
     // (El escudo trae su propio aviso: shieldFx, con la burbuja sobre el mazo.)
-    if (k !== 'escudo') toast(k === 'tele' ? `${icon('telescopio')} ¡Ves todas las cartas ${E.SCOPE_HELP} turnos!` : k === 'astro' ? `${icon('astronauta')} ¡Llegó Tito! Tócalo para que te guarde una carta` : k === 'iman' ? `${icon('iman')} ¡Imán! Tu siguiente robo te sirve` : k === 'varita' ? `${icon('varitaEstrella')} ¡Varita! Toca una carta libre` : k === 'reloj' ? `${icon('arena')} ¡Todo congelado ${E.CLOCK_TURNS} turnos!` : k === 'laser' ? `${icon('laser')} ¡Piedras rotas!` : `${icon('llaveMaestra')} ¡Candados y cortinas abiertos!`);
+    if (k !== 'escudo') toast(k === 'tele' ? `${icon('telescopio')} ¡Ves todas las cartas ${E.SCOPE_HELP} turnos!` : k === 'astro' ? `${icon('astronauta')} ¡Llegó Peter! Tócalo para que te guarde una carta` : k === 'iman' ? `${icon('iman')} ¡Imán! Tu siguiente robo te sirve` : k === 'varita' ? `${icon('varitaEstrella')} ¡Varita! Toca una carta libre` : k === 'reloj' ? `${icon('arena')} ¡Todo congelado ${E.CLOCK_TURNS} turnos!` : k === 'laser' ? `${icon('laser')} ¡Piedras rotas!` : `${icon('llaveMaestra')} ¡Candados y cortinas abiertos!`);
     this.refresh();
     if (k === 'escudo') this.shieldFx();
     this.updateCounts();

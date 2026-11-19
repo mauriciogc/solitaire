@@ -3812,11 +3812,11 @@ s.was { text-decoration: line-through 2px #ff5f7e; opacity: .7; margin-right: .2
 .board .card.scope-see { filter: saturate(.85); }
 .board .card.scope-see .front { box-shadow: inset 0 0 0 3px #8a7cf0, 2px 4px 0 #0b062a33; }
 .board .card.scope-see .front::after { content: ''; position: absolute; inset: 0; border-radius: inherit; background: #8a7cf01f; pointer-events: none; }
-/* Tito, el astronauta (14 nov 2026): flota aparte (fuera de la bandeja, para no mover botones; astroPlace escoge el
+/* Peter, el astronauta (14 nov 2026): flota aparte (fuera de la bandeja, para no mover botones; astroPlace escoge el
    lugar libre). Con carta, la carga enfrente; cuando conecta, brilla. Vuela por las cartas (astroFly). */
 .astro { position: absolute; z-index: 60; width: 58px; aspect-ratio: 1 / 1.12; padding: 0; background: none; border: 0; cursor: pointer; touch-action: manipulation; filter: drop-shadow(0 4px 0 #0b062a44); }
 .astro[hidden] { display: none; }
-/* Su planeta (14 nov 2026): fijo junto a deshacer; Tito se para en él y de ahí sale volando. */
+/* Su planeta (14 nov 2026): fijo junto a deshacer; Peter se para en él y de ahí sale volando. */
 .astro-base { position: absolute; z-index: 59; aspect-ratio: 1; pointer-events: none; filter: drop-shadow(0 3px 0 #0b062a44); }
 .astro-base[hidden] { display: none; }
 .astro-base .ico { width: 100%; height: 100%; display: block; }
@@ -3837,7 +3837,7 @@ s.was { text-decoration: line-through 2px #ff5f7e; opacity: .7; margin-right: .2
 .twin-threads { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; z-index: 0; }
 .twin-threads path { fill: none; stroke-width: 2.6; stroke-linecap: round; }
 .twin-threads path.tt-ink { stroke: var(--ink); stroke-width: 5; opacity: .85; }
-/* Tito saluda al terminar las ventanas del nivel: brilla y brinca. */
+/* Peter saluda al terminar las ventanas del nivel: brilla y brinca. */
 .astro.hello .astro-me { filter: drop-shadow(0 0 8px #7ef0ff) drop-shadow(0 0 4px #fff); animation: astro-hello .8s ease-in-out 4; }
 @keyframes astro-hello { 0%, 100% { translate: 0 0; rotate: 0deg; } 30% { translate: 0 -12px; rotate: -10deg; } 60% { translate: 0 -4px; rotate: 10deg; } }
 

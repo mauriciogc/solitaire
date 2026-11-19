@@ -63,7 +63,7 @@ export const flake = (x, y, r, c = '#bfe8ff', w = 2.2) => {
   const arms = [0, 60, 120, 180, 240, 300].map((a) => `<g transform="rotate(${a} ${x} ${y})"><path d="M${x} ${y}v${-r}M${x} ${y - r * 0.62}l${-r * 0.28} ${-r * 0.24}M${x} ${y - r * 0.62}l${r * 0.28} ${-r * 0.24}M${x} ${y - r * 0.3}l${-r * 0.2} ${-r * 0.18}M${x} ${y - r * 0.3}l${r * 0.2} ${-r * 0.18}"/></g>`).join('');
   return `<g fill="none" stroke-linecap="round" stroke-linejoin="round"><g stroke="${K}" stroke-width="${w + 2.4}">${arms}</g><g stroke="${c}" stroke-width="${w}">${arms}</g></g><circle cx="${x}" cy="${y}" r="${r * 0.18}" fill="#fff" stroke="${K}" stroke-width="${w * 0.8}"/>`;
 };
-// Tito, el astronauta (14 nov 2026, el usuario mandó de ejemplo uno chibi): casco grande con visor oscuro y brillos,
+// Peter, el astronauta (14 nov 2026, el usuario mandó de ejemplo uno chibi): casco grande con visor oscuro y brillos,
 // traje blanco con su cajita al pecho, brazos abiertos y mochila. viewBox 64 × 72.
 const SUIT = '#ffffff', SUIT2 = '#d9def0';
 const limb = (d) => `<path d="${d}" fill="none" stroke="${K}" stroke-width="12" stroke-linecap="round"/><path d="${d}" fill="none" stroke="${SUIT}" stroke-width="7.6" stroke-linecap="round"/>`;
@@ -410,7 +410,7 @@ const ICONS = {
   telescopio: () => `<path d="M14 19l-5 10M16 19l1 10M18 18l6 10" fill="none" stroke="${K}" stroke-width="2.4" stroke-linecap="round"/>`
     + tshape('M4 16l18-9 3 6-18 9z', '#8a5cf0', '#6c3fd4', `<path d="M8 15l12-6" stroke="#b9a2ff" stroke-width="1.6" stroke-linecap="round"/>`, 2.2)
     + tshape('M21 6l6-3 4 7-6 3z', '#ffc83d', '#ec9a17', '', 2.2) + tshape('M2 17l3-1.5 2.4 4.6-3 1.5z', '#ffc83d', '#ec9a17', '', 2) + `<circle cx="15" cy="18" r="2.4" fill="#fff6e6" stroke="${K}" stroke-width="1.8"/>`,
-  // Astronauta (14 nov 2026): Tito, el mismo de la bandeja (ASTRO_ART), en chiquito.
+  // Astronauta (14 nov 2026): Peter, el mismo de la bandeja (ASTRO_ART), en chiquito.
   astronauta: () => `<g transform="translate(1.6 0) scale(0.45)">${ASTRO_ART}</g>`,
   // Lazo y varita (15 nov 2026, cartas nuevas): la cuerda con su lazada y la varita con su estrella.
   lazoVaquero: () => `<path d="M7 16C3 11 7 4 15 4s12 5 11 9-6 6-11 5" fill="none" stroke="${K}" stroke-width="5.4" stroke-linecap="round"/><path d="M7 16C3 11 7 4 15 4s12 5 11 9-6 6-11 5" fill="none" stroke="#e0a160" stroke-width="2.8" stroke-linecap="round"/><path d="M7 16C3 11 7 4 15 4s12 5 11 9-6 6-11 5" fill="none" stroke="#a8692e" stroke-width="2.8" stroke-dasharray="1.2 2.6" stroke-linecap="round"/><path d="M15 18c-3 2-5 5-3 7s5 0 3-2-5 0-6 3-3 3-5 2" fill="none" stroke="${K}" stroke-width="5.4" stroke-linecap="round"/><path d="M15 18c-3 2-5 5-3 7s5 0 3-2-5 0-6 3-3 3-5 2" fill="none" stroke="#e0a160" stroke-width="2.8" stroke-linecap="round"/><path d="M15 18c-3 2-5 5-3 7s5 0 3-2-5 0-6 3-3 3-5 2" fill="none" stroke="#a8692e" stroke-width="2.8" stroke-dasharray="1.2 2.6" stroke-linecap="round"/><circle cx="15.5" cy="17.6" r="2.6" fill="#c98a4b" stroke="${K}" stroke-width="1.8"/>`,

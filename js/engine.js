@@ -792,7 +792,7 @@ export function astroSend(level, s0) {
   if (!canSend(s0)) return null;
   const id = s0.hold, s1 = { ...cloneState(s0), hold: null, holdRank: null, astroGone: true };
   s1.rem[id] = false;
-  // En las manos de Tito la enredadera ya no la alcanza: se juega como si no tuviera.
+  // En las manos de Peter la enredadera ya no la alcanza: se juega como si no tuviera.
   const lv = level.cards[id].vine == null ? level : { ...level, cards: level.cards.map((x) => (x.id === id ? { ...x, vine: undefined } : x)) };
   const { s, ev } = play(lv, s1, id);
   return { s, ev: { ...ev, t: 'send' } };

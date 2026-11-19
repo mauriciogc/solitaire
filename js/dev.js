@@ -12,13 +12,13 @@ import { FOE_ICON, ART } from './game.js';
 import { icon, miniPlanet } from './art.js';
 import { tableHTML, BIOMES, biomeKey } from './biomes.js';
 import { peek } from './galaxy.js';
-import { STATION_STYLES, PIECES as ST_PIECES, PIECE_COST, BUILD_PRIZES, built, styleOf, startBuild } from './station.js';
+import { STATION_STYLES, PIECES as ST_PIECES, PIECE_COST, BUILD_PRIZES, built, styleOf, startBuild, stationPrize, buildBonus } from './station.js';
 import { EVENTS, COLLECTIONS, FESTIVALS, festivalDays } from './events.js';
 import { ITEMS, SECTIONS, owns, lockedUntil } from './shop.js';
 import { PASS_MAX, SECRET_MAX, secretGoal, passGoal, passPrize, secretPrize, passCount, secretCount } from './passport.js';
 import { meteor, nextShowers, metItems, MET_FROM, STAR_FROM, metPrizes, SHOWERS, NEW_RAINS } from './meteor.js';
 import { BET_STEPS, BET_BOSS_FEE, BET_FEE, maxBet, RESCUE_WEEK, RESCUE_COINS, RESCUE_ITEMS, ticketCost, TICKET_PRICE, foeBeatPrize, RICH_OFF, richOff } from './economy.js';
-import { race, raceOn, raceStart, raceWin, raceLose, RACE_STEPS } from './race.js';
+import { race, raceOn, raceStart, raceWin, raceLose, RACE_STEPS, RACE_BOTS, RACE_WAIT, RACE_LOSE, racePrize, raceLosePrize, raceK } from './race.js';
 import { KINDS, TREASURE, makeLot, makeCode, rewardName, lotText, usedHere, lotNonces } from './codes.js';
 // Darte los exclusivos del pasaporte (kind 'pase') o de los secretos ('secreto'), sin cobrar sus premios.
 function passGive(kind) {
@@ -740,9 +740,12 @@ export function openDevMenu({ onGallery, onPlanets, onFestivals, onGoLevel, onRe
   const fisOf = (local, grp) => fis.filter((f) => !!f.local === local && (f.grp || 0) === (grp || 0)).sort((a, b) => festDay(a) - festDay(b)).map((f) => [f.ico, f.name, `${festDay(f).getDate()} ${MONTHS_ABBR[festDay(f).getMonth()]}${f.days > 1 ? ` · ${f.days} días` : ''}`, `f:${f.key}`]);
   // Todo lo que sale en el camino, en el orden en que aparece (nivel = el primero donde lo ves; los eventos se abren al ganar el anterior).
   const UN = [
+    // 19 nov 2026 (el usuario): construir y la carrera de 7 también van en el camino.
+    ['Construir con estrellas', UNLOCK.construir, 'estacionBase', null, 'Cada estrella nueva es un bloque; al abrirse te dan uno por cada estrella que ya tenías.'],
     ['Racha cohete', UNLOCK.racha, 'rocket'],
     ['Misiones del día', UNLOCK.mis, 'misiones', null, '3 cada día (las de cartas especiales, cuando ya llegaste a su mundo). Se cambian a medianoche.'],
     ['Logros', UNLOCK.logros, 'trophy', null, 'Para siempre. Los de cartas especiales salen al llegar al mundo de su carta.'],
+    ['Carrera de 7', UNLOCK.carrera, 'carrera', null, 'Sale «¡Nueva: Carrera de 7!» con sus reglas. Tú le das Empezar; al terminar, 30 minutos para la siguiente.'],
     // Las próximas lluvias del horario: iguales en todos los teléfonos, a la misma hora de cada uno.
     ['Lluvia de meteoritos', MET_FROM, 'meteoro', nextShowers(6).map((x) => ['meteoro', when(x), until(x), '']), '2 o 3 veces por semana, 30 minutos a cualquier hora, sin aviso. Es igual en todos los teléfonos.'],
     ['Lluvia de estrellas', STAR_FROM, 'starFall', nextShowers(6, true).map((x) => ['starFall', when(x), until(x), '']), '2 o 3 veces por semana, 15 minutos sin aviso, en días sin lluvia de meteoritos: monedas ×3 y hasta 3 premios (con sus 5 exclusivos). Igual en todos los teléfonos.'],
@@ -836,11 +839,33 @@ export function openDevMenu({ onGallery, onPlanets, onFestivals, onGoLevel, onRe
     <table class="dtable dshop"><tr><th>De dónde sale</th><th>Tienes</th><th>Faltan</th><th>Hay</th></tr>${ORIGINS_DEV.map(([o, name, ico]) => { const n = sum((k) => cnt(k, o)), y = sum((k) => mine(k, o)); return !n ? '' : `<tr class="dshop-g dacc" data-acc="s${o}"><td class="dname">${icon(ico)}${name}<span class="dchev">${icon('chev')}</span></td>${nums(y, n)}</tr>${SECTIONS.filter(({ k }) => cnt(k, o)).map(({ k, name: sn }) => `<tr class="dsub" data-of="s${o}" hidden><td class="dname">${icon(SEC_ICO[k])}${sn}</td>${nums(mine(k, o), cnt(k, o))}</tr>`).join('')}`; }).join('')}<tr class="dtot"><td><b>Total</b></td>${nums(sum((k) => ITEMS[k].filter((it) => owns(k, it.k)).length), Object.values(ITEMS).flat().length)}</tr></table>
 
     <p class="dline">De la tienda, ${shopLocked} siguen con candado por mundo; lo último se abre en el mundo ${lastNeed + 1} (nivel ${lastNeed * LEVELS_PER_WORLD + 1}).</p>`;
+  // Construir con estrellas (19 nov 2026, pedido del usuario): cómo salen los bloques, lo que cuesta cada pieza y los
+  // premios de estación y de constelación.
+  const fmtN = (n) => n.toLocaleString('es-MX');
+  const r0 = Math.floor((save.open || 0) / 10);
+  const doneSt = Object.values(save.build || {}).filter((n) => n >= ST_PIECES).length;
+  const buildSub = `${save.bloques == null ? `sin abrir (nivel ${UNLOCK.construir + 1})` : `${fmtN(save.bloques)} bloques`} · ${doneSt} estacion${doneSt === 1 ? '' : 'es'} terminada${doneSt === 1 ? '' : 's'}`;
+  const buildTable = `<p class="dline">Se abre en el nivel ${UNLOCK.construir + 1}. Cada <b>estrella nueva</b> (la que sube tu récord en un nivel del camino o secreto) es <b>1 bloque</b>. Las estrellas <b>no se gastan</b>: siguen abriendo mundos. Al abrirse te dan de golpe un bloque por cada estrella que ya tenías.</p>
+    <p class="dline">Cada planeta abierto tiene en su polo norte una estación de <b>${ST_PIECES} piezas</b> que se compran en orden (${PIECE_COST.reduce((a, b) => a + b, 0)} bloques la estación; un planeta da hasta 30 estrellas). Cada constelación tiene su estilo y se turnan los ${Object.keys(STATION_STYLES).length}.</p>
+    <table class="dtable"><tr><th>Pieza</th><th>Bloques</th></tr>${PIECE_COST.map((c, i) => `<tr><td>${i + 1}</td><td>${c}</td></tr>`).join('')}</table>
+    <p class="dline"><b>Estación completa:</b> cofre de oro con ${fmtN(stationPrize(r0 * 10).coins)} monedas (aquí; +10% por constelación, tope ×3) y ${stationPrize(0).undo} deshacer. <b>Las 10 de una constelación:</b> cápsula con el siguiente exclusivo que no tengas de esta lista; ya con todos, un cofre de ${fmtN(buildBonus(r0).coins)} monedas (aquí; +10% por constelación, tope ×3).</p>
+    <table class="dtable"><tr><th>#</th><th>Exclusivo</th><th></th></tr>${BUILD_PRIZES.map((it, i) => `<tr><td>${i + 1}</td><td class="dname">${itName(it)}</td><td>${owns(it[0], it[1]) ? '<span class="d-yes">✓</span>' : ''}</td></tr>`).join('')}</table>`;
+  // Carrera de 7 (19 nov 2026, pedido del usuario): reglas y premios por lugar.
+  const HELP_NAME = { wild: 'comodín', undo: 'deshacer', reloj: 'reloj de arena', ver3: 'ver cartas 3 s' };
+  const helpsTxt = (p) => [['wild', p.wild], ['undo', p.undo], ...Object.entries(p.helps || {})].filter(([, n]) => n).map(([k, n]) => `${n} ${HELP_NAME[k] || k}`).join(', ') || '–';
+  const rc = race();
+  const raceSub = rc?.on ? `escalón ${rc.step}/${RACE_STEPS}${rc.out ? ' · te caíste' : rc.done ? ' · terminada' : ''}` : isOn('carrera') ? 'sin carrera' : `se abre en el nivel ${UNLOCK.carrera + 1}`;
+  const raceTable = `<p class="dline">Se abre en el nivel ${UNLOCK.carrera + 1}. Tú le das <b>Empezar</b> (inscripción gratis). Corres contra <b>${RACE_BOTS} viajeros</b> simulados en el teléfono, sin servidor: todo se sortea al empezar y recargar no cambia nada.</p>
+    <p class="dline">Cada <b>nivel nuevo del camino</b> que ganas <b>al primer intento</b> es un escalón. Perderlo, rendirte o abandonarlo te saca (se avisa antes). Las ayudas sí se valen; repetir niveles ganados, eventos y secretos no cuentan. Sin tiempo límite. Los viajeros suben contigo escalón por escalón o se caen (cada uno pasa cada nivel con 86%).</p>
+    <p class="dline">Al llegar al ${RACE_STEPS}: el lugar es por <b>estrellas</b> entre los que llegaron (${RACE_STEPS * 3}★ = 1.º; si empatas, el lugar es tuyo; tope 4.º). Si te caes: cofre chico de cobre con ${RACE_LOSE.base} + ${RACE_LOSE.step} por escalón (aquí, con 3 escalones: ${fmtN(raceLosePrize(3).coins)}). Siempre se da algo. Al terminar, <b>${RACE_WAIT / 60000} minutos</b> para la siguiente. Premios ×${raceK().toFixed(1)} aquí (+10% por constelación, tope ×3).</p>
+    <table class="dtable"><tr><th>Lugar</th><th>Cofre</th><th>Monedas</th><th>Ayudas</th></tr>${[1, 2, 3, 4].map((n) => { const p = racePrize(n); return `<tr><td>${n}.º</td><td>${p.metal}</td><td>${fmtN(p.coins)}</td><td class="dname">${helpsTxt(p)}</td></tr>`; }).join('')}</table>`;
   // Reglas (15 nov 2026, pedido del usuario): lo de cómo funcionan las cosas, aparte del recuento (camino y tienda).
   // 15 nov 2026 (pedido del usuario): cada regla en su tarjeta, con su icono, título y subtítulo (cómo va hoy).
   const rule = (k, ico, t, sub, html) => `<section class="dsec drule r-${k}"><h4><span class="dr-ico">${ico}</span><span class="dr-t">${t}<small>${sub}</small></span></h4>${html}</section>`;
   const rulesHTML = [
     rule('foe', `<span class="rd-foe">${FOE_ICON.kraken()}</span>`, 'Jefes de constelación', BOSS_ORDER.map((k) => BOSS_NAMES[k].replace(/^El /, '')).join(' → '), foeTable),
+    rule('build', icon('estacionBase'), 'Construir con estrellas', buildSub, buildTable),
+    rule('race', icon('carrera'), 'Carrera de 7', raceSub, raceTable),
     rule('slot', icon('tragamonedas'), 'Tragamonedas', slotWhy(), slotTable),
     rule('rescue', icon('nave'), 'Nave de rescate', rescueSub(), rescueTable),
     rule('pass', icon('pasaporte'), 'Pasaporte', `${passCount().toLocaleString('es-MX')} niveles distintos · ${save.pass?.s || 0} de ${PASS_MAX} sellos`, passTable),
