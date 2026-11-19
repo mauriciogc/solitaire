@@ -2425,6 +2425,20 @@ html:not(.dev-on) .dev-pill { display: none; }
 p.met-sale { display: flex; align-items: center; justify-content: center; gap: 6px; width: fit-content; margin: 10px auto 0; padding: 3px 14px 4px 8px; border-radius: 99px; background: #ffe2cc; color: #d6451f; font: 400 15px/1.2 'Lilita One'; }
 .met-sale .ico { width: 22px; height: 22px; }
 .met-sale b { color: #d6451f; font-weight: 400; }
+/* Descuentazo (19 nov 2026): letrero dorado, como el boleto. */
+p.met-sale.vip, .met-sale.vip b { background: #fff1c2; color: #b06d00; }
+p.met-sale.vip { background: #fff1c2; }
+/* Descuentazo: el boleto en una sola línea abajo («Canjéalo en» y el reloj; antes se montaba sobre el nombre) y su
+   cinta del % que se mece como etiqueta. */
+.vip-modal .ep-main em { display: flex; align-items: baseline; gap: 6px; white-space: nowrap; }
+.vip-modal .ep-main .ep-clock { font-size: 21px; }
+.vip-modal .ep-off { transform-origin: 100% 50%; animation: vip-ribbon 1.6s ease-in-out infinite; }
+@keyframes vip-ribbon { 0%, 100% { rotate: 0deg; scale: 1; } 50% { rotate: -7deg; scale: 1.1; } }
+@media (prefers-reduced-motion: reduce) { .vip-modal .ep-off { animation: none; } }
+/* Descuentazo: la etiqueta de % en el botón de la tienda mientras dura el boleto; se mece. */
+.iconbtn .vip-tag { position: absolute; right: -8px; top: -8px; z-index: 2; padding: 1px 5px 2px; border-radius: 8px; background: #ff5f7e; color: #fff; font: 400 12px/1.1 'Lilita One'; font-style: normal; border: 2px solid var(--ink); rotate: 10deg; pointer-events: none; animation: vip-tag 1.6s ease-in-out infinite; }
+@keyframes vip-tag { 0%, 100% { rotate: 10deg; } 50% { rotate: -6deg; scale: 1.08; } }
+@media (prefers-reduced-motion: reduce) { .iconbtn .vip-tag { animation: none; } }
 .s-price s, .modal button s { opacity: 0.55; font-size: 0.8em; margin-right: 3px; text-decoration-thickness: 2px; }
 .loot-bub .x2 { position: absolute; top: -4px; right: -6px; margin: 0; }
 @keyframes met-x2 { 0%, 100% { scale: 1; } 50% { scale: 1.15; } }

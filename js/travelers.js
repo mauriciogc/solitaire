@@ -1207,6 +1207,76 @@ const MODELS = {
       });
     } };
   },
+  // Tractor volador (exclusivo de Construir, 19 nov 2026): tractor rojo de granja con llantas que giran, chimenea que
+  // echa bolitas de humo y dos hélices chiquitas abajo; se mece como si arara las nubes.
+  tractorvolador(part) {
+    const g = new THREE.Group(), body = new THREE.Group();
+    body.add(part(new THREE.BoxGeometry(0.42, 0.16, 0.24), '#e8434f', { y: -0.02, ol: 0.07 }));
+    body.add(part(new THREE.BoxGeometry(0.18, 0.2, 0.22), '#e8434f', { x: -0.1, y: 0.15, ol: 0.07 }));
+    body.add(part(new THREE.BoxGeometry(0.2, 0.025, 0.26), '#fff6e6', { x: -0.1, y: 0.265, ol: 0.15 }));
+    for (const z of [-0.112, 0.112]) body.add(part(new THREE.BoxGeometry(0.12, 0.1, 0.01), '#8fe8ff', { x: -0.1, y: 0.16, z, ol: 0 }));
+    body.add(part(new THREE.BoxGeometry(0.02, 0.1, 0.2), '#8fe8ff', { x: -0.008, y: 0.16, ol: 0 }));
+    body.add(part(new THREE.CylinderGeometry(0.025, 0.03, 0.14, 8), '#3a3550', { x: 0.13, y: 0.13, ol: 0.15 }));
+    body.add(part(new THREE.BoxGeometry(0.04, 0.06, 0.18), '#ffc83d', { x: 0.22, y: -0.04, ol: 0.15 }));
+    const wheels = [];
+    for (const [x, r] of [[-0.13, 0.13], [0.15, 0.08]]) for (const z of [-0.14, 0.14]) {
+      const w = part(new THREE.CylinderGeometry(r, r, 0.07, 16).rotateX(Math.PI / 2), '#3a3550', { x, y: -0.12, z, ol: 0.08 });
+      w.add(part(new THREE.CylinderGeometry(r * 0.5, r * 0.5, 0.075, 12).rotateX(Math.PI / 2), '#ffc83d', { ol: 0 }));
+      w.add(part(new THREE.BoxGeometry(r * 1.6, 0.02, 0.076), '#ffc83d', { ol: 0 }));
+      body.add(w); wheels.push(w);
+    }
+    const props = [-0.1, 0.15].map((x) => {
+      const p = new THREE.Group(); p.position.set(x, -0.27, 0);
+      p.add(part(new THREE.BoxGeometry(0.2, 0.012, 0.035), '#fff6e6', { ol: 0.2 }), part(new THREE.BoxGeometry(0.035, 0.012, 0.2), '#fff6e6', { ol: 0.2 }));
+      body.add(p); return p;
+    });
+    const puffs = Array.from({ length: 4 }, () => { const m = new THREE.Mesh(new THREE.SphereGeometry(0.04, 10, 8), glow('#ffffff', 0.85)); body.add(m); return m; });
+    body.rotation.y = -0.6;
+    g.add(body);
+    return { obj: g, tick: (t) => {
+      wheels.forEach((w) => (w.rotation.z = -t * 4));
+      props.forEach((p, i) => (p.rotation.y = t * (14 + i * 3)));
+      body.position.y = Math.sin(t * 2) * 0.04;
+      body.rotation.z = Math.sin(t * 1.6) * 0.06;
+      puffs.forEach((m, i) => {
+        const p = (t * 0.8 + i / puffs.length) % 1;
+        m.position.set(0.13 - p * 0.18, 0.22 + p * 0.3, Math.sin(i * 2 + t) * 0.04);
+        m.scale.setScalar(0.6 + p * 1.2);
+        m.material.opacity = 0.85 * (1 - p);
+      });
+    } };
+  },
+  // Transbordador (exclusivo de Construir, 19 nov 2026): nave blanca de alas en delta con panza negra, montada en su
+  // tanque naranja con dos cohetes a los lados; sus tres llamas parpadean.
+  transbordador(part) {
+    const g = new THREE.Group(), body = new THREE.Group();
+    body.add(part(new THREE.CapsuleGeometry(0.1, 0.42, 6, 16), '#ff8a3d', { z: -0.02, ol: 0.07 }));
+    for (const x of [-0.15, 0.15]) {
+      body.add(part(new THREE.CapsuleGeometry(0.045, 0.46, 4, 12), '#fff6e6', { x, y: -0.03, z: -0.02, ol: 0.12 }));
+      body.add(part(new THREE.ConeGeometry(0.05, 0.08, 12), '#fff6e6', { x, y: 0.26, z: -0.02, ol: 0.12 }));
+    }
+    const orb = new THREE.Group(); orb.position.z = 0.15;
+    orb.add(part(new THREE.CapsuleGeometry(0.075, 0.3, 6, 14), '#ffffff', { y: -0.02, ol: 0.08 }));
+    const wing = new THREE.Shape(); wing.moveTo(0, 0.08); wing.lineTo(0.22, -0.2); wing.lineTo(-0.22, -0.2); wing.closePath();
+    orb.add(part(new THREE.ExtrudeGeometry(wing, { depth: 0.02, bevelEnabled: false }).translate(0, 0, -0.01), '#ffffff', { y: -0.04, z: 0.02, ol: 0.06 }));
+    orb.add(part(new THREE.BoxGeometry(0.012, 0.12, 0.1), '#ffffff', { y: -0.14, z: 0.08, ol: 0.15 }));
+    orb.add(part(new THREE.SphereGeometry(0.06, 12, 8).scale(1, 1.1, 0.6), '#2a2f55', { y: 0.12, z: 0.05, ol: 0 }));
+    orb.add(part(new THREE.SphereGeometry(0.035, 10, 8), '#5fc7e8', { y: 0.1, z: 0.075, ol: 0.2 }));
+    body.add(orb);
+    const flames = [[0, 0, 0.15, 0.06], [-0.15, -0.02, 0, 0.05], [0.15, -0.02, 0, 0.05]].map(([x, z, zz, r]) => {
+      const f = new THREE.Group(); f.position.set(x, -0.33, z + zz);
+      const a = new THREE.Mesh(new THREE.ConeGeometry(r, 0.24, 12), glow('#ff9c2b', 0.95)); a.rotation.x = Math.PI; a.position.y = -0.1;
+      const b = new THREE.Mesh(new THREE.ConeGeometry(r * 0.5, 0.14, 10), glow('#fff4c7', 1)); b.rotation.x = Math.PI; b.position.y = -0.06;
+      f.add(a, b); body.add(f); return f;
+    });
+    body.rotation.z = -0.25;
+    g.add(body);
+    return { obj: g, tick: (t) => {
+      flames.forEach((f, i) => f.scale.set(1, 1 + Math.sin(t * 29 + i * 2) * 0.14 + Math.sin(t * 13 + i) * 0.08, 1));
+      body.rotation.y = Math.sin(t * 0.8) * 0.6;
+      body.position.y = Math.sin(t * 2.2) * 0.04;
+    } };
+  },
   // Mantarraya: aletas que aletean despacio y cola larga.
   mantarraya(part) {
     const g = new THREE.Group(), ray = new THREE.Group();

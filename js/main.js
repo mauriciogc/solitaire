@@ -2,7 +2,7 @@ import { save, prefs, persist, resetProfile, deleteProfile, renameProfile, expor
 import { UNLOCK, EVENTS, FESTIVALS, COLLECTIONS, evSoon, isOn, nextEvent, daysToNextCol, plusCols, STREAK_GOALS, STREAK_STEP, streakGoal, nextIndex, dailyStreak, streakTheme, streakReady, streakHot, streakWin, streakLose, streakPendToFeats, msToMidnight, col, colLeft, colWin, colOffers, colBuy, ev, evLeft, evTicketLeft, evTicketPrice, evBuyTicket, evPrize, evEnter, evWin, evLose, evAlbum, festAlbum, EVENT_PLANETS, EVENT_PER_PLANET, EVENT_LEVELS, festival, festivalLeft, festivalSoon, soonLeft, evPrePrice, evPreOwned, evPreBuy, nextFestival, festEnter, festWin, festLose, festShape, festPrice, festPaid, festBuy, festPre, FEST_PRE, FEST_ENTRY, EV_FIRST } from './events.js';
 import { WORLD_COUNT, LEVELS_PER_WORLD, TOTAL_LEVELS, worldInfo, generateLevel, constBoss, bossOf, bossPicked, setBossPick, variantLevel, MECH_INTRO, MECH_NAMES, MECHANICS, EXTRA, extraDebut, SCROLL_FROM, tideFirst, holeFirst, doorsFirst, bandaFirst, rocksFirst, zeroFirst, orbitFirst, pongFirst, BOSS_ORDER, secretId, isSecret, eventLevel, festivalLevel } from './levels.js';
 import { Game, faceHTML, backHTML, TIPS, TABLE_TEXT, MECH_KINDS, ART, slMark, FOE_ICON, FOE_TITLE, FOE_NAME, FOE_BTN } from './game.js';
-import { maxBet, betFee, betSteps, BET_STEPS, HELPS, DAILY_PATH, dailyState, dailyPieces, DAILY_SHIELD_MAX, starsNeeded, TICKET_PRICE, ticketCost, ticketRefund, coinsFor, bossChest, rollChest, CONST_PRIZE, CONST_OPEN, openCost, constStart, openFree, boosted, secretCoins, rollSecret, openSurprise, MET_OFF, metShopPrice, foeBeatPrize, RESCUE_WEEK, RESCUE_COINS, RESCUE_ITEMS } from './economy.js';
+import { maxBet, betFee, betSteps, BET_STEPS, HELPS, DAILY_PATH, dailyState, dailyPieces, DAILY_SHIELD_MAX, starsNeeded, TICKET_PRICE, ticketCost, ticketRefund, coinsFor, bossChest, rollChest, CONST_PRIZE, CONST_OPEN, openCost, constStart, openFree, boosted, secretCoins, rollSecret, openSurprise, MET_OFF, metShopPrice, richTier, richOff, foeBeatPrize, RESCUE_WEEK, RESCUE_COINS, RESCUE_ITEMS } from './economy.js';
 import { track, missions, missionDef, missionDone, missionsAllDone, autoClaim, ACHIEVEMENTS, ACHIEVEMENT_PRIZES, ACHIEVEMENT_MEDAL, ACHIEVEMENT_TOP, achievementGot, achievementProgress, achievementsVisible } from './missions.js';
 import { pauseOffscreen, openModal, toast, updateCoins, money, esc, reduced, wait, flyToWallet, spendFromWallet, sparkle, confetti, starsHTML, warp, buzz, balloons, lootBubbles, floatBubbles, streakWarnHTML, raceWarnHTML, popPrize, popBalloon, countPop, HEADS, betLoseHTML, shownCoins } from './ui.js';
 import { icon, iconURL, iconInner, star, coin, miniPlanet, avatarHTML, AVATAR_COLORS, kidOf, KID_SKINS, KID_HAIRS, KID_STYLES, cardBackURL, setDeck, lockIcon, curtainIcon, capChute, capBody, capLid, vineSVG } from './art.js';
@@ -11,6 +11,7 @@ import { BIOMES, biomeKey, EVENT_BIOMES, tableHTML } from './biomes.js';
 import { redeem } from './codes.js';
 import { meteor, metWin, metCoins, helpOff, MET_FROM, STAR_FROM, SHOWERS, NEW_RAINS } from './meteor.js';
 import { rainCSS } from './rains.js';
+import { buildCSS } from './build-prizes.js';
 import { dev, gallery, attachDevBar, galleryScreen, openDevMenu, planetGal, planetsScreen, casualRate, rateTag, tableIcon } from './dev.js';
 import { themeCSS } from './themes.js';
 import { setCSS, SETS, setOf, setItems, SET_DEAL } from './sets.js';
@@ -20,11 +21,11 @@ import { plinko } from './plinko.js';
 import { mulberry32, hash } from './rng.js';
 import { starCSS } from './starshower.js';
 import { PrizeStage, METALS } from './prizes3d.js';
-import { STATION_STYLES, PIECES, PIECE_COST, BUILD_TITLES, buildOn, styleOf, built, pieceCost, bloques, canBuild, startBuild, earnBloques, buyPiece, pieceThumbs, stationTint } from './station.js';
+import { STATION_STYLES, PIECES, PIECE_COST, buildOn, styleOf, built, pieceCost, bloques, canBuild, startBuild, earnBloques, buyPiece, pieceThumbs, stationTint } from './station.js';
 import { RACE_STEPS, race, raceOn, raceWaitLeft, raceStart, raceBegin, raceWin, raceLose, raceClose, racePrize, raceLosePrize, botAt, myStars } from './race.js';
 import { PASS_MAX, secretGoal, passFrameOf, passGoal, passPrize, secretPrize, passCount, secretCount, passCSS } from './passport.js';
 // Caras, fondos y marcos de las temáticas de la tienda (themes.js): su CSS se arma de su paleta.
-document.head.append(Object.assign(document.createElement('style'), { textContent: themeCSS(iconURL) + setCSS(iconURL, iconInner) + festivalCSS(FESTIVALS, iconInner) + passCSS(iconInner) + starCSS(iconInner) + rainCSS(iconInner) + `.go.met.sh-star::before { background-image: ${iconURL('starFall', 1)}; }` }));
+document.head.append(Object.assign(document.createElement('style'), { textContent: themeCSS(iconURL) + setCSS(iconURL, iconInner) + festivalCSS(FESTIVALS, iconInner) + passCSS(iconInner) + starCSS(iconInner) + rainCSS(iconInner) + buildCSS(iconInner) + `.go.met.sh-star::before { background-image: ${iconURL('starFall', 1)}; }` }));
 
 document.documentElement.classList.toggle('dev-on', !!prefs.dev);
 // Reversos de los premios de racha (carta regalo violeta y comodín dorado), para todo el documento:
@@ -214,6 +215,11 @@ const betGiftNow = (g) => betOk(g) && maxBet(g) > betFreeN();
 // boletos cuestan la mitad (la cuota no); full: lo de siempre, para enseñarlo tachado.
 // La lluvia que rebaja la tienda y los boletos de la apuesta (meteoritos y estrellas; las nuevas no).
 const saleRain = () => { const m = meteor(); return m?.K.shop ? m : null; };
+// Descuento de la tienda: el de la lluvia y el del boleto (Descuentazo) se suman (19 nov 2026, el usuario). Misma forma
+// que la lluvia ({ K: { shop, ico, name } }) para que metShopPrice sirva igual; parts: cada uno, para los letreros.
+const vipLeft = () => Math.max(0, (save.vip?.until || 0) - Date.now());
+const saleVIP = () => (vipLeft() && save.vip.off ? { K: { shop: save.vip.off, ico: 'boletoDesc', name: 'Descuentazo' }, vip: 1 } : null);
+const shopSale = () => { const parts = [saleRain(), saleVIP()].filter(Boolean); return parts.length ? { K: { ...parts[0].K, shop: parts.reduce((n, x) => n + x.K.shop, 0) }, parts } : null; };
 // Lluvia de cometas (14 nov 2026): mientras cae, la entrada a un nivel nuevo no gasta boletos (la cuota sí).
 const cometNow = () => meteor()?.K.kind === 'comet';
 // Lluvia de cristales: la ayuda que dio el nivel (comodín y deshacer van aparte, en su burbuja).
@@ -482,7 +488,8 @@ function showMap({ region, start = null, anim, after = null, unlock = null, paid
       await galaxy.cheerStation(o);
       closeBuild();
       await openStationPrize(w, res);
-      if (res.title) await openBuildTitle(res);
+      if (res.item) await openBuildItem(res);
+      else if (res.bonus) await openStationPrize(w, res, { title: '¡Constelación construida!', name: regionName(res.region), lead: 'Las 10 estaciones están listas y ya tienes todos los exclusivos: un cofre extra.', prize: res.bonus });
     }
     galaxy.busy = false;
     paintPlanet(w);
@@ -1090,10 +1097,10 @@ const eventButtons = (res) => {
   return grouped('r', 'Eventos', all);
 };
 // Tu camino (8 nov 2026) va en el menú después del álbum, con su puntito cuando hay algo nuevo que ver.
-const sideButtons = () => grouped('l', 'Menú', `${ibtn('gift', 'Regalo diario', 'daily', !dailyState(save.daily).claimed)}${ticketBtn()}${ibtn('bag', 'Tienda', 'shop', shopNew())}${ibtn('album', 'Álbum de postales', 'album')}${roadBtn()}${ibtn('gear', 'Ajustes', 'settings')}`);
+const sideButtons = () => grouped('l', 'Menú', `${ibtn('gift', 'Regalo diario', 'daily', !dailyState(save.daily).claimed)}${ticketBtn()}${shopBtn()}${vipBtn()}${ibtn('album', 'Álbum de postales', 'album')}${roadBtn()}${ibtn('gear', 'Ajustes', 'settings')}`);
 function sideAction(a) {
   if (a === 'grp-r' || a === 'grp-l') return openGroup(a.slice(4)), true;
-  const act = { me: () => !document.querySelector('.touring') && openProfile(), camino: openRoad, shop: () => openShop(), daily: openDaily, dticket: openDailyTicket, racha: openStreak, carrera: () => openRace({ play: true }), mis: openMis, logros: openAchievements, col: openCol, evento: openEvent, 'evento-next': openEventNext, fiesta: () => openFestival(), 'fiesta-next': () => openFestival(festivalSoon(), 'fiesta-next'), album: openAlbum, settings: openSettings, dev: () => openDevMenu({ onGallery: () => showGallery(save.next), onPlanets: showPlanets, onFestivals: openFestivalPack, onGoLevel: openGoLevel, onRefresh: boot, onRescue: () => (document.getElementById('modal-root').replaceChildren(), openRescue()), onPrize: devPrize, card: mechCard }) }[a];
+  const act = { me: () => !document.querySelector('.touring') && openProfile(), camino: openRoad, shop: () => openShop(), vip: () => openVIP(), daily: openDaily, dticket: openDailyTicket, racha: openStreak, carrera: () => openRace({ play: true }), mis: openMis, logros: openAchievements, col: openCol, evento: openEvent, 'evento-next': openEventNext, fiesta: () => openFestival(), 'fiesta-next': () => openFestival(festivalSoon(), 'fiesta-next'), album: openAlbum, settings: openSettings, dev: () => openDevMenu({ onGallery: () => showGallery(save.next), onPlanets: showPlanets, onFestivals: openFestivalPack, onGoLevel: openGoLevel, onRefresh: boot, onRescue: () => (document.getElementById('modal-root').replaceChildren(), openRescue()), onPrize: devPrize, card: mechCard }) }[a];
   // Usar un botón cierra su cajón (menos durante el recorrido, que los va enseñando).
   if (act && !document.querySelector('.side-touring')) closeGroups();
   act?.();
@@ -2107,10 +2114,30 @@ const setPieces = (av) => [{ sec: 'avatar', k: av }, ...setItems().filter((x) =>
 // Los descuentos se suman: el de la lluvia de meteoritos (si cae) en cada pieza y luego el del paquete. full = lo
 // que costaría sin ningún descuento (es lo que va tachado).
 function setDealOf(av, pieces = setPieces(av)) {
-  const met = saleRain(), cost = (it) => metShopPrice(it.price, met);
+  const met = shopSale(), cost = (it) => metShopPrice(it.price, met);
   const rest = pieces.filter((p) => !owns(p.sec, p.k)), full = rest.reduce((n, p) => n + p.it.price, 0);
   return { rest, full, met, pay: Math.round((rest.reduce((n, p) => n + cost(p.it), 0) * (1 - SET_DEAL)) / 5) * 5, lock: rest.map((p) => lockedUntil(p.sec, p.k)).find(Boolean), n: pieces.length };
 }
+// Letrero del descuento de la tienda (lluvia o VIP); cambia al comprar o vender si subes o bajas de escalón.
+const saleBar = (S = shopSale()) => (S ? S.parts.map((x) => `<p class="met-sale${x.vip ? ' vip' : ''}">${icon(x.K.ico)}${x.K.name}: <b>−${Math.round(x.K.shop * 100)}%</b> en toda la tienda${x.vip ? ` · <span data-vipclock>${clock(vipLeft())}</span>` : ''}</p>`).join('') : '');
+// Botón de la tienda: con el boleto de descuento lleva su etiqueta de % (se quita sola al vencerse).
+const shopBtn = (dot = shopNew()) => ibtn('bag', 'Tienda', 'shop', dot).replace('</button>', `${vipLeft() ? `<i class="vip-tag">−${Math.round(save.vip.off * 100)}%</i>` : ''}</button>`);
+// Boleto ganado sin canjear: su botón junto a la tienda con su % (se va solo 24 h después de que salió).
+const vipClaimLeft = () => (save.vip?.at && !save.vip.until ? Math.max(0, save.vip.at + 864e5 - Date.now()) : 0);
+const vipBtn = () => (vipClaimLeft() ? `<button class="iconbtn tb press vip-btn" data-a="vip" aria-label="Boleto de descuento" title="Boleto de descuento">${icon('boletoDesc')}<i class="vip-tag">−${Math.round(save.vip.off * 100)}%</i></button>` : '');
+// Repinta la tienda y el boleto en los botones de la izquierda (al ganarlo, cobrarlo o vencerse).
+function paintVIP() {
+  document.querySelectorAll('[data-a="shop"]').forEach((b) => {
+    b.outerHTML = shopBtn();
+  });
+  document.querySelectorAll('[data-a="vip"]').forEach((b) => b.remove());
+  if (vipClaimLeft()) document.querySelectorAll('[data-a="shop"]').forEach((b) => b.insertAdjacentHTML('afterend', vipBtn()));
+}
+setInterval(() => {
+  document.querySelectorAll('[data-vipclock]').forEach((c) => (c.textContent = clock(vipLeft())));
+  document.querySelectorAll('[data-a="shop"] .vip-tag').forEach((t) => !vipLeft() && t.remove());
+  document.querySelectorAll('[data-a="vip"]').forEach((b) => !vipClaimLeft() && b.remove());
+}, 1000);
 function openShop(tab = 'avatar') {
   const was = { traveler: equipped('traveler') };
   // Lo recién abierto lleva su etiqueta mientras la tienda está abierta; el punto rojo se quita.
@@ -2119,7 +2146,7 @@ function openShop(tab = 'avatar') {
   const seenBefore = save.shopSeen;
   save.shopSeen = save.open;
   persist();
-  document.querySelectorAll('[data-a="shop"]').forEach((b) => (b.outerHTML = ibtn('bag', 'Tienda', 'shop', false)));
+  document.querySelectorAll('[data-a="shop"]').forEach((b) => (b.outerHTML = shopBtn(false)));
   const m = openModal({
     title: `${icon('bag')}Tienda`,
     color: 'orange',
@@ -2127,7 +2154,7 @@ function openShop(tab = 'avatar') {
     cls: 'shop-modal',
     body: `<div class="shead"><div class="sgroups">${SHOP_GROUPS.map((g) => `<button class="sgroup" data-group="${g.k}">${icon(g.ico)}<span>${g.name}</span></button>`).join('')}</div>
       <div class="stabs"></div>
-      ${saleRain() ? `<p class="met-sale">${icon(saleRain().K.ico)}${saleRain().K.name}: <b>−${Math.round(saleRain().K.shop * 100)}%</b> en toda la tienda</p>` : ''}</div><div class="sgrid"></div>`,
+      ${saleBar()}</div><div class="sgrid"></div>`,
     onClose: () => {
       closeShelf();
       // El viajero vive en la escena 3D: al cambiarlo se vuelve a armar el mapa.
@@ -2137,8 +2164,8 @@ function openShop(tab = 'avatar') {
   // Tus monedas en la barra de arriba, a la izquierda (9 nov 2026).
   m.el.querySelector('.mhead').insertAdjacentHTML('afterbegin', `<span class="smoney">${coin()}<b data-shop-coins>${fmt(save.coins)}</b></span>`);
   const grid = m.el.querySelector('.sgrid'), tabs = m.el.querySelector('.stabs');
-  // Lluvia de meteoritos: 10% menos en toda la tienda (se ve el precio tachado).
-  const cost = (it) => metShopPrice(it.price, saleRain());
+  // Lluvia de meteoritos o descuento VIP: menos en toda la tienda (se ve el precio tachado).
+  const cost = (it) => metShopPrice(it.price, shopSale());
   const card = (sec, it) => {
     const own = owns(sec, it.k), on = inUse(sec, it.k), lock = lockedUntil(sec, it.k);
     const foot = on ? `<span class="s-on">${icon('check')}En uso</span>`
@@ -2153,13 +2180,13 @@ function openShop(tab = 'avatar') {
   };
   // Confirmar antes de vender (o de comprar un recuerdo): son monedas grandes.
   // look: clase extra de la ventana (un marco la viste con su estilo, como la ficha de su paquete).
-  const confirm = ({ title, text, label, cls = 'green', look = '', onYes }) => {
+  const confirm = ({ title, text, label, cls = 'green', look = '', onYes, disabled = false, later = true }) => {
     const c = openModal({
       title,
       color: 'orange',
       body: `<div class="lead">${text}</div>`,
       cls: `buy-modal ${look}`,
-      buttons: [{ label, cls: `${cls} grow`, onClick: onYes }, { label: 'Ahora no', cls: 'later' }],
+      buttons: [{ label, cls: `${cls} grow`, onClick: onYes, disabled }, later && { label: 'Ahora no', cls: 'later' }].filter(Boolean),
     });
     return c;
   };
@@ -2207,6 +2234,8 @@ function openShop(tab = 'avatar') {
   // Vuelve a dibujar solo los pies de las tarjetas (sin reiniciar la vitrina 3D).
   const refresh = () => {
     m.el.querySelector('[data-shop-coins]').textContent = fmt(save.coins);
+    m.el.querySelectorAll('.shead .met-sale').forEach((x) => x.remove());
+    tabs.insertAdjacentHTML('afterend', saleBar());
     if (tab === 'sets') return show('sets', false);
     grid.querySelectorAll('.sitem').forEach((el) => {
       const fresh = h(card(tab, item(tab, el.dataset.k)));
@@ -2265,8 +2294,19 @@ function openShop(tab = 'avatar') {
         },
       });
     }
-    if (el.classList.contains('on')) return;
     const k = el.dataset.k, it = item(tab, k), art = el.querySelector('.s-art');
+    // La pieza en grande (19 nov 2026, el usuario: lo que ya tienes también se ve antes de ponerlo). El botón de la
+    // ventana hace lo mismo que el de la tarjeta (comprar o usar); lo que ya traes puesto dice «En uso».
+    // Lo tuyo va sin texto y sin «Ahora no» (19 nov 2026, el usuario): la pieza, su botón y la ✕.
+    const zoom = (text, label, onYes, disabled) => {
+      const c = confirm({ title: esc(it.name), text: `<span class="s-zoom a3d-live">${shopPreview(tab, k)}</span>${text}`, label, onYes, disabled, later: !owns(tab, k),
+        // 10 nov 2026: al ver un marco, la ventana toma su estilo (cabecera, orilla y fondo) para que sepa cómo se ve.
+        look: tab === 'ring' ? `mr-${k}` : '' });
+      const cv = c.el.querySelector('canvas[data-kind]');
+      if (cv) import('./travelers.js').then(({ TravelerShelf }) => cv.isConnected && new TravelerShelf([{ canvas: cv, kind: cv.dataset.kind }]));
+    };
+    if (el.classList.contains('on')) return zoom('', `${icon('check')} En uso`, null, true);
+    if (owns(tab, k) && !e.target.closest('.s-use')) return zoom('', 'Usar', () => el.querySelector('.s-use')?.click());
     const nope = (msg) => {
       el.animate([{ translate: '0 0' }, { translate: '-6px 0' }, { translate: '5px 0' }, { translate: '-3px 0' }, { translate: '0 0' }], { duration: 300 });
       toast(msg);
@@ -2275,20 +2315,8 @@ function openShop(tab = 'avatar') {
     const pay = cost(it);
     if (!owns(tab, k) && save.coins < pay) return nope(`${coin()} Te faltan ${fmt(pay - save.coins)} monedas`);
     // 10 nov 2026 (el usuario): tocar la tarjeta ya no compra: abre la pieza en grande con «¿La compras?». Solo el botón
-    // del precio compra directo. Lo tuyo se pone de un toque, como antes.
-    if (!owns(tab, k) && !e.target.closest('.s-price')) {
-      const c = confirm({
-        title: esc(it.name),
-        text: `<span class="s-zoom a3d-live">${shopPreview(tab, k)}</span>¿Lo compras por ${coin()} <b>${fmt(pay)}</b>?`,
-        label: `Comprar ${coin()} ${fmt(pay)}`,
-        // 10 nov 2026: al ver un marco, la ventana toma su estilo (cabecera, orilla y fondo) para que sepa cómo se ve.
-        look: tab === 'ring' ? `mr-${k}` : '',
-        onYes: () => el.querySelector('.s-price')?.click(),
-      });
-      const cv = c.el.querySelector('canvas[data-kind]');
-      if (cv) import('./travelers.js').then(({ TravelerShelf }) => cv.isConnected && new TravelerShelf([{ canvas: cv, kind: cv.dataset.kind }]));
-      return;
-    }
+    // del precio compra directo. Lo tuyo: tocar la tarjeta lo enseña en grande y su botón «Usar» lo pone (19 nov 2026).
+    if (!owns(tab, k) && !e.target.closest('.s-price')) return zoom(`¿Lo compras por ${coin()} <b>${fmt(pay)}</b>?`, `Comprar ${coin()} ${fmt(pay)}`, () => el.querySelector('.s-price')?.click());
     const bought = !owns(tab, k);
     if (bought) {
       buy(tab, k, pay);
@@ -2343,7 +2371,7 @@ function openSetSheet(av, after = () => {}) {
 }
 function setSheet(host, av, { back, backLabel, changed }) {
   const pieces = setPieces(av);
-  const cost = (it) => metShopPrice(it.price, saleRain());
+  const cost = (it) => metShopPrice(it.price, shopSale());
   const LBL = { avatar: 'Disfraz', ring: 'Marco', title: 'Título', traveler: 'Nave', back: 'Reverso', face: 'Cara', space: 'Espacio', frame: 'Postal' };
   const pic = ({ sec, k }) => sec === 'traveler' ? `<canvas class="trav-prev" data-kind="${k}"></canvas>` : sec === 'title' ? titleHTML(k) : sec === 'ring' ? avatarHTML({ ...save, look: 'char', char: av, ring: k }) : shopPreview(sec, k);
   const state = ({ sec, k, it }) => {
@@ -3830,7 +3858,54 @@ async function notices() {
     persist();
     open();
   }
+  // Descuentazo (19 nov 2026): el boleto de descuento de la tienda.
+  if (vipDue()) {
+    if (!(await calm(gen))) return;
+    if (vipDue()) earnVIP(), await openVIP();
+  }
   if (await calm(gen)) streakLost();
+}
+// Descuentazo (19 nov 2026, el usuario: «que sea un boleto, que dure 24 h; no le digas que hay más, sale porque sí»):
+// un boleto de descuento para toda la tienda. Por dentro sale al juntar monedas (RICH_OFF: 5,000 → 15%, 10,000 → 20%,
+// 20,000 → 25%, 50,000 → 30%), pero al jugador no se le dice por qué ni que hay más. Sale su ventana con «Canjear»:
+// las 24 h del descuento empiezan al canjearlo; si no, queda un botón junto a la tienda otras 24 h y luego se va.
+// save.vip = { t: escalón del último boleto, at: cuándo salió, off, until: hasta cuándo vale (0 = sin canjear) }.
+// Para que no salga a diario si juntas y gastas (19 nov 2026): después de uno (canjeado o no) espera VIP_WAIT; antes
+// solo sale uno de más valor (reemplaza al de antes).
+const VIP_WAIT = 72 * 3600e3;
+function vipDue() {
+  const t = richTier(save.coins || 0), v = save.vip || { t: 0, at: 0 };
+  return t > 0 && (t > v.t || Date.now() - v.at >= VIP_WAIT);
+}
+function earnVIP() {
+  save.vip = { t: richTier(save.coins || 0), at: Date.now(), off: richOff(save.coins || 0), until: 0 };
+  persist();
+  paintVIP();
+}
+function openVIP() {
+  if (!vipClaimLeft()) return;
+  const pct = Math.round(save.vip.off * 100);
+  return new Promise((done) => {
+    confetti(60);
+    const m = openModal({
+      title: '¡Descuentazo!',
+      color: 'gold',
+      cls: 'entry-modal vip-modal',
+      body: `${passHTML({ name: 'Toda la tienda', color: 'gold' }, { ico: 'bag', label: 'Boleto de descuento', sub: `Canjéalo en <span class="ep-clock" data-pclock>${clock(vipClaimLeft())}</span>`, off: `−${pct}%` })}
+        <p class="lead">${pct}% menos en todo por <b>24 horas</b> desde que lo canjees.</p>`,
+      onClose: done,
+      buttons: [{ label: `${icon('check')} Canjear`, cls: 'green wide', onClick: () => {
+        save.vip.until = Date.now() + 864e5;
+        persist();
+        paintVIP();
+        const b = document.querySelector('[data-a="shop"]');
+        if (b && !reduced()) { b.animate([{ scale: 1 }, { scale: 1.3 }, { scale: 1 }], { duration: 420, easing: 'ease-out' }); const r = b.getBoundingClientRect(); sparkle({ x: r.left + r.width / 2, y: r.top + r.height / 2 }, 16); }
+        buzz(20);
+        toast(`${icon('boletoDesc')} ¡−${pct}% en toda la tienda por 24 horas!`);
+      } }],
+    });
+    passClock(m, vipClaimLeft, paintVIP);
+  });
 }
 
 // Algo nuevo en la columna de la derecha: su botón entra volando, sale la ventana que lo explica
@@ -3964,7 +4039,7 @@ const UNLOCK_INFO = {
         ['bloque', 'Cada <b>estrella nueva</b> que ganes te da un <b>bloque</b>. Tus estrellas no se gastan: siguen abriendo mundos.'],
         ['martillo', 'Dentro de un planeta toca el <b>martillo</b> y construye sus <b>5 piezas</b>, una tras otra.'],
         ['cofrePlaneta', 'Estación terminada: un <b>cofre</b> con monedas.'],
-        ['esfera', 'Cada constelación tiene su estilo. Con sus <b>10 estaciones</b>, un <b>título exclusivo</b>.'],
+        ['esfera', 'Cada constelación tiene su estilo. Con sus <b>10 estaciones</b>, un <b>exclusivo</b>: título, disfraz, marco, reverso o viajero.'],
         ['gift', `Para empezar tienes <b>${bloques()}</b> bloques: uno por cada estrella que ya ganaste.`],
       ],
     };
@@ -5777,18 +5852,19 @@ async function flyToBuild(from, gained) {
 }
 // Estación completa: el cofre planeta de oro, como el de la carrera (llega de atrás, se sacude, se abre y suelta sus
 // premios). Ya se sumaron al guardado en buyPiece.
-function openStationPrize(w, res) {
+// opts: la misma ventana con otro texto y premio (el cofre extra de la constelación construida).
+function openStationPrize(w, res, { title = '¡Estación completa!', name = STATION_STYLES[styleOf(w)].name, lead = `Terminaste la estación de ${esc(worldInfo(w).name)}. Este cofre es tuyo.`, prize } = {}) {
   return new Promise((done) => {
-    const p = res.prize;
+    const p = prize || res.prize;
     confetti(70);
     const m = openModal({
-      title: '¡Estación completa!',
+      title,
       color: 'gold',
       closable: false,
       cls: 'boss-win foe-win side-win race-prize build-prize',
       body: `<div class="ww-hero"><div class="rays"></div><span class="ww-pl">${icon('estacionBase')}</span></div>
-        <b class="ww-name">${esc(STATION_STYLES[styleOf(w)].name)}</b>
-        <p class="ww-lead">Terminaste la estación de ${esc(worldInfo(w).name)}. Este cofre es tuyo.</p>
+        <b class="ww-name">${esc(name)}</b>
+        <p class="ww-lead">${lead}</p>
         <div class="chest-row"><div class="chest foe-chest p3d"></div></div>`,
       buttons: [{ label: 'Continuar', cls: 'green wide', onClick: () => {
         const b = m.el.querySelector('.chest').getBoundingClientRect();
@@ -5813,9 +5889,10 @@ function openStationPrize(w, res) {
     }, 900);
   });
 }
-// Las 10 estaciones de una constelación: la esfera de gemas con un título exclusivo (BUILD_TITLES, en orden).
-const openBuildTitle = (res) => capsuleWin({ title: '¡Constelación construida!', color: 'gold', kind: 'sphere', hero: icon('estacionBase'),
-  name: regionName(res.region), lead: 'Las 10 estaciones están listas: un título exclusivo para tu perfil.', bubbles: [giftBubble('title', res.title)] });
+// Las 10 estaciones de una constelación: la esfera de gemas con el siguiente exclusivo (BUILD_PRIZES en station.js).
+const BUILD_WHAT = { title: 'un título exclusivo', avatar: 'un disfraz exclusivo', ring: 'un marco exclusivo', back: 'un reverso exclusivo', traveler: 'un viajero exclusivo' };
+const openBuildItem = (res) => capsuleWin({ title: '¡Constelación construida!', color: 'gold', kind: 'sphere', hero: icon('estacionBase'),
+  name: regionName(res.region), lead: `Las 10 estaciones están listas: ${BUILD_WHAT[res.item[0]]} para tu perfil.`, bubbles: [giftBubble(...res.item)] });
 
 // Modo dev (18 nov 2026): ver cada cofre y cápsula sin jugar hasta ahí. Solo se ven: no dan nada.
 function devPrize(k) {

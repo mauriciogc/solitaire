@@ -335,6 +335,8 @@ const ICONS = {
   // Menú de la columna izquierda plegada: cuatro cuadritos de colores.
   menu: () => tshape('M5 5h9v9H5z', '#ffb066', '#e8853e', '', 2) + tshape('M18 5h9v9h-9z', '#5ad68c', '#2f9e5c', '', 2) + tshape('M5 18h9v9H5z', '#4aa8de', '#2f86c0', '', 2) + tshape('M18 18h9v9h-9z', '#ff5f7e', '#d63d5f', '', 2),
   // Vender: etiqueta de precio con una moneda.
+  // Boleto de descuento (Descuentazo, 19 nov 2026): boleto café con su % blanco.
+  boletoDesc: () => `<g transform="rotate(-12 16 16)">${tshape('M3 10.5a2 2 0 0 1 2-2h22a2 2 0 0 1 2 2v3a2.6 2.6 0 0 0 0 5.2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-3a2.6 2.6 0 0 0 0-5.2z', '#c98a4a', '#9a6232', `<path d="M22 9v14" stroke="#fff6e6" stroke-width="1.8" stroke-dasharray="2 2"/><path d="M8.5 20.5 15.5 11" stroke="#fff6e6" stroke-width="2.2" stroke-linecap="round"/><circle cx="9" cy="12.5" r="1.9" fill="#fff6e6"/><circle cx="15" cy="19.2" r="1.9" fill="#fff6e6"/>`)}</g>`,
   tag: () => tshape('M4 15.5V6a2 2 0 0 1 2-2h9.5L28 16.5a2 2 0 0 1 0 2.8L19.3 28a2 2 0 0 1-2.8 0z', '#ffb066', '#e8853e', `<circle cx="9.5" cy="9.5" r="2.2" fill="#fff6e6" stroke="${K}" stroke-width="1.6"/>${tshape(CIRCLE(17.5, 17.5, 4.6), '#ffd75a', '#e8a417', '', 1.6)}`),
   bag: () => tshape('M6 13h20v13a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2z', '#ffb066', '#e8853e')
     + tshape('M13 28v-6.5a3 3 0 0 1 6 0V28z', '#9a5a32', '#7a4024')
@@ -789,6 +791,15 @@ BACKS.pasaporte = { a: '#3a4fc0', b: '#1e2a7a', dots: '#ffd85a', art: () => `<g 
 // Reverso de la lluvia de cometas (14 nov 2026, su exclusivo): azul de noche con el cometa de la suerte grande y
 // boletitos que caen alrededor.
 BACKS.cometasuerte = { a: '#2f6ac0', b: '#163a7a', dots: '#c9f0ff', art: () => `<g transform="translate(12 32) scale(2.4)">${ICONS.cometaLluvia()}</g>${[[18, 22, 0.42, -20], [68, 104, 0.48, 16], [70, 20, 0.36, 30]].map(([x, y, k, r]) => `<g transform="translate(${x} ${y}) rotate(${r} 16 16) scale(${k})">${ICONS.ticket()}</g>`).join('')}` };
+// Reversos de Construir (19 nov 2026, premios de constelación construida, station.js BUILD_PRIZES).
+// Faro estelar: azul de noche con el faro de rayas al centro y su luz que barre a los lados.
+BACKS.faroluz = { a: '#24307a', b: '#121a4a', dots: '#fff3a0', art: () => `<path d="M50 50 8 30V70z" fill="#fff3a0" opacity=".35"/><path d="M50 50 92 34V66z" fill="#fff3a0" opacity=".35"/>`
+  + `<path d="M36 124 41 62H59L64 124z" fill="#fff" stroke="${K}" stroke-width="3.5" stroke-linejoin="round"/><path d="M39 104H61L62.4 114H37.6zM40.6 82H59.4L60.6 92H39.4z" fill="#ff5f7e"/>`
+  + `<rect x="38" y="56" width="24" height="7" rx="2" fill="#ff5f7e" stroke="${K}" stroke-width="3"/><rect x="42" y="42" width="16" height="14" rx="3" fill="#fff3a0" stroke="${K}" stroke-width="3"/><path d="M39 42 50 30 61 42z" fill="#ff5f7e" stroke="${K}" stroke-width="3" stroke-linejoin="round"/><rect x="30" y="122" width="40" height="7" rx="3" fill="#b9b3cc" stroke="${K}" stroke-width="3"/>` };
+// Carrusel: rosa de feria con el carrusel de techo de rayas, sus caballitos y foquitos.
+BACKS.carrusel = { a: '#ff7aa2', b: '#c94a7a', dots: '#fff3a0', art: () => `<path d="M22 58 50 34 78 58z" fill="#fff" stroke="${K}" stroke-width="3.5" stroke-linejoin="round"/><path d="M50 34 36 58H44zM50 34 56 58H64z" fill="#ffc83d"/><path d="M22 58Q29 66 36 58Q43 66 50 58Q57 66 64 58Q71 66 78 58" fill="#ffc83d" stroke="${K}" stroke-width="3" stroke-linejoin="round"/>`
+  + [32, 50, 68].map((x, i) => `<path d="M${x} 62V108" stroke="#fff6e0" stroke-width="3"/><g transform="translate(${x - 9} ${78 + (i % 2 ? -6 : 4)})"><ellipse cx="9" cy="8" rx="9" ry="6" fill="${['#7fb8ff', '#fff', '#7ee08a'][i]}" stroke="${K}" stroke-width="2.6"/><circle cx="16" cy="3" r="4" fill="${['#7fb8ff', '#fff', '#7ee08a'][i]}" stroke="${K}" stroke-width="2.6"/></g>`).join('')
+  + `<rect x="20" y="106" width="60" height="9" rx="4" fill="#ffc83d" stroke="${K}" stroke-width="3"/>${[26, 38, 50, 62, 74].map((x) => `<circle cx="${x}" cy="60" r="1.8" fill="#fff3a0"/>`).join('')}` };
 // Reversos de las temáticas (themes.js): su color, puntitos claros y su dibujo grande al centro.
 for (const t of THEMES) BACKS[themeKey(t)] ??= { a: t.main, b: t.dark, dots: t.light, art: () => `<g transform="translate(18 38) scale(2)">${(ICONS[t.ico] || ICONS.star)()}</g>` };
 const backCache = {};
@@ -835,6 +846,7 @@ export const AVATARS = Object.fromEntries([
   'tamalito', 'taquito', 'arbolito', 'pinatita', 'clavelito', 'bigoton', 'atigrado', 'dalmata', 'audifonos', 'bichito', 'bufoncito', 'uvita',
   'pulpopintor', 'ranita', 'mapache', 'chaneque', 'xologuia', 'lloronita', 'catrinita', 'revolucionario', 'xolo', 'reno', 'reymago', 'cupido',
   'catarina', 'foca', 'chihuahua', 'gatobruja', 'custodio', 'viajerogalactico', 'meteorin', 'loro', 'sirena', 'vampiro', 'auroral', 'cristalino',
+  'astrolunar', 'astronomo', 'caballerogalactico',
 ].map((k) => [k, 1]));
 const initial = (p) => ((p.name || '?').trim().charAt(0).toUpperCase() || '?').replace(/[&<>"']/g, '');
 const avColor = (p) => AVATAR_COLORS[(p.avatar || 0) % AVATAR_COLORS.length];
@@ -1038,6 +1050,18 @@ RINGS.fugaces = () => band(55, '#3a2a99', 7) + `<circle cx="70" cy="70" r="55" f
 // lila, con la gema de 8 lados del icono (antes turquesa con diamantes).
 RINGS.cristales = () => band(55, '#7d52d8', 7) + `<circle cx="70" cy="70" r="55" fill="none" stroke="#ecdfff" stroke-width="2" stroke-dasharray="2 7" stroke-linecap="round"/>`
   + `<g class="r-spin">${Array.from({ length: 8 }, (_, i) => { const d = i * 45 - 90, [x, y] = at(d, 56), k = i % 2 ? 0.44 : 0.6; return `<g class="r-tw" style="animation-delay:${(i * 0.3).toFixed(1)}s"><g transform="translate(${(x - 16 * k).toFixed(1)} ${(y - 16 * k).toFixed(1)}) scale(${k})">${ICONS.cristal()}</g></g>`; }).join('')}</g>`;
+// Marcos de Construir (19 nov 2026, premios de constelación construida, station.js BUILD_PRIZES). Rehechos el mismo día
+// (el usuario: las gemas se parecían al de la lluvia de cristales; le gusta cómo gira el arcoíris).
+// Cúpula de cristal: sencillo, banda de vidrio azul clarito con su brillo, y un cohete que le da vueltas encima.
+RINGS.cupulacristal = () => band(55, '#bfeaff', 7) + `<circle cx="70" cy="70" r="55" fill="none" stroke="#fff" stroke-width="2.5" pathLength="12" stroke-dasharray="1.2 4.8" stroke-linecap="round" opacity=".9"/>`
+  + `<g class="r-moon" style="animation-duration:7s">${[0.7, 0.5, 0.3].map((o, i) => { const [x, y] = at(-102 - i * 9, 55); return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${3.4 - i * 0.8}" fill="#ffc83d" stroke="${K}" stroke-width="1.2" opacity="${o}"/>`; }).join('')}<g transform="translate(72 15) rotate(55) scale(1.05) translate(-16 -16)">${ICONS.rocket()}</g></g>`;
+// Mina de cristales: como el arcoíris, una banda de facetas de colores de gema que gira, y por dentro otra de chispas
+// que gira al revés.
+RINGS.minacristales = () => `<circle cx="70" cy="70" r="56" fill="none" stroke="${K}" stroke-width="13"/><g class="r-spin">${['#c9a6ff', '#5fe0c8', '#ff7ab8', '#ffd36b', '#7fb8ff'].map((c, i) => `<circle cx="70" cy="70" r="56" fill="none" stroke="${c}" stroke-width="8" pathLength="20" stroke-dasharray="1.65 8.35" stroke-dashoffset="${-i * 2}"/>`).join('')}</g>`
+  + `<g class="r-spin" style="animation-direction:reverse;animation-duration:10s"><circle cx="70" cy="70" r="56" fill="none" stroke="#fff" stroke-width="2" pathLength="20" stroke-dasharray=".2 1.8" stroke-linecap="round"/></g>`;
+// Templo dorado: banda de oro con su greca, y una corona de rayos de sol que gira despacio por fuera.
+RINGS.templodorado = () => `<g class="r-spin" style="animation-duration:24s">${Array.from({ length: 16 }, (_, i) => { const d = i * 22.5, [x1, y1] = at(d - 5, 59), [x2, y2] = at(d, 67), [x3, y3] = at(d + 5, 59); return `<path d="M${x1.toFixed(1)} ${y1.toFixed(1)}L${x2.toFixed(1)} ${y2.toFixed(1)}L${x3.toFixed(1)} ${y3.toFixed(1)}z" fill="${i % 2 ? '#ffe58a' : '#ffb31a'}" stroke="${K}" stroke-width="2" stroke-linejoin="round"/>`; }).join('')}</g>`
+  + band(55, '#e0a82a', 8) + `<circle cx="70" cy="70" r="55" fill="none" stroke="#8a5a0a" stroke-width="4" pathLength="48" stroke-dasharray="1 1"/><circle cx="70" cy="70" r="55" fill="none" stroke="#ffe58a" stroke-width="1.4" pathLength="48" stroke-dasharray="1 1" stroke-dashoffset="1"/>`;
 // Constelación secreta: banda violeta noche con estrellas moradas que titilan y puntitos de luz entre ellas.
 RINGS.secreto = () => band(55, '#3a1f7a', 8) + `<circle cx="70" cy="70" r="55" fill="none" stroke="#d6c4ff" stroke-width="2" stroke-dasharray="1 7" stroke-linecap="round"/>`
   + Array.from({ length: 8 }, (_, i) => { const [x, y] = at(i * 45 - 90, 55), k = i % 2 ? 0.44 : 0.62; return `<g class="r-tw" style="animation-delay:${(i * 0.3).toFixed(1)}s"><g transform="translate(${(x - 16 * k).toFixed(1)} ${(y - 16 * k).toFixed(1)}) scale(${k})">${ICONS.starSecret()}</g></g>`; }).join('');

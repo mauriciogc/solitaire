@@ -101,6 +101,12 @@ export const MET_OFF = { help: 0.3, shop: 0.1 };
 export const round5 = (n) => Math.round(n / 5) * 5;
 // met: la lluvia que cae (meteor()): la de estrellas rebaja más (SHOWERS en meteor.js).
 export const metShopPrice = (p, met) => (met && p ? round5(p * (1 - (met.K?.shop ?? MET_OFF.shop))) : p);
+// Descuento VIP (19 nov 2026, pedido del usuario): mientras tengas muchas monedas, toda la tienda cuesta menos.
+// [monedas, descuento]: 5,000 → 15%, 10,000 → 20%, 20,000 → 25% y 50,000 → 30% (el tope). Con la lluvia, el más grande.
+export const RICH_OFF = [[5000, 0.15], [10000, 0.2], [20000, 0.25], [50000, 0.3]];
+// Escalón en que vas (0 = ninguno, 1-4) y su descuento.
+export const richTier = (coins) => RICH_OFF.filter(([n]) => coins >= n).length;
+export const richOff = (coins) => RICH_OFF[richTier(coins) - 1]?.[1] || 0;
 
 // ---------- Regalo diario: camino de 28 días ----------
 // Premios modestos para que dure semanas. Si un día no se reclama, se vuelve al día 1 (salvo con escudo).

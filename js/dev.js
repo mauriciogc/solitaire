@@ -12,12 +12,12 @@ import { FOE_ICON, ART } from './game.js';
 import { icon, miniPlanet } from './art.js';
 import { tableHTML, BIOMES, biomeKey } from './biomes.js';
 import { peek } from './galaxy.js';
-import { STATION_STYLES, PIECES as ST_PIECES, PIECE_COST, built, styleOf, startBuild } from './station.js';
+import { STATION_STYLES, PIECES as ST_PIECES, PIECE_COST, BUILD_PRIZES, built, styleOf, startBuild } from './station.js';
 import { EVENTS, COLLECTIONS, FESTIVALS, festivalDays } from './events.js';
 import { ITEMS, SECTIONS, owns, lockedUntil } from './shop.js';
 import { PASS_MAX, SECRET_MAX, secretGoal, passGoal, passPrize, secretPrize, passCount, secretCount } from './passport.js';
 import { meteor, nextShowers, metItems, MET_FROM, STAR_FROM, metPrizes, SHOWERS, NEW_RAINS } from './meteor.js';
-import { BET_STEPS, BET_BOSS_FEE, BET_FEE, maxBet, RESCUE_WEEK, RESCUE_COINS, RESCUE_ITEMS, ticketCost, TICKET_PRICE, foeBeatPrize } from './economy.js';
+import { BET_STEPS, BET_BOSS_FEE, BET_FEE, maxBet, RESCUE_WEEK, RESCUE_COINS, RESCUE_ITEMS, ticketCost, TICKET_PRICE, foeBeatPrize, RICH_OFF, richOff } from './economy.js';
 import { race, raceOn, raceStart, raceWin, raceLose, RACE_STEPS } from './race.js';
 import { KINDS, TREASURE, makeLot, makeCode, rewardName, lotText, usedHere, lotNonces } from './codes.js';
 // Darte los exclusivos del pasaporte (kind 'pase') o de los secretos ('secreto'), sin cobrar sus premios.
@@ -1079,7 +1079,15 @@ export function openDevMenu({ onGallery, onPlanets, onFestivals, onGoLevel, onRe
       { l: 'Esfera: evento del mes', title: 'Al completar un planeta del evento del mes', fn: () => onPrize('esfera') },
       { l: 'Esfera: festividad', title: 'Al completar un planeta de una festividad', fn: () => onPrize('esfera-fiesta') },
     ] },
-    // Construir con estrellas (18 nov 2026): bloques, estaciones y la vista previa de los 4 estilos.
+    // Descuentazo (19 nov 2026): el boleto de descuento de 24 h. Sale al volver al mapa al llegar a un escalón de monedas.
+    { t: 'Descuentazo', sub: `${(save.coins || 0).toLocaleString('es-MX')} monedas (daría −${Math.round(richOff(save.coins || 0) * 100)}%) · ${(save.vip?.until || 0) > Date.now() ? `−${Math.round(save.vip.off * 100)}% activo` : save.vip?.at && !save.vip.until && Date.now() - save.vip.at < 864e5 ? `boleto de −${Math.round(save.vip.off * 100)}% sin canjear` : 'sin boleto'}`, items: [
+      ...RICH_OFF.map(([n, o]) => ({ l: `${n.toLocaleString('es-MX')} monedas (−${Math.round(o * 100)}%)`, title: 'Te deja con esas monedas justas: al volver al mapa sale el boleto si es de más valor que el último o ya pasaron 72 h', fn: () => ((save.coins = n), persist(), onRefresh()) })),
+      { l: 'Que se venza el descuento', title: 'El boleto ya canjeado deja de valer', fn: () => (save.vip?.until && (save.vip.until = 1), persist(), onRefresh()) },
+      { l: 'Que se vaya el boleto sin canjear', title: 'Pasan las 24 h para canjearlo: se quita su botón', fn: () => (save.vip && !save.vip.until && (save.vip.at = Date.now() - 864e5), persist(), onRefresh()) },
+      { l: 'Pasar las 72 h de espera', title: 'Como si el último boleto hubiera salido hace 3 días: al volver al mapa sale otro (si tienes 5,000 o más)', fn: () => (save.vip && (save.vip.at = Date.now() - 72 * 3600e3), persist(), onRefresh()) },
+      { l: 'Que me lo vuelvan a dar', title: 'Borra el boleto y el último escalón: sale otra vez al volver al mapa', fn: () => (delete save.vip, persist(), onRefresh()) },
+    ] },
+    // Construir con estrellas (18 nov 2026): bloques, estaciones y la vista previa de los estilos (10 desde el 19 nov).
     (() => {
       const ds = save.devStation || {}, set = (patch) => ((save.devStation = { n: 5, ...ds, ...patch }), persist(), onRefresh());
       const bset = (fn) => () => { startBuild(); save.build ||= {}; fn(); persist(); onRefresh(); };
@@ -1089,9 +1097,16 @@ export function openDevMenu({ onGallery, onPlanets, onFestivals, onGoLevel, onRe
           { l: 'Darme 20 bloques', cls: 'gold', fn: bset(() => (save.bloques += 20)) },
           { l: 'Quedarme sin bloques', title: 'Para ver la pieza en gris y el aviso de cuántos faltan', fn: bset(() => (save.bloques = 0)) },
           { l: 'A 1 pieza de terminar este mundo', title: 'Le faltará la última pieza y te alcanzan los bloques: al comprarla sale el cofre', fn: bset(() => { save.build[w] = ST_PIECES - 1; save.bloques = Math.max(save.bloques, PIECE_COST[ST_PIECES - 1]); }) },
-          { l: 'A 1 pieza de terminar la constelación', title: 'Las otras 9 estaciones de la constelación quedan listas y a esta le falta una: al comprarla salen el cofre y la cápsula con el título', fn: bset(() => { for (let k = r * 10; k < r * 10 + 10; k++) save.build[k] = ST_PIECES; save.build[w] = ST_PIECES - 1; save.bloques = Math.max(save.bloques, PIECE_COST[ST_PIECES - 1]); }) },
+          { l: 'A 1 pieza de terminar la constelación', title: 'Las otras 9 estaciones de la constelación quedan listas y a esta le falta una: al comprarla salen el cofre y la cápsula con el siguiente exclusivo (o el cofre extra si ya los tienes todos)', fn: bset(() => { for (let k = r * 10; k < r * 10 + 10; k++) save.build[k] = ST_PIECES; save.build[w] = ST_PIECES - 1; save.bloques = Math.max(save.bloques, PIECE_COST[ST_PIECES - 1]); }) },
           { l: 'Borrar estaciones', fn: bset(() => (save.build = {})) },
           { l: 'Ver el aviso de primera vez', title: 'Vuelve a salir «¡Nuevo: Construir!» al volver al mapa y te da otra vez un bloque por cada estrella', fn: () => { if (save.intro) delete save.intro.construir; delete save.bloques; save.build = {}; persist(); onRefresh(); } },
+        ] },
+        // 19 nov 2026: los 15 exclusivos de constelación construida, en orden (BUILD_PRIZES).
+        { k: 'prizes', h: 'Exclusivos de constelación', ico: 'esfera', sub: (() => { const n = BUILD_PRIZES.findIndex(([sec, k]) => !save.owned[`${sec}:${k}`]); return n < 0 ? 'ya tienes los 15: sale el cofre extra' : `tienes ${n} de 15 · sigue: ${ITEMS[BUILD_PRIZES[n][0]].find((x) => x.k === BUILD_PRIZES[n][1])?.name}`; })(), items: [
+          { l: 'Quitarme el siguiente', title: 'Te quita el último que ganaste, para que vuelva a salir', fn: () => { const it = [...BUILD_PRIZES].reverse().find(([sec, k]) => save.owned[`${sec}:${k}`]); if (it) delete save.owned[`${it[0]}:${it[1]}`]; persist(); onRefresh(); } },
+          { l: 'Darme el siguiente', title: 'Como si construyeras una constelación (sin ventana)', fn: () => { const it = BUILD_PRIZES.find(([sec, k]) => !save.owned[`${sec}:${k}`]); if (it) save.owned[`${it[0]}:${it[1]}`] = 1; persist(); onRefresh(); } },
+          { l: 'Darme los 15', title: 'Para ver el cofre extra al construir otra constelación', fn: () => { BUILD_PRIZES.forEach(([sec, k]) => (save.owned[`${sec}:${k}`] = 1)); persist(); onRefresh(); } },
+          { l: 'Quitarme los 15', fn: () => { BUILD_PRIZES.forEach(([sec, k]) => delete save.owned[`${sec}:${k}`]); persist(); onRefresh(); } },
         ] },
         { k: 'preview', h: 'Vista previa de estilos', ico: 'martillo', sub: ds.style ? `${STATION_STYLES[ds.style].name} en todos · ${ds.n ?? 5} de 5 piezas${ds.play ? ' · se arma al entrar' : ''}` : 'apagada: cada constelación con su estilo', items: [
           ...Object.entries(STATION_STYLES).map(([k, x]) => ({ l: x.name, cls: ds.style === k ? 'gold' : '', title: x.pieces.join(', '), fn: () => set({ style: k }) })),

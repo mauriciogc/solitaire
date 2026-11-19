@@ -10,6 +10,7 @@ import { festivalItems, festivalTitleIcons } from './festival-art.js';
 import { passItems } from './passport.js';
 import { starItems } from './starshower.js';
 import { rainItems } from './rains.js';
+import { buildItems } from './build-prizes.js';
 
 // Las secciones van en 3 grupos para que las pestañas quepan en un teléfono.
 export const GROUPS = [
@@ -467,6 +468,9 @@ export const ITEMS = {
   // Exclusivos de las lluvias de cometas, aurora y cristales (14 nov 2026, rains.js).
   const ri = rainItems();
   for (const sec in ri) ITEMS[sec].push(...ri[sec]);
+  // Exclusivos de Construir (19 nov 2026, build-prizes.js): al construir una constelación completa.
+  const bi = buildItems();
+  for (const sec in bi) ITEMS[sec].push(...bi[sec]);
   // Colecciones de personaje (sets.js): cada pieza cuesta según su avatar y se abre en el mismo mundo que él.
   for (const { sec, ...it } of setItems()) {
     const av = ITEMS.avatar.find((x) => x.k === it.set), base = av.price || 300;
@@ -487,6 +491,7 @@ for (const it of ITEMS.avatar) if (FESTIVALS.some((f) => f.grp && f.key === it.e
 ONE_NAME.viajerogalactico = 'Explorador galáctico/Exploradora galáctica';
 ONE_NAME.auroral = 'Guardián de la aurora/Guardiana de la aurora';
 ONE_NAME.cristalino = 'Mago de cristal/Maga de cristal';
+for (const it of buildItems().avatar) ONE_NAME[it.k] = it.name;
 for (const it of ITEMS.avatar) {
   const n = ONE_NAME[it.k];
   if (!n) continue;
