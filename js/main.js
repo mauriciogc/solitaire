@@ -5,7 +5,7 @@ import { Game, faceHTML, backHTML, TIPS, TABLE_TEXT, MECH_KINDS, ART, slMark, FO
 import { maxBet, betFee, betSteps, BET_STEPS, HELPS, DAILY_PATH, dailyState, dailyPieces, DAILY_SHIELD_MAX, starsNeeded, TICKET_PRICE, ticketCost, ticketRefund, coinsFor, bossChest, rollChest, CONST_PRIZE, CONST_OPEN, openCost, constStart, openFree, boosted, secretCoins, rollSecret, openSurprise, MET_OFF, metShopPrice, foeBeatPrize, RESCUE_WEEK, RESCUE_COINS, RESCUE_ITEMS } from './economy.js';
 import { track, missions, missionDef, missionDone, missionsAllDone, autoClaim, ACHIEVEMENTS, ACHIEVEMENT_PRIZES, ACHIEVEMENT_MEDAL, ACHIEVEMENT_TOP, achievementGot, achievementProgress, achievementsVisible } from './missions.js';
 import { pauseOffscreen, openModal, toast, updateCoins, money, esc, reduced, wait, flyToWallet, spendFromWallet, sparkle, confetti, starsHTML, warp, buzz, balloons, lootBubbles, floatBubbles, streakWarnHTML, popPrize, popBalloon, countPop, HEADS, betLoseHTML, shownCoins } from './ui.js';
-import { icon, iconURL, iconInner, star, coin, miniPlanet, avatarHTML, AVATAR_COLORS, kidOf, KID_SKINS, KID_HAIRS, KID_STYLES, cardBackURL, setDeck, lockIcon, curtainIcon, chestBody, chestLid, foeChestBody, foeChestLid, boxBody, boxLid, capChute, capBody, capLid, vineSVG } from './art.js';
+import { icon, iconURL, iconInner, star, coin, miniPlanet, avatarHTML, AVATAR_COLORS, kidOf, KID_SKINS, KID_HAIRS, KID_STYLES, cardBackURL, setDeck, lockIcon, curtainIcon, capChute, capBody, capLid, vineSVG } from './art.js';
 import { GROUPS, SECTIONS, ITEMS, shopItems, groupOf, owns, equipped, equip, buy, item, lockedUntil, titleHTML, titleIcon, sell, sellable, sellPrice } from './shop.js';
 import { BIOMES, biomeKey, EVENT_BIOMES, tableHTML } from './biomes.js';
 import { redeem } from './codes.js';
@@ -19,6 +19,8 @@ import { slotDue, openSlot } from './slot.js';
 import { plinko } from './plinko.js';
 import { mulberry32, hash } from './rng.js';
 import { starCSS } from './starshower.js';
+import { PrizeStage, METALS } from './prizes3d.js';
+import { RACE_STEPS, race, raceOn, raceWaitLeft, raceStart, raceBegin, raceWin, raceLose, raceClose, racePrize, raceLosePrize, botAt, myStars } from './race.js';
 import { PASS_MAX, secretGoal, passFrameOf, passGoal, passPrize, secretPrize, passCount, secretCount, passCSS } from './passport.js';
 // Caras, fondos y marcos de las temáticas de la tienda (themes.js): su CSS se arma de su paleta.
 document.head.append(Object.assign(document.createElement('style'), { textContent: themeCSS(iconURL) + setCSS(iconURL, iconInner) + festivalCSS(FESTIVALS, iconInner) + passCSS(iconInner) + starCSS(iconInner) + rainCSS(iconInner) + `.go.met.sh-star::before { background-image: ${iconURL('starFall', 1)}; }` }));
@@ -240,7 +242,7 @@ const betLoot = (g) => [
   { ico: coin(), n: boosted(coinsFor(g, 3, 0), save.coins, g), met: meteor()?.K.x > 1 ? meteor().K.x : 0 },
   { ico: icon('ticket'), n: ticketRefund(g) },
   col() && { ico: icon(col().token), n: 3 },
-  g % LEVELS_PER_WORLD === LEVELS_PER_WORLD - 1 && { ico: icon('cofre') },
+  g % LEVELS_PER_WORLD === LEVELS_PER_WORLD - 1 && { ico: icon('cofrePlaneta') },
 ].filter(Boolean);
 // Sin etiqueta ×N donde hay número (9 nov 2026): ya va multiplicado y la etiqueta hacía creer que era eso ×N otra vez.
 // El cofre y el meteoro (sin número: su premio sale al ganar) sí llevan su ×N.
@@ -975,13 +977,14 @@ const colBtn = () => {
 // res: lo que dejó la victoria (se pinta el número de antes y luego sube).
 // Misiones del día y logros (10 nov 2026): ya no se reclaman (se cobran solos), así que el botón no lleva punto rojo:
 // un anillo alrededor se llena con lo que llevas (--p, 0 a 1). Misiones: lo de las 3 juntas y un puntito por misión
-// cumplida; todas y el cofre: palomita. Logros: lo que le falta al más cercano a su siguiente medalla y cuántas llevas.
-const missionPips = (s) => `<small class="rn pips">${s.list.map((x) => `<i class="${missionDone(x) ? 'on' : ''}"></i>`).join('')}</small>`;
+// cumplida (el número); todas y el cofre: palomita. Logros: lo que le falta al más cercano a su siguiente medalla y cuántas llevas.
+// 18 nov 2026 (el usuario): en vez de puntitos, el número de cumplidas (como logros y racha; con 0 no sale).
+const missionNum = (s) => { const n = s.list.filter(missionDone).length; return n ? `<small class="rn">${n}</small>` : ''; };
 const missionsBtn = () => {
   if (!isOn('mis')) return '';
   const s = missions(ev()?.state?.paid), all = missionsAllDone();
   const p = s.list.reduce((n, x) => n + Math.min(1, x.n / x.goal), 0) / (s.list.length || 1);
-  return `<button class="iconbtn tb press prog mis-btn ${fresh('mis')} ${all ? 'all-done' : ''}" data-a="mis" style="--p:${p.toFixed(3)}" aria-label="Misiones del día" title="Misiones del día">${icon('misiones')}${all ? `<span class="fi-lock">${icon('check')}</span>` : missionPips(s)}</button>`;
+  return `<button class="iconbtn tb press prog mis-btn ${fresh('mis')} ${all ? 'all-done' : ''}" data-a="mis" style="--p:${p.toFixed(3)}" aria-label="Misiones del día" title="Misiones del día">${icon('misiones')}${all ? `<span class="fi-lock">${icon('check')}</span>` : missionNum(s)}</button>`;
 };
 const achievementsBtn = () => {
   if (!isOn('logros')) return '';
@@ -1007,14 +1010,14 @@ const grouped = (k, label, html) => {
 };
 const eventButtons = (res) => {
   // Siempre en este orden (8 nov 2026, pedido del usuario): mes, día, colección, racha, misiones, logros.
-  const all = evBtn() + festBtn() + colBtn() + streakBtn(res?.racha ? res.racha - 1 : null) + missionsBtn() + achievementsBtn();
+  const all = evBtn() + festBtn() + colBtn() + streakBtn(res?.racha ? res.racha - 1 : null) + raceBtn() + missionsBtn() + achievementsBtn();
   return grouped('r', 'Eventos', all);
 };
 // Tu camino (8 nov 2026) va en el menú después del álbum, con su puntito cuando hay algo nuevo que ver.
 const sideButtons = () => grouped('l', 'Menú', `${ibtn('gift', 'Regalo diario', 'daily', !dailyState(save.daily).claimed)}${ticketBtn()}${ibtn('bag', 'Tienda', 'shop', shopNew())}${ibtn('album', 'Álbum de postales', 'album')}${roadBtn()}${ibtn('gear', 'Ajustes', 'settings')}`);
 function sideAction(a) {
   if (a === 'grp-r' || a === 'grp-l') return openGroup(a.slice(4)), true;
-  const act = { me: () => !document.querySelector('.touring') && openProfile(), camino: openRoad, shop: () => openShop(), daily: openDaily, dticket: openDailyTicket, racha: openStreak, mis: openMis, logros: openAchievements, col: openCol, evento: openEvent, 'evento-next': openEventNext, fiesta: () => openFestival(), 'fiesta-next': () => openFestival(festivalSoon(), 'fiesta-next'), album: openAlbum, settings: openSettings, dev: () => openDevMenu({ onGallery: () => showGallery(save.next), onPlanets: showPlanets, onFestivals: openFestivalPack, onGoLevel: openGoLevel, onRefresh: boot, onRescue: () => (document.getElementById('modal-root').replaceChildren(), openRescue()), card: mechCard }) }[a];
+  const act = { me: () => !document.querySelector('.touring') && openProfile(), camino: openRoad, shop: () => openShop(), daily: openDaily, dticket: openDailyTicket, racha: openStreak, carrera: () => openRace({ play: true }), mis: openMis, logros: openAchievements, col: openCol, evento: openEvent, 'evento-next': openEventNext, fiesta: () => openFestival(), 'fiesta-next': () => openFestival(festivalSoon(), 'fiesta-next'), album: openAlbum, settings: openSettings, dev: () => openDevMenu({ onGallery: () => showGallery(save.next), onPlanets: showPlanets, onFestivals: openFestivalPack, onGoLevel: openGoLevel, onRefresh: boot, onRescue: () => (document.getElementById('modal-root').replaceChildren(), openRescue()), onPrize: devPrize, card: mechCard }) }[a];
   // Usar un botón cierra su cajón (menos durante el recorrido, que los va enseñando).
   if (act && !document.querySelector('.side-touring')) closeGroups();
   act?.();
@@ -1713,6 +1716,8 @@ function startLevelNow(g, { resume = false, free = false, anim = 'up', bet = 1, 
   const saved = run ? !run.replay : !free && !save.stars[g] && !isSecret(g);
   const mult = run ? run.bet || 1 : bet;
   const betPaid = run ? run.paid || null : mult > 1 ? paid : null;
+  // Carrera de 7: el nivel nuevo del camino que se empieza (otro intento del mismo = te caes).
+  if (!free && !isSecret(g) && g === save.next && g < TOTAL_LEVELS) raceBegin(g, !!run);
   if (!run) {
     save.tries[g] = v + 1;
     if (saved) save.run = { g, v, state: null, sig: null, ...(mult > 1 && { bet: mult, paid: betPaid }) };
@@ -1771,6 +1776,7 @@ function startLevelNow(g, { resume = false, free = false, anim = 'up', bet = 1, 
     // gaveUp: se rindió o abandonó (no solo salió de un nivel repetido sin jugar).
     onAbandon: (gaveUp) => {
       if ((counts && gaveUp !== false) || (replay && gaveUp)) streakLose();
+      if (counts && gaveUp !== false) raceLose(g);
       clearRun();
       back();
     },
@@ -1781,7 +1787,9 @@ function startLevelNow(g, { resume = false, free = false, anim = 'up', bet = 1, 
       if (dev.on && gallery.active) return showGallery();
       if (res.met?.prize?.items) await openMetPrize(res.met.prize.items, res.met.kind);
       const w = worldOf(g);
-      const go = () => showMap({ start: w, anim: 'down', after: res.counted ? { g, w, res } : null });
+      const go0 = () => showMap({ start: w, anim: 'down', after: res.counted ? { g, w, res } : null });
+      // Carrera de 7: después de los cofres, cómo vas (o tu podio).
+      const go = () => (race()?.pending ? openRace().then(go0) : go0());
       // Jefe derrotado: después del cofre del planeta (si tocaba), su cofre de jefe.
       const foe = () => (res.foeChest ? openFoeReward(res.foeChest) : null);
       if (res.chest) return openBossReward(w, res).then(foe).then(go);
@@ -1833,6 +1841,7 @@ function startLevelNow(g, { resume = false, free = false, anim = 'up', bet = 1, 
       save.gold += gold;
       save.cgold = (save.cgold || 0) + cgold;
       const streakOn = isOn('racha'); // la racha cuenta desde el nivel siguiente al que la abre
+      if (!prev) raceWin(g, stars);
       if (g >= save.next) save.next = g + 1;
       if (g === 0) save.tutorial = true;
       // Cofre del jefe (primera vez): según el % de estrellas del mundo. Se guarda ya, aunque salgas antes de verlo.
@@ -2518,7 +2527,7 @@ function openMis() {
     return `<li class="mis ${done ? 'got' : ''}">${missionIcon(m)}<div><b>${m.text(x.goal)}</b>${barHTML(x.n, x.goal)}</div>${end}</li>`;
   };
   // El cofre de las 3 (lo que trae es sorpresa); a la derecha, un puntito por misión cumplida.
-  const bonus = () => `<li class="mis bonus ${s.bonus ? 'got' : ''}">${icon('cofre')}<div><b>Cofre del día</b><small>${s.bonus ? 'Ya lo abriste' : 'Sorpresa al cumplir las 3'}</small></div>${s.bonus ? `<span class="mis-got">${icon('check')}</span>` : `<span class="mis-pips">${s.list.map((x) => `<i class="${missionDone(x) ? 'on' : ''}"></i>`).join('')}</span>`}</li>`;
+  const bonus = () => `<li class="mis bonus ${s.bonus ? 'got' : ''}">${icon('cofrePlaneta')}<div><b>Cofre del día</b><small>${s.bonus ? 'Ya lo abriste' : 'Sorpresa al cumplir las 3'}</small></div>${s.bonus ? `<span class="mis-got">${icon('check')}</span>` : `<span class="mis-pips">${s.list.map((x) => `<i class="${missionDone(x) ? 'on' : ''}"></i>`).join('')}</span>`}</li>`;
   const m = openModal({
     title: 'Misiones del día',
     color: 'green',
@@ -2589,7 +2598,7 @@ document.addEventListener('pointerdown', (e) => {
   closeGroups();
 }, true);
 // Nombre corto de cada botón del cajón (va abajo).
-const GRP_NAMES = { daily: 'Regalo', dticket: 'Boletos', shop: 'Tienda', album: 'Álbum', camino: 'Camino', settings: 'Ajustes', racha: 'Racha', mis: 'Misiones', logros: 'Logros', col: 'Colección', evento: 'Evento', 'evento-next': 'Próximo', fiesta: 'Festividad', 'fiesta-next': 'Próxima' };
+const GRP_NAMES = { daily: 'Regalo', dticket: 'Boletos', shop: 'Tienda', album: 'Álbum', camino: 'Camino', settings: 'Ajustes', racha: 'Racha', carrera: 'Carrera', mis: 'Misiones', logros: 'Logros', col: 'Colección', evento: 'Evento', 'evento-next': 'Próximo', fiesta: 'Festividad', 'fiesta-next': 'Próxima' };
 // El botón del grupo enseña lo más urgente de su cajón y cuántos tienen algo listo; se repinta cuando cambian.
 function paintGroup(side) {
   const btn = side.querySelector('.grp-btn'), drawer = side.querySelector('.grp-drawer');
@@ -2854,7 +2863,7 @@ function evWorlds(e, hold = null) {
     const first = p * N, done = Math.max(0, Math.min(N, s.k - first));
     const state = p === hold ? 'locked' : done >= N ? 'done' : s.k >= first ? 'current' : 'locked';
     const levels = Array.from({ length: N }, (_, j) => ({ kind: first + j < s.k ? 'done' : first + j === s.k ? 'cur' : 'lock', stars: 0, paused: s.run?.k === first + j }));
-    const chip = state === 'done' ? `<span class="chip info">${icon('check')}${icon('gift')}</span>` : state === 'current' ? `<span class="chip info">${icon('flag')}${done + 1}/${N}</span>` : `<span class="lk">${icon('lock')}</span>`;
+    const chip = state === 'done' ? `<span class="chip info">${icon('check')}${icon('esfera')}</span>` : state === 'current' ? `<span class="chip info">${icon('flag')}${done + 1}/${N}</span>` : `<span class="lk">${icon('lock')}</span>`;
     return { w: EVS.W + p, theme: B[p].planet, state, levels, done, pin: true, gift: true, badgeIco: evIcoImg(e), nodes: EVS.nodes, chip };
   });
 }
@@ -3008,12 +3017,12 @@ function openEvIntro(e, go = false) {
       <ul class="evi-rules">
         ${rule('ticket', `Pagas la entrada <b>una vez</b> y reintentas <b>las veces que quieras</b> ${e.days > 1 ? 'mientras dure' : 'hasta la medianoche'}.`)}
         ${rule('flame', `${K.L} niveles <b>difíciles</b>. No cuentan para tu <b>racha</b> ni tu <b>colección</b>.`)}
-        ${rule('gift', `El <b>nivel ${K.N}</b> de cada planeta trae un <b>regalo sorpresa</b> que puede ser un <b>exclusivo</b>. Aquí no hay estrellas: lo que cuenta es <b>pasarlo</b>.`)}
+        ${rule('esfera', `El <b>nivel ${K.N}</b> de cada planeta trae un <b>regalo sorpresa</b> que puede ser un <b>exclusivo</b>. Aquí no hay estrellas: lo que cuenta es <b>pasarlo</b>.`)}
         ${rule('flag', `${K.left() > 864e5 ? 'Termina en unos días' : 'Termina hoy a la medianoche'}: te quedan <b>${evDaysOf(K)}</b>.`)}
       </ul>` : `<p class="lead">¡Llegó el evento del mes! Viaja por <b>${EVENT_PLANETS} planetas</b> y gana premios <b>exclusivos</b> que solo salen ahora: disfraces, marcos, reversos, postales, fondos, títulos y naves.</p>
       <ul class="evi-rules">
         ${rule(e.tk, `Cada nivel se juega con tu <b>boleto</b>. Si ganas, lo conservas; si pierdes, llega otro en <b>48 horas</b> o lo compras en ${coin()} <b>${money(evTicketPrice({ ...e, state: { ...e.state, paid: true } }))}</b>.`)}
-        ${rule('gift', `El <b>nivel 5</b> de cada planeta trae un <b>regalo sorpresa</b> que puede ser un <b>exclusivo</b>. Aquí no hay estrellas: lo que cuenta es <b>pasarlo</b>.`)}
+        ${rule('esfera', `El <b>nivel 5</b> de cada planeta trae un <b>regalo sorpresa</b> que puede ser un <b>exclusivo</b>. Aquí no hay estrellas: lo que cuenta es <b>pasarlo</b>.`)}
         ${rule('flame', `${EVENT_LEVELS} niveles <b>difíciles</b>. No cuentan para tu <b>racha</b> ni tu <b>colección</b>.`)}
         ${rule('flag', `Tienes <b>${evDays()}</b> para llegar al último planeta. ¡Entra cada día y no dejes pasar tu boleto!`)}
       </ul>`}`,
@@ -3195,35 +3204,48 @@ function startEvent() {
 }
 // Premio del 5.º nivel: la caja tiembla, se abre y los exclusivos salen en burbujas. No se ponen solos: se cambian en el perfil.
 function openEvPrize(e, res) {
+  const pl = EVENT_BIOMES[e.key]?.[res.planet];
+  return capsuleWin({ title: '¡Planeta completado!', color: e.color, kind: 'sphere', hero: pl ? miniPlanet(pl.emblem) : icon(e.ico || 'esfera'),
+    name: e.planets[res.planet], lead: `Un exclusivo de ${e.name} para tu perfil.`, bubbles: res.items.map((it) => giftBubble(it.sec, it.k)) });
+}
+// Ventana de una cápsula (18 nov 2026, el usuario: como «¡Mundo completado!»): arriba de dónde viene (planeta, lluvia,
+// código) con rayos, su nombre y una línea; la cápsula abajo (a la derecha en PC y acostado), tiembla, se abre y
+// suelta sus burbujas. onContinue: lo de antes de cerrar (p. ej. monedas al monedero).
+function capsuleWin({ title, color, kind = 'pill', hero, name, lead, bubbles, onContinue }) {
   return new Promise((done) => {
     confetti(60);
     const m = openModal({
-      title: `¡${e.planets[res.planet]} completado!`,
-      color: e.color,
+      title,
+      color,
       closable: false,
-      cls: 'gift-prize',
-      body: `<div class="gift-box"><div class="gbox"><span class="lid">${boxLid()}</span><span class="body">${boxBody()}</span></div></div>
-        <p class="note">Exclusivo de ${e.name}: es tuyo para siempre. Póntelo desde tu perfil.</p>`,
-      buttons: [{ label: 'Continuar', cls: 'green wide', onClick: () => { closeShelf(); done(); } }],
+      cls: 'gift-prize side-win',
+      body: `<div class="ww-hero"><div class="rays"></div><span class="ww-pl">${hero}</span></div>
+        <b class="ww-name">${esc(name)}</b>
+        <p class="ww-lead">${lead}</p>
+        ${capsuleBox(kind)}`,
+      buttons: [{ label: 'Continuar', cls: 'green wide', onClick: () => { onContinue?.(m); closeShelf(); done(); } }],
     });
-    boxBubbles(m, res.items.map((it) => giftBubble(it.sec, it.k)));
+    if (!reduced()) m.el.querySelectorAll('.ww-pl, .ww-name, .ww-lead').forEach((el, i) => el.animate([{ opacity: 0, scale: 0.6 }, { opacity: 1, scale: 1.08, offset: 0.7 }, { opacity: 1, scale: 1 }], { duration: 380, delay: 120 + i * 110, easing: 'ease-out', fill: 'backwards' }));
+    boxBubbles(m, bubbles);
   });
 }
 // Una cosa de la tienda como burbuja: un circulito con su dibujo y abajo qué es (Avatar, Postal…).
 const GIFT_KIND = { avatar: 'Disfraz', ring: 'Marco', title: 'Título', back: 'Reverso', face: 'Caras', traveler: 'Viajero', space: 'Fondo', frame: 'Postal' };
 const giftBubble = (sec, k) => `<span class="lb-pic lp-${sec}">${sec === 'title' ? titleIcon(k) : shopPreview(sec, k)}</span><b>${GIFT_KIND[sec]}</b>`;
-// La caja de regalo de la ventana (.gbox) tiembla, se abre y suelta sus premios en burbujas.
+// Cápsula de regalo (18 nov 2026, antes caja): píldora de gemas (regalo chico) o esfera de gemas (regalo grande, al
+// completar un planeta del evento o de una festividad). Es 3D (prizes3d.js): tiembla, se abre y suelta sus premios.
+const capsuleBox = (kind = 'pill') => `<div class="gift-box"><div class="gbox p3d" data-k="${kind}"></div></div>`;
 function boxBubbles(m, bubbles) {
-  const box = m.el.querySelector('.gbox');
+  const box = m.el.querySelector('.gbox'), stage = new PrizeStage(box, box.dataset.k);
   // Los viajeros son 3D: su lienzo vive en la burbuja, así que la vitrina se arma cuando la burbuja ya existe.
   const out = () => {
     lootBubbles(m, bubbles, box, { lift: 40 });
     if (m.el.querySelector('.loot-bub canvas')) setTimeout(() => travShelf(m.el), 50);
   };
-  if (reduced()) return m.el.classList.add('opened'), out();
+  if (reduced()) return stage.open(), out();
   setTimeout(async () => {
-    await box.animate([{ rotate: '0deg' }, { rotate: '-9deg' }, { rotate: '8deg' }, { rotate: '-6deg' }, { rotate: '4deg' }, { rotate: '0deg' }], { duration: 650, iterations: 2 }).finished;
-    box.querySelector('.lid').animate([{ translate: '0 0', rotate: '0deg' }, { translate: '30px -70px', rotate: '40deg', opacity: 1, offset: 0.6 }, { translate: '60px -40px', rotate: '80deg', opacity: 0 }], { duration: 600, easing: 'cubic-bezier(0.2, 0.8, 0.4, 1)', fill: 'forwards' });
+    await stage.shake(3);
+    await stage.open();
     const q = box.getBoundingClientRect();
     sparkle({ x: q.left + q.width / 2, y: q.top + q.height / 3 }, 22);
     buzz(20);
@@ -3329,19 +3351,9 @@ function openMetIntro() {
 }
 // El premio de la lluvia fue un exclusivo de meteoro: sale de una caja como los del evento.
 function openMetPrize(items, kind = 'met') {
-  return new Promise((done) => {
-    confetti(60);
-    const m = openModal({
-      title: '¡Te cayó un tesoro del cielo!',
-      color: 'violet',
-      closable: false,
-      cls: 'gift-prize',
-      body: `<div class="gift-box"><div class="gbox"><span class="lid">${boxLid()}</span><span class="body">${boxBody()}</span></div></div>
-        <p class="note">Exclusivo de la ${(SHOWERS[kind] || SHOWERS.met).name.toLowerCase()}: es tuyo para siempre. Póntelo desde tu perfil.</p>`,
-      buttons: [{ label: 'Continuar', cls: 'green wide', onClick: () => { closeShelf(); done(); } }],
-    });
-    boxBubbles(m, items.map((it) => giftBubble(it.sec, it.k)));
-  });
+  const sh = SHOWERS[kind] || SHOWERS.met;
+  return capsuleWin({ title: '¡Te cayó un tesoro del cielo!', color: 'violet', hero: icon(sh.ico), name: sh.name,
+    lead: 'Un exclusivo para tu perfil. Póntelo cuando quieras.', bubbles: items.map((it) => giftBubble(it.sec, it.k)) });
 }
 // Cada segundo avanzan los relojes de la lluvia (botón Jugar, aviso y ficha del tablero). Cuando empieza o termina,
 // la pantalla se vuelve a pintar (si hay una ventana o una animación, en cuanto se pueda).
@@ -3365,7 +3377,7 @@ setInterval(() => {
 const FEAT_ONE = 3;
 const FEAT_KIND = {
   mis: { tag: 'Misión del día', ico: 'misiones', head: '¡Misión cumplida!' },
-  bonus: { tag: 'Misiones del día', ico: 'cofre', head: '¡Cumpliste las 3!' },
+  bonus: { tag: 'Misiones del día', ico: 'cofrePlaneta', head: '¡Cumpliste las 3!' },
   logro: { tag: 'Logro', ico: 'trophy' },
   racha: { tag: 'Racha cohete', ico: 'rocket' },
   pase: { tag: 'Pasaporte', ico: 'pasaporte' },
@@ -3398,6 +3410,8 @@ function featHTML(fs) {
     below = '<span class="mbar"><i></i></span>';
     inPic = `<i class="ft-ok">${icon('check')}</i>`;
   } else if (t === 'bonus') {
+    // El cofre planeta en 2D (18 nov 2026, el usuario: aquí va el icono, no el 3D).
+    pic = icon('cofrePlaneta');
     name = 'Cofre del día';
   } else if (t === 'logro') {
     const l = ACHIEVEMENTS.find((x) => x.id === f.id);
@@ -3509,7 +3523,9 @@ async function featCard(back, fs) {
     await anim(el.querySelector('.ft-ok'), [{ scale: 3, opacity: 0, rotate: '-40deg' }, { scale: 0.85, opacity: 1, rotate: '0deg', offset: 0.7 }, { scale: 1, opacity: 1 }], { duration: 260, easing: 'ease-out' });
     sparkleAt(pic, 14);
   } else if (t === 'bonus') {
-    await anim(pic, [{ rotate: '0deg' }, { rotate: '-14deg' }, { rotate: '12deg' }, { rotate: '-9deg' }, { rotate: '0deg' }], { duration: 340, iterations: 2 });
+    // Tiembla y salta con chispas.
+    await anim(pic.firstElementChild, [{ rotate: '0deg' }, { rotate: '-12deg' }, { rotate: '10deg' }, { rotate: '-8deg' }, { rotate: '6deg' }, { rotate: '0deg' }], { duration: 520 });
+    await anim(pic.firstElementChild, [{ scale: 1 }, { scale: 1.25 }, { scale: 1 }], { duration: 300, easing: 'ease-out' });
     sparkleAt(pic, 26);
     if (!fast) confetti(40);
   } else if (t === 'logro') {
@@ -3667,7 +3683,7 @@ async function notices() {
     if (!(await calm(gen))) return;
     if (rescueDue()) await openRescue();
   }
-  for (const k of ['racha', 'mis', 'logros', 'meteoro', 'col', 'apuesta', 'estrellas', 'mes', 'col2', 'cometas', 'fiesta', 'col3', 'aurora', 'fiesta2', 'cristales', 'fiesta3', 'fiesta4', 'fiesta5', 'fiesta6']) {
+  for (const k of ['racha', 'mis', 'logros', 'carrera', 'meteoro', 'col', 'apuesta', 'estrellas', 'mes', 'col2', 'cometas', 'fiesta', 'col3', 'aurora', 'fiesta2', 'cristales', 'fiesta3', 'fiesta4', 'fiesta5', 'fiesta6']) {
     // La lluvia: solo si nunca se ha visto una (quien ya la vio caer no necesita la ventana). La apuesta: nivel 101.
     // Las lluvias nuevas (14 nov 2026), igual: al llegar a su nivel, si todavía no ha visto caer una.
     const rk = RAIN_KEY[k];
@@ -3680,6 +3696,11 @@ async function notices() {
       persist();
       paintBetSticker();
     }
+  }
+  // Carrera de 7: te caíste (abandonaste) o quedó una ventana sin ver.
+  if (isOn('carrera') && race()?.pending) {
+    if (!(await calm(gen))) return;
+    if (race()?.pending) await openRace();
   }
   // Misiones, logros y racha que se cumplieron jugando: su festejo y sus monedas al monedero.
   autoClaim();
@@ -3772,7 +3793,7 @@ const festNow = (f, nx) => ['flag', f ? (f.soon ? `${f.inDays > 1 ? `En ${f.inDa
 const FEST_RULES = () => [
   ['reloj', 'El día de la fiesta, <b>24 horas</b> (algunas duran varios días).'],
   ['planet', '<b>3 planetas</b> de 3 niveles: <b>9 niveles</b> difíciles.'],
-  ['gift', 'Cada planeta termina con un <b>regalo</b> que puede ser un <b>exclusivo</b>. Aquí no hay estrellas: lo importante es <b>pasar</b>.'],
+  ['esfera', 'Cada planeta termina con un <b>regalo</b> que puede ser un <b>exclusivo</b>. Aquí no hay estrellas: lo importante es <b>pasar</b>.'],
   ['ticket', `Pagas la entrada <b>una vez</b> y reintentas las veces que quieras. <b>3 días antes</b> sale su botón y la entrada cuesta <b>${Math.round(FEST_PRE * 100)}% menos</b>.`],
 ];
 // Cuáles son las nuevas (11 nov 2026, el usuario: «faltó poner cuáles son»): fichas con su icono, nombre y fecha.
@@ -3835,7 +3856,7 @@ const UNLOCK_INFO = {
     lead: ulLead(UNLOCK.mis + 1, 'las misiones del día', 'Cada día, 3 retos para jugar como siempre.'),
     rules: [
       ['reloj', '<b>3 misiones</b> cada día. A medianoche llegan otras.'],
-      ['gift', 'Cada una da <b>monedas</b>, y las 3 juntas, un <b>cofre</b>.'],
+      ['cofrePlaneta', 'Cada una da <b>monedas</b>, y las 3 juntas, un <b>cofre</b>.'],
       ['check', 'Todo cuenta: cartas, estrellas, rachas, bombas, burbujas… Se cobran <b>solas</b>.'],
       ['flag', 'Las ves a la <b>derecha</b>.'],
     ],
@@ -3849,6 +3870,11 @@ const UNLOCK_INFO = {
       ['check', 'Se cobran <b>solos</b> al lograrlos.'],
       ['flag', 'Los ves a la <b>derecha</b>.'],
     ],
+  }),
+  carrera: () => ({
+    title: '¡Nueva: Carrera de 7!', ico: 'carrera', color: 'blue', hero: icon('carrera', 0, 0, 'big'),
+    lead: ulLead(UNLOCK.carrera + 1, 'la carrera de 7', 'Gana 7 seguidos y sube al podio.'),
+    rules: [...RACE_RULES, ['flag', 'La ves a la <b>derecha</b>. Empieza cuando tú quieras.']],
   }),
   racha: () => {
     const t = streakTheme();
@@ -3930,7 +3956,7 @@ const UNLOCK_INFO = {
       rules: [
         ['reloj', 'Dura <b>todo el mes</b>. Si lo empiezas tarde, juega lo que alcances.'],
         ['planet', '<b>5 planetas</b> de 5 niveles: <b>25 niveles</b> difíciles.'],
-        ['gift', 'El último nivel de cada planeta abre un <b>regalo sorpresa</b> que puede ser un <b>exclusivo</b>. Aquí no hay estrellas: lo importante es <b>pasar</b>.'],
+        ['esfera', 'El último nivel de cada planeta abre un <b>regalo sorpresa</b> que puede ser un <b>exclusivo</b>. Aquí no hay estrellas: lo importante es <b>pasar</b>.'],
         ['ticket', 'Cada nivel se juega con tu <b>boleto</b>: si pierdes, llega otro en <b>48 horas</b> o lo compras.'],
         ['flag', e ? `¡Este mes hay uno: <b>${e.name}</b>! Búscalo a la <b>derecha</b>.` : nx ? `El próximo, <b>${nx.name}</b>, llega en ${inDays(nx.days)}.` : 'Pronto llega el primero.'],
       ],
@@ -3958,7 +3984,7 @@ function evHeroIcons(main, list = Object.keys(EVENTS).map(Number).sort((a, b) =>
   return [at(-1), at(0), at(1)].map((x, k) => icon(x, 0, 0, k === 1 ? 'main' : '')).join('');
 }
 async function openUnlock(k) {
-  const sel = k === 'meteoro' || k === 'estrellas' || RAIN_KEY[k] || k.startsWith('apuesta') ? null : `.side.r [data-a="${{ racha: 'racha', mis: 'mis', logros: 'logros', col: 'col', mes: 'evento', col2: 'col', col3: 'col', fiesta: 'fiesta', fiesta2: 'fiesta', fiesta3: 'fiesta', fiesta4: 'fiesta', fiesta5: 'fiesta', fiesta6: 'fiesta' }[k]}"]`;
+  const sel = k === 'meteoro' || k === 'estrellas' || RAIN_KEY[k] || k.startsWith('apuesta') ? null : `.side.r [data-a="${{ racha: 'racha', carrera: 'carrera', mis: 'mis', logros: 'logros', col: 'col', mes: 'evento', col2: 'col', col3: 'col', fiesta: 'fiesta', fiesta2: 'fiesta', fiesta3: 'fiesta', fiesta4: 'fiesta', fiesta5: 'fiesta', fiesta6: 'fiesta' }[k]}"]`;
   if (sel) openGroup('r', 'open');
   const btn = sel && document.querySelector(sel);
   revealed.add(k);
@@ -4237,38 +4263,46 @@ function evPostcardHTML(x, cls = '', frame = equipped('frame')) {
     <div class="stamp"><b>${x.year}</b><small>${pcKind(x).stamp}</small></div>
   </div>`;
 }
+const CHEST_METAL = { oro: 'oro', plata: 'plata', bronce: 'bronce' };
+const FROM_BACK = [{ scale: 0.12, opacity: 0, filter: 'brightness(.5)' }, { scale: 1.1, opacity: 1, filter: 'brightness(1)', offset: 0.7 }, { scale: 0.97, offset: 0.85 }, { scale: 1 }];
+// 18 nov 2026 (el usuario): sin postal en esta ventana (la postal sigue en el álbum y demás lugares). Arriba el mundo
+// con su planetita, sus estrellas (de los 10 niveles: el metal va por todo el mundo, no por el último) y el sello del
+// metal; el cofre es el protagonista (como el del jefe y la carrera).
+const METAL_NAME = { oro: 'Oro', plata: 'Plata', bronce: 'Bronce', cobre: 'Cobre' };
 function openBossReward(w, res) {
   return new Promise((done) => {
-    const ch = res.chest;
+    const ch = res.chest, info = worldInfo(w), metal = CHEST_METAL[ch.tier] || 'cobre', tier = ch.tier;
     confetti(60);
     const m = openModal({
       title: `¡Mundo ${w + 1} completado!`,
       color: 'gold',
       closable: false,
-      cls: 'boss-win',
-      body: `${postcardHTML(w, res.worldStars)}
-        <div class="chest-row"><div class="chest"><span class="lid">${chestLid()}</span><span class="body">${chestBody()}</span>${ch.bet > 1 ? `<i class="go-bet chest-bet b${ch.bet}">×${ch.bet}</i>` : ''}</div></div>`,
+      cls: 'boss-win foe-win side-win world-win',
+      body: `<div class="ww-hero"><div class="rays"></div><span class="ww-pl">${miniPlanet(BIOMES[biomeKey(info.place)].emblem)}</span>
+          <i class="ww-seal m-${metal}" title="${TIER[tier]}"><b>${res.worldStars}/30</b><small>${METAL_NAME[metal]}</small></i>${(save.secret[w] || 0) >= 3 ? `<i class="ww-sec" title="Sello secreto">${icon('star')}</i>` : ''}</div>
+        <b class="ww-name">${esc(info.name)}</b>
+        <div class="chest-row"><div class="chest foe-chest p3d" style="--metal:${METALS[metal]}">${ch.bet > 1 ? `<i class="go-bet chest-bet b${ch.bet}">×${ch.bet}</i>` : ''}</div></div>
+        <p class="ww-note">${icon('album')}Su postal ya está en tu álbum.</p>`,
       buttons: [{ label: 'Continuar', cls: 'green wide', onClick: done }],
     });
     balloons(m);
+    // Cofre planeta 3D; su metal es el sello del mundo (oro, plata, bronce; sin sello, cobre).
+    const row = m.el.querySelector('.chest-row'), chest = m.el.querySelector('.chest');
+    const stage = new PrizeStage(chest, 'chest', { metal });
     // Los premios son burbujas: salen del cofre y suben despacio (más lento que los globos) por encima de la ventana.
-    const loot = () => lootBubbles(m, prizeIcons(ch), m.el.querySelector('.chest'));
-    if (reduced()) {
-      m.el.querySelector('.chest-row').classList.add('open', 'done');
-      return loot();
-    }
-    const pc = m.el.querySelector('.postcard'), stamp = m.el.querySelector('.stamp'), chest = m.el.querySelector('.chest');
-    pc.animate([{ rotate: '-8deg', scale: 0.7, opacity: 0 }, { rotate: '3deg', scale: 1.04, opacity: 1, offset: 0.7 }, { rotate: '-1.5deg', scale: 1 }], { duration: 620, delay: 150, easing: 'ease-out', fill: 'backwards' });
-    stamp.animate([{ scale: 2.6, rotate: '-30deg', opacity: 0 }, { scale: 0.92, rotate: '12deg', opacity: 1, offset: 0.7 }, { scale: 1, rotate: '8deg' }], { duration: 420, delay: 750, easing: 'cubic-bezier(0.5, 0, 0.75, 0)', fill: 'backwards' });
+    const loot = () => lootBubbles(m, prizeIcons(ch), chest);
+    if (reduced()) return row.classList.add('open', 'done'), stage.open(), loot();
+    m.el.querySelectorAll('.ww-pl, .ww-seal, .ww-sec, .ww-name').forEach((el, i) => el.animate([{ opacity: 0, scale: 0.6 }, { opacity: 1, scale: 1.08, offset: 0.7 }, { opacity: 1, scale: 1 }], { duration: 380, delay: 120 + i * 110, easing: 'ease-out', fill: 'backwards' }));
+    chest.animate(FROM_BACK, { duration: 650, delay: 500, easing: 'ease-out', fill: 'backwards' });
     setTimeout(async () => {
-      await chest.animate([{ rotate: '0deg' }, { rotate: '-8deg' }, { rotate: '7deg' }, { rotate: '-5deg' }, { rotate: '0deg' }], { duration: 520, iterations: 2 }).finished;
-      const row = m.el.querySelector('.chest-row');
+      await stage.shake(3);
       row.classList.add('open');
-      const r = m.el.querySelector('.chest').getBoundingClientRect();
+      await stage.open();
+      const r = chest.getBoundingClientRect();
       sparkle({ x: r.left + r.width / 2, y: r.top + r.height / 3 }, 20);
       await loot();
       row.classList.add('done');
-    }, 1300);
+    }, 1200);
   });
 }
 
@@ -4282,18 +4316,28 @@ function openFoeReward(fc) {
       title: '¡Jefe derrotado!',
       color: `foe-${fc.kind}`,
       closable: false,
-      cls: `boss-win foe-win foe-${fc.kind}`,
-      body: `<p class="lead">¡Venciste a <b>${FOE_NAME[fc.kind]}</b>! Este es su cofre.</p>
-        <div class="chest-row"><div class="chest foe-chest"><span class="lid">${foeChestLid(c)}</span><span class="body">${foeChestBody(c)}<i class="fc-emb">${FOE_ICON[fc.kind]()}</i></span>${fc.bet > 1 ? `<i class="go-bet chest-bet b${fc.bet}">×${fc.bet}</i>` : ''}</div></div>`,
+      cls: `boss-win foe-win side-win foe-${fc.kind}`,
+      // 18 nov 2026 (el usuario): como «¡Mundo completado!»: su dibujo con rayos de su color, su nombre y el cofre
+      // (a la derecha en PC y acostado).
+      body: `<div class="ww-hero" style="--hr:${c[2]}"><div class="rays"></div><span class="ww-pl">${FOE_ICON[fc.kind]()}</span></div>
+        <b class="ww-name">${FOE_TITLE[fc.kind]}</b>
+        <p class="ww-lead">¡Lo venciste! Este es su cofre.</p>
+        <div class="chest-row"><div class="chest foe-chest p3d">${fc.bet > 1 ? `<i class="go-bet chest-bet b${fc.bet}">×${fc.bet}</i>` : ''}</div></div>`,
       buttons: [{ label: 'Continuar', cls: `${FOE_BTN[fc.kind] || 'green'} wide`, onClick: done }],
     });
     const row = m.el.querySelector('.chest-row'), chest = m.el.querySelector('.chest');
+    // Cofre planeta 3D del color del jefe, con su dibujo en el candado.
+    const stage = new PrizeStage(chest, 'chest', { body: c[0], metal: 'oro', emblem: FOE_ICON[fc.kind]() });
     const loot = () => lootBubbles(m, prizeIcons(fc), chest);
-    if (reduced()) return row.classList.add('open', 'done'), loot();
-    chest.animate([{ translate: '0 -120px', scale: 0.6, opacity: 0 }, { translate: '0 0', scale: 1.08, opacity: 1, offset: 0.7 }, { scale: 0.96, offset: 0.85 }, { translate: '0 0', scale: 1 }], { duration: 560, delay: 150, easing: 'cubic-bezier(.5,0,.75,0)', fill: 'backwards' });
+    if (reduced()) return row.classList.add('open', 'done'), stage.open(), loot();
+    m.el.querySelectorAll('.ww-pl, .ww-name, .ww-lead').forEach((el, i) => el.animate([{ opacity: 0, scale: 0.6 }, { opacity: 1, scale: 1.08, offset: 0.7 }, { opacity: 1, scale: 1 }], { duration: 380, delay: 120 + i * 110, easing: 'ease-out', fill: 'backwards' }));
+    // Llega de atrás hacia adelante (18 nov 2026, el usuario: no de arriba): crece desde lejos y se pasa un poco.
+    chest.animate(FROM_BACK, { duration: 650, delay: 450, easing: 'ease-out', fill: 'backwards' });
     setTimeout(async () => {
-      for (const a of [6, 10, 14]) await chest.animate([{ rotate: '0deg' }, { rotate: `-${a}deg` }, { rotate: `${a}deg` }, { rotate: '0deg' }], { duration: 360 }).finished;
+      // Se sacude cada vez más fuerte.
+      for (const a of [0.08, 0.13, 0.18]) await stage.shake(1, a);
       row.classList.add('open');
+      stage.open();
       const r = chest.getBoundingClientRect();
       chest.animate([{ scale: 1 }, { scale: 1.15 }, { scale: 1 }], { duration: 320, easing: 'ease-out' });
       sparkle({ x: r.left + r.width / 2, y: r.top + r.height / 3 }, 30);
@@ -5195,7 +5239,7 @@ function openSettings(then) {
     body: `<div class="rows">
       <button class="row" data-a="help">${icon('help')}<b>Cómo jugar</b>${icon('chev')}</button>
       ${game ? '' : `<button class="row" data-a="profile">${avatarHTML(save)}<b>Perfil</b>${icon('chev')}</button>`}
-      ${game ? '' : `<button class="row" data-a="gift">${icon('gift')}<b>Códigos<span>Canjea un código de regalo</span></b>${icon('chev')}</button>`}
+      ${game ? '' : `<button class="row" data-a="gift">${icon('capsula')}<b>Códigos<span>Canjea un código de regalo</span></b>${icon('chev')}</button>`}
       ${game ? '' : `<button class="row" data-a="backup">${icon('backup')}<b>Respaldo<span>Guarda tu avance con un código</span></b>${icon('chev')}</button>`}
       ${installPrompt ? `<button class="row" data-a="install"><img class="ico app-ico" src="icon.svg" alt=""><b>Instalar app<span>Pantalla completa y sin conexión</span></b>${icon('chev')}</button>` : ''}
     </div>`,
@@ -5357,10 +5401,10 @@ function openGiftCode(then, text = '') {
     title: 'Códigos',
     color: 'green',
     onClose: then,
-    body: `<div class="gift-top">${icon('gift', 0, 0, 'big')}</div>
+    body: `<div class="gift-top">${icon('capsula', 0, 0, 'big')}</div>
       <p class="lead">¿Te regalaron un código? Escríbelo aquí y descubre tu regalo.</p>
       <input class="text-in gift-in" value="${esc(text)}" maxlength="14" placeholder="XXXX-XXXX-XXXX" spellcheck="false" autocapitalize="characters" autocomplete="off" autocorrect="off" enterkeyhint="go">`,
-    buttons: [{ label: `${icon('gift')} Canjear`, cls: 'green wide', keep: true, disabled: true, onClick: () => tryGift(m, then) }],
+    buttons: [{ label: 'Canjear', cls: 'green wide', keep: true, disabled: true, onClick: () => tryGift(m, then) }],
   });
   const box = m.el.querySelector('.gift-in'), go = m.el.querySelector('.mbtns .btn');
   // Se ve como se escribe en el código: mayúsculas y un guion cada 4 letras.
@@ -5391,30 +5435,239 @@ function tryGift(m, then) {
 // o un circulito con lo que es (giftBubble). Lo de la tienda se ve luego en la tienda o el perfil.
 // Las monedas y los boletos vuelan al monedero al continuar (el guardado ya los tiene).
 function openGiftPrize(r) {
-  confetti(60);
   const it = r.item;
-  const m = openModal({
-    title: '¡Un regalo para ti!',
-    color: 'green',
-    closable: false,
-    cls: 'gift-prize',
-    body: `<div class="gift-box"><div class="gbox"><span class="lid">${boxLid()}</span><span class="body">${boxBody()}</span></div></div>`,
-    buttons: [{
-      label: 'Continuar',
-      cls: 'green wide',
-      onClick: () => {
-        const b = m.el.querySelector('.gbox').getBoundingClientRect(), at = { x: b.left + b.width / 2, y: b.top + b.height / 2 };
-        closeShelf();
-        (async () => {
-          if (r.coins) await flyToWallet('coins', at, r.coins);
-          if (r.tickets) await flyToWallet('tickets', at, r.tickets);
-        })();
-      },
-    }],
-  });
-  boxBubbles(m, it ? [giftBubble(it.sec, it.k)] : prizeIcons(r));
+  return capsuleWin({ title: '¡Un regalo para ti!', color: 'green', hero: icon('sobre'), name: 'Código de regalo',
+    lead: it ? 'Un exclusivo para tu perfil. Póntelo cuando quieras.' : 'Tu regalo ya está en tu monedero.',
+    bubbles: it ? [giftBubble(it.sec, it.k)] : prizeIcons(r),
+    onContinue: (m) => {
+      const b = m.el.querySelector('.gbox').getBoundingClientRect(), at = { x: b.left + b.width / 2, y: b.top + b.height / 2 };
+      (async () => {
+        if (r.coins) await flyToWallet('coins', at, r.coins);
+        if (r.tickets) await flyToWallet('tickets', at, r.tickets);
+      })();
+    } });
 }
 
+// ---------- Carrera de 7 (18 nov 2026; reglas y premios en race.js) ----------
+// Botón a la derecha (después de la racha): anillo con los escalones y abajo el número (como logros); lista para
+// empezar, punto; esperando, arriba lo que falta (como los eventos).
+const RACE_RULES = [
+  ['flag', 'Gana <b>7 niveles nuevos seguidos</b>, cada uno <b>al primer intento</b>.'],
+  ['rocket', 'Corres contra <b>4 viajeros</b>. Si pierdes, te rindes o abandonas un nivel, <b>te caes</b>.'],
+  ['star', 'Al llegar, el lugar va por <b>estrellas</b>: con <b>21</b> eres el 1.º.'],
+  ['cofreCobre', 'Si te caes, también te llevas un <b>cofre</b>.'],
+  ['reloj', '<b>Sin tiempo límite</b>, y las ayudas sí se valen.'],
+];
+const RACE_PLACE = ['1.º', '2.º', '3.º', '4.º'];
+const raceBtn = () => {
+  if (!isOn('carrera')) return '';
+  const r = race(), on = !!r?.on, left = raceWaitLeft();
+  return `<button class="iconbtn tb press prog race-btn ${fresh('carrera')}${!on && !left ? ' ready' : ''}${left ? ' waiting' : ''}" data-a="carrera" style="--p:${on ? (r.step / RACE_STEPS).toFixed(3) : 0}" aria-label="Carrera de 7" title="Carrera de 7">${icon('carrera')}${on ? (r.step ? `<small class="rn">${r.step}</small>` : '') : left ? `<small class="tl">${shortLeft(left)}</small>` : '<span class="dot"></span>'}</button>`;
+};
+const refreshRace = () => swapBtn('carrera', raceBtn());
+// El reloj del botón mientras espera la siguiente.
+setInterval(() => !race()?.on && race()?.next && document.querySelector('[data-a="carrera"]') && refreshRace(), 15000);
+// Lo que trae un premio, en chips chiquitos (monedas, comodines, deshacer y cartas de ayuda).
+const raceChips = (p) => [p.coins && `${coin()}<b>${money(p.coins)}</b>`, p.wild && `${icon('wild')}<b>×${p.wild}</b>`, p.undo && `${icon('undo')}<b>×${p.undo}</b>`, ...Object.entries(p.helps || {}).map(([k, n]) => `${icon(HELPS[k].ico)}<b>×${n}</b>`)]
+  .filter(Boolean).map((x) => `<span class="rc-chip">${x}</span>`).join('');
+const RACE_CHEST = { oro: 'cofreOro', plata: 'cofrePlata', bronce: 'cofreBronce', cobre: 'cofreCobre' };
+// Un carril (18 nov 2026, el usuario: renglón sencillo, sin verse botón): lugar, avatar, nombre, 6 escalones
+// y la bandera de meta con su nave, y las estrellas.
+// Tu carril va del color del fondo de tu avatar (contorno y fondo clarito); los de los viajeros, todos iguales.
+const myLane = () => AVATAR_COLORS[(save.avatar || 0) % AVATAR_COLORS.length];
+const raceLane = (row, n) => `<li class="rc-lane${row.me ? ' me' : ''}${row.out ? ' out' : ''}" data-k="${row.me ? 'me' : row.i}"${row.me ? ` style="--lc:${myLane()}"` : ''}>
+  <b class="rc-n">${n}</b><span class="rc-av">${row.me ? avatarHTML(save) : avatarHTML({ name: row.name, avatar: row.av })}</span><b class="rc-name">${row.me ? 'Tú' : esc(row.name)}</b>
+  <span class="rc-track">${Array.from({ length: RACE_STEPS - 1 }, (_, k) => `<i class="${k < row.at ? 'on' : ''}" style="--j:${k + 1}"></i>`).join('')}<span class="rc-goal">${icon('meta')}</span><span class="rc-ship" style="--s:${row.at}">${icon('rocket')}</span></span>
+  <span class="rc-st">${star()}<b>${row.stars}</b></span></li>`;
+// Cómo se ve con tus s escalones y los viajeros en sb (al caerte, ellos ya jugaron el siguiente).
+const raceRows = (r, s, sb = s, meOut = false) => [{ me: true, at: s, out: meOut, stars: myStars({ stars: r.stars.slice(0, s) }) }, ...r.bots.map((b, i) => ({ i, name: b.name, av: b.av, ...botAt(b, sb) }))];
+// En orden de lugar: los que siguen en carrera primero, por escalón y luego por estrellas (si empatas, vas arriba).
+const raceSort = (rows) => [...rows].sort((a, b) => (a.out ? 1 : 0) - (b.out ? 1 : 0) || b.at - a.at || b.stars - a.stars || (b.me ? 1 : 0) - (a.me ? 1 : 0));
+// Sin carrera (18 nov 2026, el usuario: mucho texto): el boleto de los eventos (passHTML) y los 4 cofres; las reglas
+// van en la bienvenida y en el «?». La inscripción tiene precio tachado y siempre es gratis. Esperando la siguiente:
+// el mismo boleto, gris, con el reloj.
+// 18 nov 2026 (el usuario): la carrera es azul (boleto y cabecera de sus ventanas), como el anillo de su botón.
+const RACE_PASS = { name: 'Carrera de 7', color: 'blue', ico: 'carrera' };
+const RACE_FEE = 500;
+function openRaceIdle() {
+  const left = raceWaitLeft();
+  if (left) {
+    const m = openModal({ title: 'Carrera de 7', color: 'blue', cls: 'entry-modal race-win',
+      body: passHTML(RACE_PASS, { state: 'wait', label: 'La siguiente empieza en', sub: `<span class="ep-clock" data-pclock>${clock(left)}</span>` }),
+      buttons: [{ label: '¡Entendido!', cls: 'gold wide' }] });
+    passClock(m, raceWaitLeft, () => (refreshRace(), openRaceIdle()));
+    return Promise.resolve();
+  }
+  const prizes = [1, 2, 3, 4].map((n) => { const p = racePrize(n); return `<li class="rc-prize p${n}"><b class="rc-pl">${RACE_PLACE[n - 1]}</b><span class="rc-pchest">${icon(RACE_CHEST[p.metal])}</span><span class="rc-chips">${raceChips(p)}</span></li>`; }).join('');
+  return new Promise((done) => {
+    const m = openModal({ title: 'Carrera de 7', color: 'blue', wide: true, cls: 'entry-modal race-win race-idle',
+      body: `${passHTML(RACE_PASS, { label: 'Inscripción', sub: `${RACE_STEPS} niveles seguidos · 4 viajeros`, off: '¡Gratis!' })}
+        <ol class="rc-prizes">${prizes}</ol>`,
+      buttons: [{ label: `Inscribirme · ${coin()} <s>${money(RACE_FEE)}</s> ¡Gratis!`, cls: 'green wide', onClick: () => { raceStart(); refreshRace(); setTimeout(() => openRace({ play: true, fresh: true }).then(done), 60); } }],
+      onClose: () => !race()?.on && done() });
+    helpTip(m, RACE_RULES.map(([, t]) => t).join(' '));
+    if (reduced()) return;
+    // Los cofres caen uno por uno, del 1.º al 4.º, y rebotan.
+    m.el.querySelectorAll('.rc-prize').forEach((el, i) => el.animate([{ opacity: 0, scale: 0.6, translate: '0 -14px' }, { opacity: 1, scale: 1.06, translate: '0 0', offset: 0.7 }, { opacity: 1, scale: 1, translate: '0 0' }], { duration: 420, delay: 350 + i * 110, easing: 'ease-out', fill: 'backwards' }));
+  });
+}
+// La carrera: carriles en orden de lugar. Si hay algo nuevo (pending), las naves avanzan o se estrellan y luego los
+// carriles se reacomodan (suben o bajan) a su nuevo lugar. Al caerte o llegar, dice tu lugar y en «Continuar» sale
+// la ventana del cofre (como la de los jefes).
+// play: viene del botón del mapa (puede ir a jugar); fresh: recién empezada (las naves entran).
+function openRace({ play = false, fresh: isNew = false } = {}) {
+  const r = race();
+  if (!r?.on) return openRaceIdle();
+  const finish = r.out || r.done, anim = r.pending && !reduced();
+  const end = r.out ? raceRows(r, r.step, r.step + 1, true) : raceRows(r, r.step);
+  const start = anim ? raceRows(r, r.seen || 0) : end;
+  const endLead = () => (r.done ? `¡Quedaste en <b>${RACE_PLACE[r.place - 1]} lugar</b> con ${myStars(r)} estrellas!` : `¡Te caíste en el escalón ${r.step + 1}! Pero no te vas con las manos vacías.`);
+  const lead = finish && !anim ? endLead() : r.step ? `Llevas <b>${r.step} de ${RACE_STEPS}</b>. Gana el nivel ${fmtLvl(save.next + 1)} al primer intento.` : `Gana <b>${RACE_STEPS} niveles nuevos</b> seguidos, cada uno al primer intento.`;
+  return new Promise((done) => {
+    const m = openModal({ title: 'Carrera de 7', color: 'blue', wide: true, closable: !finish && !anim, cls: `race-win${finish ? ' race-end' : ''}`,
+      body: `<p class="lead rc-lead">${lead}</p><ol class="rc-lanes">${raceSort(start).map((row, i) => raceLane(row, i + 1)).join('')}</ol>`,
+      buttons: [play && !finish ? { label: `${icon('play')} ¡A jugar!`, cls: 'green wide', onClick: () => { done(); enterLevel(save.next); } } : { label: 'Continuar', cls: 'green wide', onClick: () => (finish ? openRacePrize(r).then(done) : done()) }],
+      onClose: () => !finish && done() });
+    const lanes = m.el.querySelector('.rc-lanes');
+    const lane = (k) => lanes.querySelector(`[data-k="${k}"]`);
+    const paint = (k, row) => {
+      const li = lane(k);
+      li.querySelector('.rc-ship').style.setProperty('--s', row.at);
+      li.querySelectorAll('.rc-track i').forEach((d, j) => d.classList.toggle('on', j < row.at));
+      li.querySelector('.rc-st b').textContent = row.stars;
+    };
+    // Se reacomodan al lugar nuevo (FLIP): cada carril se desliza de donde estaba y su número cambia.
+    const reorder = async () => {
+      const top = new Map([...lanes.children].map((li) => [li, li.getBoundingClientRect().top]));
+      raceSort(end).forEach((row, i) => { const li = lane(row.me ? 'me' : row.i); lanes.append(li); li.querySelector('.rc-n').textContent = i + 1; });
+      const moved = [...lanes.children].filter((li) => top.get(li) !== li.getBoundingClientRect().top);
+      if (reduced() || !moved.length) return;
+      moved.forEach((li) => {
+        const dy = top.get(li) - li.getBoundingClientRect().top;
+        li.animate([{ translate: `0 ${dy}px`, zIndex: li.dataset.k === 'me' ? 3 : 1 }, { translate: '0 0', zIndex: li.dataset.k === 'me' ? 3 : 1 }], { duration: 650, easing: 'cubic-bezier(.3,1.3,.5,1)' });
+        li.querySelector('.rc-n').animate([{ scale: 1.6 }, { scale: 1 }], { duration: 400, delay: 450, easing: 'ease-out' });
+      });
+      await wait(700);
+    };
+    const run = async () => {
+      if (isNew && !reduced()) lanes.querySelectorAll('.rc-lane').forEach((li, i) => li.animate([{ opacity: 0, translate: '-40px 0' }, { opacity: 1, translate: '6px 0', offset: 0.7 }, { opacity: 1, translate: '0 0' }], { duration: 420, delay: 120 + i * 110, easing: 'ease-out', fill: 'backwards' }));
+      if (anim) {
+        await wait(500);
+        // Los viajeros primero, uno por uno: avanzan o se estrellan.
+        for (const [j, b] of end.slice(1).entries()) {
+          const a = start[j + 1];
+          if (b.out && !a.out) {
+            const li = lane(b.i);
+            paint(b.i, b);
+            await wait(250);
+            li.classList.add('crash');
+            sparkleAt(li.querySelector('.rc-ship'), 12);
+            buzz(15);
+            await wait(450);
+            li.classList.add('out');
+          } else if (b.at !== a.at) {
+            paint(b.i, b);
+            await wait(240);
+          }
+        }
+        await wait(250);
+        const me = lane('me');
+        if (r.out) {
+          me.classList.add('crash');
+          buzz(40);
+          await wait(800);
+          me.classList.add('out');
+        } else {
+          paint('me', end[0]);
+          await wait(450);
+          sparkleAt(me.querySelector('.rc-ship'), 22);
+          buzz(25);
+        }
+        await wait(200);
+        await reorder();
+      }
+      r.pending = false;
+      r.seen = r.step;
+      persist();
+      if (!finish || !anim) return;
+      // Tu lugar: el número salta y el texto lo anuncia.
+      const lead = m.el.querySelector('.rc-lead'), me = lane('me');
+      lead.innerHTML = endLead();
+      lead.animate([{ scale: 0.8, opacity: 0 }, { scale: 1.05, opacity: 1, offset: 0.7 }, { scale: 1 }], { duration: 380, easing: 'ease-out' });
+      me.classList.add('pop');
+      me.querySelector('.rc-n').animate([{ scale: 2.6, rotate: '-20deg' }, { scale: 0.9, offset: 0.7 }, { scale: 1 }], { duration: 420, easing: 'ease-out' });
+      sparkleAt(me, 20);
+      if (r.done) confetti(r.place === 1 ? 90 : 50);
+    };
+    run();
+  });
+}
+// Segunda parte del final: el cofre del metal de tu lugar (cobre chico si te caíste), como el de los jefes: llega de
+// atrás, se sacude, se abre y suelta sus premios. Ya se sumaron al guardado en race.js; al cerrar se acaba la carrera.
+function openRacePrize(r) {
+  return new Promise((done) => {
+    const p = r.prize;
+    const m = openModal({
+      title: r.done ? `¡${RACE_PLACE[r.place - 1]} lugar!` : '¡Buen intento!',
+      color: 'gold',
+      closable: false,
+      // 18 nov 2026 (el usuario): como «¡Mundo completado!»: el podio con rayos (sin sello: el lugar va en el título),
+      // el nombre de la carrera y el cofre (a la derecha en PC y acostado).
+      cls: 'boss-win foe-win side-win race-prize',
+      body: `<div class="ww-hero"><div class="rays"></div><span class="ww-pl">${icon('carrera')}</span></div>
+        <b class="ww-name">Carrera de 7</b>
+        <p class="ww-lead">${r.done ? `Llegaste a la meta con ${myStars(r)} estrellas.` : 'Te caíste, pero este cofre es por tus escalones.'}</p>
+        <div class="chest-row"><div class="chest foe-chest p3d${p.small ? ' small' : ''}"></div></div>`,
+      buttons: [{ label: 'Continuar', cls: 'green wide', onClick: () => {
+        const b = m.el.querySelector('.chest').getBoundingClientRect();
+        raceClose();
+        refreshRace();
+        if (p.coins) flyToWallet('coins', { x: b.left + b.width / 2, y: b.top + b.height / 2 }, p.coins);
+        done();
+      } }],
+    });
+    const row = m.el.querySelector('.chest-row'), chest = m.el.querySelector('.chest');
+    const stage = new PrizeStage(chest, 'chest', { metal: p.metal });
+    const loot = () => lootBubbles(m, prizeIcons(p), chest);
+    if (reduced()) return row.classList.add('open', 'done'), stage.open(), loot();
+    m.el.querySelectorAll('.ww-pl, .ww-name, .ww-lead').forEach((el, i) => el.animate([{ opacity: 0, scale: 0.6 }, { opacity: 1, scale: 1.08, offset: 0.7 }, { opacity: 1, scale: 1 }], { duration: 380, delay: 120 + i * 110, easing: 'ease-out', fill: 'backwards' }));
+    chest.animate(FROM_BACK, { duration: 650, delay: 500, easing: 'ease-out', fill: 'backwards' });
+    setTimeout(async () => {
+      await stage.shake(r.done ? 3 : 2);
+      row.classList.add('open');
+      await stage.open();
+      const c = chest.getBoundingClientRect();
+      sparkle({ x: c.left + c.width / 2, y: c.top + c.height / 3 }, 20);
+      if (r.done && r.place === 1) confetti(60);
+      await loot();
+      row.classList.add('done');
+    }, 900);
+  });
+}
+
+// Modo dev (18 nov 2026): ver cada cofre y cápsula sin jugar hasta ahí. Solo se ven: no dan nada.
+function devPrize(k) {
+  document.getElementById('modal-root').replaceChildren();
+  const it = { sec: 'avatar', k: ITEMS.avatar.find((x) => x.k !== 'sencillo')?.k || ITEMS.avatar[0].k };
+  const loot = { coins: 800, wild: 1, undo: 3 };
+  const w = Math.min(Math.floor(save.next / LEVELS_PER_WORLD), WORLD_COUNT - 1);
+  const stars = { oro: 30, plata: 27, bronce: 23, sello: 10 };
+  if (stars[k]) return openBossReward(w, { chest: { tier: k, ...loot }, worldStars: stars[k] });
+  if (k === 'jefe') return openFoeReward({ ...foeBeatPrize(0), kind: 'kraken' });
+  if (k.startsWith('pildora')) return openMetPrize([it], k.split('-')[1] || 'met');
+  if (k === 'codigo') return openGiftPrize({ item: it });
+  if (k === 'codigo-monedas') return openGiftPrize({ coins: 500 });
+  if (k === 'carrera') return refreshRace(), openRace({ play: true });
+  // Cofre de la carrera (solo se ve: el premio de mentira no se suma; al cerrar no toca una carrera que vaya).
+  if (k.startsWith('carrera-')) { const n = +k.slice(8); return openRacePrize(n ? { done: true, place: n, stars: Array(RACE_STEPS).fill(3), prize: racePrize(n) } : { out: true, step: 3, prize: raceLosePrize(3) }); }
+  // Con un evento y una festividad de verdad (el primero de su lista), para ver su planeta y su color.
+  if (k === 'esfera' || k === 'esfera-fiesta') {
+    const e = k === 'esfera' ? ev() || EVENTS[0] : festival() || FESTIVALS[0];
+    return openEvPrize(e, { planet: 0, items: [it] });
+  }
+}
+
+// Dev (18 nov 2026, el usuario): los 4 cofres juntos (oro, plata, bronce, cobre) para comparar su metal; se abren solos.
 // ---------- Instalar como app ----------
 // Chrome (Android y escritorio) avisa cuando se puede instalar; se guarda el aviso y la opción sale en Ajustes.
 // En iPhone no existe: se instala desde Compartir → Agregar a inicio.
@@ -5682,6 +5935,7 @@ function toggleDev() {
 
 // Para pruebas automáticas en modo dev: abrir un nivel por número (desde la consola).
 window.devPlay = (g) => prefs.dev && startLevel(g, { free: true });
+window.devPrize = (k) => prefs.dev && devPrize(k);
 Object.defineProperty(window, 'devGame', { get: () => (prefs.dev ? game : null) });
 Object.defineProperty(window, 'devMap', { get: () => (prefs.dev ? map : null) });
 

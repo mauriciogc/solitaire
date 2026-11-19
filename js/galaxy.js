@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { BIOMES, LOCKED, biomeKey } from './biomes.js';
 import { INK, icon, star } from './art.js';
 import { makeTraveler, mapCovered } from './travelers.js';
+import { prizeModel } from './prizes3d.js';
 
 const K = INK;
 const TAU = Math.PI * 2;
@@ -435,16 +436,14 @@ export class Galaxy {
     this.orient(g, d, this.rAt(o.t, o.seed, d) - 0.005);
     path.add(g);
   }
-  // Evento: en vez del castillo, la caja de regalo del planeta (gris y abierta cuando ya se cobró).
+  // Evento: en vez del castillo, la esfera de gemas del planeta (18 nov 2026, antes caja de regalo); gris y abierta
+  // cuando ya se cobró.
   giftBox(path, o, got) {
-    const g = new THREE.Group(), box = this.toon({ color: got ? '#cfc8e2' : '#47c27a' }), rib = this.toon({ color: got ? '#e9e4f2' : '#ffc83d' });
-    const ol = new THREE.MeshBasicMaterial({ color: K, side: THREE.BackSide });
-    const add = (geo, mat, x, y, z = 0, rz = 0) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.rotation.z = rz; const s = new THREE.Mesh(geo, ol); s.position.copy(m.position); s.rotation.copy(m.rotation); s.scale.setScalar(1.12); g.add(m, s); };
-    add(new THREE.BoxGeometry(0.5, 0.4, 0.5), box, 0, 0.2);
-    add(new THREE.BoxGeometry(0.58, 0.14, 0.58), box, got ? 0.18 : 0, got ? 0.56 : 0.46, 0, got ? -0.5 : 0);
-    add(new THREE.BoxGeometry(0.12, 0.42, 0.52), rib, 0, 0.2);
-    if (!got) for (const s of [-1, 1]) add(new THREE.TorusGeometry(0.1, 0.04, 6, 12), rib, s * 0.1, 0.62, 0, s * 0.5);
-    g.scale.setScalar(0.14);
+    const g = new THREE.Group(), m = prizeModel('sphere', (p) => this.toon(p), { grey: got });
+    m.open(got ? 1 : 0, 0);
+    m.obj.position.y = 0.42;
+    g.add(m.obj);
+    g.scale.setScalar(0.16);
     const d = NODE_DIRS[9].clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), 0.16);
     this.orient(g, d, this.rAt(o.t, o.seed, d) - 0.005);
     path.add(g);

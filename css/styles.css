@@ -192,7 +192,10 @@ button:disabled { cursor: default; }
 .galaxy .side.l { left: calc(10px + var(--cl)); }
 /* Eventos: columna de la derecha (solo los activos). */
 .galaxy .side.r { right: calc(10px + var(--cr)); }
-.racha-btn .rn { position: absolute; bottom: -7px; left: 50%; translate: -50% 0; min-width: 22px; padding: 0 6px 1px; border-radius: 9px; background: #ff8a3d; border: 2px solid var(--ink); color: #fff; font: 400 13px 'Lilita One'; line-height: 1.3; text-align: center; }
+/* 18 nov 2026 (el usuario): el número de abajo mide lo mismo en todos los botones (racha, colección, misiones, logros,
+   carrera); cada uno solo cambia su color. */
+.iconbtn .rn { position: absolute; bottom: -7px; left: 50%; translate: -50% 0; box-sizing: border-box; min-width: 24px; height: 20px; padding: 0 6px; border-radius: 10px; border: 2px solid var(--ink); color: #fff; font: 400 13px/16px 'Lilita One'; text-align: center; white-space: nowrap; }
+.racha-btn .rn { background: #ff8a3d; }
 /* Cerca del siguiente premio: el botón arde (brillo naranja que late y una llamita que tiembla). */
 .racha-btn.hot { animation: hot-glow 1.1s ease-in-out infinite; }
 @keyframes hot-glow { 0%, 100% { box-shadow: inset 0 -5px 0 var(--cream-d), inset 0 2px 0 #fff, 0 3px 0 var(--ink), 0 0 0 3px #ff8a3d, 0 0 14px 4px #ff8a3d88; } 50% { box-shadow: inset 0 -5px 0 var(--cream-d), inset 0 2px 0 #fff, 0 3px 0 var(--ink), 0 0 0 3px #ffc83d, 0 0 26px 10px #ffb02eaa; } }
@@ -664,8 +667,9 @@ html.dev-on .galaxy .res .me { display: none; }
 .mhead h2 { margin: 0 0 2px; font-family: 'Lilita One'; font-weight: 400; font-size: 24px; letter-spacing: 0.01em; text-align: center; line-height: 1.05; }
 .x { position: absolute; right: 9px; top: 50%; translate: 0 -50%; width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; background: #ff5f7e; border: 2.5px solid var(--ink); box-shadow: inset 0 -4px 0 #d63d5f, 0 2px 0 var(--ink); }
 .x .ico { width: 20px; height: 20px; }
-.mbody { min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 16px 20px 8px; text-align: center; scrollbar-width: thin; scrollbar-color: #c9b897 transparent; }
+.mbody { min-height: 0; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; padding: 16px 20px 8px; text-align: center; scrollbar-width: thin; scrollbar-color: #c9b897 transparent; }
 .mbody:empty { display: none; }
+/* overflow-x (18 nov 2026): el lienzo 3D de cofres y cápsulas es más grande que su lugar y sacaba una barra de lado. */
 /* Sin botones abajo: que el contenido no quede pegado al borde. */
 .mbody:last-child { padding-bottom: 22px; }
 .mbody p { margin: 6px 0; }
@@ -813,8 +817,12 @@ html.dev-on .galaxy .res .me { display: none; }
 .sw[aria-checked="true"]::after { left: 25px; }
 
 .gbox { position: relative; width: 96px; height: 96px; }
-.gbox .lid, .gbox .body { position: absolute; inset: 0; }
 .gbox .ico { width: 100%; height: 100%; }
+/* Cápsulas y cofres 3D (prizes3d.js, 18 nov 2026): el lienzo sale 2.4 veces su lugar para que quepan la tapa al
+   abrirse y lo que salta; si no hay 3D, va su icono 2D. */
+.p3d { position: relative; }
+.p3d > .p3d-c { position: absolute; left: -70%; top: -70%; width: 240%; height: 240%; pointer-events: none; }
+.p3d > .ico { position: absolute; inset: 0; width: 100%; height: 100%; }
 @keyframes wobble { 0%, 70%, 100% { rotate: 0deg; } 76% { rotate: -6deg; } 82% { rotate: 6deg; } 88% { rotate: -3deg; } }
 .loot-it { display: inline-flex; align-items: center; gap: 2px; padding: 2px 8px 3px 3px; border-radius: 12px; background: #fff; border: 2px solid var(--ink); font: 400 15px/1 'Lilita One'; animation: lootpop 420ms var(--spring) both; }
 .loot-it .ico { width: 24px; height: 24px; }
@@ -841,11 +849,15 @@ html.dev-on .galaxy .res .me { display: none; }
 .boss-win .postcard { margin-right: 34px; }
 .boss-win .postcard:has(.seal-secret) + .lead { margin-top: 20px; }
 /* Teléfono acostado: postal y cofre más chicos para que el botón Continuar se vea completo. */
+/* Cofre planeta grande (18 nov 2026, el usuario): sale encima de la postal, que al abrirse queda al fondo y discreta. */
+.boss-win:has(.postcard) .chest-row { z-index: 2; margin-top: -34px; }
+.boss-win:has(.postcard) .chest { width: 140px; height: 140px; }
+.boss-win .postcard { transition: opacity 500ms, scale 500ms var(--spring), filter 500ms; }
+.boss-win:has(.chest-row.open) .postcard { opacity: .55; scale: .92; filter: saturate(.7); }
 @media (orientation: landscape) and (max-height: 500px) {
   .boss-win .postcard { zoom: .78; margin-bottom: 4px; }
-  .boss-win .chest-row { margin-top: 4px; gap: 4px; }
-  .boss-win .chest { width: 62px; height: 62px; }
-  .boss-win .chest::before { inset: -24px; }
+  .boss-win:has(.postcard) .chest-row { margin-top: -78px; gap: 4px; }
+  .boss-win:has(.postcard) .chest { width: 130px; height: 130px; }
 }
 /* Sello secreto: morado con estrella, junto al sello de estrellas (nivel secreto con 3 estrellas). */
 .seal-secret { position: absolute; right: 58px; bottom: -14px; z-index: 1; width: 52px; height: 52px; border-radius: 50%; display: grid; place-content: center; justify-items: center; rotate: -10deg;
@@ -864,13 +876,6 @@ html.dev-on .galaxy .res .me { display: none; }
 .loot-bub .ico { width: 58px; height: 58px; padding: 9px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fff 0 18%, #fffbe8 30%, #fff3c4 70%); border: 2.5px solid var(--ink); box-shadow: inset 0 -4px 0 #f1c75a, 0 3px 0 var(--ink), 0 0 0 5px #ffffff55, 0 0 18px #ffc83d88; }
 .loot-bub b { padding: 0 9px 2px; border-radius: 99px; background: var(--ink); color: #ffd75a; font: 400 16px/1.25 'Lilita One'; }
 .chest { position: relative; width: 100px; height: 100px; flex: none; }
-.chest::before { content: ''; position: absolute; inset: -40px; border-radius: 50%; opacity: 0; scale: 0.4; transition: opacity 300ms, scale 500ms var(--spring);
-  background: repeating-conic-gradient(#ffd75a 0 10deg, transparent 10deg 24deg); mask: radial-gradient(circle, #000 20%, transparent 66%); animation: spin 8s linear infinite; }
-.chest-row.open .chest::before { opacity: .8; scale: 1; }
-.chest .lid, .chest .body { position: absolute; inset: 0; }
-.chest .ico { width: 100%; height: 100%; }
-.chest .lid { transform-origin: 85% 48%; transition: rotate 420ms var(--spring), translate 420ms var(--spring); }
-.chest-row.open .lid { rotate: 28deg; translate: 8px -14px; }
 .chest-row .loot { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 14px; min-height: 76px; }
 .chest-row .loot-it { position: relative; z-index: 2; flex-direction: column; gap: 3px; padding: 0; background: none; border: 0; animation: none; }
 .chest-row .loot-it .ico { width: 54px; height: 54px; padding: 8px; border-radius: 50%; background: radial-gradient(circle at 40% 35%, #fff, #fff3c4 70%); border: 2.5px solid var(--ink); box-shadow: inset 0 -4px 0 #f1c75a, 0 3px 0 var(--ink), 0 0 16px #ffc83d88; }
@@ -879,25 +884,57 @@ html.dev-on .galaxy .res .me { display: none; }
 .chest-row.done .loot-it:nth-child(2) { animation-delay: -.8s; } .chest-row.done .loot-it:nth-child(3) { animation-delay: -1.6s; }
 @keyframes loot-bob { 50% { translate: 0 -5px; } }
 .chest-row:not(.open) .loot { visibility: hidden; }
-/* Cofre del jefe derrotado (15 nov 2026): más grande, rayos del color del jefe y su dibujo en la placa del frente. */
+/* Mundo completado (18 nov 2026, el usuario: sin postal): el planeta grande con rayos, el nombre y una cinta del metal
+   con las estrellas y cómo te fue; el cofre abajo (acomodo del jefe) y la nota de que la postal ya está en el álbum. */
+.ww-hero { position: relative; height: 104px; display: grid; place-items: center; margin-top: -4px; }
+.ww-hero .rays { width: 190px; height: 190px; z-index: 0; }
+.ww-pl { position: relative; z-index: 1; width: 92px; height: 92px; animation: wobble 2.8s ease-in-out infinite; }
+.ww-pl .ico { width: 100%; height: 100%; filter: drop-shadow(0 4px 0 #0b062a33); }
+.ww-sec { position: absolute; z-index: 2; right: calc(50% + 26px); top: 6px; width: 34px; height: 34px; display: grid; place-items: center; border-radius: 50%; background: #8a5cf0; border: 2.5px dashed #fff; box-shadow: 0 0 0 2.5px #8a5cf0, 0 0 0 4.5px var(--ink); rotate: 10deg; }
+.ww-sec .ico { width: 20px; height: 20px; }
+.ww-name { position: relative; z-index: 1; display: block; margin-top: 2px; font: 400 26px/1.05 'Lilita One'; color: var(--ink); }
+/* Sello del metal (18 nov 2026, el usuario: como el del secreto, no cinta), encimado abajo a la derecha del planeta;
+   el secreto va arriba a la izquierda. */
+.ww-seal { --m: #ffc83d; position: absolute; z-index: 2; left: calc(50% + 16px); bottom: 2px; width: 60px; height: 60px; display: grid; place-content: center; text-align: center; border-radius: 50%;
+  background: var(--m); border: 2.5px dashed #fff; box-shadow: 0 0 0 2.5px var(--m), 0 0 0 4.5px var(--ink), 0 4px 0 4px var(--ink); color: var(--ink); font-style: normal; rotate: -10deg; }
+.ww-seal.m-plata { --m: #dfe6f2; } .ww-seal.m-bronce { --m: #eaa565; } .ww-seal.m-cobre { --m: #d77a5c; color: #fff; }
+.ww-seal b { font: 400 16px/1 'Lilita One'; }
+.ww-seal small { font-size: 8.5px; font-weight: 900; line-height: 1.1; text-transform: uppercase; letter-spacing: .04em; }
+.side-win .chest-row { margin: 22px 0 14px; }
+.side-win .gift-box { margin: 30px 0 4px; }
+/* Jefe derrotado: su dibujo en lugar del planeta y sus rayos de su color (--hr). */
+.ww-hero .rays { background: repeating-conic-gradient(var(--hr, #ffd75a) 0 9deg, transparent 9deg 22.5deg); }
+.ww-pl > svg { width: 100%; height: 100%; filter: drop-shadow(0 4px 0 #0b062a33); }
+.ww-lead { margin: 4px 0 0 !important; font-weight: 700; color: #4a3f73; }
+.ww-note { display: flex; align-items: center; justify-content: center; gap: 6px; margin: 0 0 2px !important; font-weight: 700; font-size: 13px; color: #6e66a3; }
+.ww-note .ico { width: 22px; height: 22px; }
+/* Acostado y en PC (18 nov 2026, el usuario): a la izquierda el mundo (o el jefe) y a la derecha el cofre (side-win:
+   mundo completado y jefe derrotado). */
+@media (min-width: 900px) and (min-height: 501px) {
+  .modal.side-win { width: min(600px, 100%); }
+  .side-win .mbody { display: grid; grid-template-columns: 1fr 230px; grid-template-areas: 'hero chest' 'name chest' 'note chest'; align-content: center; align-items: center; column-gap: 10px; }
+  .side-win .ww-hero { grid-area: hero; } .side-win .ww-name { grid-area: name; } .side-win .ww-lead { grid-area: note; } .side-win .ww-note { grid-area: note; margin-top: 10px !important; }
+  .side-win .chest-row, .side-win .gift-box { grid-area: chest; margin: 0; }
+}
+@media (max-height: 500px) {
+  .side-win .mbody { display: grid; grid-template-columns: 1fr 190px; grid-template-areas: 'hero chest' 'name chest' 'note chest'; align-content: center; align-items: center; column-gap: 10px; }
+  .side-win .ww-hero { grid-area: hero; height: 74px; } .ww-pl { width: 64px; height: 64px; } .ww-hero .rays { width: 140px; height: 140px; }
+  .side-win .ww-name { grid-area: name; font-size: 22px; } .side-win .ww-lead { grid-area: note; }
+  .ww-seal { width: 50px; height: 50px; left: calc(50% + 20px); bottom: -2px; } .ww-seal b { font-size: 14px; } .ww-sec { right: calc(50% + 22px); }
+  .side-win .ww-note { grid-area: note; margin-top: 6px !important; }
+  .side-win .chest-row, .side-win .gift-box { grid-area: chest; margin: 0; }
+  .side-win .chest.foe-chest { width: 130px; height: 130px; }
+}
+@media (prefers-reduced-motion: reduce) { .ww-pl { animation: none; } }
+/* Cofre del jefe derrotado (15 nov 2026): más grande y con su dibujo en la placa del frente (18 nov: sin sol detrás). */
 .foe-win .lead { margin: 2px 0 6px; }
 .foe-win .chest-row { margin: 26px 0 18px; }
 .chest.foe-chest { width: 150px; height: 150px; }
-.chest.foe-chest::before { inset: -56px; background: repeating-conic-gradient(var(--fc-ray, #ffd75a) 0 10deg, transparent 10deg 22deg); }
-.foe-fenix .chest.foe-chest { --fc-ray: #ffa24a; }
-.foe-ilus .chest.foe-chest { --fc-ray: #9db0ff; }
-.foe-kraken .chest.foe-chest { --fc-ray: #e3a6f0; }
-.foe-medusa .chest.foe-chest { --fc-ray: #9ff3ff; }
 .foe-tip.foe-medusa .fa-bar b { background: linear-gradient(#7feeff, #2fc4dc); box-shadow: inset 0 -2px 0 #1f97ad; }
-.foe-whale .chest.foe-chest { --fc-ray: #a6ecbf; }
 .foe-tip.foe-whale .fa-bar b { background: linear-gradient(#8ee07a, #47c27a); box-shadow: inset 0 -2px 0 #2f9e5c; }
 .foe-tip.foe-kraken .fa-bar b { background: linear-gradient(#d68ae8, #b25fd0); box-shadow: inset 0 -2px 0 #8a3fae; }
 .foe-tip.foe-ilus .fa-bar b { background: linear-gradient(#7f97ff, #4f6cff); box-shadow: inset 0 -2px 0 #3349d6; }
-.chest.foe-chest .fc-emb { position: absolute; left: 50%; top: 68%; width: 22%; aspect-ratio: 1; translate: -50% -50%; display: grid; place-items: center; }
-.chest.foe-chest .fc-emb svg { width: 100%; height: 100%; overflow: visible; }
-.chest-row.open .chest.foe-chest .fc-emb { animation: fc-emb 1.6s ease-in-out infinite; }
-@keyframes fc-emb { 50% { translate: -50% calc(-50% - 4px); scale: 1.1; } }
-@media (max-height: 640px) { .chest.foe-chest { width: 110px; height: 110px; } .foe-win .chest-row { margin: 14px 0 10px; } }
+@media (max-height: 640px) { .chest.foe-chest { width: 135px; height: 135px; } .foe-win .chest-row { margin: 14px 0 10px; } }
 .chest-row:not(.open) .loot-it { animation: none; }
 @media (prefers-reduced-motion: reduce) { .chest-row.done .loot-it { animation: none; } }
 .album { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(250px, 100%), 1fr)); gap: 12px 8px; margin-top: 6px; }
@@ -1774,7 +1811,7 @@ html:not(.dev-on) .dev-pill { display: none; }
 }
 
 /* ---------- Colección (tienda temporal) ---------- */
-.col-btn .rn { position: absolute; bottom: -7px; left: 50%; translate: -50% 0; min-width: 22px; padding: 0 6px 1px; border-radius: 9px; background: #8a5cf0; border: 2px solid var(--ink); color: #fff; font: 400 13px 'Lilita One'; line-height: 1.3; text-align: center; }
+.col-btn .rn { background: #8a5cf0; }
 /* Arriba: tus fichas en grande y el reloj de cuándo termina. */
 .ctop { display: flex; flex-direction: column; align-items: center; gap: 8px; margin-bottom: 4px; }
 .cbank { position: relative; display: flex; align-items: center; justify-content: center; height: 86px; }
@@ -1855,9 +1892,10 @@ html:not(.dev-on) .dev-pill { display: none; }
 .gift-top .ico { width: 74px; height: 74px; animation: wobble 2.4s ease-in-out infinite; filter: drop-shadow(0 4px 0 #0b062a33); }
 .gift-in { text-align: center; font: 400 22px/1.2 'Lilita One'; letter-spacing: .1em; text-transform: uppercase; }
 .gift-in::placeholder { color: #c4bddd; }
-.gift-box { display: flex; justify-content: center; margin: 46px 0 6px; }
-.gift-box .gbox { width: 104px; height: 104px; animation: wobble 2.4s ease-in-out infinite; }
-.gift-prize.opened .gbox .lid { opacity: 0; }
+.gift-box { display: flex; justify-content: center; margin: 40px 0 0; }
+.gift-box .gbox { width: 150px; height: 150px; }
+.gift-prize .gift-box + .note { margin-top: -6px; }
+.gift-box:has(.gbox[data-k="sphere"]) { margin-bottom: 6px; } /* la esfera va más abajo en su lienzo */
 /* Burbuja de una cosa del tesoro: su dibujo cabe en el círculo (como el icono de las monedas). */
 .loot-bub .lb-pic { position: relative; width: 58px; height: 58px; border-radius: 50%; overflow: hidden; display: grid; place-items: center; background: radial-gradient(circle at 35% 30%, #fff 0 18%, #fffbe8 30%, #fff3c4 70%); border: 2.5px solid var(--ink); box-shadow: inset 0 -4px 0 #f1c75a, 0 3px 0 var(--ink), 0 0 0 5px #ffffff55, 0 0 18px #ffc83d88; }
 .loot-bub .lb-pic > * { flex: none; }
@@ -1870,8 +1908,8 @@ html:not(.dev-on) .dev-pill { display: none; }
 .lp-space .space-prev { position: absolute; inset: 0; width: auto; height: auto; border: 0; border-radius: 50%; }
 .lp-frame .frame-prev { zoom: .2; width: 260px; padding: 0; }
 @media (max-height: 500px) { .gift-top .ico { width: 48px; height: 48px; } }
-/* Acostado: la caja más chica para que Continuar se vea sin desplazar. */
-@media (max-height: 500px) { .gift-box { margin: 30px 0 4px; } .gift-box .gbox { width: 64px; height: 64px; } }
+/* Acostado: la cápsula un poco más chica para que Continuar se vea sin desplazar. */
+@media (max-height: 500px) { .gift-box { margin: 14px 0 0; } .gift-box .gbox { width: 124px; height: 124px; } }
 .ev-btn .ico { width: 88%; height: 88%; }
 .ev-btn .wait { position: absolute; top: -9px; left: 50%; translate: -50% 0; padding: 0 7px 1px; border-radius: 9px; background: var(--ink); border: 2px solid #fff; color: #fff; font: 400 13px 'Lilita One'; line-height: 1.35; white-space: nowrap; }
 .ev-btn.waiting .ico { filter: grayscale(.6); opacity: .75; }
@@ -2598,9 +2636,8 @@ p.met-sale { display: flex; align-items: center; justify-content: center; gap: 6
 .medal.on.m3 { background: linear-gradient(135deg, #f4f7ff, #a9c6e8); } .medal.on.m4 { background: linear-gradient(135deg, #c6f3ff, #6fd3ff 45%, #b98cff); box-shadow: 0 0 6px #7fe3ff; }
 .lg .btn .ico, .lg .mis-prize .ico { width: 16px; height: 16px; }
 /* Misiones (8 nov 2026): un puntito por misión en el botón del mapa y en el cofre (como los de la racha). */
-.mis-btn .rn.pips { position: absolute; bottom: -7px; left: 50%; translate: -50% 0; display: flex; gap: 3px; padding: 3px 5px; border-radius: 9px; background: #2f9e5c; border: 2px solid var(--ink); }
-.pips i, .mis-pips i { display: block; width: 8px; height: 8px; border-radius: 50%; background: #ffffff55; border: 1.5px solid var(--ink); }
-.pips i.on { background: #ffd75a; } .pips i.got { background: #fff; }
+.mis-btn .rn { background: #2f9e5c; }
+.mis-pips i { display: block; width: 8px; height: 8px; border-radius: 50%; background: #ffffff55; border: 1.5px solid var(--ink); }
 .mis-btn.all-done > .ico { opacity: .55; }
 .mis-btn .fi-lock { position: absolute; right: -6px; bottom: -6px; width: 22px; height: 22px; display: grid; place-items: center; border-radius: 50%; background: #2fae6a; border: 2px solid var(--ink); }
 .mis-btn .fi-lock .ico { width: 70%; height: 70%; }
@@ -3157,7 +3194,7 @@ p.met-sale { display: flex; align-items: center; justify-content: center; gap: 6
 .mis-btn.prog { --pc: #5ad68c; }
 .logros-btn.prog { --pc: #ffc83d; }
 .racha-btn.prog { --pc: #ff8a3d; }
-.logros-btn .rn { position: absolute; bottom: -7px; left: 50%; translate: -50% 0; min-width: 22px; padding: 0 6px 1px; border-radius: 9px; background: #d98a10; border: 2px solid var(--ink); color: #fff; font: 400 13px 'Lilita One'; line-height: 1.3; text-align: center; }
+.logros-btn .rn { background: #d98a10; }
 
 /* Festejo de misiones, logros y racha (10 nov 2026): todo se oscurece y al centro una tarjeta con su etiqueta de qué es.
    Va dentro de la pantalla (que aísla sus capas) y el monedero sube encima (.feat-lift) para ver llegar las monedas. */
@@ -3231,6 +3268,7 @@ p.met-sale { display: flex; align-items: center; justify-content: center; gap: 6
 .devmenu .dp-mis { --dpc: #5ad68c; --dpd: #2f9e5c; }
 .devmenu .dp-logro { --dpc: #ffc83d; --dpd: #b97a0a; }
 .devmenu .dp-racha { --dpc: #ff8fb0; --dpd: #d63d6f; }
+.devmenu .dp-carrera { --dpc: #ffc83d; --dpd: #c0571f; }
 /* Logro Apostador (10 nov 2026): su dibujo es la etiqueta ×N de la apuesta. */
 .mis-bet { flex: none; width: 34px; height: 34px; display: grid; place-items: center; }
 .mis-bet .go-bet.dbet { font-size: 14px; rotate: -8deg; }
@@ -3861,10 +3899,8 @@ s.was { text-decoration: line-through 2px #ff5f7e; opacity: .7; margin-right: .2
 .waste.clk-seal::after { content: ''; position: absolute; inset: -6%; z-index: 5; pointer-events: none; border-radius: 12px; background: linear-gradient(135deg, rgba(200,240,255,.55), rgba(160,210,255,.25) 50%, rgba(220,250,255,.5)); border: 3px solid #bfe9ff; box-shadow: 0 0 12px #8fd3ff; }
 .btn.lilac { background: #9a6cf0; color: #fff; box-shadow: inset 0 -5px 0 #7448d0, inset 0 2px 0 #d9c4ff, 0 3px 0 var(--ink); }
 .foe-bar.foe-clock .fb-hp b, .foe-tip.foe-clock .fa-bar b { background: linear-gradient(#cfa8ff, #9a6cf0); box-shadow: inset 0 -2px 0 #7448d0; }
-.foe-clock .chest.foe-chest { --fc-ray: #d9c4ff; }
 .btn.amber { background: #f2b233; color: var(--ink); box-shadow: inset 0 -5px 0 #c98a10, inset 0 2px 0 #ffe08a, 0 3px 0 var(--ink); }
 .foe-bar.foe-wind .fb-hp b, .foe-tip.foe-wind .fa-bar b { background: linear-gradient(#ffe08a, #f2b233); box-shadow: inset 0 -2px 0 #c98a10; }
-.foe-wind .chest.foe-chest { --fc-ray: #ffe08a; }
 /* Viento solar (17 nov 2026): remolino de tres brazos con contorno de tinta (afuera blanco, adentro dorado y al
    revés), brillo al centro, chispas doradas que giran y se cierran, y rayas de viento que entran. */
 .wnd-swirl { position: absolute; z-index: 9700; pointer-events: none; }
@@ -4054,3 +4090,69 @@ s.was { text-decoration: line-through 2px #ff5f7e; opacity: .7; margin-right: .2
 /* Estela de la pelota: chispas de fuego que se apagan. */
 .pong-spark { position: absolute; z-index: 6050; pointer-events: none; border-radius: 50%; background: radial-gradient(circle, #fff6b0 0 25%, #ffb03a 55%, rgba(255, 90, 60, 0) 75%); }
 @media (prefers-reduced-motion: reduce) { .zero-board .card .inner, .orbit-planet svg { animation: none; } }
+
+/* ---------- Carrera de 7 (18 nov 2026; race.js y openRace en main.js) ---------- */
+/* Botón del mapa: anillo con los escalones y abajo el número (como logros); esperando, arriba lo que falta. */
+.race-btn.prog { --pc: #4aa8de; }
+.race-btn .rn { background: #2f86c0; }
+.race-btn.waiting .tl { background: #6e66a3; }
+/* Carriles (el usuario: renglones sencillos, como logros; no botones): lugar, avatar, nombre, 6 escalones y la bandera
+   de meta con la nave, y las estrellas. Van en orden de lugar y se reacomodan. La nave va de 0 (salida) a 7 (meta). */
+.race-win .rc-lead { margin: 0 0 8px; }
+.rc-lanes { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.rc-lane { position: relative; display: grid; grid-template-columns: 20px 34px 56px 1fr 40px; align-items: center; gap: 6px; padding: 3px 8px 3px 6px; border-radius: 12px; background: #fff; border: 2px solid #e3d3b5; transition: opacity 400ms, filter 400ms, background 400ms, border-color 400ms; }
+/* El tuyo, del color del fondo de tu avatar (contorno y fondo clarito); los viajeros, todos iguales. */
+.rc-lane.me { z-index: 2; background: color-mix(in srgb, var(--lc) 18%, #fff); border-color: var(--lc); }
+.rc-n { font: 400 15px 'Lilita One'; color: #8a7fae; text-align: center; }
+.rc-lane:nth-child(1) .rc-n { color: #e89a17; } .rc-lane:nth-child(2) .rc-n { color: #8c9ab3; } .rc-lane:nth-child(3) .rc-n { color: #c0743a; }
+.rc-av { display: grid; place-items: center; }
+.rc-av .avatar { --k: .6; border-width: 2px; }
+.rc-name { font: 400 15px/1.1 'Lilita One'; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rc-track { position: relative; height: 26px; }
+.rc-track::before { content: ''; position: absolute; left: 11px; right: 11px; top: 50%; border-top: 2.5px dashed #d9ccb0; }
+.rc-track i { position: absolute; top: 50%; left: calc(var(--j) / 7 * (100% - 22px) + 11px); width: 9px; height: 9px; margin: -4.5px 0 0 -4.5px; border-radius: 50%; background: #fff; border: 2px solid #b9ac8f; transition: background 300ms, border-color 300ms; }
+.rc-track i.on { background: #ffc83d; border-color: var(--ink); }
+.rc-goal { position: absolute; top: 50%; right: -4px; width: 22px; height: 22px; margin-top: -14px; }
+.rc-goal .ico { width: 100%; height: 100%; }
+.rc-ship { position: absolute; z-index: 1; top: 50%; left: calc(var(--s) / 7 * (100% - 22px) - 2px); width: 26px; height: 26px; margin-top: -13px; transition: left 550ms cubic-bezier(.3, 1.35, .5, 1); }
+.rc-ship .ico { width: 100%; height: 100%; rotate: 55deg; }
+.rc-st { display: flex; align-items: center; justify-content: flex-end; gap: 2px; font: 400 15px 'Lilita One'; }
+.rc-st .ico { width: 16px; height: 16px; }
+.rc-lane.out { opacity: .5; filter: grayscale(.85); }
+.rc-lane.crash .rc-ship { animation: rc-crash 750ms ease-in forwards; }
+@keyframes rc-crash { 20% { transform: translateY(-5px) rotate(-30deg); } 40% { transform: rotate(25deg); } 100% { transform: translate(8px, 9px) rotate(210deg) scale(.8); } }
+.rc-lane.me.pop { animation: rc-pop 500ms ease-out; }
+@keyframes rc-pop { 40% { scale: 1.04; } }
+/* Premios por lugar (antes de empezar): el cofre de su metal con su lugar y abajo lo que trae. */
+/* 18 nov 2026 (el usuario): cofre a la izquierda, lo que trae a la derecha y el lugar en la esquina del cuadro. */
+.rc-prizes { list-style: none; padding: 0; margin: 14px 0 0; display: grid; grid-template-columns: 1fr 1fr; gap: 12px 10px; }
+.rc-prize { position: relative; display: flex; align-items: center; gap: 8px; padding: 8px 8px 8px 10px; border-radius: 14px; background: #fff; border: 2px solid #e3d3b5; text-align: left; }
+.rc-prize.p1 { background: linear-gradient(170deg, #fff8e0, #ffe8a8); border-color: #ffc83d; }
+.rc-pchest { flex: none; display: grid; }
+.rc-pchest > .ico { width: 48px; height: 48px; filter: drop-shadow(0 3px 0 #0b062a26); }
+.rc-prize.p1 .rc-pchest > .ico { animation: wobble 2.4s ease-in-out infinite; }
+.rc-pl { position: absolute; left: -8px; top: -10px; z-index: 1; padding: 0 8px 1px; border-radius: 99px; border: 2px solid var(--ink); background: #ffc83d; font: 400 13px/1.3 'Lilita One'; }
+.p2 .rc-pl { background: #e4ebf5; } .p3 .rc-pl { background: #eaa565; } .p4 .rc-pl { background: #d77a5c; color: #fff; }
+.rc-chips { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; gap: 2px 8px; }
+.rc-chip { display: inline-flex; align-items: center; gap: 2px; font: 400 13px 'Lilita One'; }
+.rc-chip .ico, .rc-chip .coin { width: 16px; height: 16px; }
+/* Cofre del final (segunda ventana, igual que «¡Mundo completado!», side-win); chico si te caíste. */
+.race-prize .chest.foe-chest.small { width: 110px; height: 110px; }
+@media (max-width: 420px) {
+  .rc-prize { gap: 6px; padding: 7px 6px 7px 8px; }
+  .rc-pchest > .ico { width: 40px; height: 40px; }
+  .rc-lane { grid-template-columns: 16px 30px 48px 1fr 34px; gap: 4px; padding-inline: 4px 6px; }
+  .rc-name { font-size: 14px; }
+  .rc-av .avatar { --k: .54; }
+}
+@media (max-height: 500px) {
+  .rc-lanes { gap: 2px; }
+  .rc-lane { padding-block: 0; }
+  .rc-av .avatar { --k: .5; }
+  .race-win .rc-lead { margin-bottom: 4px; }
+  .rc-prizes { margin-top: 6px; }
+  /* Acostado: los 4 en un renglón, más chicos; si no cabe, la ventana se desplaza. */
+  .rc-prizes { grid-template-columns: repeat(4, 1fr); gap: 10px 8px; margin-top: 10px; }
+  .rc-prize { padding: 5px 6px 5px 8px; gap: 6px; }
+  .rc-pchest > .ico { width: 36px; height: 36px; }
+}

@@ -5907,7 +5907,7 @@ export class Game {
       wild && bub(icon('wild'), wild),
       undo && bub(icon('undo'), undo),
       col && bub(icon(col.ico), col.n),
-      ev && res.items?.length && bub(icon('gift'), res.items.length),
+      ev && res.items?.length && bub(icon('capsula'), res.items.length),
       ...Object.entries(res.helps || {}).map(([k, n]) => bub(icon(HELPS[k].ico), n)),
     ].filter(Boolean);
     const note = ev ? (res.repeat ? '<p class="note">Ya tenías los exclusivos de este planeta: te tocan ayudas.</p>' : '')

@@ -17,6 +17,7 @@ import { ITEMS, SECTIONS, owns, lockedUntil } from './shop.js';
 import { PASS_MAX, SECRET_MAX, secretGoal, passGoal, passPrize, secretPrize, passCount, secretCount } from './passport.js';
 import { meteor, nextShowers, metItems, MET_FROM, STAR_FROM, metPrizes, SHOWERS, NEW_RAINS } from './meteor.js';
 import { BET_STEPS, BET_BOSS_FEE, BET_FEE, maxBet, RESCUE_WEEK, RESCUE_COINS, RESCUE_ITEMS, ticketCost, TICKET_PRICE, foeBeatPrize } from './economy.js';
+import { race, raceOn, raceStart, raceWin, raceLose, RACE_STEPS } from './race.js';
 import { KINDS, TREASURE, makeLot, makeCode, rewardName, lotText, usedHere, lotNonces } from './codes.js';
 // Darte los exclusivos del pasaporte (kind 'pase') o de los secretos ('secreto'), sin cobrar sus premios.
 function passGive(kind) {
@@ -658,7 +659,29 @@ function rescueSub() {
   return `${log.length}/${RESCUE_WEEK} esta semana${hoy ? ' · hoy ya vino' : log.length >= RESCUE_WEEK ? ' · llena' : ' · lista'}`;
 }
 
-export function openDevMenu({ onGallery, onPlanets, onFestivals, onGoLevel, onRefresh, onRescue, card }) {
+// Carrera de 7 en dev: ganar un escalón o acomodar el final para quedar en el lugar n.
+function devRaceWin(n) {
+  if (!raceOn()) raceStart();
+  race().lv = save.next;
+  raceWin(save.next, n);
+  devOnPrize('carrera');
+}
+function devRaceEnd(place) {
+  const r = raceStart();
+  const me = place === 1 ? 3 : 2;
+  r.step = r.seen = RACE_STEPS - 1;
+  r.stars = Array(RACE_STEPS - 1).fill(me);
+  // Los primeros place-1 viajeros llegan con 21★; uno llega con poquitas; los demás se caen en algún escalón.
+  r.bots.forEach((b, i) => {
+    if (i < place - 1) Object.assign(b, { fall: RACE_STEPS, stars: Array(RACE_STEPS).fill(3) });
+    else if (i === place - 1) Object.assign(b, { fall: RACE_STEPS, stars: Array(RACE_STEPS).fill(1) });
+    else b.fall = 2 + i;
+  });
+  devRaceWin(me);
+}
+let devOnPrize = () => {};
+export function openDevMenu({ onGallery, onPlanets, onFestivals, onGoLevel, onRefresh, onRescue, onPrize, card }) {
+  devOnPrize = onPrize;
   const w = Math.min(Math.floor(save.next / LEVELS_PER_WORLD), save.open);
   const r = Math.floor(w / REGION);
   const evNow = ev(), colNow = col();
@@ -901,7 +924,7 @@ export function openDevMenu({ onGallery, onPlanets, onFestivals, onGoLevel, onRe
       } },
       // En pruebas, empezar de cero también vuelve a enseñar los avisos de desbloqueo (el Reiniciar de Ajustes no).
     ] },
-    // Misiones del día, logros y racha (10 nov 2026): un solo grupo con su parte cada uno, de su color (como sus
+    // Misiones del día, logros, racha y carrera de 7 (10 nov 2026): un solo grupo con su parte cada uno, de su color (como sus
     // tarjetas de festejo), y arriba "Premios mezclados" para ver los festejos juntos.
     { t: 'Misiones, logros y racha', items: [
       { l: 'Premios mezclados', cls: 'gold', title: 'Siguiente premio de racha, una misión y un logro: para ver sus festejos juntos', fn: () => devDo([devStreakNext, devMisOne, devAchievementOne], onRefresh) },
@@ -930,6 +953,17 @@ export function openDevMenu({ onGallery, onPlanets, onFestivals, onGoLevel, onRe
       { k: 'logro', h: 'Logros', ico: 'trophy', sub: `${ACHIEVEMENTS.reduce((n, l) => n + achievementGot(l), 0)} medallas`, items: [
         { l: 'Completar uno', title: 'Uno al azar llega a su siguiente medalla y al cerrar se cobra su premio', fn: () => devDo([devAchievementOne], onRefresh) },
         { l: 'Subir todos un escalón', fn: () => { const st = (save.stats ||= {}); for (const l of ACHIEVEMENTS) { const k = l.best ? `${l.k}Best` : l.k; st[k] = Math.max(st[k] || 0, l.steps.find((n) => n > (st[k] || 0)) || st[k]); } persist(); onRefresh(); } },
+      ] },
+      // Carrera de 7 (18 nov 2026): cada momento sin jugar los 7 niveles (estos sí dan su premio).
+      { k: 'carrera', h: 'Carrera de 7', ico: 'carrera', sub: race()?.on ? `escalón ${race().step}/${RACE_STEPS}${race().out ? ' · te caíste' : race().done ? ' · terminada' : ''}` : 'sin carrera', items: [
+        { l: 'Ver la carrera', cls: 'gold', fn: () => onPrize('carrera') },
+        // 18 nov 2026 (pedido del usuario): volver a ver la ventana «¡Nueva: Carrera de 7!» del nivel 61.
+        { l: 'Ver el aviso de bienvenida', title: 'La ventana «¡Nueva: Carrera de 7!» con sus reglas: sale al volver al mapa', fn: () => { if (save.intro) delete save.intro.carrera; persist(); onRefresh(); } },
+        { l: 'Empezar', fn: () => (raceStart(), onPrize('carrera')) },
+        ...[3, 2, 1].map((n) => ({ l: `Ganar escalón ${n}★`, title: 'Cuenta como si ganaras el siguiente nivel al primer intento (no avanza el camino)', fn: () => devRaceWin(n) })),
+        { l: 'Perder', title: 'Te caes: cofre chico por los escalones que llevabas', fn: () => { if (!raceOn()) raceStart(); race().lv = save.next; raceLose(save.next); onPrize('carrera'); } },
+        ...[1, 2, 3, 4].map((n) => ({ l: `Terminar ${n}.º`, title: 'Te deja en el escalón 6 con los viajeros acomodados para ese lugar y gana el 7', fn: () => devRaceEnd(n) })),
+        { l: 'Sin espera', title: 'Se puede empezar otra ya', fn: () => { if (race()) race().next = 0; persist(); onRefresh(); } },
       ] },
       // Pasaporte y secretos (11 nov 2026): sumar lo que falta para el siguiente sello o premio (se festeja al volver al
       // mapa) y darte sus exclusivos sin cobrarlos. Van al final del grupo (Premios mezclados no los incluye).
@@ -1027,6 +1061,22 @@ export function openDevMenu({ onGallery, onPlanets, onFestivals, onGoLevel, onRe
       { l: 'Ver la nave', cls: 'gold', title: 'Llega la nave con sus 4 cápsulas (sí te da el premio)', fn: onRescue },
       { l: 'Quedarme sin boletos ni monedas', title: 'Boletos y monedas en 0, el regalo de boletos sin listo y la nave lista: llega sola en el mapa', fn: () => ((save.tickets = 0), (save.coins = 0), (save.ticketAt = Date.now()), (save.rescues = []), (save.run = null), persist(), onRefresh()) },
       { l: 'Lista otra vez', title: 'Que pueda volver a llegar (borra las veces de esta semana)', fn: () => ((save.rescues = []), delete save.rescueAt, persist(), onRefresh()) },
+    ] },
+    // Cofres y cápsulas 3D (18 nov 2026): solo para verlos abrirse; no dan nada.
+    { t: 'Cofres y cápsulas', sub: 'solo se ven, no dan nada', items: [
+      { l: 'Cofre oro', cls: 'gold', title: 'Cofre del planeta con 30/30 estrellas', fn: () => onPrize('oro') },
+      { l: 'Cofre plata', title: 'Cofre del planeta con 27+ estrellas', fn: () => onPrize('plata') },
+      { l: 'Cofre bronce', title: 'Cofre del planeta con 23+ estrellas', fn: () => onPrize('bronce') },
+      { l: 'Cofre cobre', title: 'Cofre del planeta con pocas estrellas', fn: () => onPrize('sello') },
+      ...[1, 2, 3, 4].map((n) => ({ l: `Cofre de carrera ${n}.º`, title: 'La ventana del premio al terminar la carrera de 7 en ese lugar', fn: () => onPrize(`carrera-${n}`) })),
+      { l: 'Cofre de carrera (te caíste)', title: 'El cofre chico de cobre por los escalones', fn: () => onPrize('carrera-0') },
+      { l: 'Cofre de jefe', title: 'Cofre del jefe derrotado (Kraken), de su color y con su dibujo', fn: () => onPrize('jefe') },
+      // 18 nov 2026 (pedido del usuario): cada ventana donde sale una cápsula.
+      ...[['met', 'meteoritos'], ['star', 'estrellas'], ['comet', 'cometas'], ['aurora', 'aurora'], ['crystal', 'cristales']].map(([k, n]) => ({ l: `Píldora: ${n}`, title: 'El exclusivo que trae esa lluvia', fn: () => onPrize(`pildora-${k}`) })),
+      { l: 'Píldora: código', title: 'Un exclusivo de un código de regalo', fn: () => onPrize('codigo') },
+      { l: 'Píldora: código (monedas)', title: 'Un código de regalo de monedas', fn: () => onPrize('codigo-monedas') },
+      { l: 'Esfera: evento del mes', title: 'Al completar un planeta del evento del mes', fn: () => onPrize('esfera') },
+      { l: 'Esfera: festividad', title: 'Al completar un planeta de una festividad', fn: () => onPrize('esfera-fiesta') },
     ] },
     { t: 'Globos y burbujas', sub: ['globo', 'burbuja'].map(popTxt).join(' · '), items: [
       { l: 'A 1 globo del comodín', fn: () => popNear('globo') },

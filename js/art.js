@@ -24,6 +24,14 @@ export function tshape(d, base, shade, inside = '', sw = 2, off = [-1.4, -2.2]) 
   const id = 'ts' + uid++;
   return `<clipPath id="${id}"><path d="${d}"/></clipPath><g clip-path="url(#${id})"><path d="${d}" fill="${shade}"/><path d="${d}" fill="${base}" transform="translate(${off[0]} ${off[1]})"/>${inside}</g><path d="${d}" fill="none" stroke="${K}" stroke-width="${sw}" stroke-linejoin="round"/>`;
 }
+// Cofre planeta en 2D (18 nov 2026); m, md: el metal de sus correas, aros y candado (la C que escogió el usuario).
+const chest2D = (m, md) => tshape('M3 17h26v9a2.5 2.5 0 0 1-2.5 2.5h-21A2.5 2.5 0 0 1 3 26z', '#2b4fa8', '#1f3a80', '<circle cx="5.8" cy="21" r="1" fill="#fff"/><circle cx="16" cy="26.4" r="1" fill="#fff"/><circle cx="26.4" cy="21.6" r="1" fill="#fff"/>')
+    + tshape('M3 17v-3.5A6.5 6.5 0 0 1 9.5 7h13a6.5 6.5 0 0 1 6.5 6.5V17z', '#3a63c4', '#2b4fa8', '<path d="M9 10.6q7-2.6 14 0" stroke="#7fa0ec" stroke-width="1.6" fill="none" stroke-linecap="round"/><circle cx="16" cy="13.6" r=".9" fill="#fff"/>')
+    + tshape('M3 17v-3.5a6.5 6.5 0 0 1 2.6-5.2V17zM29 17v-3.5a6.5 6.5 0 0 0-2.6-5.2V17z', m, md, '', 1.4)
+    + tshape('M3 25.6h26v.4a2.5 2.5 0 0 1-2.5 2.5h-21A2.5 2.5 0 0 1 3 26z', m, md, '', 1.6)
+    + tshape('M7.6 7.3h4.4v21.2H7.6zM20 7.3h4.4v21.2H20z', m, md, '', 1.6)
+    + tshape('M12.2 13.2h7.6v8h-7.6z', m, md, '<circle cx="16" cy="17.2" r="2" fill="#ff9c2b"/>', 1.6)
+    + `<path d="M16 7V3.8" stroke="${K}" stroke-width="1.6"/><circle cx="16" cy="3.2" r="1.7" fill="#ff5f7e" stroke="${K}" stroke-width="1.2"/>`;
 const svg = (inner, cls = '', vb = 32) => `<svg class="ico ${cls}" viewBox="0 0 ${vb} ${vb}" aria-hidden="true">${inner}</svg>`;
 const glyph = (d, w = 5, color = K) => `<path d="${d}" fill="none" stroke="${color}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"/>`;
 
@@ -336,6 +344,29 @@ const ICONS = {
     + tshape('M3.5 8.5a3 3 0 0 1 3-3h15a3 3 0 0 1 3 3V27h-21z', '#ff9c3d', '#e2753a', '<path d="M3.5 23h21" stroke="#c95f2a" stroke-width="2"/>')
     + `<rect x="6.5" y="10" width="15" height="9" rx="1.6" fill="#fff" stroke="${K}" stroke-width="1.8"/><path d="M11.5 10v9M16.5 10v9" stroke="${K}" stroke-width="1.3"/>`
     + `<circle cx="9" cy="14.5" r="1.6" fill="#a37bff"/><circle cx="14" cy="14.5" r="1.6" fill="#a37bff"/><circle cx="19" cy="14.5" r="1.6" fill="#a37bff"/>`,
+  // Premios (18 nov 2026): cofre planeta (monedas y ayudas), píldora de gemas (regalo chico) y esfera de gemas
+  // (regalo grande). Al abrirse son 3D (prizes3d.js); estos son sus iconos chicos.
+  // Carrera de 7 (18 nov 2026): podio de oro, plata y bronce con la bandera de meta.
+  carrera: () => `<path d="M16 14.5V2.6" stroke="${K}" stroke-width="1.8" stroke-linecap="round"/>`
+    + tshape('M16 3h8.5v6.6H16z', '#ffffff', '#e3dcf2', `<path d="M16 3h2.8v2.2H16zM21.6 3h2.9v2.2h-2.9zM18.8 5.2h2.8v2.2h-2.8zM16 7.4h2.8v2.2H16zM21.6 7.4h2.9v2.2h-2.9z" fill="${K}"/>`, 1.5)
+    + tshape('M3 19h9v9H3z', '#e4ebf5', '#a9b4c8', '', 2) + tshape('M20 21h9v7h-9z', '#eaa565', '#b8743a', '', 2)
+    + tshape('M11.5 14.5h9V28h-9z', '#ffc83d', '#ec9a17', '<path d="M14.6 19l1.8-1.2v6.4" stroke="#fff" stroke-width="1.7" fill="none" stroke-linecap="round" stroke-linejoin="round"/>', 2),
+  cofrePlaneta: () => chest2D('#ffc83d', '#ec9a17'),
+  // Carrera de 7 (18 nov 2026): el mismo cofre con el metal de cada lugar.
+  cofreOro: () => chest2D('#ffc83d', '#ec9a17'),
+  cofrePlata: () => chest2D('#e4ebf5', '#a9b4c8'),
+  cofreBronce: () => chest2D('#eaa565', '#b8743a'),
+  cofreCobre: () => chest2D('#d77a5c', '#a8543a'),
+  // Meta de la carrera: bandera a cuadros.
+  meta: () => `<path d="M7 4v25" stroke="${K}" stroke-width="3.2" stroke-linecap="round"/>`
+    + tshape('M8.5 5h17v12h-17z', '#ffffff', '#e3dcf2', `<path d="M8.5 5h4.25v4H8.5zM17 5h4.25v4H17zM12.75 9H17v4h-4.25zM21.25 9h4.25v4h-4.25zM8.5 13h4.25v4H8.5zM17 13h4.25v4H17z" fill="${K}"/>`, 2),
+  capsula: () => tshape('M16 9.5H9.5a6.5 6.5 0 0 0 0 13H16z', '#3b3f8f', '#2c2f70', '<path d="M5.8 13.6q1.5-2.6 4-2.9" stroke="#fff" stroke-width="1.4" fill="none" stroke-linecap="round" opacity=".7"/>')
+    + tshape('M16 9.5h6.5a6.5 6.5 0 0 1 0 13H16z', '#3b3f8f', '#2c2f70')
+    + tshape('M11 8.5h3v15h-3zM18 8.5h3v15h-3z', '#ffc83d', '#ec9a17', '', 1.6)
+    + tshape(CIRCLE(6.6, 16, 2.1), '#ff5f7e', '#d63d5f', '', 1.3) + tshape(CIRCLE(25.4, 16, 2.1), '#5fc7e8', '#2f86c0', '', 1.3),
+  esfera: () => tshape(CIRCLE(16, 16.5, 12), '#3b3f8f', '#2c2f70', '<path d="M8.5 11.5q2.5-4 7-5" stroke="#fff" stroke-width="1.6" fill="none" stroke-linecap="round" opacity=".7"/>')
+    + tshape('M3.5 14.5h25v4h-25z', '#ffc83d', '#ec9a17', '', 1.6)
+    + [[9, 16.5, '#ff5f7e'], [16, 16.5, '#7dea8c'], [23, 16.5, '#b47dff'], [16, 8.6, '#5fc7e8'], [11, 23.5, '#ff9c2b'], [21, 23.5, '#5fc7e8']].map(([x, y, c]) => tshape(CIRCLE(x, y, 1.9), c, '#00000033', '', 1.2)).join(''),
   gift: () => tshape('M6 14h20v12.5a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2z', '#47c27a', '#2f9e5c')
     + tshape('M4 10a1.5 1.5 0 0 1 1.5-1.5h21A1.5 1.5 0 0 1 28 10v4.2H4z', '#5ad68c', '#3fb873')
     + tshape('M14.3 8.5h3.4v20h-3.4z', '#ffc83d', '#ec9a17', '', 1.6)
@@ -1037,26 +1068,9 @@ let placeColors = () => ['#86cf5c', '#4d9f45', '#2f86c8'];
 export const setPlaceColors = (fn) => (placeColors = fn);
 export const placeIcon = (place, cls = '') => miniPlanet(placeColors(place), `place ${cls}`);
 
-// ---------- Cofre del jefe y caja sorpresa (cuerpo y tapa por separado, para abrirlos) ----------
-// Ambos usan el mismo lienzo de 64×64: la tapa se pone encima del cuerpo y se anima sola.
+// ---------- Nave de rescate (cuerpo, tapa y paracaídas por separado, para abrirlos) ----------
+// Lienzo de 64×64. El cofre y la caja de antes ahora son 3D (prizes3d.js).
 const big = (inner, cls) => `<svg class="ico ${cls}" viewBox="0 0 64 64" aria-hidden="true">${inner}</svg>`;
-export const chestBody = (cls = '') => big(
-  tshape('M8 30h48v22a4 4 0 0 1-4 4H12a4 4 0 0 1-4-4z', '#c07a3e', '#94572a', '<path d="M8 40h48" stroke="#94572a" stroke-width="2"/>', 3)
-  + tshape('M15 30h7v26h-7zM42 30h7v26h-7z', '#ffc83d', '#ec9a17', '', 2.4)
-  + tshape('M27 30h10v10a5 5 0 0 1-10 0z', '#ffc83d', '#ec9a17', `<circle cx="32" cy="35" r="2" fill="${K}"/>`, 2.4), cls);
-export const chestLid = (cls = '') => big(
-  tshape('M8 31v-7a11 11 0 0 1 11-11h26a11 11 0 0 1 11 11v7z', '#d58a4a', '#a8652f', '<path d="M12 18q20-6 40 0" stroke="#e8a66a" stroke-width="3" fill="none"/>', 3)
-  + tshape('M15 14.5h7V31h-7zM42 14.5h7V31h-7z', '#ffc83d', '#ec9a17', '', 2.4), cls);
-// Cofre del jefe de constelación (15 nov 2026): más grande y del color del jefe (c = [color, sombra, brillo]), con
-// esquinas doradas, una placa al frente (ahí va el dibujo del jefe, encima en HTML) y una gema en la tapa.
-export const foeChestBody = (c, cls = '') => big(
-  tshape('M6 30h52v23a5 5 0 0 1-5 5H11a5 5 0 0 1-5-5z', c[0], c[1], `<path d="M6 41h52" stroke="${c[1]}" stroke-width="2"/><path d="M10 34h44" stroke="${c[2]}" stroke-width="2" stroke-linecap="round" opacity=".7"/>`, 3)
-  + tshape('M13 30h5v28h-5zM46 30h5v28h-5z', '#ffc83d', '#ec9a17', '', 2.2)
-  + tshape('M23 31h18v15a9 9 0 0 1-18 0z', '#ffc83d', '#ec9a17', '<path d="M26 34h12v11a6 6 0 0 1-12 0z" fill="#fff1c2"/>', 2.4), cls);
-export const foeChestLid = (c, cls = '') => big(
-  tshape('M6 31v-8a12 12 0 0 1 12-12h28a12 12 0 0 1 12 12v8z', c[0], c[1], `<path d="M11 17q21-7 42 0" stroke="${c[2]}" stroke-width="3" fill="none" stroke-linecap="round"/>`, 3)
-  + tshape('M13 31V12.5h5V31zM46 31V12.5h5V31z', '#ffc83d', '#ec9a17', '', 2.2)
-  + tshape('M32 4l6 7-6 7-6-7z', '#ff5f7e', '#d63d5f', '<path d="M29.5 9.5 32 7" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/>', 2.2), cls);
 // Nave de rescate (11 nov 2026): cápsula con paracaídas, en 3 piezas encimadas (mismo viewBox) para animarlas aparte:
 // el paracaídas (con sus cuerdas) se va volando, la tapa salta y el cuerpo se queda. c = [color, sombra].
 export const capChute = (c, cls = '') => big(
@@ -1069,10 +1083,3 @@ export const capLid = (c, cls = '') => big(
   tshape('M17 46v-2a15 13 0 0 1 30 0v2z', c[0], c[1], '', 2.6)
   + tshape('M27 39a5 5 0 0 1 10 0v1H27z', '#9be7ff', '#5fc7e8', '<path d="M29 37.5l2-1.5" stroke="#fff" stroke-width="1.4" stroke-linecap="round"/>', 2)
   + tshape('M15 45h34v3H15z', '#ffc83d', '#ec9a17', '', 2), cls);
-export const boxBody = (cls = '') => big(
-  tshape('M10 30h44v24a3 3 0 0 1-3 3H13a3 3 0 0 1-3-3z', '#8a5cf0', '#6c3fd4', '<path d="M14 36h36" stroke="#a785ff" stroke-width="3"/>', 3)
-  + tshape('M28 30h8v27h-8z', '#ffc83d', '#ec9a17', '', 2.4), cls);
-export const boxLid = (cls = '') => big(
-  tshape('M32 20c-4-9-15-11-15-5 0 4 7 5 15 5zM32 20c4-9 15-11 15-5 0 4-7 5-15 5z', '#ffc83d', '#ec9a17', '', 2.6)
-  + tshape('M6 22a2 2 0 0 1 2-2h48a2 2 0 0 1 2 2v9H6z', '#a785ff', '#8a5cf0', '', 3)
-  + tshape('M28 20h8v11h-8z', '#ffc83d', '#ec9a17', '', 2.4), cls);

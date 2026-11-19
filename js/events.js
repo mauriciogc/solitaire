@@ -20,7 +20,8 @@ import { EVENT_LEVELS, EVENT_PER_PLANET, EVENT_PLANETS, FESTIVAL_LEVELS, FESTIVA
 // del mes 131; festividades cada 50 desde el 181 (de un día 181, leyendas 231, México 281, América 331; Europa 381 y
 // Oriente 431).
 // 14 nov 2026 (pedido del usuario): fiesta5 = fiestas de Europa, fiesta6 = fiestas de Oriente.
-export const UNLOCK = { racha: 30, mis: 40, logros: 50, col: 90, mes: 130, col2: 140, fiesta: 180, col3: 190, fiesta2: 230, fiesta3: 280, fiesta4: 330, fiesta5: 380, fiesta6: 430 };
+// carrera: Carrera de 7 (18 nov 2026), desde el nivel 61.
+export const UNLOCK = { racha: 30, mis: 40, logros: 50, carrera: 60, col: 90, mes: 130, col2: 140, fiesta: 180, col3: 190, fiesta2: 230, fiesta3: 280, fiesta4: 330, fiesta5: 380, fiesta6: 430 };
 export const isOn = (k) => (save.next || 0) >= UNLOCK[k];
 
 // En estrellas (7 nov 2026: llegaba a 30 victorias sin problema porque contaba cualquiera): cada victoria suma sus

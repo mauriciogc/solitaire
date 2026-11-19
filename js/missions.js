@@ -193,6 +193,10 @@ export const ACHIEVEMENTS = [
   // de apuestas seguidas (betrow) con cualquier ×N.
   ...[[2, [20, 40, 80, 150, 300]], [3, [15, 30, 60, 120, 240]], [5, [10, 20, 40, 80, 160]], [7, [8, 15, 30, 60, 120]], [10, [5, 10, 20, 40, 80]], [13, [4, 8, 15, 30, 60]], [15, [3, 6, 12, 25, 50]]].map(([m, steps]) =>
     ({ id: `bet${m}`, k: `bet${m}`, bet: m, raw: true, name: `Apostador ×${m}`, ico: 'coin', steps, text: (n) => `Gana ${fmtN(n)} niveles apostando ×${m}` })),
+  // Carrera de 7 (18 nov 2026, el usuario): carreras que llegas a la meta y las que ganas en 1.er lugar. Salen al abrirse
+  // la carrera (nivel 61, UNLOCK.carrera en events.js). Metas tal cual.
+  { id: 'races', k: 'races', raw: true, from: 60, name: 'Corredor espacial', ico: 'carrera', steps: [3, 10, 30, 75, 150], text: (n) => `Llega a la meta en ${fmtN(n)} carrera${n > 1 ? 's' : ''} de 7` },
+  { id: 'raceWins', k: 'raceWins', raw: true, from: 60, name: 'Campeón de carreras', ico: 'crown', steps: [1, 5, 15, 40, 100], text: (n) => `Queda en 1.er lugar en ${fmtN(n)} carrera${n > 1 ? 's' : ''} de 7` },
   { id: 'secrets', k: 'secret', name: 'Explorador secreto', ico: 'starSecret', steps: [5, 25, 100, 250, 520], text: (n) => `Gana ${n} niveles secretos`, title: 'explorador_secreto' },
 ];
 // 8 nov 2026: los logros pedían poco (el usuario: "no están tan complicados"): todas las metas ×LOGRO_UP desde el
@@ -251,7 +255,7 @@ export function achievementClaim(id) {
 // ---------- Lo que cuenta ----------
 // stats: { win, stars, three, cards, streak, noundo, noextra, nowild, left, rewards, boss, coins, locks, packs, ice,
 // bombs, comets, turbo, halves, coincards, ghosts, cham, event, secret, burbuja, globo, meteoro, arrows, doubles, lives,
-// curtains, brooms, boss3, pure }. Los "best" (streak, left) se
+// curtains, brooms, boss3, pure, races, raceWins }. Los "best" (streak, left) se
 // comparan; lo demás se suma. Devuelve las misiones que se acaban de completar (para avisar).
 // Los que guardan el mejor (no se suman): racha de un nivel y cartas en el mazo.
 // achieve = false: nivel ya ganado que se repite (12 nov 2026, el usuario): los logros solo cuentan niveles únicos, así
