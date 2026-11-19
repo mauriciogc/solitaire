@@ -352,6 +352,11 @@ const ICONS = {
     + tshape('M3 19h9v9H3z', '#e4ebf5', '#a9b4c8', '', 2) + tshape('M20 21h9v7h-9z', '#eaa565', '#b8743a', '', 2)
     + tshape('M11.5 14.5h9V28h-9z', '#ffc83d', '#ec9a17', '<path d="M14.6 19l1.8-1.2v6.4" stroke="#fff" stroke-width="1.7" fill="none" stroke-linecap="round" stroke-linejoin="round"/>', 2),
   cofrePlaneta: () => chest2D('#ffc83d', '#ec9a17'),
+  // Construir (18 nov 2026): el bloque (lo que se gasta en las estaciones; turquesa para no confundirse con estrellas ni
+  // monedas), el martillo del botón y la estación (aviso y logros).
+  bloque: () => `<path d="M16 3.5 28.5 10v13.5L16 29.5 3.5 23.5V10z" fill="${K}" stroke="${K}" stroke-width="2.4" stroke-linejoin="round"/><path d="M16 4.8 27.2 10.5 16 16.2 4.8 10.5z" fill="#8ff5e4"/><path d="M4.8 10.5 16 16.2v12L4.8 22.7z" fill="#3cc8b4"/><path d="M27.2 10.5v12.2L16 28.2v-12z" fill="#249a8c"/><path d="${starPath(16, 10.4, 3.6, 1.6)}" fill="#fff6c9"/><path d="M7 13.2v6.4" stroke="#b8fff2" stroke-width="1.6" stroke-linecap="round"/>`,
+  martillo: () => `<g transform="rotate(-38 16 16)">${tshape('M14.3 12h3.4v17.5a1.7 1.7 0 0 1-3.4 0z', '#c98a4b', '#9a6233', '', 2)}${tshape('M7 5.5h15.5a3 3 0 0 1 3 3V12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V7.5a2 2 0 0 1 2-2z', '#a9b4d0', '#7d88a8', '<path d="M8 8h13" stroke="#e6ecff" stroke-width="1.6" stroke-linecap="round"/>', 2.2)}</g>`,
+  estacionBase: () => `${tshape('M3 23.5h26l-2.5 4.5h-21z', '#d9dbe8', '#a9abc4', '', 2)}${tshape('M7 23.5a8 8 0 0 1 16 0z', '#bfeaff', '#7ec8f0', '<path d="M10.5 19.5q2-3.5 5.5-4" stroke="#fff" stroke-width="1.6" fill="none" stroke-linecap="round"/>', 2)}${tshape('M23.5 23.5V12.5h2.4v11z', '#ffffff', '#cfd2e6', '', 1.6)}${tshape('M20 7.5h9.4l-1.6 4.6h-6.2z', '#ffffff', '#cfd2e6', '', 1.8)}${tshape(CIRCLE(13, 9.5, 2.6), '#ffc83d', '#ec9a17', '', 1.6)}`,
   // Carrera de 7 (18 nov 2026): el mismo cofre con el metal de cada lugar.
   cofreOro: () => chest2D('#ffc83d', '#ec9a17'),
   cofrePlata: () => chest2D('#e4ebf5', '#a9b4c8'),

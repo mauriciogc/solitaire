@@ -182,6 +182,12 @@ export const ITEMS = {
     { k: 'cazafantasmas', name: 'Cazafantasmas', ev: 'logro', logro: 1 },
     { k: 'cumplidor', name: 'Cumplidor', ev: 'logro', logro: 1 },
     { k: 'explorador_secreto', name: 'Explorador secreto', ev: 'logro', logro: 1 },
+    // Construir (18 nov 2026): uno por cada constelación con sus 10 estaciones, en orden (BUILD_TITLES en station.js).
+    { k: 'albanil_estelar', name: 'Albañil estelar', ev: 'construir', obra: 1 },
+    { k: 'constructor_lunar', name: 'Constructor lunar', ev: 'construir', obra: 1 },
+    { k: 'ingeniero_espacial', name: 'Ingeniero espacial', ev: 'construir', obra: 1 },
+    { k: 'arquitecto_galactico', name: 'Arquitecto galáctico', ev: 'construir', obra: 1 },
+    { k: 'urbanista_cosmos', name: 'Urbanista del cosmos', ev: 'construir', obra: 1 },
     { k: 'explorador', name: 'Explorador', price: 250 },
     { k: 'cazacometas', name: 'Cazacometas', price: 400 },
     { k: 'maestro', name: 'Maestro de picos', price: 600, need: 5 },
@@ -530,7 +536,7 @@ export const SELL = 0.7;
 export const sellPrice = (sec, it) => round5((it.ev ? EX_VALUE[sec] || 1500 : it.price) * SELL);
 // ¿Se puede vender? Lo que tienes y no es gratis ni de código de regalo.
 // Los del pasaporte y los secretos tampoco: no vuelven a salir.
-export const sellable = (sec, it) => !!it && owns(sec, it.k) && it.price !== 0 && !it.code && !it.logro && !it.pase && !it.secreto;
+export const sellable = (sec, it) => !!it && owns(sec, it.k) && it.price !== 0 && !it.code && !it.logro && !it.pase && !it.secreto && !it.obra;
 // Vender: lo quitas de lo tuyo (si lo traías puesto, vuelves al de siempre), te dan las monedas y regresa a su tienda
 // (los exclusivos, a su evento).
 export function sell(sec, k) {
@@ -581,6 +587,7 @@ const TITLE_ICO = { novato: 'star', explorador: 'flag', cazacometas: 'rocket', m
 for (const s of SETS) TITLE_ICO[s.title[0]] = s.title[2];
 Object.assign(TITLE_ICO, festivalTitleIcons(FESTIVALS));
 TITLE_ICO.cazasecretos = 'starSecret';
+Object.assign(TITLE_ICO, { albanil_estelar: 'bloque', constructor_lunar: 'martillo', ingeniero_espacial: 'estacionBase', arquitecto_galactico: 'estacionBase', urbanista_cosmos: 'estacionBase' });
 TITLE_ICO.trotamundos = 'pasaporte';
 TITLE_ICO.pidedeseo = 'starFall';
 TITLE_ICO.luzdelnorte = 'aurora';

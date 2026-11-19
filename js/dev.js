@@ -12,6 +12,7 @@ import { FOE_ICON, ART } from './game.js';
 import { icon, miniPlanet } from './art.js';
 import { tableHTML, BIOMES, biomeKey } from './biomes.js';
 import { peek } from './galaxy.js';
+import { STATION_STYLES, PIECES as ST_PIECES, PIECE_COST, built, styleOf, startBuild } from './station.js';
 import { EVENTS, COLLECTIONS, FESTIVALS, festivalDays } from './events.js';
 import { ITEMS, SECTIONS, owns, lockedUntil } from './shop.js';
 import { PASS_MAX, SECRET_MAX, secretGoal, passGoal, passPrize, secretPrize, passCount, secretCount } from './passport.js';
@@ -721,7 +722,7 @@ export function openDevMenu({ onGallery, onPlanets, onFestivals, onGoLevel, onRe
   const MONTHS_ABBR = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
   const evs = Object.entries(EVENTS).filter(([, e]) => e.ready).sort((a, b) => a[0] - b[0]);
   const fis = FESTIVALS.filter((f) => f.ready), y = new Date().getFullYear();
-  const origin = (it) => (!it.ev ? 'tienda' : it.code ? 'codigo' : it.met ? 'meteoro' : it.star ? 'estrellas' : it.rain ? it.ev : it.logro ? 'logro' : it.pase ? 'pasaporte' : it.secreto ? 'secretos' : FESTIVALS.some((f) => f.key === it.ev) ? 'fiesta' : Object.values(EVENTS).some((e) => e.key === it.ev) ? 'mes' : 'col');
+  const origin = (it) => (!it.ev ? 'tienda' : it.code ? 'codigo' : it.met ? 'meteoro' : it.star ? 'estrellas' : it.rain ? it.ev : it.logro ? 'logro' : it.pase ? 'pasaporte' : it.secreto ? 'secretos' : it.obra ? 'construir' : FESTIVALS.some((f) => f.key === it.ev) ? 'fiesta' : Object.values(EVENTS).some((e) => e.key === it.ev) ? 'mes' : 'col');
   const ORIGINS_DEV = [['tienda', 'De la tienda', 'bag'], ['col', 'Colecciones', 'concha'], ['mes', 'Evento del mes', 'planet'], ['fiesta', 'Festividades', 'flame'], ['codigo', 'Códigos de regalo', 'cofre'], ['meteoro', 'Lluvia de meteoritos', 'meteoro'], ['estrellas', 'Lluvia de estrellas', 'starFall'], ['cometas', 'Lluvia de cometas', 'cometaLluvia'], ['aurora', 'Aurora', 'aurora'], ['cristales', 'Lluvia de cristales', 'cristal'], ['logro', 'Logros', 'trophy'], ['pasaporte', 'Pasaporte', 'pasaporte'], ['secretos', 'Niveles secretos', 'starSecret']];
   const cnt = (sec, o) => ITEMS[sec].filter((it) => origin(it) === o).length;
   const mine = (sec, o) => ITEMS[sec].filter((it) => origin(it) === o && owns(sec, it.k)).length;
@@ -1078,6 +1079,28 @@ export function openDevMenu({ onGallery, onPlanets, onFestivals, onGoLevel, onRe
       { l: 'Esfera: evento del mes', title: 'Al completar un planeta del evento del mes', fn: () => onPrize('esfera') },
       { l: 'Esfera: festividad', title: 'Al completar un planeta de una festividad', fn: () => onPrize('esfera-fiesta') },
     ] },
+    // Construir con estrellas (18 nov 2026): bloques, estaciones y la vista previa de los 4 estilos.
+    (() => {
+      const ds = save.devStation || {}, set = (patch) => ((save.devStation = { n: 5, ...ds, ...patch }), persist(), onRefresh());
+      const bset = (fn) => () => { startBuild(); save.build ||= {}; fn(); persist(); onRefresh(); };
+      const done = Object.values(save.build || {}).filter((n) => n >= ST_PIECES).length;
+      return { t: 'Construir con estrellas', sub: `nivel ${UNLOCK.construir + 1} · ${save.bloques == null ? 'sin abrir' : `${save.bloques} bloques`} · ${done} estacion${done === 1 ? '' : 'es'} terminada${done === 1 ? '' : 's'}`, items: [], parts: [
+        { k: 'build', h: 'Estaciones', ico: 'estacionBase', sub: `este mundo (${w + 1}): ${built(w)} de ${ST_PIECES} piezas, estilo ${STATION_STYLES[styleOf(w)].name}`, items: [
+          { l: 'Darme 20 bloques', cls: 'gold', fn: bset(() => (save.bloques += 20)) },
+          { l: 'Quedarme sin bloques', title: 'Para ver la pieza en gris y el aviso de cuántos faltan', fn: bset(() => (save.bloques = 0)) },
+          { l: 'A 1 pieza de terminar este mundo', title: 'Le faltará la última pieza y te alcanzan los bloques: al comprarla sale el cofre', fn: bset(() => { save.build[w] = ST_PIECES - 1; save.bloques = Math.max(save.bloques, PIECE_COST[ST_PIECES - 1]); }) },
+          { l: 'A 1 pieza de terminar la constelación', title: 'Las otras 9 estaciones de la constelación quedan listas y a esta le falta una: al comprarla salen el cofre y la cápsula con el título', fn: bset(() => { for (let k = r * 10; k < r * 10 + 10; k++) save.build[k] = ST_PIECES; save.build[w] = ST_PIECES - 1; save.bloques = Math.max(save.bloques, PIECE_COST[ST_PIECES - 1]); }) },
+          { l: 'Borrar estaciones', fn: bset(() => (save.build = {})) },
+          { l: 'Ver el aviso de primera vez', title: 'Vuelve a salir «¡Nuevo: Construir!» al volver al mapa y te da otra vez un bloque por cada estrella', fn: () => { if (save.intro) delete save.intro.construir; delete save.bloques; save.build = {}; persist(); onRefresh(); } },
+        ] },
+        { k: 'preview', h: 'Vista previa de estilos', ico: 'martillo', sub: ds.style ? `${STATION_STYLES[ds.style].name} en todos · ${ds.n ?? 5} de 5 piezas${ds.play ? ' · se arma al entrar' : ''}` : 'apagada: cada constelación con su estilo', items: [
+          ...Object.entries(STATION_STYLES).map(([k, x]) => ({ l: x.name, cls: ds.style === k ? 'gold' : '', title: x.pieces.join(', '), fn: () => set({ style: k }) })),
+          ds.style && { l: 'Apagar la vista previa', fn: () => set({ style: null }) },
+          ...(ds.style ? [1, 2, 3, 4, 5].map((n) => ({ l: `${n} pieza${n > 1 ? 's' : ''}`, cls: (ds.n ?? 5) === n ? 'gold' : '', title: STATION_STYLES[ds.style].pieces.slice(0, n).join(', '), fn: () => set({ n }) })) : []),
+          ds.style && { l: `Armarse al entrar: ${ds.play ? 'sí' : 'no'}`, title: 'Al tocar un planeta, sus piezas caen del cielo una por una', fn: () => set({ play: !ds.play }) },
+        ] },
+      ] };
+    })(),
     { t: 'Globos y burbujas', sub: ['globo', 'burbuja'].map(popTxt).join(' · '), items: [
       { l: 'A 1 globo del comodín', fn: () => popNear('globo') },
       { l: 'A 1 burbuja de las monedas', title: 'Las burbujas salen de los premios al ganar cualquier nivel y del cofre del jefe', fn: () => popNear('burbuja') },

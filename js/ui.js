@@ -370,6 +370,10 @@ export function betLoseHTML(m, paid, when = 'si abandonas') {
 export const streakWarnHTML = (n, pend, when) =>
   `<div class="racha-warn"><span class="rw-ico">${icon('rocket')}<b class="outl">${n}</b></span><p><b>¡Pierdes tu racha de ${n} estrellas!</b> ${when}, vuelve a 0${pend ? ' y se pierden los premios sin reclamar' : ''}.</p></div>`;
 
+// Aviso de que te sales de la carrera de 7 (rendirse o abandonar un nivel de la carrera): la bandera tiembla.
+export const raceWarnHTML = (step, total, when) =>
+  `<div class="racha-warn race-warn"><span class="rw-ico">${icon('carrera')}<b class="outl">${step}</b></span><p><b>¡Terminas tu carrera de ${total}!</b> ${when}, te quedas en el escalón ${step} de ${total} y solo te llevas el cofre chico.</p></div>`;
+
 // Globos y burbujas truenados (save.pops). Se acumulan entre niveles. A los 100 globos regala 1 comodín y la cuenta
 // vuelve a 0; el siguiente pide 200, luego 400, 800 y vuelve a 100 (siempre 1 comodín). Las burbujas de premios (las de
 // cada victoria y las del cofre) igual pero desde 20 (20, 40… 640 y otra vez 20) y dan siempre 60 monedas (provisional:

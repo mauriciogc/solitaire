@@ -1,5 +1,5 @@
 import { save, persist } from './storage.js';
-import { openModal, HEADS, toast, confetti, updateCoins, money, starsHTML, reduced, buzz, sparkle, wait, spendFromWallet, flyToWallet, balloons, lootBubbles, streakWarnHTML, betLoseHTML, shownCoins, popPrize } from './ui.js';
+import { openModal, HEADS, toast, confetti, updateCoins, money, starsHTML, reduced, buzz, sparkle, wait, spendFromWallet, flyToWallet, balloons, lootBubbles, streakWarnHTML, raceWarnHTML, betLoseHTML, shownCoins, popPrize } from './ui.js';
 import { worldInfo, packGroups, MECH_NAMES, LEVELS_PER_WORLD, scrollStrip, scrollSpan, scrollCover, SCROLL_VIEW, SCROLL_SHOW, stripGap, NEB_SLOTS, GRAV_SHOWN, W, H } from './levels.js';
 import * as E from './engine.js';
 import { price, EV_MARKUP, round5, HELPS, buyable } from './economy.js';
@@ -472,7 +472,7 @@ const marks = (c) =>
   // su cara y en su reverso, como el turbo.)
   '';
 
-// opts: onExit, onAbandon(gaveUp), onReplay, rachaRisk() → { n, pend } | null, onWin(stars) → { coins, tickets, prev, gold, wild, chest }, onDone(res), onSave(state)?,
+// opts: onExit, onAbandon(gaveUp), onReplay, rachaRisk() → { n, pend } | null, raceRisk() → { step, total } | null, onWin(stars) → { coins, tickets, prev, gold, wild, chest }, onDone(res), onSave(state)?,
 //       resume (estado guardado), saved (la partida se guarda al salir), tutorial, dev
 //       meteor: la lluvia que caía al empezar (SHOWERS de meteor.js: la ficha de monedas lleva su ×N y su reloj)
 //       event: { ico, table } = nivel del evento del mes (table = la mesa de su temática) (sin estrellas; perder gasta su boleto y no se reintenta)
@@ -5819,15 +5819,14 @@ export class Game {
   endLevel() {
     if (this.done || this.modalOpen) return;
     this.modalOpen = true;
-    const left = this.cards.filter((c) => !c.removed && !this.inDoor(c)).length;
     const cost = this.extraCost(), short = save.coins < cost;
     const fan = [0, 1, 2, 3, 4].map((k) => `<div class="card mini-back" style="left:${6 + k * 9}px;rotate:${-14 + k * 7}deg"></div>`).join('');
     const m = openModal({
       title: '¿Finalizar el nivel?',
       color: 'pink',
-      // El cuadro grande es el botón de comprar +5: dice el precio y se toca para gastar (gris si no alcanza).
-      body: `<button class="offer buy press"${short ? ' disabled' : ''}><div class="fan">${fan}</div><div><b>Comprar +5 cartas</b><span>Quedan ${left} carta${left === 1 ? '' : 's'} en el tablero. ${this.opts.event ? 'Te pueden salvar el nivel.' : 'Con +5 siempre te llevas al menos 1 estrella.'}</span>
-          <em class="cost${short ? ' short' : ''}">${coin()} ${cost || 'gratis'}${short ? ' · te faltan monedas' : ''}</em></div></button>${this.opts.event || this.opts.free ? '' : betLoseHTML(this.opts.bet, this.opts.betPaid, 'si te rindes')}${this.streakWarn(true)}`,
+      // El cuadro es el botón de comprar +5: el precio al lado del título y se toca para gastar (gris si no alcanza).
+      // 18 nov 2026 (el usuario): compacto, sin la descripción.
+      body: `<button class="offer buy press"${short ? ' disabled' : ''}><div class="fan">${fan}</div><div><b>Comprar +5 cartas</b><em class="cost${short ? ' short' : ''}">${coin()} ${cost || 'gratis'}${short ? ' · te faltan' : ''}</em></div></button>${this.opts.event || this.opts.free ? '' : betLoseHTML(this.opts.bet, this.opts.betPaid, 'si te rindes')}${this.streakWarn(true)}`,
       onClose: () => (this.modalOpen = false),
       buttons: [
         { label: 'Rendirse', cls: 'pink grow', onClick: () => (this.trackEnd(false), this.opts.onAbandon(true)) },
@@ -5843,11 +5842,11 @@ export class Game {
 
 
   // Rendirse o abandonar (nivel nuevo o repetido) reinicia la racha: se avisa solo si hay algo que perder.
+  // Igual con la carrera de 7 (18 nov 2026, el usuario): si el nivel es de la carrera, también se avisa que se acaba.
   streakWarn(end) {
-    const r = this.opts.rachaRisk?.();
-    if (!r) return '';
+    const r = this.opts.rachaRisk?.(), c = this.opts.raceRisk?.();
     const when = !end ? 'Si abandonas' : 'Si te rindes';
-    return streakWarnHTML(r.n, r.pend, when);
+    return (r ? streakWarnHTML(r.n, r.pend, when) : '') + (c ? raceWarnHTML(c.step, c.total, when) : '');
   }
 
   // Misiones y logros (missions.js): lo que se hizo en el nivel, al terminarlo (no en la galería del modo dev).

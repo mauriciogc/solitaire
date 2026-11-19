@@ -5,6 +5,7 @@ import { BIOMES, LOCKED, biomeKey } from './biomes.js';
 import { INK, icon, star } from './art.js';
 import { makeTraveler, mapCovered } from './travelers.js';
 import { prizeModel } from './prizes3d.js';
+import { stationFor, stationTint, makeStation, showPieces, puff } from './station.js';
 
 const K = INK;
 const TAU = Math.PI * 2;
@@ -54,6 +55,13 @@ function merge(g) {
 }
 
 const texCache = {};
+// Formas de los planetas, compartidas entre mapas (18 nov 2026: al girar el teléfono el mapa se vuelve a armar y antes
+// recalculaba el ruido de cada planeta; ahora solo la primera vez). Se quedan las últimas GEO_KEEP; al limpiar el mapa
+// no se tiran (userData.shared).
+const GEO = new Map(), GEO_KEEP = 48;
+const freeGeo = (g) => !g?.userData.shared && g?.dispose();
+// Tamaño de la estación del polo; con zoom se achica si no cabe arriba del planeta (en horizontal hay poco espacio).
+const STATION_S = 0.6;
 
 // Modo dev: ver con colores los planetas cerrados (sección Planetas del menú dev).
 export const peek = { on: false };
@@ -81,7 +89,6 @@ export class Galaxy {
     const grad = new THREE.DataTexture(new Uint8Array([70, 70, 70, 255, 160, 160, 160, 255, 255, 255, 255, 255]), 3, 1, THREE.RGBAFormat);
     grad.minFilter = grad.magFilter = THREE.NearestFilter; grad.needsUpdate = true;
     this.toon = (o) => new THREE.MeshToonMaterial({ gradientMap: grad, ...o });
-    this.geo = {};
     this.layout();
     this.objs = worlds.map((wd, i) => this.makePlanet(wd, this.spots[i], i));
     this.buildTrail();
@@ -157,7 +164,7 @@ export class Galaxy {
   }
   planetGeo(t, seed, detail) {
     const ck = `${seed}:${detail}:${t.sea}`;
-    if (this.geo[ck]) return this.geo[ck];
+    if (GEO.has(ck)) { const hit = GEO.get(ck); GEO.delete(ck); GEO.set(ck, hit); return hit; }
     let g = merge(new THREE.IcosahedronGeometry(1, detail));
     const pos = g.attributes.position, hg = new Float32Array(pos.count), land = [], v = new THREE.Vector3();
     for (let i = 0; i < pos.count; i++) {
@@ -170,7 +177,10 @@ export class Galaxy {
     }
     g.setAttribute('hgt', new THREE.BufferAttribute(hg, 1));
     g.computeVertexNormals();
-    return (this.geo[ck] = { g, land });
+    g.userData.shared = true;
+    GEO.set(ck, { g, land });
+    if (GEO.size > GEO_KEEP) GEO.delete(GEO.keys().next().value);
+    return GEO.get(ck);
   }
   // Franjas de color por píxel con la altura interpolada: bordes curvos.
   bandMat(t, alive) {
@@ -295,7 +305,10 @@ export class Galaxy {
     const outline = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ color: t.outline, side: THREE.BackSide }));
     outline.scale.setScalar(1.035);
     spin.add(body, outline);
-    if (!locked) this.props(spin, t, seed, land, g, alive);
+    // Estación de bloques en el polo norte (construir, station.js): en los planetas abiertos. Solo se arma si ya tiene
+    // piezas (o en la vista previa); las demás, al comprar la primera (addStation). Cerca del polo no hay árboles.
+    const sto = !locked && !wd.theme && !wd.gift && (wd.state === 'done' || wd.state === 'current') && stationFor(wd);
+    if (!locked) this.props(spin, t, seed, sto ? land.filter((i) => g.attributes.position.getY(i) / Math.hypot(g.attributes.position.getX(i), g.attributes.position.getY(i), g.attributes.position.getZ(i)) < 0.86) : land, g, alive);
     if (t.volcano) {
       const v = new THREE.Group(), dir = new THREE.Vector3(-0.3, 0.9, -0.3).normalize();
       const cone = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.2, 0.22, 12), this.toon({ color: '#4a3b52' })); cone.position.y = 0.1;
@@ -309,7 +322,20 @@ export class Galaxy {
     if (rr() < 0.3) ring = this.ring(holder, locked ? '#a7a3b8' : t.bands.at(-2)[1], rr());
     if (t.glow) holder.add(new THREE.Mesh(new THREE.SphereGeometry(1.16, 32, 24), this.glowMat(t.glow)));
     this.scene.add(holder);
-    return { wd, t, seed, holder, spin, body, outline, orbit, ring, path: null, base: { x: bx, y: by, s: br }, sq: undefined, vel: 0, wig: 0, wv: 0, ph: i * 1.3 };
+    const o = { wd, t, seed, holder, spin, body, outline, orbit, ring, sto, station: null, path: null, base: { x: bx, y: by, s: br }, sq: undefined, vel: 0, wig: 0, wv: 0, ph: i * 1.3 };
+    if (sto && (sto.n > 0 || sto.play)) this.addStation(o);
+    return o;
+  }
+  // Arma la estación del planeta (con las piezas que ya tiene). Devuelve la estación (o null si ese planeta no lleva).
+  addStation(o) {
+    if (o.station || !o.sto) return o.station;
+    const st = (o.station = makeStation(o.sto.style, (p) => this.toon(p), stationTint(o.t), o.sto.n >= 5 && !o.sto.play));
+    st.sto = o.sto;
+    showPieces(st, o.sto.n);
+    st.obj.scale.setScalar(this.sel === o && this.mode === 'planet' ? this.stationFit(o) : STATION_S);
+    this.orient(st.obj, new THREE.Vector3(0, 1, 0), this.rAt(o.t, o.seed, new THREE.Vector3(0, 1, 0)) - 0.02);
+    o.spin.add(st.obj);
+    return st;
   }
 
   // ---------- guía entre planetas: una línea continua y suave por detrás (lo recorrido brilla) ----------
@@ -572,6 +598,7 @@ export class Galaxy {
     });
     this.anim = { from, to, t0: performance.now(), dur: instant || reduced() ? 0 : 1250, dir: 1 };
     this.on.mode?.('planet', o.wd.w);
+    if (o.station?.sto.play) { showPieces(o.station, 0); setTimeout(() => !this.dead && this.sel === o && this.playStation(o), this.anim.dur + 300); }
   }
   zoomOut() {
     if (!this.sel || this.anim) return Promise.resolve();
@@ -579,6 +606,10 @@ export class Galaxy {
     this.anim = { from: this.snap(), to: this.objs.map((o) => ({ x: o.base.x, y: o.base.y, s: o.base.s, ry: o.spin.rotation.y, rx: 0.35 })), t0: performance.now(), dur: reduced() ? 0 : 1050, dir: -1 };
     this.on.mode?.('galaxy');
     return new Promise((ok) => (this.anim.done = ok));
+  }
+  stationFit(o) {
+    const top = this.zoom.y + this.zoom.s * this.rAt(o.t, o.seed, new THREE.Vector3(0, 1, 0)), room = this.hh * 0.94 - top;
+    return Math.max(0.2, Math.min(STATION_S, room / (this.zoom.s * o.station.h)));
   }
   applyAnim(now) {
     const a = this.anim, k = a.dur ? Math.min(1, (now - a.t0) / a.dur) : 1, e = ease(k);
@@ -588,6 +619,7 @@ export class Galaxy {
       o.holder.scale.setScalar(f.s + (t.s - f.s) * e);
       o.spin.rotation.y = f.ry + (t.ry - f.ry) * e; o.spin.rotation.x = f.rx + (t.rx - f.rx) * e;
     });
+    if (this.sel?.station) { const f = this.stationFit(this.sel); this.sel.station.obj.scale.setScalar(a.dir > 0 ? STATION_S + (f - STATION_S) * e : f + (STATION_S - f) * e); }
     const sel = this.sel, show = a.dir > 0 ? Math.max(0, (k - 0.55) / 0.45) : Math.max(0, 1 - k / 0.35);
     if (sel?.path) { sel.path.visible = show > 0; for (const sp of sel.sprites) if (!sp.userData.hidden) sp.scale.set(sp.userData.s[0] * show, sp.userData.s[1] * show, 1); sel.avatar?.scale.setScalar(sel.avatar.userData.s * show); }
     this.pinShow = a.dir > 0 ? Math.max(0, 1 - k / 0.3) : Math.max(0, (k - 0.7) / 0.3);
@@ -604,6 +636,38 @@ export class Galaxy {
     }
   }
 
+  // Modo dev: la estación se arma pieza por pieza (cae del cielo, se aplasta al llegar y levanta polvito).
+  async playStation(o) {
+    for (let i = 0; i < o.station.sto.n; i++) {
+      await this.dropPiece(o, i);
+      await new Promise((ok) => setTimeout(ok, 180));
+    }
+    o.wv = 5;
+  }
+  // Una pieza cae del cielo a su lugar, se aplasta al llegar y levanta polvito (al comprarla o en la vista previa).
+  async dropPiece(o, i) {
+    const st = o.station, p = st.pieces[i], y0 = p.userData.y0;
+    p.visible = true;
+    await this.tween(420, (k) => { p.position.y = y0 + 1.6 * (1 - k * k); p.scale.setScalar(0.6 + 0.4 * k); });
+    const dust = puff(st.obj);
+    navigator.vibrate?.(12);
+    await this.tween(320, (k) => { const b = Math.sin(k * Math.PI) * (1 - k); p.scale.set(1 + b * 0.5, 1 - b * 0.6, 1 + b * 0.5); dust(k); });
+    p.position.y = y0; p.scale.setScalar(1);
+  }
+  // La estación terminada: brinca toda junta y el planeta se sacude.
+  async cheerStation(o) {
+    const g = o.station.obj, s0 = g.scale.x;
+    o.wv = 7;
+    await this.tween(520, (k) => { const b = Math.sin(k * Math.PI * 2) * (1 - k); g.scale.set(s0 * (1 + b * 0.25), s0 * (1 + b * 0.4), s0 * (1 + b * 0.25)); });
+    g.scale.setScalar(s0);
+  }
+  // Dónde se ve la estación en la pantalla (para que los bloques vuelen hacia ella).
+  stationPoint(o) {
+    const v = new THREE.Vector3(0, o.station.h * 0.4, 0);
+    o.station.obj.localToWorld(v);
+    const r = this.renderer.domElement.getBoundingClientRect(), q = v.project(this.camera);
+    return { x: r.left + ((q.x + 1) / 2) * r.width, y: r.top + ((1 - q.y) / 2) * r.height };
+  }
   // ---------- animaciones de avance (las pide main.js) ----------
   tween(dur, fn) {
     if (reduced()) { fn(1); return Promise.resolve(); }
@@ -754,7 +818,7 @@ export class Galaxy {
       if (W / H < 1 !== this.port) return requestAnimationFrame(() => !this.dead && this.on.relayout?.());
       this.renderer.setSize(W, H, false);
       this.fit(W, H);
-      if (this.sel && this.mode === 'planet' && !this.anim) { const p = this.sel.holder; p.position.set(this.camera.position.x + this.zoom.x, this.camera.position.y + this.zoom.y, 0); p.scale.setScalar(this.zoom.s); }
+      if (this.sel && this.mode === 'planet' && !this.anim) { const p = this.sel.holder; p.position.set(this.camera.position.x + this.zoom.x, this.camera.position.y + this.zoom.y, 0); p.scale.setScalar(this.zoom.s); this.sel.station?.obj.scale.setScalar(this.stationFit(this.sel)); }
     };
     // Se mide el propio mapa (no la ventana): al girar el teléfono, iOS avisa del cambio antes de
     // reacomodar la página y el tamaño leído aún era el viejo, así que el dibujo quedaba estirado.
@@ -780,6 +844,7 @@ export class Galaxy {
           o.holder.position.y = o.base.y + Math.sin((now / 1000) * 0.9 + o.ph) * 0.05;
         }
         if (o.orbit && !calm) o.orbit.rotation.y += dt * 0.35;
+        if (o.station && !calm) o.station.tick(now / 1000);
         if (o.sq !== undefined) {
           o.vel += (-180 * o.sq - 9 * o.vel) * dt; o.sq += o.vel * dt;
           const s = o.base.s;
@@ -813,7 +878,7 @@ export class Galaxy {
     cancelAnimationFrame(this.raf);
     document.removeEventListener('visibilitychange', this.onVis);
     this.ro.disconnect();
-    this.scene.traverse((o) => { o.geometry?.dispose(); [].concat(o.material || []).forEach((m) => { m.map?.dispose(); m.dispose(); }); });
+    this.scene.traverse((o) => { freeGeo(o.geometry); [].concat(o.material || []).forEach((m) => { m.map?.dispose(); m.dispose(); }); });
     this.renderer.dispose();
     this.renderer.forceContextLoss();
     this.renderer.domElement.remove();
@@ -842,7 +907,6 @@ export class PlanetView {
     const grad = new THREE.DataTexture(new Uint8Array([70, 70, 70, 255, 160, 160, 160, 255, 255, 255, 255, 255]), 3, 1, THREE.RGBAFormat);
     grad.minFilter = grad.magFilter = THREE.NearestFilter; grad.needsUpdate = true;
     this.toon = (o) => new THREE.MeshToonMaterial({ gradientMap: grad, ...o });
-    this.geo = {};
     const o = (this.o = this.makePlanet({ ...wd, state: 'done', done: 10 }, { u: 0, c: 0, s: 1 }, 0));
     o.holder.position.set(0, 0, 0);
     o.body.geometry = o.outline.geometry = this.planetGeo(o.t, o.seed, 72).g;
@@ -868,7 +932,7 @@ export class PlanetView {
   dispose() {
     this.dead = true;
     cancelAnimationFrame(this.raf);
-    this.scene.traverse((q) => { q.geometry?.dispose(); [].concat(q.material || []).forEach((m) => { m.map?.dispose(); m.dispose(); }); });
+    this.scene.traverse((q) => { freeGeo(q.geometry); [].concat(q.material || []).forEach((m) => { m.map?.dispose(); m.dispose(); }); });
     this.renderer.dispose();
     this.renderer.forceContextLoss();
     this.renderer.domElement.remove();

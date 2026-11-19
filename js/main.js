@@ -4,7 +4,7 @@ import { WORLD_COUNT, LEVELS_PER_WORLD, TOTAL_LEVELS, worldInfo, generateLevel, 
 import { Game, faceHTML, backHTML, TIPS, TABLE_TEXT, MECH_KINDS, ART, slMark, FOE_ICON, FOE_TITLE, FOE_NAME, FOE_BTN } from './game.js';
 import { maxBet, betFee, betSteps, BET_STEPS, HELPS, DAILY_PATH, dailyState, dailyPieces, DAILY_SHIELD_MAX, starsNeeded, TICKET_PRICE, ticketCost, ticketRefund, coinsFor, bossChest, rollChest, CONST_PRIZE, CONST_OPEN, openCost, constStart, openFree, boosted, secretCoins, rollSecret, openSurprise, MET_OFF, metShopPrice, foeBeatPrize, RESCUE_WEEK, RESCUE_COINS, RESCUE_ITEMS } from './economy.js';
 import { track, missions, missionDef, missionDone, missionsAllDone, autoClaim, ACHIEVEMENTS, ACHIEVEMENT_PRIZES, ACHIEVEMENT_MEDAL, ACHIEVEMENT_TOP, achievementGot, achievementProgress, achievementsVisible } from './missions.js';
-import { pauseOffscreen, openModal, toast, updateCoins, money, esc, reduced, wait, flyToWallet, spendFromWallet, sparkle, confetti, starsHTML, warp, buzz, balloons, lootBubbles, floatBubbles, streakWarnHTML, popPrize, popBalloon, countPop, HEADS, betLoseHTML, shownCoins } from './ui.js';
+import { pauseOffscreen, openModal, toast, updateCoins, money, esc, reduced, wait, flyToWallet, spendFromWallet, sparkle, confetti, starsHTML, warp, buzz, balloons, lootBubbles, floatBubbles, streakWarnHTML, raceWarnHTML, popPrize, popBalloon, countPop, HEADS, betLoseHTML, shownCoins } from './ui.js';
 import { icon, iconURL, iconInner, star, coin, miniPlanet, avatarHTML, AVATAR_COLORS, kidOf, KID_SKINS, KID_HAIRS, KID_STYLES, cardBackURL, setDeck, lockIcon, curtainIcon, capChute, capBody, capLid, vineSVG } from './art.js';
 import { GROUPS, SECTIONS, ITEMS, shopItems, groupOf, owns, equipped, equip, buy, item, lockedUntil, titleHTML, titleIcon, sell, sellable, sellPrice } from './shop.js';
 import { BIOMES, biomeKey, EVENT_BIOMES, tableHTML } from './biomes.js';
@@ -20,6 +20,7 @@ import { plinko } from './plinko.js';
 import { mulberry32, hash } from './rng.js';
 import { starCSS } from './starshower.js';
 import { PrizeStage, METALS } from './prizes3d.js';
+import { STATION_STYLES, PIECES, PIECE_COST, BUILD_TITLES, buildOn, styleOf, built, pieceCost, bloques, canBuild, startBuild, earnBloques, buyPiece, pieceThumbs, stationTint } from './station.js';
 import { RACE_STEPS, race, raceOn, raceWaitLeft, raceStart, raceBegin, raceWin, raceLose, raceClose, racePrize, raceLosePrize, botAt, myStars } from './race.js';
 import { PASS_MAX, secretGoal, passFrameOf, passGoal, passPrize, secretPrize, passCount, secretCount, passCSS } from './passport.js';
 // Caras, fondos y marcos de las temáticas de la tienda (themes.js): su CSS se arma de su paleta.
@@ -397,6 +398,8 @@ function showMap({ region, start = null, anim, after = null, unlock = null, paid
     <div class="p-only phud"></div>
     <div class="res">${wallet()}</div>
     <div class="cta"></div>
+    <div class="build-veil" data-a="build-close" hidden></div>
+    <div class="build-tray" hidden></div>
   </div>`);
   let galaxy = null;
   const cta = el.querySelector('.cta'), phud = el.querySelector('.phud');
@@ -413,9 +416,77 @@ function showMap({ region, start = null, anim, after = null, unlock = null, paid
     else go = '<div class="hint-chip">Toca un nivel para repetirlo</div>';
     // Mecánica nueva: botón con su carta junto a Jugar; al tocarlo se despliega el aviso y al tocarlo otra vez se recoge.
     // Brinca hasta que lo lee (o hasta que vio el "Nuevo: …" del tablero).
+    // Construir: el martillo con tus bloques; brinca si te alcanza para la siguiente pieza. Se va al terminar la estación.
+    const bb = buildOn() && save.bloques != null && w <= currentWorld() && built(w) < PIECES
+      ? `<button class="iconbtn tb press build-tog${canBuild(w) ? ' ready' : ''}" data-a="build" aria-label="Construir la estación" title="Construir">${icon('martillo')}<small class="rn">${bloques()}</small></button>` : '';
     cta.classList.remove('mech-open');
     cta.innerHTML = mech ? `<div class="newmech info"><div><b>Aquí aparece: ${MECH_NAMES[mech].toLowerCase()}</b><span>${MECH_TEXT[mech]}</span></div></div>
-      <button class="mech-tog tb press${save.seen[mech] ? ' seen' : ''}" data-a="mech" aria-expanded="false" aria-label="Qué hay de nuevo en este mundo" title="Nuevo en este mundo">${mechCard(mech)}<i>?</i></button>${go}` : go;
+      <button class="mech-tog tb press${save.seen[mech] ? ' seen' : ''}" data-a="mech" aria-expanded="false" aria-label="Qué hay de nuevo en este mundo" title="Nuevo en este mundo">${mechCard(mech)}<i>?</i></button>${bb}${go}` : bb + go;
+  };
+  // ---------- Construir (station.js): la tira de las 5 piezas sube desde abajo, sin ventana; un toque compra ----------
+  const tray = el.querySelector('.build-tray');
+  const paintTray = (w) => {
+    const st = styleOf(w), S = STATION_STYLES[st], n = built(w), cost = pieceCost(w), have = bloques();
+    const pics = pieceThumbs(st, stationTint(BIOMES[biomeKey(worldInfo(w).place)].planet));
+    // 18 nov 2026 (el usuario): como el mazo de ayudas (el cajón morado del juego): cada pieza en su cuadro con su foto
+    // 3D, el nombre en pastilla blanca y abajo su botón (verde con el precio, gris si no alcanza o bloqueada, azul hecha).
+    const slot = (k) => {
+      const st = k < n ? 'done' : k === n ? 'next' : 'locked', short = k === n && have < cost;
+      const btn = st === 'done' ? `<span class="hs-buy bt-done">${icon('check')}</span>`
+        : st === 'next' ? `<button class="hs-buy${short ? ' short' : ''}" data-a="build-buy">${icon('bloque')}${cost}</button>`
+        : `<span class="hs-buy short">${icon('lock')}${PIECE_COST[k]}</span>`;
+      return `<div class="bt-item ${st}${short ? ' short' : ''}"><${st === 'next' ? 'button data-a="build-buy"' : 'div'} class="bt-tile"><img src="${pics[k]}" alt=""><b class="hs-name">${S.pieces[k]}</b></${st === 'next' ? 'button' : 'div'}>${btn}</div>`;
+    };
+    tray.innerHTML = `<div class="hs-head"><b class="outl">${icon('estacionBase')}${S.name}</b><span class="bt-have">${icon('bloque')}<b class="outl">${have}</b></span><button class="hs-x" data-a="build-close" aria-label="Cerrar">${icon('close')}</button></div>
+      <div class="bt-row">${Array.from({ length: PIECES }, (_, k) => slot(k)).join('')}</div>`;
+  };
+  const openBuild = () => {
+    const w = galaxy?.sel?.wd.w;
+    if (w == null || !galaxy.addStation(galaxy.sel)) return;
+    paintTray(w);
+    tray.hidden = false;
+    el.querySelector('.build-veil').hidden = false;
+    el.classList.add('building');
+    requestAnimationFrame(() => tray.classList.add('show'));
+    if (!reduced()) tray.querySelectorAll('.bt-item').forEach((x, i) => x.animate([{ opacity: 0, scale: 0.5 }, { opacity: 1, scale: 1.1, offset: 0.7 }, { opacity: 1, scale: 1 }], { duration: 340, delay: 120 + i * 60, easing: 'ease-out', fill: 'backwards' }));
+  };
+  const closeBuild = () => {
+    if (tray.hidden) return;
+    el.classList.remove('building');
+    tray.classList.remove('show');
+    el.querySelector('.build-veil').hidden = true;
+    setTimeout(() => !tray.classList.contains('show') && (tray.hidden = true), 260);
+  };
+  const buildBuy = async () => {
+    const o = galaxy?.sel, w = o?.wd.w;
+    if (!o || galaxy.busy || !galaxy.addStation(o)) return;
+    const next = tray.querySelector('.bt-item.next'), cost = pieceCost(w);
+    if (!next) return;
+    if (bloques() < cost) {
+      buzz(30);
+      if (!reduced()) next.animate([{ translate: '0 0' }, { translate: '-6px 0' }, { translate: '6px 0' }, { translate: '-4px 0' }, { translate: '0 0' }], { duration: 360 });
+      return;
+    }
+    galaxy.busy = true;
+    const ic = tray.querySelector('.bt-have .ico').getBoundingClientRect();
+    const res = buyPiece(w);
+    track({ pieces: 1, stations: res.done ? 1 : 0 });
+    tray.querySelector('.bt-have b').textContent = bloques();
+    next.classList.add('going');
+    await flyBlocks({ x: ic.left + ic.width / 2, y: ic.top + ic.height / 2 }, galaxy.stationPoint(o), cost);
+    await galaxy.dropPiece(o, res.i);
+    paintTray(w);
+    const got = tray.querySelectorAll('.bt-item')[res.i];
+    if (got && !reduced()) { got.animate([{ scale: 1 }, { scale: 1.25 }, { scale: 1 }], { duration: 360, easing: 'ease-out' }); const q = got.getBoundingClientRect(); sparkle({ x: q.left + q.width / 2, y: q.top + q.height / 2 }, 12); }
+    if (res.done) {
+      await galaxy.cheerStation(o);
+      closeBuild();
+      await openStationPrize(w, res);
+      if (res.title) await openBuildTitle(res);
+    }
+    galaxy.busy = false;
+    paintPlanet(w);
+    if (save.feats?.length) playFeats();
   };
   const paint = () => (galaxy?.mode === 'planet' && galaxy.sel ? paintPlanet(galaxy.sel.wd.w) : paintGalaxyCTA());
   paintGalaxyCTA();
@@ -424,7 +495,10 @@ function showMap({ region, start = null, anim, after = null, unlock = null, paid
     if (galaxy?.busy) return; // mientras se anima un avance, no se toca nada
     if (a === 'up') return galaxy && !galaxy.anim && warp(() => showUniverse({ from: region }), { out: true });
     if (sideAction(a)) return;
-    if (a === 'out') return galaxy?.zoomOut();
+    if (a === 'out') return closeBuild(), galaxy?.zoomOut();
+    if (a === 'build') return tray.hidden ? openBuild() : closeBuild();
+    if (a === 'build-close') return closeBuild();
+    if (a === 'build-buy') return buildBuy();
     if (a === 'mech') {
       const open = cta.classList.toggle('mech-open'), tog = cta.querySelector('.mech-tog');
       tog.setAttribute('aria-expanded', open);
@@ -473,6 +547,7 @@ function showMap({ region, start = null, anim, after = null, unlock = null, paid
         mode: (m, w) => {
           el.classList.toggle('zoomed', m === 'planet');
           current = () => showMap({ region, start: m === 'planet' ? w : null });
+          if (m !== 'planet') closeBuild();
           if (m === 'planet') paintPlanet(w);
           else paintGalaxyCTA();
           // Recorrido: al entrar al mundo 1 se explican los niveles.
@@ -536,6 +611,7 @@ async function celebrateWin(galaxy, a, cta, paint, slide) {
   paint();
   cta.style.opacity = '';
   if (!reduced()) cta.animate([{ scale: 0.4, opacity: 0 }, { scale: 1.08, opacity: 1, offset: 0.6 }, { scale: 1 }], { duration: 420, easing: 'ease-out' });
+  if (a.res.bloques) { await wait(reduced() ? 0 : 450); await flyToBuild(mid, a.res.bloques); }
   // Jefe ganado por primera vez: a la galaxia, a abrir el mundo siguiente (o a decir qué falta).
   if (a.res.chest && a.w + 1 < WORLD_COUNT) {
     await wait(600);
@@ -1119,6 +1195,7 @@ const ROAD_TABLES = [
 function roadItems() {
   const t = streakTheme();
   const evs = [
+    ['construir', UNLOCK.construir, 'Construir', 'estacionBase', 'Cada estrella nueva es un bloque: arma una estación en cada planeta.'],
     ['racha', UNLOCK.racha, t.name, t.ico, 'Gana niveles seguidos, junta estrellas y llévate premios cada día.'],
     ['mis', UNLOCK.mis, 'Misiones del día', 'misiones', 'Cada día 3 misiones con monedas, y un cofre si cumples las 3.'],
     ['logros', UNLOCK.logros, 'Logros', 'trophy', 'Todo suma para siempre: bronce, plata, oro, platino y diamante.'],
@@ -1377,8 +1454,9 @@ const runCounts = (g) => !save.stars[g] && !isSecret(g) && g <= save.next;
 const runLoses = (run) => (run.replay ? !!run.racha : runCounts(run.g));
 const runStreak = (run) => {
   const r = dailyStreak();
-  if (!runLoses(run) || !isOn('racha') || !r.n) return '';
-  return streakWarnHTML(r.n, r.pend.length, 'Si lo abandonas');
+  const c = !run.replay && raceOn() && race().lv === run.g ? raceWarnHTML(race().step, RACE_STEPS, 'Si lo abandonas') : '';
+  if (!runLoses(run) || !isOn('racha') || !r.n) return c;
+  return streakWarnHTML(r.n, r.pend.length, 'Si lo abandonas') + c;
 };
 // chosen: ya escogió la apuesta en su ventana (si no, un nivel nuevo con apuesta abre la ventana primero).
 function enterLevel(g, chosen = false) {
@@ -1773,6 +1851,7 @@ function startLevelNow(g, { resume = false, free = false, anim = 'up', bet = 1, 
     onExit: back,
     // Si la racha está abierta y va en algo, las ventanas de rendirse/abandonar lo dicen.
     rachaRisk: () => ((counts || replay) && isOn('racha') && dailyStreak().n ? { n: dailyStreak().n, pend: dailyStreak().pend.length, isNew: counts } : null),
+    raceRisk: () => (counts && raceOn() && race().lv === g ? { step: race().step, total: RACE_STEPS } : null),
     // gaveUp: se rindió o abandonó (no solo salió de un nivel repetido sin jugar).
     onAbandon: (gaveUp) => {
       if ((counts && gaveUp !== false) || (replay && gaveUp)) streakLose();
@@ -1811,6 +1890,7 @@ function startLevelNow(g, { resume = false, free = false, anim = 'up', bet = 1, 
         const wild = bonus.wild || 0, undo = bonus.undo || 0;
         const tokenCount = colWin(stars, prev, met?.col || 1);
         save.secret[w] = Math.max(prev, stars);
+        const bloq = earnBloques(stars - prev); // construir: cada estrella nueva es un bloque
         save.coins += coins;
         save.wild += wild;
         save.undo += undo;
@@ -1818,7 +1898,7 @@ function startLevelNow(g, { resume = false, free = false, anim = 'up', bet = 1, 
         persist();
         updateCoins();
         // Primera vez con 3 estrellas: la postal del mundo gana el sello secreto (se celebra al continuar).
-        return { coins, tickets: met?.prize?.tickets || 0, prev, wild: wild + (met?.prize?.wild || 0) + (met?.gift === 'wild' ? 1 : 0), undo: undo + (met?.prize?.undo || 0) + (met?.gift === 'undo' ? 1 : 0), helps: giftHelps(met), met, counted: true, first: !prev, racha: dailyStreak, replay: !free, seal: stars >= 3 && prev < 3, col: tokenCount ? { n: tokenCount, ico: col().token } : null };
+        return { bloques: bloq, coins, tickets: met?.prize?.tickets || 0, prev, wild: wild + (met?.prize?.wild || 0) + (met?.gift === 'wild' ? 1 : 0), undo: undo + (met?.prize?.undo || 0) + (met?.gift === 'undo' ? 1 : 0), helps: giftHelps(met), met, counted: true, first: !prev, racha: dailyStreak, replay: !free, seal: stars >= 3 && prev < 3, col: tokenCount ? { n: tokenCount, ico: col().token } : null };
       }
       // En modo dev se puede saltar a cualquier nivel: solo cuenta si ya estaba desbloqueado.
       if (g > save.next) return { coins: 0, tickets: 0, prev: 0, replay: !free };
@@ -1836,6 +1916,7 @@ function startLevelNow(g, { resume = false, free = false, anim = 'up', bet = 1, 
       const gold = w % 10 === 9 ? 0 : bossTk, cgold = w % 10 === 9 ? bossTk : 0;
       const tokenCount = colWin(stars, prev, mult * (met?.col || 1));
       save.stars[g] = Math.max(prev, stars);
+      const bloq = earnBloques(stars - prev); // construir: cada estrella nueva es un bloque
       save.coins += coins;
       save.tickets += tickets;
       save.gold += gold;
@@ -1879,7 +1960,7 @@ function startLevelNow(g, { resume = false, free = false, anim = 'up', bet = 1, 
       updateCoins();
       // Repetir desde la victoria salta el festejo del mapa: no se ofrece si toca abrir el mundo siguiente.
       // Los boletos del premio de la lluvia ya los guardó metWin: aquí solo se enseñan.
-      return { bet: mult, coins, tickets: tickets + (met?.prize?.tickets || 0), prev, gold, cgold, chest, wild: mw + (met?.gift === 'wild' ? 1 : 0), undo: mu + (met?.gift === 'undo' ? 1 : 0), helps: giftHelps(met), met, worldStars: worldStars(w), counted: true, first: !prev, racha: dailyStreak, replay: !free && !chest && !foeChest, foeChest, col: tokenCount ? { n: tokenCount, ico: col().token } : null };
+      return { bloques: bloq, bet: mult, coins, tickets: tickets + (met?.prize?.tickets || 0), prev, gold, cgold, chest, wild: mw + (met?.gift === 'wild' ? 1 : 0), undo: mu + (met?.gift === 'undo' ? 1 : 0), helps: giftHelps(met), met, worldStars: worldStars(w), counted: true, first: !prev, racha: dailyStreak, replay: !free && !chest && !foeChest, foeChest, col: tokenCount ? { n: tokenCount, ico: col().token } : null };
     },
   });
   // El tablero sube y la pantalla anterior se queda atrás.
@@ -1975,6 +2056,7 @@ const ORIGINS = [
   { k: 'logro', name: 'Logros', ico: 'trophy' },
   { k: 'pasaporte', name: 'Pasaporte', ico: 'pasaporte' },
   { k: 'secretos', name: 'Niveles secretos', ico: 'starSecret' },
+  { k: 'construir', name: 'Construir', ico: 'estacionBase' },
 ];
 // De qué evento salió un exclusivo: { g: grupo de ORIGINS, ico, name } (o null si es de la tienda).
 function exFrom(it) {
@@ -1986,6 +2068,7 @@ function exFrom(it) {
   if (it.logro) return { g: 'logro', ico: 'trophy', name: 'Logros' };
   if (it.pase) return { g: 'pasaporte', ico: 'pasaporte', name: 'Pasaporte' };
   if (it.secreto) return { g: 'secretos', ico: 'starSecret', name: 'Niveles secretos' };
+  if (it.obra) return { g: 'construir', ico: 'estacionBase', name: 'Construir' };
   const f = FESTIVALS.find((x) => x.key === it.ev);
   if (f) return { g: 'fiesta', ico: f.ico, name: f.name };
   const e = Object.values(EVENTS).find((x) => x.key === it.ev);
@@ -3683,7 +3766,7 @@ async function notices() {
     if (!(await calm(gen))) return;
     if (rescueDue()) await openRescue();
   }
-  for (const k of ['racha', 'mis', 'logros', 'carrera', 'meteoro', 'col', 'apuesta', 'estrellas', 'mes', 'col2', 'cometas', 'fiesta', 'col3', 'aurora', 'fiesta2', 'cristales', 'fiesta3', 'fiesta4', 'fiesta5', 'fiesta6']) {
+  for (const k of ['construir', 'racha', 'mis', 'logros', 'carrera', 'meteoro', 'col', 'apuesta', 'estrellas', 'mes', 'col2', 'cometas', 'fiesta', 'col3', 'aurora', 'fiesta2', 'cristales', 'fiesta3', 'fiesta4', 'fiesta5', 'fiesta6']) {
     // La lluvia: solo si nunca se ha visto una (quien ya la vio caer no necesita la ventana). La apuesta: nivel 101.
     // Las lluvias nuevas (14 nov 2026), igual: al llegar a su nivel, si todavía no ha visto caer una.
     const rk = RAIN_KEY[k];
@@ -3871,6 +3954,21 @@ const UNLOCK_INFO = {
       ['flag', 'Los ves a la <b>derecha</b>.'],
     ],
   }),
+  // Construir (18 nov 2026): al abrirse te dan un bloque por cada estrella que ya ganaste (startBuild).
+  construir: () => {
+    startBuild();
+    return {
+      title: '¡Nuevo: Construir!', ico: 'estacionBase', color: 'green', hero: icon('estacionBase', 0, 0, 'big'),
+      lead: ulLead(UNLOCK.construir + 1, 'construir', 'Arma una estación en cada planeta.'),
+      rules: [
+        ['bloque', 'Cada <b>estrella nueva</b> que ganes te da un <b>bloque</b>. Tus estrellas no se gastan: siguen abriendo mundos.'],
+        ['martillo', 'Dentro de un planeta toca el <b>martillo</b> y construye sus <b>5 piezas</b>, una tras otra.'],
+        ['cofrePlaneta', 'Estación terminada: un <b>cofre</b> con monedas.'],
+        ['esfera', 'Cada constelación tiene su estilo. Con sus <b>10 estaciones</b>, un <b>título exclusivo</b>.'],
+        ['gift', `Para empezar tienes <b>${bloques()}</b> bloques: uno por cada estrella que ya ganaste.`],
+      ],
+    };
+  },
   carrera: () => ({
     title: '¡Nueva: Carrera de 7!', ico: 'carrera', color: 'blue', hero: icon('carrera', 0, 0, 'big'),
     lead: ulLead(UNLOCK.carrera + 1, 'la carrera de 7', 'Gana 7 seguidos y sube al podio.'),
@@ -3984,7 +4082,7 @@ function evHeroIcons(main, list = Object.keys(EVENTS).map(Number).sort((a, b) =>
   return [at(-1), at(0), at(1)].map((x, k) => icon(x, 0, 0, k === 1 ? 'main' : '')).join('');
 }
 async function openUnlock(k) {
-  const sel = k === 'meteoro' || k === 'estrellas' || RAIN_KEY[k] || k.startsWith('apuesta') ? null : `.side.r [data-a="${{ racha: 'racha', carrera: 'carrera', mis: 'mis', logros: 'logros', col: 'col', mes: 'evento', col2: 'col', col3: 'col', fiesta: 'fiesta', fiesta2: 'fiesta', fiesta3: 'fiesta', fiesta4: 'fiesta', fiesta5: 'fiesta', fiesta6: 'fiesta' }[k]}"]`;
+  const sel = k === 'meteoro' || k === 'estrellas' || k === 'construir' || RAIN_KEY[k] || k.startsWith('apuesta') ? null : `.side.r [data-a="${{ racha: 'racha', carrera: 'carrera', mis: 'mis', logros: 'logros', col: 'col', mes: 'evento', col2: 'col', col3: 'col', fiesta: 'fiesta', fiesta2: 'fiesta', fiesta3: 'fiesta', fiesta4: 'fiesta', fiesta5: 'fiesta', fiesta6: 'fiesta' }[k]}"]`;
   if (sel) openGroup('r', 'open');
   const btn = sel && document.querySelector(sel);
   revealed.add(k);
@@ -5644,6 +5742,80 @@ function openRacePrize(r) {
     }, 900);
   });
 }
+
+// ---------- Construir (station.js) ----------
+// Los bloques vuelan de tu contador a la estación (en arco, uno tras otro; hasta 6).
+function flyBlocks(from, to, n, onLand) {
+  if (reduced()) return Promise.resolve();
+  const runs = [];
+  for (let i = 0; i < Math.min(6, n); i++) {
+    const f = document.createElement('div');
+    f.className = 'fly-prize fly-bloque';
+    f.innerHTML = icon('bloque');
+    f.style.cssText = `left:${from.x}px;top:${from.y}px`;
+    document.body.append(f);
+    const dx = to.x - from.x, dy = to.y - from.y, mx = dx / 2 + (Math.random() - 0.5) * 90, my = Math.min(0, dy) / 2 - 50 - Math.random() * 50;
+    runs.push(f.animate([{ translate: '0 0', scale: 0.4, opacity: 0, rotate: '0deg' }, { translate: `${mx}px ${my}px`, scale: 1.25, opacity: 1, rotate: '160deg', offset: 0.45 }, { translate: `${dx}px ${dy}px`, scale: 0.45, opacity: 0.9, rotate: '320deg' }],
+      { duration: 720, delay: i * 85, easing: 'ease-in-out', fill: 'backwards' }).finished.then(() => (f.remove(), onLand?.(i))));
+  }
+  return Promise.all(runs);
+}
+// Al volver de ganar: los bloques nuevos vuelan al martillo (como las monedas al monedero) y su número sube.
+async function flyToBuild(from, gained) {
+  const btn = document.querySelector('.galaxy .build-tog'), rn = btn?.querySelector('.rn');
+  if (!rn || !(gained > 0)) return;
+  const end = bloques(), n = Math.min(6, gained), r = btn.getBoundingClientRect();
+  rn.textContent = end - gained;
+  await flyBlocks(from, { x: r.left + r.width / 2, y: r.top + r.height / 2 }, gained, (i) => {
+    rn.textContent = end - gained + Math.round((gained * (i + 1)) / n);
+    if (!reduced()) btn.animate([{ scale: 1 }, { scale: 1.15 }, { scale: 1 }], { duration: 200, easing: 'ease-out' });
+  });
+  rn.textContent = end;
+  if (reduced()) return;
+  sparkle({ x: r.left + r.width / 2, y: r.top + r.height / 2 }, 12);
+  rn.animate([{ scale: 1 }, { scale: 1.5 }, { scale: 1 }], { duration: 360, easing: 'ease-out' });
+}
+// Estación completa: el cofre planeta de oro, como el de la carrera (llega de atrás, se sacude, se abre y suelta sus
+// premios). Ya se sumaron al guardado en buyPiece.
+function openStationPrize(w, res) {
+  return new Promise((done) => {
+    const p = res.prize;
+    confetti(70);
+    const m = openModal({
+      title: '¡Estación completa!',
+      color: 'gold',
+      closable: false,
+      cls: 'boss-win foe-win side-win race-prize build-prize',
+      body: `<div class="ww-hero"><div class="rays"></div><span class="ww-pl">${icon('estacionBase')}</span></div>
+        <b class="ww-name">${esc(STATION_STYLES[styleOf(w)].name)}</b>
+        <p class="ww-lead">Terminaste la estación de ${esc(worldInfo(w).name)}. Este cofre es tuyo.</p>
+        <div class="chest-row"><div class="chest foe-chest p3d"></div></div>`,
+      buttons: [{ label: 'Continuar', cls: 'green wide', onClick: () => {
+        const b = m.el.querySelector('.chest').getBoundingClientRect();
+        if (p.coins) flyToWallet('coins', { x: b.left + b.width / 2, y: b.top + b.height / 2 }, p.coins);
+        done();
+      } }],
+    });
+    const row = m.el.querySelector('.chest-row'), chest = m.el.querySelector('.chest');
+    const stage = new PrizeStage(chest, 'chest', { metal: p.metal });
+    const loot = () => lootBubbles(m, prizeIcons(p), chest);
+    if (reduced()) return row.classList.add('open', 'done'), stage.open(), loot();
+    m.el.querySelectorAll('.ww-pl, .ww-name, .ww-lead').forEach((el, i) => el.animate([{ opacity: 0, scale: 0.6 }, { opacity: 1, scale: 1.08, offset: 0.7 }, { opacity: 1, scale: 1 }], { duration: 380, delay: 120 + i * 110, easing: 'ease-out', fill: 'backwards' }));
+    chest.animate(FROM_BACK, { duration: 650, delay: 500, easing: 'ease-out', fill: 'backwards' });
+    setTimeout(async () => {
+      await stage.shake(3);
+      row.classList.add('open');
+      await stage.open();
+      const c = chest.getBoundingClientRect();
+      sparkle({ x: c.left + c.width / 2, y: c.top + c.height / 3 }, 20);
+      await loot();
+      row.classList.add('done');
+    }, 900);
+  });
+}
+// Las 10 estaciones de una constelación: la esfera de gemas con un título exclusivo (BUILD_TITLES, en orden).
+const openBuildTitle = (res) => capsuleWin({ title: '¡Constelación construida!', color: 'gold', kind: 'sphere', hero: icon('estacionBase'),
+  name: regionName(res.region), lead: 'Las 10 estaciones están listas: un título exclusivo para tu perfil.', bubbles: [giftBubble('title', res.title)] });
 
 // Modo dev (18 nov 2026): ver cada cofre y cápsula sin jugar hasta ahí. Solo se ven: no dan nada.
 function devPrize(k) {
