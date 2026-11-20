@@ -6,6 +6,7 @@ import { INK, icon, star } from './art.js';
 import { makeTraveler, mapCovered } from './travelers.js';
 import { prizeModel } from './prizes3d.js';
 import { stationFor, stationTint, makeStation, showPieces, puff } from './station.js';
+import { makeLair } from './lair.js';
 
 const K = INK;
 const TAU = Math.PI * 2;
@@ -62,6 +63,8 @@ const GEO = new Map(), GEO_KEEP = 48;
 const freeGeo = (g) => !g?.userData.shared && g?.dispose();
 // Tamaño de la estación del polo; con zoom se achica si no cabe arriba del planeta (en horizontal hay poco espacio).
 const STATION_S = 0.6;
+// Lo más que se inclina un planeta con estación para verla desde arriba (y a donde gira solo al construir).
+const TILT_MAX = 1.1;
 
 // Modo dev: ver con colores los planetas cerrados (sección Planetas del menú dev).
 export const peek = { on: false };
@@ -309,7 +312,7 @@ export class Galaxy {
     // piezas (o en la vista previa); las demás, al comprar la primera (addStation). Cerca del polo no hay árboles.
     const sto = !locked && !wd.theme && !wd.gift && (wd.state === 'done' || wd.state === 'current') && stationFor(wd);
     if (!locked) this.props(spin, t, seed, sto ? land.filter((i) => g.attributes.position.getY(i) / Math.hypot(g.attributes.position.getX(i), g.attributes.position.getY(i), g.attributes.position.getZ(i)) < 0.86) : land, g, alive);
-    if (t.volcano) {
+    if (t.volcano && !wd.lair) { // la guarida ocupa el polo
       const v = new THREE.Group(), dir = new THREE.Vector3(-0.3, 0.9, -0.3).normalize();
       const cone = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.2, 0.22, 12), this.toon({ color: '#4a3b52' })); cone.position.y = 0.1;
       const lava = new THREE.Mesh(new THREE.CircleGeometry(0.055, 12), new THREE.MeshBasicMaterial({ color: '#ffb340' })); lava.rotation.x = -Math.PI / 2; lava.position.y = 0.212;
@@ -324,6 +327,14 @@ export class Galaxy {
     this.scene.add(holder);
     const o = { wd, t, seed, holder, spin, body, outline, orbit, ring, sto, station: null, path: null, base: { x: bx, y: by, s: br }, sq: undefined, vel: 0, wig: 0, wv: 0, ph: i * 1.3 };
     if (sto && (sto.n > 0 || sto.play)) this.addStation(o);
+    // Arena de jefes (20 nov 2026): la guarida del jefe va en el polo, como la estación, con el portón hacia la cámara.
+    if (wd.lair) {
+      const st = (o.station = makeLair((p) => this.toon(p), wd.lair.color));
+      st.obj.scale.setScalar(STATION_S);
+      this.orient(st.obj, new THREE.Vector3(0, 1, 0), this.rAt(t, seed, new THREE.Vector3(0, 1, 0)) - 0.03);
+      st.obj.rotateY(-faceAt(0));
+      spin.add(st.obj);
+    }
     return o;
   }
   // Arma la estación del planeta (con las piezas que ya tiene). Devuelve la estación (o null si ese planeta no lleva).
@@ -375,6 +386,12 @@ export class Galaxy {
   }
   buildPath(o) {
     if (o.path) return;
+    // Arena: sin camino ni insignias; solo la guarida (ya está en el polo).
+    if (o.wd.lair) {
+      o.path = new THREE.Group(); o.sprites = []; o.badges = [];
+      o.path.visible = false; o.spin.add(o.path);
+      return;
+    }
     const { t, seed, wd } = o, path = new THREE.Group();
     const pts = PATH_DIRS.map((d) => d.clone().multiplyScalar(Math.max(this.rAt(t, seed, d), 1) + 0.006));
     const curve = new THREE.CatmullRomCurve3(pts);
@@ -584,7 +601,7 @@ export class Galaxy {
   snap() { return this.objs.map((o) => ({ x: o.holder.position.x, y: o.holder.position.y, s: o.holder.scale.x, ry: o.spin.rotation.y, rx: o.spin.rotation.x })); }
   zoomTo(o, instant) {
     if (this.anim) return;
-    this.sel = o; this.mode = 'planet'; o.sq = undefined; this.vel = 0;
+    this.sel = o; this.mode = 'planet'; o.sq = undefined; this.vel = 0; this.tilt = 0;
     if (!o.hi) { o.hi = this.planetGeo(o.t, o.seed, 72).g; o.lo = o.body.geometry; }
     o.body.geometry = o.outline.geometry = o.hi;
     this.buildPath(o);
@@ -643,6 +660,11 @@ export class Galaxy {
       await new Promise((ok) => setTimeout(ok, 180));
     }
     o.wv = 5;
+  }
+  // Inclina el planeta con zoom hacia arriba (o lo regresa) para ver la estación: al abrir el martillo y al cerrarlo.
+  tiltTo(v = TILT_MAX) {
+    const a = this.tilt || 0;
+    return this.tween(650, (k) => (this.tilt = a + (v - a) * ease(k)));
   }
   // Una pieza cae del cielo a su lugar, se aplasta al llegar y levanta polvito (al comprarla o en la vista previa).
   async dropPiece(o, i) {
@@ -774,6 +796,21 @@ export class Galaxy {
       const dx = e.clientX - d.lx, dy = e.clientY - d.ly, dt = Math.max(1, performance.now() - d.t);
       d.lx = e.clientX; d.ly = e.clientY; d.t = performance.now();
       if (this.mode === 'planet') {
+        // Arena (20 nov 2026, el usuario: «girar el planeta completo y de arriba abajo, para ver el castillo»): de lado
+        // sin tope y de arriba abajo hasta ver la guarida desde arriba o asomarse por abajo.
+        if (this.sel.wd.lair) {
+          this.look += (dx / el.clientWidth) * (this.port ? 5 : 3.2);
+          this.tilt = clamp((this.tilt || 0) + (dy / el.clientHeight) * 4, -0.7, 1.25);
+          return;
+        }
+        // Planeta con estación (21 nov 2026, el usuario: «los mundos que ya tengan al menos una pieza, que permita girar
+        // hacia arriba para verlo»): arrastrar hacia abajo lo inclina para ver la estación desde arriba. Cada arrastre
+        // escoge un solo eje (el primero que pase de 8 px) para no inclinarlo sin querer al recorrer el camino.
+        if (this.sel.station) {
+          d.axis ||= Math.hypot(e.clientX - d.x, e.clientY - d.y) > 8 ? (Math.abs(e.clientY - d.y) > Math.abs(e.clientX - d.x) ? 'y' : 'x') : '';
+          if (!d.axis) return;
+          if (d.axis === 'y') { this.tilt = clamp((this.tilt || 0) + (dy / el.clientHeight) * 4, 0, TILT_MAX); return; }
+        }
         // Giro libre por todo el camino (del nivel 1 al último visible).
         const last = this.sel?.badges?.[10] && !this.sel.badges[10].userData.hidden ? 10 : this.lastOf(this.sel);
         this.look = clamp(this.look + (dx / el.clientWidth) * (this.port ? 5 : 3.2), this.faceOf(this.sel, last) + 0.3, faceAt(0) + 0.05);
@@ -790,6 +827,12 @@ export class Galaxy {
       this.vel = 0;
       at(e);
       if (this.mode === 'planet') {
+        // Arena: tocar la guarida (o el planeta) abre la ficha del jefe; la guarida brinca.
+        if (this.sel.wd.lair) {
+          if (!ray.intersectObjects([this.sel.station.obj, this.sel.body], true).length) return;
+          this.sel.station.hop = 1;
+          return this.on.level?.(this.sel.wd.w, 0);
+        }
         const hit = ray.intersectObjects(this.sel.sprites.filter((s) => s.userData.level != null && !s.userData.hidden))[0];
         if (hit && this.guide && !this.guide('level', hit.object.userData.level)) return;
         if (hit) { const sp = hit.object; sp.userData.pop = 1; this.on.level?.(this.sel.wd.w, sp.userData.level); }
@@ -845,6 +888,12 @@ export class Galaxy {
         }
         if (o.orbit && !calm) o.orbit.rotation.y += dt * 0.35;
         if (o.station && !calm) o.station.tick(now / 1000);
+        // Guarida tocada: se aplasta y rebota.
+        if (o.station?.hop) {
+          o.station.hop = Math.max(0, o.station.hop - dt * 2.5);
+          const f = this.stationFit(o), k = Math.sin(o.station.hop * Math.PI) * 0.18;
+          o.station.obj.scale.set(f * (1 + k), f * (1 - k), f * (1 + k));
+        }
         if (o.sq !== undefined) {
           o.vel += (-180 * o.sq - 9 * o.vel) * dt; o.sq += o.vel * dt;
           const s = o.base.s;
@@ -856,6 +905,7 @@ export class Galaxy {
       const sel = this.sel;
       if (this.mode === 'planet' && sel && !this.anim) {
         sel.spin.rotation.y = Math.round((sel.spin.rotation.y - this.look) / TAU) * TAU + this.look + (calm ? 0 : Math.sin(now / 2600) * 0.04);
+        if (sel.wd.lair || sel.station) sel.spin.rotation.x += ((this.tilt || 0) - sel.spin.rotation.x) * Math.min(1, dt * 12);
         for (const sp of sel.sprites) {
           if (sp.userData.pop && !sp.userData.hidden) { sp.userData.pop = Math.max(0, sp.userData.pop - dt * 3); const k = 1 + Math.sin(sp.userData.pop * Math.PI) * 0.35; sp.scale.set(sp.userData.s[0] * k, sp.userData.s[1] * k, 1); }
         }

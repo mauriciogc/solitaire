@@ -454,8 +454,8 @@ const RESPITE_MIN = 10;
 // (a +20 y +30 de la mesa): enrollada 51, gravedad 101, nebulosa 151, hangar 201, bitácora 251, marea 301, agujero
 // negro 351, puertas 401, banda 451, asteroides 501, grúa 551 y la que se voltea 601.
 // 16 nov 2026 (pedido del usuario): el cohete se estrena en el 651 (el lugar de la caja galáctica, que se quitó).
-// Tubos neumáticos (19 nov 2026, pedido del usuario; la v1 de dev/ideas-19-nov.html) en el 851: la mesa que sigue al
-// meteoro fugaz (801).
+// Tubos neumáticos (19 nov 2026, pedido del usuario) en el 851: la mesa que sigue al meteoro fugaz (801). 20 nov 2026:
+// sin tubos, ahora «cartas al vuelo» (la clave sigue siendo 'tubos' por los guardados).
 export const SCROLL_FROM = { mesa: 50, gravedad: 100, nebulosa: 150, hangar: 200, bitacora: 250, portal: 550, voltea: 600, cohete: 650, tubos: 850 };
 // Marea (7 nov 2026): el agua sube desde abajo cada 3 robos y baja cada 3 jugadas; lo que queda bajo el agua no se
 // juega. Desde el nivel MAREA_FROM + 1, ~1 de cada 10 normales del camino (sin otra mesa, respiro ni ayudas).
@@ -613,6 +613,7 @@ export function scrollKind(g) {
 // La nebulosa, algo menos: solo se ven 3 tramos a la vez.
 function scrollSegments(r, d, kind) {
   if (kind === 'gravedad') return gravCols(r, d);
+  if (kind === 'tubos') return gravCols(r, d, 4, 8);
   if (kind === 'hangar') return hangarCols(r, d);
   const want = kind === 'nebulosa' ? 32 + Math.round(d * 16) : 40 + Math.round(d * 20);
   const out = [], names = [];
@@ -626,8 +627,9 @@ function scrollSegments(r, d, kind) {
   return out;
 }
 // Gravedad: columnas de alto parecido (cada carta un poco más arriba que la de abajo; el juego las acomoda).
-function gravCols(r, d) {
-  const n = randInt(r, 3, 5), want = 26 + Math.round(d * 14);
+// Cartas al vuelo (20 nov 2026, el usuario: «mínimo 4 columnas y quizás máximo 7 u 8»): de 4 a 8.
+function gravCols(r, d, lo = 3, hi = 5) {
+  const n = randInt(r, lo, hi), want = 26 + Math.round(d * 14);
   const out = Array.from({ length: n }, () => []);
   for (let i = 0; i < want; i++) out[i % n].push({ x: 0, y: -out[i % n].length * 0.2, z: out[i % n].length });
   return out;
@@ -925,6 +927,56 @@ function bossLevel(g) {
   return best.L;
 }
 
+// ---------- Arena de jefes (20 nov 2026, pedido del usuario) ----------
+// Volver a jugar contra los jefes que ya venciste, por gusto: sin estrellas, premios ni nada del camino. Cada pelea es
+// un tablero nuevo (seed) de la constelación del último jefe que venciste (base), así trae las cartas que ya conoces.
+// Dificultad: Tranquilo (menos vida, ataca como en la primera vuelta), Normal (como en el camino) y Furioso (más vida
+// y ataca como una vuelta después). Se busca como el jefe del camino (bossLevel): que el solucionador lo gane
+// venciéndolo y que el bot casual gane y lo venza lo bastante (menos en Furioso).
+// hp: vida por pasos (parte de las cartas; x = + bossExtra de su vuelta), del más alto al más bajo; si ningún tablero
+// cumple con uno, se prueba el siguiente. bot: rango de victorias del bot casual; kill: cuántas veces lo vence; tries:
+// cuántos tableros prueba con cada paso (el Tranquilo, más: su tablero tiene que salir amable).
+export const ARENA_DIFF = [
+  { hp: [0.35, 0.25, 0.18], r: () => 0, bot: [0.3, 1], kill: 0.5, tries: 10 },
+  { hp: ['x', 0.45, 0.35, 0.25], r: (r0) => r0, bot: [BOSS_MIN, 0.6], kill: BOSS_KILL, tries: 5 },
+  { hp: ['x+', 'x', 0.45], r: (r0) => r0 + 1, bot: [0.06, 0.35], kill: 0.2, tries: 4 },
+];
+// El jefe de constelación más alto ya ganado (99, 199…), según el primer nivel sin completar.
+export const arenaBase = (next) => Math.min(TOTAL_LEVELS - 1, Math.max(99, Math.floor(next / 100) * 100 - 1));
+export function arenaMake({ kind, base, diff }, [t, k]) {
+  const D = ARENA_DIFF[diff], r = D.r(bossOf(base).r), L = buildLevel(base, null, t), n = L.cards.length, h = D.hp[k];
+  L.foe = { kind, r, hp: Math.round(h === 'x+' ? n * 0.75 + bossExtra(r) : h === 'x' ? n * 0.6 + bossExtra(r) : n * h) };
+  L.arena = 1;
+  return L;
+}
+// Devuelve [t, k] (el tablero y el paso de vida). Va en un worker (boss-worker.js) y a lo mucho ARENA_MS: si no
+// encontró uno que cumpla, el más cercano.
+const ARENA_MS = 3500;
+export function arenaPick(spec) {
+  const D = ARENA_DIFF[spec.diff], seed = spec.seed | 0, end = Date.now() + ARENA_MS;
+  let best = null;
+  const solved = new Set();
+  for (let k = 0; k < D.hp.length; k++) {
+    for (let i = 0; i < D.tries; i++) {
+      if (Date.now() > end) return best ? best.p : [seed, D.hp.length - 1];
+      const t = seed + i, x = arenaMake(spec, [t, k]);
+      if (!solved.has(t) && !solve(x, initState(x), 25000, 0, true)) continue;
+      solved.add(t);
+      const r = mulberry32(seed * 31 + i * 7 + k);
+      let w = 0, kl = 0;
+      for (let j = 0; j < QUICK; j++) {
+        const o = casualRun(x, r);
+        w += o.win;
+        kl += o.kill;
+      }
+      const p = w / QUICK, score = Math.min(p / D.bot[0], kl / QUICK / D.kill, p > D.bot[1] ? D.bot[1] / p : 1);
+      if (!best || score > best.w) best = { p: [t, k], w: score };
+      if (score >= 1) return best.p;
+    }
+  }
+  return best ? best.p : [seed, D.hp.length - 1];
+}
+
 // Niveles normales: a veces, por suerte de los números, uno sale brutal (bot < 15%, como un extremo pero sin estar
 // marcado). Si en la revisión rápida el bot gana menos del 15%, se arma la siguiente versión t. Del 11 al SOFT_UNTIL.
 export const SOFT_UNTIL = 2500;
@@ -1026,8 +1078,8 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
   // level.flip, c.flipBy; los duros no la llevan: su tablero y sus estrellas salen del camino acertado, que no sabe de
   // la vuelta), los portales (la gravedad al revés: solo se ve distinta) y el hangar (solo se ven HANGAR_SHOW columnas;
   // al vaciar una sale otra, con la regla de la nebulosa). La bitácora es un tablero normal de hojas encimadas.
-  // Tubos (19 nov 2026): la gravedad con solo la carta de abajo de cada columna a la vista; lo demás va escondido en 3
-  // tubos de vidrio que disparan la siguiente al hueco que vacías (solo se dibuja distinto).
+  // Cartas al vuelo (antes tubos; 20 nov 2026 sin tubos): la gravedad con solo la carta de abajo de cada columna a la
+  // vista (de 4 a 8 columnas); al vaciar un hueco, la que sigue llega volando de arriba, abajo o un lado.
   const flipOn = want === 'voltea' && !T, portalOn = want === 'portal', hangarOn = want === 'hangar', bitaOn = want === 'bitacora', tubesOn = want === 'tubos';
   // Cohete (16 nov 2026, el usuario: «exactamente las mismas mecánicas del tapete, solo otra animación»): es la mesa
   // enrollada (scroll 'mesa') con level.rocket; el juego la dibuja como cohete y regala monedas por tramo.
@@ -1065,7 +1117,7 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
   const template = (ev?.scroll && (bitaOn ? 'bitacora' : scroll)) || ev?.template || (ev && (index === LEVELS_PER_WORLD - 1 || r() < 0.15 + ev.tight * 0.17) ? pick(r, ['peaks', 'peaks', 'scatter', 'invPyramid']) : (bitaOn ? 'bitacora' : rocketOn ? 'cohete' : scroll) || (respite ? pick(r, RESPITE_SHAPES) : chooseTemplate(r, ev ? Math.max(3, base) : base, d, true)));
 
   const shape = (dd) => (template === 'clusters' ? clusters(r, dd, index === LEVELS_PER_WORLD - 1, true) : [TEMPLATES[template](r, dd)]);
-  let raw = bitaOn ? bitaSheets(r) : scroll ? scrollSegments(r, d, hangarOn ? 'hangar' : scroll) : shape(d);
+  let raw = bitaOn ? bitaSheets(r) : scroll ? scrollSegments(r, d, hangarOn ? 'hangar' : tubesOn ? 'tubos' : scroll) : shape(d);
   // Sin ayudas: si salió muy chico, se vuelve a armar un poco más grande.
   // Niveles duros: tableros más grandes (T.min).
   const minN = respite ? RESPITE_MIN : Math.max(freshMin(base), T?.min || 0);
@@ -1677,7 +1729,7 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
     ...(rocketOn && { rocket: 1 }),
     ...(hangarOn && { hangar: HANGAR_SHOW }),
     ...(portalOn && { portal: 1 }),
-    ...(tubesOn && { tubes: 3 }),
+    ...(tubesOn && { tubes: 1 }),
     ...(sheets && { sheets, peek }),
     ...(grav && { cols: segments }),
     ...(flipOn && { flip: 1 }),

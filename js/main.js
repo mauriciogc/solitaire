@@ -1,7 +1,8 @@
 import { save, prefs, persist, resetProfile, deleteProfile, renameProfile, exportCode, readCode, loadProfile, setDev } from './storage.js';
 import { UNLOCK, EVENTS, FESTIVALS, COLLECTIONS, evSoon, isOn, nextEvent, daysToNextCol, plusCols, STREAK_GOALS, STREAK_STEP, streakGoal, nextIndex, dailyStreak, streakTheme, streakReady, streakHot, streakWin, streakLose, streakPendToFeats, msToMidnight, col, colLeft, colWin, colOffers, colBuy, ev, evLeft, evTicketLeft, evTicketPrice, evBuyTicket, evPrize, evEnter, evWin, evLose, evAlbum, festAlbum, EVENT_PLANETS, EVENT_PER_PLANET, EVENT_LEVELS, festival, festivalLeft, festivalSoon, soonLeft, evPrePrice, evPreOwned, evPreBuy, nextFestival, festEnter, festWin, festLose, festShape, festPrice, festPaid, festBuy, festPre, FEST_PRE, FEST_ENTRY, EV_FIRST } from './events.js';
 import { WORLD_COUNT, LEVELS_PER_WORLD, TOTAL_LEVELS, worldInfo, generateLevel, constBoss, bossOf, bossPicked, setBossPick, variantLevel, MECH_INTRO, MECH_NAMES, MECHANICS, EXTRA, extraDebut, SCROLL_FROM, tideFirst, holeFirst, doorsFirst, bandaFirst, rocksFirst, zeroFirst, orbitFirst, pongFirst, BOSS_ORDER, secretId, isSecret, eventLevel, festivalLevel } from './levels.js';
-import { Game, faceHTML, backHTML, TIPS, TABLE_TEXT, MECH_KINDS, ART, slMark, FOE_ICON, FOE_TITLE, FOE_NAME, FOE_BTN } from './game.js';
+import { Game, faceHTML, backHTML, TIPS, TABLE_TEXT, MECH_KINDS, ART, slMark, FOE_ICON, FOE_TITLE, FOE_NAME, FOE_BTN, FOE_TEXT } from './game.js';
+import { arenaBase, arenaMake, arenaPick } from './levels.js';
 import { maxBet, betFee, betSteps, BET_STEPS, HELPS, DAILY_PATH, dailyState, dailyPieces, DAILY_SHIELD_MAX, starsNeeded, TICKET_PRICE, ticketCost, ticketRefund, coinsFor, bossChest, rollChest, CONST_PRIZE, CONST_OPEN, openCost, constStart, openFree, boosted, secretCoins, rollSecret, openSurprise, MET_OFF, metShopPrice, richTier, richOff, foeBeatPrize, RESCUE_WEEK, RESCUE_COINS, RESCUE_ITEMS } from './economy.js';
 import { track, missions, missionDef, missionDone, missionsAllDone, autoClaim, ACHIEVEMENTS, ACHIEVEMENT_PRIZES, ACHIEVEMENT_MEDAL, ACHIEVEMENT_TOP, achievementGot, achievementProgress, achievementsVisible } from './missions.js';
 import { pauseOffscreen, openModal, toast, updateCoins, money, esc, reduced, wait, flyToWallet, spendFromWallet, sparkle, confetti, starsHTML, warp, buzz, balloons, lootBubbles, floatBubbles, streakWarnHTML, raceWarnHTML, popPrize, popBalloon, countPop, HEADS, betLoseHTML, shownCoins } from './ui.js';
@@ -410,7 +411,7 @@ function showMap({ region, start = null, anim, after = null, unlock = null, paid
   </div>`);
   let galaxy = null;
   const cta = el.querySelector('.cta'), phud = el.querySelector('.phud');
-  const paintGalaxyCTA = () => (cta.innerHTML = playCTA());
+  const paintGalaxyCTA = () => (cta.innerHTML = arenaBtn() + playCTA());
   const paintPlanet = (w) => {
     const info = worldInfo(w), b = BIOMES[biomeKey(info.place)];
     const mech = Object.entries(MECH_INTRO).find(([, iw]) => iw === w)?.[0];
@@ -420,15 +421,18 @@ function showMap({ region, start = null, anim, after = null, unlock = null, paid
     let go;
     if (run && worldOf(run.g) === w) go = goBtn('Continuar', isSecret(run.g) ? 'Nivel secreto' : `Nivel ${run.g + 1}`, 'continue', run.bet);
     else if (save.next >= first && save.next < first + LEVELS_PER_WORLD) go = goBtn('Jugar', playSub(), 'play-next', betShown());
-    else go = '<div class="hint-chip">Toca un nivel para repetirlo</div>';
+    // 20 nov 2026 (el usuario): sin leyenda abajo; el «Toca un nivel para repetirlo» sale arriba, flotando, al entrar al
+    // planeta (on.mode), y los botones se recorren a la orilla.
+    else go = '';
     // Mecánica nueva: botón con su carta junto a Jugar; al tocarlo se despliega el aviso y al tocarlo otra vez se recoge.
     // Brinca hasta que lo lee (o hasta que vio el "Nuevo: …" del tablero).
     // Construir: el martillo con tus bloques; brinca si te alcanza para la siguiente pieza. Se va al terminar la estación.
     const bb = buildOn() && save.bloques != null && w <= currentWorld() && built(w) < PIECES
       ? `<button class="iconbtn tb press build-tog${canBuild(w) ? ' ready' : ''}" data-a="build" aria-label="Construir la estación" title="Construir">${icon('martillo')}<small class="rn">${bloques()}</small></button>` : '';
     cta.classList.remove('mech-open');
+    cta.style.removeProperty('--ax');
     cta.innerHTML = mech ? `<div class="newmech info"><div><b>Aquí aparece: ${MECH_NAMES[mech].toLowerCase()}</b><span>${MECH_TEXT[mech]}</span></div></div>
-      <button class="mech-tog tb press${save.seen[mech] ? ' seen' : ''}" data-a="mech" aria-expanded="false" aria-label="Qué hay de nuevo en este mundo" title="Nuevo en este mundo">${mechCard(mech)}<i>?</i></button>${bb}${go}` : bb + go;
+      <button class="mech-tog tb press${save.seen[mech] ? ' seen' : ''}" data-a="mech" aria-expanded="false" aria-label="Qué hay de nuevo en este mundo" title="Nuevo en este mundo">${mechCard(mech)}<i>?</i></button>${bb}${arenaBtn()}${go}` : bb + arenaBtn() + go;
   };
   // ---------- Construir (station.js): la tira de las 5 piezas sube desde abajo, sin ventana; un toque compra ----------
   const tray = el.querySelector('.build-tray');
@@ -454,12 +458,15 @@ function showMap({ region, start = null, anim, after = null, unlock = null, paid
     tray.hidden = false;
     el.querySelector('.build-veil').hidden = false;
     el.classList.add('building');
+    // El planeta gira hacia arriba para ver la estación mientras construyes (21 nov 2026, el usuario).
+    galaxy.tiltTo();
     requestAnimationFrame(() => tray.classList.add('show'));
     if (!reduced()) tray.querySelectorAll('.bt-item').forEach((x, i) => x.animate([{ opacity: 0, scale: 0.5 }, { opacity: 1, scale: 1.1, offset: 0.7 }, { opacity: 1, scale: 1 }], { duration: 340, delay: 120 + i * 60, easing: 'ease-out', fill: 'backwards' }));
   };
   const closeBuild = () => {
     if (tray.hidden) return;
     el.classList.remove('building');
+    if (galaxy?.sel && galaxy.mode === 'planet') galaxy.tiltTo(0);
     tray.classList.remove('show');
     el.querySelector('.build-veil').hidden = true;
     setTimeout(() => !tray.classList.contains('show') && (tray.hidden = true), 260);
@@ -505,6 +512,7 @@ function showMap({ region, start = null, anim, after = null, unlock = null, paid
     if (sideAction(a)) return;
     if (a === 'out') return closeBuild(), galaxy?.zoomOut();
     if (a === 'build') return tray.hidden ? openBuild() : closeBuild();
+    if (a === 'arena') return closeBuild(), warp(() => showArena());
     if (a === 'build-close') return closeBuild();
     if (a === 'build-buy') return buildBuy();
     if (a === 'mech') {
@@ -512,6 +520,9 @@ function showMap({ region, start = null, anim, after = null, unlock = null, paid
       tog.setAttribute('aria-expanded', open);
       // Acostado el aviso sale a la izquierda: no más ancho que lo que hay hasta la orilla.
       const nm = cta.querySelector('.newmech');
+      // La flechita del aviso apunta a la carta, haya o no botón de Jugar a su lado (20 nov 2026, el usuario).
+      const cr = cta.getBoundingClientRect(), tr = tog.getBoundingClientRect();
+      cta.style.setProperty('--ax', `${cr.right - (tr.left + tr.width / 2)}px`);
       if (open && nm && !matchMedia('(max-aspect-ratio: 1/1)').matches) nm.style.maxWidth = `${Math.min(420 * parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--k') || 1), cta.getBoundingClientRect().left - 24)}px`;
       // Ya lo leyó: deja de brincar y en el tablero ya no sale el "Nuevo: …" (misma bandera, save.seen).
       const mech = galaxy?.sel && Object.entries(MECH_INTRO).find(([, iw]) => iw === galaxy.sel.wd.w)?.[0];
@@ -556,8 +567,11 @@ function showMap({ region, start = null, anim, after = null, unlock = null, paid
           el.classList.toggle('zoomed', m === 'planet');
           current = () => showMap({ region, start: m === 'planet' ? w : null });
           if (m !== 'planet') closeBuild();
-          if (m === 'planet') paintPlanet(w);
-          else paintGalaxyCTA();
+          if (m === 'planet') {
+            paintPlanet(w);
+            const first = w * LEVELS_PER_WORLD;
+            if (!(save.run && worldOf(save.run.g) === w) && !(save.next >= first && save.next < first + LEVELS_PER_WORLD) && w <= currentWorld()) setTimeout(() => galaxy?.mode === 'planet' && toast('Toca un nivel para repetirlo'), 500);
+          } else paintGalaxyCTA();
           // Recorrido: al entrar al mundo 1 se explican los niveles.
           if (m === 'planet' && tourStep() === 'galaxy') {
             setTour('planet');
@@ -965,7 +979,7 @@ function showUniverse({ from = regionOf(currentWorld()), opening = null } = {}) 
     <div class="side l">${sideButtons()}</div>
     <div class="side r">${eventButtons()}</div>
     <div class="res">${wallet()}</div>
-    <div class="cta">${playCTA()}</div>
+    <div class="cta">${arenaBtn()}${playCTA()}</div>
   </div>`);
   let uni = null;
   // Entrar a una constelación: la cámara se lanza hacia ella y el túnel de estrellas lleva a sus planetas.
@@ -981,6 +995,7 @@ function showUniverse({ from = regionOf(currentWorld()), opening = null } = {}) 
   el.addEventListener('click', (e) => {
     const a = e.target.closest('[data-a]')?.dataset.a;
     if (uni?.busy) return;
+    if (a === 'arena') return warp(() => showArena());
     if (a === 'continue') return playNow();
     if (a === 'gate') return openWorldGate(pendingWorld());
     sideAction(a);
@@ -1202,7 +1217,7 @@ const ROAD_TABLES = [
   ['portal', 'Grúa de feria', ''],
   ['voltea', 'Mesa que se voltea', 'Columnas dentro de una cápsula: solo juegas la de abajo. Cada 5 jugadas o robos da media vuelta.'],
   ['cohete', 'Cohete', ''],
-  ['tubos', 'Tubos neumáticos', ''],
+  ['tubos', 'Cartas al vuelo', ''],
 ];
 function roadItems() {
   const t = streakTheme();
@@ -3083,6 +3098,282 @@ function showEvent({ anim, after = null, start = null, kind = null } = {}) {
   const img = evIcoImg(e), ready = img.complete ? Promise.resolve() : img.decode().catch(() => {});
   Promise.all([ready, Galaxy ? null : loadGalaxy()]).then(() => requestAnimationFrame(make));
 }
+// ---------- Arena de jefes (20 nov 2026, pedido del usuario) ----------
+// Volver a pelear contra los jefes de constelación que ya venciste en el camino, por gusto: no da estrellas, monedas
+// ni premios y no cuenta para nada (eventos, racha, carrera, misiones, logros). Sale con la corona de abajo (junto al
+// martillo) después de ganar el nivel 100 (Fénix), con su ventana. Es su propia constelación, como los eventos: un
+// planeta por jefe con su guarida arriba (lair.js); al tocarla sale la ficha: dificultad, hasta 3 ayudas gratis (solo
+// las que ya conoces; no salen de tu inventario) y cuántas veces lo has vencido. Cada pelea es un tablero nuevo
+// (arenaPick en levels.js) con las cartas que ya conoces.
+const ARENA_LOOK = { fenix: 'volcan', ilus: 'arboleda', medusa: 'aurora', wind: 'cielo', hand: 'pantano', kraken: 'puerto', whale: 'arrecife', clock: 'cueva' };
+const ARENA_COLOR = { fenix: '#ff8a3d', ilus: '#8a6bff', medusa: '#38d6e8', wind: '#ffc83d', hand: '#5fd47a', kraken: '#a05cf0', whale: '#4a8cff', clock: '#c9a8ff' };
+const ARENA_DIFF_NAME = ['Tranquilo', 'Normal', 'Furioso'];
+const ARENA_DIFF_TXT = ['Menos vida y ataca menos.', 'Como en tu camino.', 'Más vida y ataca más seguido.'];
+const arenaOn = () => !!save.stars[99];
+const arenaOpenAt = (i) => !!save.stars[(i + 1) * 100 - 1];
+const arenaSave = () => (save.arena ||= { wins: {} });
+const arenaWins = (k) => arenaSave().wins[k] || [0, 0, 0];
+const arenaTotal = (k) => arenaWins(k).reduce((a, b) => a + b, 0);
+const vecesTxt = (n) => `${n} ${n === 1 ? 'vez' : 'veces'}`;
+const arenaBtn = () => (arenaOn() ? `<button class="iconbtn tb press arena-tog${save.intro?.arena ? '' : ' fresh'}" data-a="arena" aria-label="Arena de jefes" title="Arena de jefes">${icon('crown')}</button>` : '');
+// Ayudas para escoger: comodín y deshacer siempre; las demás, las que ya conoces (alguna vez tuviste o ya salió su
+// carta en el camino).
+const ARENA_HELPS = [['wild', 'Comodín', 'wild'], ['undo', 'Deshacer ×3', 'undo'], ['reloj', 'Reloj de arena', 'arena'], ['ver3', 'Ver cartas', 'ojo'], ['llave', 'Llave maestra', 'llaveMaestra'], ['tele', 'Telescopio', 'telescopio'], ['varita', 'Varita', 'varitaEstrella'], ['iman', 'Imán', 'iman'], ['astro', 'Astronauta', 'astronauta']];
+const ARENA_SEEN = { iman: 'magnet', varita: 'wand', tele: 'scope', astro: 'astro' };
+const arenaHelpOk = (k) => {
+  const has = save.helps || {};
+  if (k === 'wild' || k === 'undo') return true;
+  if (k === 'ver3') return ['ver2', 'ver3', 'ver4', 'ver5'].some((x) => x in has);
+  return k in has || !!save.seen[ARENA_SEEN[k]];
+};
+// Durante la pelea tu inventario se guarda aparte (save.arenaStash) y el tablero solo tiene lo que escogiste, sin
+// monedas (así no se compra nada). Al salir se regresa; si se cerró el juego a media pelea, al abrirlo (boot).
+function arenaSwap(picks) {
+  if (save.arenaStash) arenaRestore();
+  save.arenaStash = { wild: save.wild, undo: save.undo, coins: save.coins, helps: save.helps };
+  save.wild = picks.filter((k) => k === 'wild').length;
+  save.undo = picks.includes('undo') ? 3 : 0;
+  save.coins = 0;
+  save.helps = Object.fromEntries(picks.filter((k) => k !== 'wild' && k !== 'undo').map((k) => [k, 1]));
+  persist();
+}
+function arenaRestore() {
+  const s = save.arenaStash;
+  if (!s) return;
+  Object.assign(save, { wild: s.wild, undo: s.undo, coins: s.coins, helps: s.helps });
+  delete save.arenaStash;
+  persist();
+  updateCoins();
+}
+function showArena({ start = null, anim } = {}) {
+  noticeGen++;
+  gallery.active = false;
+  current = () => showArena({ start });
+  const el = h(`<div class="screen galaxy event ev-arena">
+    <div class="space"></div><div class="g3d"></div><div class="glabels g-only"></div>
+    <div class="g-only">
+      <button class="hbtn tb press out-btn" data-a="back" aria-label="Volver al mapa" title="Mapa">${icon('prev')}</button>
+      <div class="wtitle info">${icon('crown', 0, 0, 'em')}<div><b>Arena de jefes</b></div></div>
+    </div>
+    <div class="p-only phud"></div>
+    <div class="cta"></div>
+  </div>`);
+  let galaxy = null;
+  const cta = el.querySelector('.cta'), phud = el.querySelector('.phud');
+  const paintPlanet = (i) => {
+    const k = BOSS_ORDER[i];
+    phud.innerHTML = `<button class="hbtn tb press out-btn" data-a="out" aria-label="Volver a la arena" title="Arena">${icon('prev')}</button>
+      <div class="wtitle info"><span class="em ar-em" style="--c:${ARENA_COLOR[k]}">${FOE_ICON[k]()}</span><div><b>${FOE_TITLE[k]}</b></div></div>`;
+    cta.innerHTML = goBtn('Retar', '', 'arena-fight').replace('class="go', 'class="go boss-go');
+  };
+  el.addEventListener('click', (e) => {
+    const a = e.target.closest('[data-a]')?.dataset.a;
+    if (galaxy?.busy) return;
+    if (a === 'back') return warp(() => showMap(), { out: true });
+    if (a === 'out') return galaxy?.zoomOut();
+    if (a === 'arena-fight' && galaxy?.sel) return openArenaFoe(galaxy.sel.wd.w);
+  });
+  mount(el, anim);
+  const make = () => {
+    if (!el.isConnected) return;
+    galaxy = new Galaxy(el.querySelector('.g3d'), el.querySelector('.glabels'), {
+      worlds: BOSS_ORDER.map((k, i) => {
+        const open = arenaOpenAt(i);
+        return {
+          w: i, place: worldInfo(0).place, state: open ? 'done' : 'locked', stars: 0, levels: [], nodes: [0], done: 0, pin: false,
+          ...(open && { theme: BIOMES[ARENA_LOOK[k]].planet, lair: { color: ARENA_COLOR[k] } }),
+          chip: `<span class="chip info">${open ? FOE_TITLE[k] : `${icon('lock')}Nivel ${(i + 1) * 100}`}</span>`,
+        };
+      }),
+      player: { traveler: equipped('traveler') },
+      start,
+      on: {
+        mode: (m, w) => {
+          el.classList.toggle('zoomed', m === 'planet');
+          current = () => showArena({ start: m === 'planet' ? w : null });
+          if (m === 'planet') paintPlanet(w);
+          else cta.innerHTML = '';
+        },
+        locked: (w) => toast(`${icon('lock')} Lo encuentras en el nivel ${(w + 1) * 100}`),
+        relayout: remount,
+        level: (w) => openArenaFoe(w),
+      },
+    });
+    el._dispose = () => galaxy.dispose();
+  };
+  (Galaxy ? Promise.resolve() : loadGalaxy()).then(() => requestAnimationFrame(make));
+}
+// Ficha del jefe: quién es y cuántas veces lo has vencido (con un trofeíto en cada dificultad que ya le ganaste), qué
+// hace, la dificultad y hasta 3 ayudas gratis que vuelan a sus lugares (el comodín se puede repetir: hasta 3; tocar un
+// lugar lleno la regresa). Recuerda lo último que escogiste.
+// 20 nov 2026 (el usuario: «repasa ux/ui del modal»): el texto del jefe a todo lo ancho y a la izquierda; las ayudas
+// escogidas se quedan encendidas con su palomita o ×N (antes se apagaban y parecían bloqueadas); «+» en los lugares
+// vacíos y ✕ en los llenos.
+function openArenaFoe(i) {
+  const k = BOSS_ORDER[i], A = arenaSave(), helps = ARENA_HELPS.filter(([x]) => arenaHelpOk(x));
+  let diff = A.diff ?? 1;
+  const picks = (A.picks || []).filter((x) => helps.some(([y]) => y === x)).slice(0, 3);
+  const tot = arenaTotal(k), cup = icon('trophy');
+  const m = openModal({
+    title: FOE_TITLE[k], color: 'violet', wide: true, cls: 'arena-foe',
+    body: `<div class="af-top" style="--c:${ARENA_COLOR[k]}"><span class="af-ico">${FOE_ICON[k]()}</span>
+        <div class="af-who"><b>${FOE_TEXT[k][0]}</b><span class="af-cnt">${cup}${tot ? `Vencido <b>${vecesTxt(tot)}</b>` : 'Aún no lo vences aquí'}</span></div></div>
+      <p class="af-what">${FOE_TEXT[k][1]}</p>
+      <div class="af-lbl"><b>Dificultad</b></div>
+      <div class="af-diff">${ARENA_DIFF_NAME.map((n, d) => `<button class="press" data-d="${d}">${n}</button>`).join('')}</div>
+      <p class="af-dtxt"></p>
+      <div class="af-lbl"><b>Lleva hasta 3 ayudas</b></div>
+      <div class="af-slots">${'<button class="press"></button>'.repeat(3)}</div>
+      <div class="af-helps">${helps.map(([x, n, ic]) => `<button class="press" data-h="${x}">${icon(ic)}<span>${n}</span><i class="af-n"></i></button>`).join('')}</div>`,
+    buttons: [{ label: `${icon('play')} ¡A pelear!`, cls: 'green wide', onClick: () => arenaFight(k, diff, picks.slice()) }],
+  });
+  const box = m.el, slots = [...box.querySelectorAll('.af-slots button')];
+  const icOf = (x) => ARENA_HELPS.find(([y]) => y === x)[2];
+  const setDiff = (d) => {
+    diff = d;
+    box.querySelectorAll('.af-diff button').forEach((b) => b.classList.toggle('on', +b.dataset.d === d));
+    box.querySelector('.af-dtxt').textContent = ARENA_DIFF_TXT[d];
+    box.querySelector('.af-top').dataset.d = d;
+  };
+  const paint = () => {
+    slots.forEach((s, j) => {
+      s.innerHTML = picks[j] ? `${icon(icOf(picks[j]))}<i class="af-x">${icon('close')}</i>` : '<i class="af-plus">+</i>';
+      s.classList.toggle('full', !!picks[j]);
+      s.setAttribute('aria-label', picks[j] ? 'Quitar esta ayuda' : 'Lugar libre');
+    });
+    box.querySelectorAll('.af-helps button').forEach((b) => {
+      const n = picks.filter((x) => x === b.dataset.h).length;
+      b.classList.toggle('on', n > 0);
+      b.classList.toggle('dim', picks.length >= 3 && !n);
+      b.querySelector('.af-n').innerHTML = n > 1 ? `×${n}` : n ? icon('check') : '';
+    });
+  };
+  // La ayuda vuela de su botón a su lugar (o de regreso).
+  const fly = (from, to, ic) => {
+    if (reduced()) return Promise.resolve();
+    const a = from.getBoundingClientRect(), b = to.getBoundingClientRect(), f = document.createElement('div');
+    f.className = 'af-fly';
+    f.innerHTML = icon(ic);
+    document.body.append(f);
+    const x0 = a.left + a.width / 2 - 18, y0 = a.top + a.height / 2 - 18, x1 = b.left + b.width / 2 - 18, y1 = b.top + b.height / 2 - 18;
+    return f.animate([{ translate: `${x0}px ${y0}px`, scale: 1 }, { translate: `${(x0 + x1) / 2}px ${Math.min(y0, y1) - 40}px`, scale: 1.4, rotate: '15deg' }, { translate: `${x1}px ${y1}px`, scale: 1 }], { duration: 420, easing: 'cubic-bezier(.4,0,.3,1)' }).finished.then(() => f.remove(), () => f.remove());
+  };
+  const shake = (b) => (!reduced() && b.animate([{ translate: '0 0' }, { translate: '-5px 0' }, { translate: '5px 0' }, { translate: '0 0' }], { duration: 260 }), buzz(30));
+  const remove = (j) => {
+    const x = picks[j], b = box.querySelector(`.af-helps [data-h="${x}"]`);
+    picks.splice(j, 1);
+    paint();
+    fly(slots[j], b, icOf(x));
+  };
+  box.querySelector('.af-diff').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-d]');
+    if (b) setDiff(+b.dataset.d), buzz(8);
+  });
+  box.querySelector('.af-helps').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-h]');
+    if (!b) return;
+    const x = b.dataset.h;
+    // Las demás se escogen una vez (tocarla otra vez la quita); el comodín se suma hasta llenar.
+    if (x !== 'wild' && picks.includes(x)) return remove(picks.lastIndexOf(x));
+    if (picks.length >= 3) return shake(b);
+    picks.push(x);
+    buzz(10);
+    const slot = slots[picks.length - 1];
+    slot.classList.add('wait');
+    fly(b, slot, icOf(x)).then(() => (slot.classList.remove('wait'), paint()));
+    paint();
+  });
+  box.querySelector('.af-slots').addEventListener('click', (e) => {
+    const j = slots.indexOf(e.target.closest('button'));
+    if (picks[j]) remove(j);
+  });
+  setDiff(diff);
+  paint();
+}
+// Busca el tablero en el worker (con el letrero de «Preparando al jefe…») y entra.
+function arenaFight(k, diff, picks) {
+  const A = arenaSave();
+  A.diff = diff;
+  A.picks = picks;
+  persist();
+  const spec = { kind: k, base: arenaBase(save.next || 0), diff, seed: Math.floor(Math.random() * 1e6) };
+  let p = null;
+  const build = new Promise((done) => {
+    const local = () => done((p = arenaPick(spec)));
+    if (!window.Worker) return local();
+    try {
+      const w = new Worker(new URL('./boss-worker.js', import.meta.url), { type: 'module' });
+      w.onmessage = (e) => (w.terminate(), done((p = e.data.p)));
+      w.onerror = () => (w.terminate(), local());
+      w.postMessage(spec);
+    } catch {
+      local();
+    }
+  });
+  prepBoss(build, () => arenaPlay(spec, p, picks));
+}
+function arenaPlay(spec, p, picks) {
+  const k = spec.kind, i = BOSS_ORDER.indexOf(k), level = arenaMake(spec, p);
+  const old = [...app.children];
+  game?.destroy();
+  game = null;
+  document.getElementById('modal-root').replaceChildren();
+  arenaSwap(picks);
+  const leave = () => (arenaRestore(), showArena({ start: i, anim: 'down' }));
+  const again = () => (arenaRestore(), arenaFight(k, spec.diff, picks));
+  const end = (win, beat) => arenaEnd(k, spec.diff, win, beat, leave, again);
+  game = new Game(app, level, {
+    dev,
+    free: true,
+    noTrack: true,
+    noAchieve: true,
+    arena: { onEnd: end },
+    onExit: leave,
+    onAbandon: (gaveUp) => (gaveUp === false ? leave() : end(false, false)),
+    onReplay: again,
+    onDone: leave,
+    onWin: () => ({ coins: 0, tickets: 0, prev: 0 }),
+  });
+  const drop = () => old.forEach((o) => (o._dispose?.(), o.remove()));
+  if (old.length && !reduced()) game.el.animate([{ translate: '0 100%' }, { translate: '0 0' }], { duration: 560, easing: 'cubic-bezier(0.2, 0.9, 0.25, 1)' }).finished.then(drop, drop);
+  else drop();
+  game.attachDev = () => attachDevBar(game, { go: () => toast('Sal a la arena para escoger otro jefe'), toGallery: leave });
+  current = null;
+  if (dev.on) game.attachDev();
+}
+// Final de la pelea: ganaste (el contador sube y, si es la primera vez en esa dificultad, se dice) o esta vez no.
+function arenaEnd(k, diff, win, beat, leave, again) {
+  const n0 = arenaTotal(k);
+  let first = false;
+  if (win) {
+    const w = (arenaSave().wins[k] ||= [0, 0, 0]);
+    first = !w[diff];
+    w[diff]++;
+    persist();
+  }
+  const m = openModal({
+    title: win ? (beat ? '¡Jefe derrotado!' : '¡Le ganaste!') : 'Esta vez no',
+    color: win ? 'gold' : 'violet',
+    closable: false,
+    cls: `arena-end${win ? ' win' : ''}`,
+    body: `<div class="ae-hero" style="--c:${ARENA_COLOR[k]}"><div class="rays"></div><span class="ae-ico">${FOE_ICON[k]()}</span>${win ? `<span class="ae-crown">${icon('crown')}</span>` : ''}</div>
+      ${win ? `<div class="ae-cnt">${icon('trophy')}<span>Vencido <b>${n0}</b> ${n0 + 1 === 1 ? 'vez' : 'veces'}</span></div>${first ? `<p class="note">¡Primera vez en <b>${ARENA_DIFF_NAME[diff]}</b>!</p>` : ''}`
+        : `<p class="lead">${FOE_TITLE[k]} sigue en su guarida. Otro tablero, otra suerte.</p>`}`,
+    buttons: [{ label: `${icon('replay')} Otra vez`, cls: 'green wide', onClick: again }, { label: 'Volver a la arena', cls: 'ghost wide', onClick: leave }],
+  });
+  if (!win) return;
+  confetti();
+  setTimeout(() => {
+    const b = m.el.querySelector('.ae-cnt b');
+    if (!b) return;
+    b.textContent = n0 + 1;
+    if (!reduced()) b.animate([{ scale: 1 }, { scale: 1.7, color: '#e2405a', offset: 0.4 }, { scale: 1 }], { duration: 520, easing: 'cubic-bezier(.3,1.4,.5,1)' });
+    buzz([15, 40, 15]);
+    const r = b.getBoundingClientRect();
+    sparkle({ x: r.left + r.width / 2, y: r.top + r.height / 2 }, 14);
+  }, 900);
+}
+
 // Al volver de ganar: monedas al monedero, el viajero camina al siguiente nivel; si fue el jefe del planeta,
 // se sale a la constelación y el siguiente planeta se enciende.
 async function evCelebrate(galaxy, a, el, cta, paint) {
@@ -3816,6 +4107,11 @@ async function notices() {
       paintBetSticker();
     }
   }
+  // Arena de jefes: al ganarle al Fénix (nivel 100), su ventana y aparece la corona.
+  if (arenaOn() && !save.intro?.arena) {
+    if (!(await calm(gen))) return;
+    if (document.querySelector('#app .cta [data-a="arena"]')) await openUnlock('arena');
+  }
   // Tripulación lunar: llegaron a otra base (también con lo que juntaron los viajeros mientras no jugabas).
   if (isOn('tripulacion')) {
     crewCheck();
@@ -3986,6 +4282,15 @@ const MONTHS_LONG = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'jul
 const ulList = (list) => (list?.length ? `<ul class="ul-list">${list.map(([ico, name, sub]) => `<li>${icon(ico)}<span><b>${name}</b>${sub ? `<small>${sub}</small>` : ''}</span></li>`).join('')}</ul>` : '');
 const RAIN_KEY = { cometas: 'comet', aurora: 'aurora', cristales: 'crystal' };
 const UNLOCK_INFO = {
+  arena: () => ({
+    title: '¡Nueva: Arena de jefes!', ico: 'crown', color: 'violet', hero: icon('crown', 0, 0, 'big'),
+    lead: 'Venciste a tu primer jefe de constelación. Ahora lo puedes <b>retar otra vez</b>.',
+    rules: [
+      ['crown', 'Toca la <b>corona</b> de abajo: cada jefe que vences en tu camino espera en su <b>guarida</b>.'],
+      ['flame', 'Escoge la <b>dificultad</b> y hasta <b>3 ayudas gratis</b>. Cada pelea es un <b>tablero nuevo</b>.'],
+      ['trophy', 'No da estrellas ni premios: cuenta las <b>veces que lo vences</b>.'],
+    ],
+  }),
   cometas: () => ({
     title: '¡Nueva: Lluvia de cometas!', ico: 'cometaLluvia', color: 'blue', hero: icon('cometaLluvia', 0, 0, 'big'),
     lead: ulLead(SHOWERS.comet.from + 1, 'la lluvia de cometas', 'De vez en cuando caen cometas sobre tu mapa y traen boletos.'),
@@ -4184,8 +4489,8 @@ function evHeroIcons(main, list = Object.keys(EVENTS).map(Number).sort((a, b) =>
   return [at(-1), at(0), at(1)].map((x, k) => icon(x, 0, 0, k === 1 ? 'main' : '')).join('');
 }
 async function openUnlock(k) {
-  const sel = k === 'meteoro' || k === 'estrellas' || k === 'construir' || RAIN_KEY[k] || k.startsWith('apuesta') ? null : `.side.r [data-a="${{ racha: 'racha', carrera: 'carrera', tripulacion: 'tripulacion', mis: 'mis', logros: 'logros', col: 'col', mes: 'evento', col2: 'col', col3: 'col', fiesta: 'fiesta', fiesta2: 'fiesta', fiesta3: 'fiesta', fiesta4: 'fiesta', fiesta5: 'fiesta', fiesta6: 'fiesta' }[k]}"]`;
-  if (sel) openGroup('r', 'open');
+  const sel = k === 'arena' ? '.cta [data-a="arena"]' : k === 'meteoro' || k === 'estrellas' || k === 'construir' || RAIN_KEY[k] || k.startsWith('apuesta') ? null : `.side.r [data-a="${{ racha: 'racha', carrera: 'carrera', tripulacion: 'tripulacion', mis: 'mis', logros: 'logros', col: 'col', mes: 'evento', col2: 'col', col3: 'col', fiesta: 'fiesta', fiesta2: 'fiesta', fiesta3: 'fiesta', fiesta4: 'fiesta', fiesta5: 'fiesta', fiesta6: 'fiesta' }[k]}"]`;
+  if (sel && k !== 'arena') openGroup('r', 'open');
   const btn = sel && document.querySelector(sel);
   revealed.add(k);
   if (btn) {
@@ -6138,7 +6443,7 @@ const CARD_SHORT = {
 const TABLE_HELP = [
   ['nave', 'ship', 'Nave ladrona', 'se lleva cartas de tu <b>mazo</b>; con racha de 4 te regresa una.'], ['mesa', 'mesa', 'Mesa enrollada', 'limpia las primeras y salen más del <b>rollo</b>.'], ['nebulosa', 'nebulosa', 'Nebulosa', 'vacía un grupo y sale <b>otro</b>.'], ['gravedad', 'gravedad', 'Gravedad', 'juegas la de <b>abajo</b> y la columna cae.'],
   ['hangar', 'hangar', 'Hangar', 'vacía una columna y del <b>hangar</b> sale otra.'], ['bitacora', 'bitacora', 'Bitácora', 'por las <b>escotillas</b> juegas cartas de la hoja de abajo.'], ['portal', 'portal', 'Grúa de feria', 'la <b>garra</b> se lleva la carta de arriba de cada columna.'], ['voltea', 'voltea', 'Mesa que se voltea', 'cada 5 turnos la cápsula da <b>media vuelta</b>.'],
-  ['cohete', 'cohete', 'Cohete', 'limpia y el <b>cohete avanza</b>; cada tramo da monedas.'], ['tubos', 'tubos', 'Tubos neumáticos', 'vacía un hueco y un <b>tubo</b> lo rellena disparando otra carta.'], ['marea', 'marea', 'Marea', 'robar sube el <b>agua</b> y jugar la baja.'], ['hoyo', 'hoyo', 'Agujero negro', 'cada 4 turnos <b>revuelve</b> los números.'], ['astro', 'astro', 'Astronauta', 'te <b>guarda</b> una carta y luego la lleva al descarte.'],
+  ['cohete', 'cohete', 'Cohete', 'limpia y el <b>cohete avanza</b>; cada tramo da monedas.'], ['tubos', 'tubos', 'Cartas al vuelo', 'vacía un hueco y otra carta <b>llega volando</b> a su lugar.'], ['marea', 'marea', 'Marea', 'robar sube el <b>agua</b> y jugar la baja.'], ['hoyo', 'hoyo', 'Agujero negro', 'cada 4 turnos <b>revuelve</b> los números.'], ['astro', 'astro', 'Astronauta', 'te <b>guarda</b> una carta y luego la lleva al descarte.'],
   ['rocas', 'rocas', 'Asteroides', 'robar hace caer <b>piedras</b> que tapan cartas.'], ['puertas', 'puertas', 'Puertas', 'juega una <b>carta llave</b> y abre la puerta que quieras.'], ['banda', 'banda', 'Banda transportadora', 'las cartas <b>dan vueltas</b>; atrápalas al pasar.'],
   ['zero', 'zero', 'Gravedad cero', 'al jugar, una carta <b>flota</b> encima de otra.'], ['orbit', 'orbit', 'Planetas en órbita', 'la carta con un <b>planeta</b> encima no se juega.'], ['pong', 'pong', 'Meteoro fugaz', 'el meteoro pone enfrente la carta de <b>abajo</b>.'],
 ];
@@ -6319,6 +6624,7 @@ const loadAvatars = () => import('./avatar3d.js').then((m) => m.watchAvatars()).
 addEventListener('pagehide', stampRuns);
 
 function boot() {
+  arenaRestore();
   staleRuns();
   // Reiniciar el perfil, salir del modo dev o volver al punto de partida cambian lo puesto: reverso, frente y fondo.
   applyLook();

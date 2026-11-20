@@ -365,8 +365,6 @@ button.bt-tile:active { scale: .94; }
 .mech-open .newmech { opacity: 1; scale: 1; translate: 0 0; pointer-events: auto; transition: opacity 160ms ease, scale 380ms var(--spring), translate 380ms var(--spring); }
 .newmech > div > b { display: block; font-size: calc(14px * var(--k)); line-height: 1.1; }
 .newmech > div > span { display: block; font-size: calc(12.5px * var(--k)); line-height: 1.2; color: #5a4a9e; font-weight: 600; }
-.hint-chip { padding: 8px 14px; border-radius: 14px; background: #0b062a99; color: #fff; font-weight: 800; font-size: calc(14px * var(--k)); pointer-events: none; animation: chip-life 4.5s var(--ease-out) forwards; }
-@keyframes chip-life { 0% { opacity: 0; translate: 0 14px; } 8% { opacity: 1; translate: 0 0; } 75% { opacity: 1; translate: 0 0; } 100% { opacity: 0; translate: 0 6px; } }
 /* Regalo y boleto listos para cobrar: se mueven (como la carta de mecánica nueva) con su punto rojo. */
 .iconbtn.ready, .road-btn.nuevo { animation: ready-wiggle 2.8s ease-in-out infinite; }
 .iconbtn.ready:nth-child(2) { animation-delay: -1.4s; }
@@ -386,8 +384,8 @@ button.bt-tile:active { scale: .94; }
   .galaxy .region { top: calc(60px * var(--k) + var(--st)); }
   .galaxy .res .pill:first-child:not(:last-child) { display: none; }
   .wtitle { max-width: none; left: calc(12px + var(--cl)); right: calc(12px + var(--cr)); top: calc(58px * var(--k) + var(--st)); }
-  .newmech { right: 0; top: auto; bottom: calc(100% + 14px); min-height: calc(60px * var(--k)); width: calc(100vw - 28px - var(--cl) - var(--cr)); max-width: calc(380px * var(--k)); padding: 8px 16px 10px; transform-origin: calc(100% - 205px * var(--k)) bottom; translate: 0 20px; }
-  .newmech::after { right: auto; top: auto; left: calc(100% - 205px * var(--k) - 7px); bottom: -8px; margin: 0; rotate: 135deg; }
+  .newmech { right: 0; top: auto; bottom: calc(100% + 14px); min-height: calc(60px * var(--k)); width: calc(100vw - 28px - var(--cl) - var(--cr)); max-width: calc(380px * var(--k)); padding: 8px 16px 10px; transform-origin: calc(100% - var(--ax, 205px * var(--k))) bottom; translate: 0 20px; }
+  .newmech::after { right: auto; top: auto; left: calc(100% - var(--ax, 205px * var(--k)) - 7px); bottom: -8px; margin: 0; rotate: 135deg; }
 }
 
 /* ---------- Partida: mesa ---------- */
@@ -2458,9 +2456,9 @@ p.met-sale.vip { background: #fff1c2; }
    de la misma baraja que el comodín con cuántas tienes; abajo, comprar +1 con un toque. Sin tener, la carta se ve apagada. */
 .help-sheet, .help-sheet-out { position: fixed; z-index: 9001; --hw: 72px; padding: 0 14px 14px; border-radius: 22px; color: #fff;
   background: linear-gradient(170deg, #3d2d8c, #261b5e); border: 3px solid var(--ink); box-shadow: inset 0 0 0 2px #ffffff1f, 0 5px 0 var(--ink), 0 18px 40px #0b062a99; }
-.help-sheet-out { pointer-events: none; }
 /* Velo (8 nov 2026): oscurece el tablero mientras el panel está abierto (encima de la mesa, debajo de las ventanas).
    Tocarlo cierra el panel. */
+.help-sheet-out { pointer-events: none; }
 .help-scrim { position: fixed; inset: 0; z-index: 9000; background: radial-gradient(120% 90% at 50% 100%, #0b062ab3, #0b062a73); }
 .hs-head { display: flex; align-items: center; justify-content: space-between; height: 44px; }
 .hs-head b { font: 400 20px 'Lilita One', sans-serif; letter-spacing: .02em; }
@@ -3783,19 +3781,8 @@ p.met-sale.vip { background: #fff1c2; }
 /* Grúa de feria (13 nov 2026; antes portales): cada riel con su garra arriba que agarra la carta que se juega; al
    jugarla, la garra baja, cierra las pinzas y sube la columna. Se mece poquito. */
 .portal-mesa .g-rail::after { bottom: auto; top: 6px; opacity: 0; }
-/* Tubos neumáticos (19 nov 2026): sin rieles; tres tubos de vidrio arriba con cartitas de canto (cuántas quedan, sin
-   número). Al disparar, el tubo se infla y echa aire por la boca. */
+/* Cartas al vuelo (antes tubos neumáticos; 20 nov 2026 sin tubos): sin rieles, solo los huecos en fila. */
 .tubes-mesa .g-rail { display: none; }
-.tube { position: absolute; z-index: 500; pointer-events: none; border: 2.5px solid var(--ink); border-radius: calc(var(--cw) * 0.42) calc(var(--cw) * 0.42) calc(var(--cw) * 0.16) calc(var(--cw) * 0.16); background: linear-gradient(90deg, #bfe9ff40, #ffffffa0 22%, #bfe9ff30 45%, #bfe9ff55); box-shadow: inset 0 0 0 2px #ffffff55, 0 3px 0 #0b062a55; transform-origin: 50% 100%; }
-.tube::before { content: ''; position: absolute; left: 14%; top: 8%; width: 12%; height: 60%; border-radius: 99px; background: #fff; opacity: .55; }
-.tube .tb-fill { position: absolute; left: 12%; right: 12%; bottom: calc(var(--cw) * 0.26); display: flex; flex-direction: column-reverse; gap: 1px; }
-.tube .tb-fill i { height: calc(var(--cw) * 0.17); border-radius: 3px; border: 1.5px solid var(--ink); background: var(--back) center / 100% 340%; }
-.tube .tb-mouth { position: absolute; left: 22%; right: 22%; bottom: calc(var(--cw) * -0.16); height: calc(var(--cw) * 0.2); border: 2.5px solid var(--ink); border-radius: 0 0 6px 6px; background: #8fa0c8; }
-.tube.empty { filter: saturate(.5) brightness(.85); }
-.tube.puff { animation: tube-puff .42s ease-out; }
-.tube.puff .tb-mouth::after { content: ''; position: absolute; left: 50%; top: 100%; width: calc(var(--cw) * 0.7); height: calc(var(--cw) * 0.7); translate: -50% 0; border-radius: 50%; background: radial-gradient(circle, #fff 0 30%, #ffffff00 70%); animation: tube-air .42s ease-out forwards; }
-@keyframes tube-puff { 30% { scale: 1.12 .9; } 65% { scale: .95 1.06; } }
-@keyframes tube-air { from { opacity: .9; scale: .3; } to { opacity: 0; scale: 1.6; translate: -50% 30%; } }
 .portal-mesa .g-rail { overflow: visible; z-index: auto; } /* así la garra queda encima de la carta que agarra */
 .g-claw { position: absolute; left: 50%; top: calc(var(--cw) * -0.24); width: calc(var(--cw) * 0.95); translate: -50% 0; z-index: 950; transform-origin: 50% 0; animation: g-claw-sway 3.2s ease-in-out infinite; }
 .g-claw svg { display: block; width: 100%; overflow: visible; }
@@ -4339,3 +4326,78 @@ s.was { text-decoration: line-through 2px #ff5f7e; opacity: .7; margin-right: .2
   .rc-prize { padding: 5px 6px 5px 8px; gap: 6px; }
   .rc-pchest > .ico { width: 36px; height: 36px; }
 }
+
+/* Arena de jefes (20 nov 2026): sin tienda; el hueco del mazo vacío no ofrece +5 y las ayudas no se compran. */
+.arena-game .buy5 b { display: none; }
+.arena-game .hs-buy { display: none; }
+.arena-game .hud-r .pill:has([data-coins]) { display: none; }
+/* ---------- Arena de jefes (20 nov 2026) ---------- */
+.arena-tog { flex: none; }
+/* Corona y «¡A pelear!» oscuros: que imponga (20 nov 2026, el usuario). */
+.arena-tog.tb { background: #54479a; box-shadow: inset 0 -5px 0 #3b307a, inset 0 2px 0 #8a7cd0, 0 3px 0 var(--ink), 0 8px 14px #0b062a55; }
+.arena-tog > .ico { width: 66%; height: 66%; animation: wob 2.8s ease-in-out infinite; filter: drop-shadow(1.5px 0 0 #fff) drop-shadow(-1.5px 0 0 #fff) drop-shadow(0 1.5px 0 #fff) drop-shadow(0 -1.5px 0 #fff); }
+.go.boss-go { background: #54479a; box-shadow: inset 0 -7px 0 #3b307a, inset 0 3px 0 #8a7cd0, 0 4px 0 var(--ink), 0 12px 22px #0b062a77; }
+.go.boss-go .t b { color: #ffd85a; }
+@keyframes wob { 50% { rotate: -8deg; scale: 1.08; } }
+.ar-em { display: grid; place-items: center; flex: none; border-radius: 50%; border: 2.5px solid var(--ink); background: var(--c); }
+.ar-em svg { width: 72%; height: 72%; }
+.wtitle small .ico { flex: none; }
+/* Ficha del jefe (20 nov 2026, repaso: texto a lo ancho, trofeo en las dificultades ganadas, ayudas escogidas encendidas) */
+.arena-foe .af-top { display: flex; gap: 12px; align-items: center; }
+.arena-foe .af-ico { flex: none; width: 68px; height: 68px; border-radius: 50%; border: 3px solid var(--ink); background: var(--c); display: grid; place-items: center; box-shadow: 0 3px 0 var(--ink); animation: af-calm 1.8s ease-in-out infinite; transition: box-shadow .3s; }
+.arena-foe .af-ico svg { width: 44px; height: 44px; }
+.arena-foe .af-top[data-d="0"] .af-ico { animation-duration: 2.8s; }
+.arena-foe .af-top[data-d="2"] .af-ico { animation: af-mad .35s infinite; box-shadow: 0 3px 0 var(--ink), 0 0 0 6px #ff6a5b77; }
+@keyframes af-calm { 50% { translate: 0 -4px; } }
+@keyframes af-mad { 25% { translate: -2px 1px; rotate: -4deg; } 75% { translate: 2px -1px; rotate: 4deg; } }
+.arena-foe .af-who { display: flex; flex-direction: column; gap: 4px; min-width: 0; text-align: left; }
+.arena-foe .af-who > b { font-size: 15px; line-height: 1.2; }
+.arena-foe .af-cnt { display: inline-flex; align-items: center; gap: 5px; align-self: flex-start; padding: 2px 10px 3px 6px; border-radius: 99px; background: #fff3c4; border: 2px solid #f0d27a; font-size: 13px; font-weight: 700; }
+.arena-foe .af-cnt .ico { width: 18px; height: 18px; }
+.arena-foe .af-what { margin: 10px 0 0; padding: 8px 12px; border-radius: 12px; background: #efe8ff; border: 2px solid #ddd0f7; text-align: left; font-size: 13px; line-height: 1.35; font-weight: 600; color: #5a4a9e; }
+.arena-foe .af-what b { color: var(--ink); }
+.arena-foe .af-lbl { display: flex; justify-content: space-between; align-items: baseline; margin: 12px 2px 6px; }
+.arena-foe .af-lbl b { font-family: 'Lilita One'; font-weight: 400; font-size: 17px; }
+.arena-foe .af-lbl small { font-weight: 800; font-size: 12px; color: #2f9e5a; background: #dff6e7; border-radius: 99px; padding: 1px 9px; }
+.arena-foe .af-diff { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.arena-foe .af-diff button { position: relative; font: 400 15px 'Lilita One'; padding: 10px 2px 9px; border-radius: 12px; border: 3px solid var(--ink); background: #fff; color: var(--ink); box-shadow: 0 3px 0 var(--ink); transition: background .2s, scale .25s var(--spring); }
+.arena-foe .af-diff button.on { scale: 1.06; }
+.arena-foe .af-diff button.on[data-d="0"] { background: #7fd6a0; }
+.arena-foe .af-diff button.on[data-d="1"] { background: #ffd54a; }
+.arena-foe .af-diff button.on[data-d="2"] { background: #ff6a5b; color: #fff; }
+.arena-foe .af-dtxt { margin: 7px 0 0; text-align: center; font-size: 13px; font-weight: 700; color: #6d6394; min-height: 1.2em; }
+.arena-foe .af-slots { display: flex; gap: 10px; justify-content: center; margin-bottom: 10px; }
+.arena-foe .af-slots button { position: relative; width: 56px; height: 56px; border-radius: 14px; border: 3px dashed #c4b6e4; background: #fff; display: grid; place-items: center; padding: 0; }
+.arena-foe .af-slots .af-plus { font: 400 26px 'Lilita One'; color: #c4b6e4; font-style: normal; }
+.arena-foe .af-slots button.full { border-style: solid; border-color: var(--ink); background: #ffe9a8; box-shadow: 0 3px 0 var(--ink); animation: lootpop .35s var(--spring); }
+.arena-foe .af-slots button.wait > * { opacity: 0; }
+.arena-foe .af-slots button > .ico { width: 36px; height: 36px; }
+.arena-foe .af-x { position: absolute; top: -8px; right: -8px; width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; background: #ff5f7e; border: 2px solid var(--ink); }
+.arena-foe .af-x .ico { width: 11px; height: 11px; }
+.arena-foe .af-helps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
+.arena-foe .af-helps button { position: relative; border: 2.5px solid var(--ink); border-radius: 12px; background: #fff; padding: 6px 2px 5px; font-weight: 700; font-size: 11.5px; color: var(--ink); line-height: 1.1; transition: opacity .2s, background .2s; }
+.arena-foe .af-helps button > .ico { display: block; width: 30px; height: 30px; margin: 0 auto 3px; }
+.arena-foe .af-helps button.on { background: #ffe9a8; box-shadow: 0 0 0 2px #ffc83d; }
+.arena-foe .af-helps button.dim { opacity: .45; }
+.arena-foe .af-n:empty { display: none; }
+.arena-foe .af-n { position: absolute; top: -8px; right: -6px; min-width: 22px; height: 22px; padding: 0 4px; border-radius: 99px; display: grid; place-items: center; background: #5fd47a; border: 2px solid var(--ink); font: 400 12px 'Lilita One'; font-style: normal; color: #fff; -webkit-text-stroke: 0; }
+.arena-foe .af-n .ico { width: 13px; height: 13px; }
+.af-fly { position: fixed; left: 0; top: 0; z-index: 1600; width: 36px; height: 36px; pointer-events: none; }
+.af-fly .ico { width: 100%; height: 100%; }
+/* Final de la pelea */
+.arena-end .ae-hero { position: relative; height: 150px; display: grid; place-items: center; overflow: hidden; }
+.arena-end .ae-ico { position: relative; width: 92px; height: 92px; border-radius: 50%; border: 3px solid var(--ink); background: var(--c); display: grid; place-items: center; }
+.arena-end .ae-ico svg { width: 60px; height: 60px; }
+/* Ganaste: el jefe recibe el golpe (tiembla y parpadea) y su corona cae encima, ya es tuya. */
+.arena-end .ae-hero .rays { z-index: 0; width: 220px; height: 220px; }
+.arena-end .ae-ico { z-index: 1; box-shadow: 0 4px 0 var(--ink); }
+.arena-end.win .ae-ico { animation: ae-hit .7s ease .3s both; }
+@keyframes ae-hit { 0%, 100% { translate: 0; filter: none; } 15% { translate: -7px 0; rotate: -8deg; filter: brightness(2.2); } 30% { translate: 6px 0; rotate: 6deg; filter: none; } 45% { translate: -4px 0; rotate: -4deg; filter: brightness(1.8); } 60% { translate: 3px 0; rotate: 2deg; filter: none; } }
+.arena-end .ae-crown { position: absolute; z-index: 2; left: 50%; top: 50%; width: 44px; height: 44px; margin: -76px 0 0 8px; rotate: 18deg; animation: ae-crown .55s cubic-bezier(.3,1.5,.5,1) 1s both; filter: drop-shadow(0 3px 0 #0b062a44); }
+.arena-end .ae-crown .ico { width: 100%; height: 100%; }
+@keyframes ae-crown { from { translate: 0 -60px; opacity: 0; scale: 1.4; } to { translate: 0; opacity: 1; scale: 1; } }
+.arena-end:not(.win) .ae-ico { animation: af-calm 1s ease-in-out 3; }
+.arena-end .ae-cnt { display: flex; align-items: center; justify-content: center; gap: 6px; font-weight: 800; font-size: 18px; }
+.arena-end .ae-cnt .ico { width: 28px; height: 28px; }
+.arena-end .ae-cnt b { display: inline-block; font: 400 26px 'Lilita One'; }
+.lvl-tag.arena-tag .ico { width: 26px; height: 26px; }

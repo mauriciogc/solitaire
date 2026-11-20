@@ -198,19 +198,19 @@ const TABLE_ICONS = {
   // 17 nov 2026: cartas que se mueven.
   zero: SV('<rect x="4" y="12" width="10" height="14" rx="2" fill="#fff" transform="rotate(-10 9 19)"/><rect x="16" y="5" width="10" height="14" rx="2" fill="#fff" transform="rotate(8 21 12)"/><path d="M6 6l1 2 2 1-2 1-1 2-1-2-2-1 2-1zM27 24l.8 1.6 1.6.8-1.6.8-.8 1.6-.8-1.6-1.6-.8 1.6-.8z" fill="#9fe6ff" stroke-width="1"/>'),
   orbit: SV('<ellipse cx="16" cy="17" rx="13" ry="5" stroke-dasharray="2 2"/><circle cx="16" cy="16" r="5" fill="#ffc23a"/><circle cx="27" cy="17" r="4" fill="#ff8aa6"/><circle cx="6" cy="15" r="3" fill="#7fd8ff"/>'),
-  // Tubos neumáticos (19 nov 2026): tres tubos de vidrio con cartas y una que sale disparada.
-  tubos: SV('<rect x="3" y="3" width="7" height="17" rx="3.5" fill="#bfe9ff"/><rect x="12.5" y="3" width="7" height="17" rx="3.5" fill="#bfe9ff"/><rect x="22" y="3" width="7" height="17" rx="3.5" fill="#bfe9ff"/><rect x="4.5" y="12" width="4" height="6" rx="1" fill="#8a5cf0" stroke="none"/><rect x="23.5" y="9" width="4" height="9" rx="1" fill="#8a5cf0" stroke="none"/><rect x="12" y="20" width="8" height="10" rx="1.6" fill="#fff" transform="rotate(14 16 25)"/><path d="M7 22l3 3M25 22l-3 3" stroke="#ffc83d" stroke-width="1.8" stroke-linecap="round"/>'),
+  // Cartas al vuelo (20 nov 2026, antes tubos): una carta y flechas que llegan de los cuatro lados.
+  tubos: SV('<rect x="11" y="9" width="10" height="14" rx="2" fill="#fff"/><path d="M16 1v5M13.5 4l2.5 2.5L18.5 4M16 31v-5M13.5 28l2.5-2.5 2.5 2.5M1 16h6M4.5 13.5L7 16l-2.5 2.5M31 16h-6M27.5 13.5L25 16l2.5 2.5" stroke="#ffc83d" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>'),
   // Meteoro fugaz (19 nov 2026, antes ping-pong): piedra con su cola de fuego.
   pong: SV('<path d="M17 7C11 11 6 18 3 29c10-3 16-8 20-15z" fill="#ff8a3d"/><path d="M16 12c-4 3-7 7-9 12 5-2 9-5 11-9z" fill="#ffd54a" stroke="none"/><circle cx="21" cy="11" r="7" fill="#a07a5c"/><circle cx="23" cy="9" r="1.8" fill="#7d5a40" stroke="none"/><circle cx="19" cy="14" r="1.4" fill="#7d5a40" stroke="none"/>'),
   marea: SV('<rect x="5" y="3" width="22" height="26" rx="3" fill="#fff6e6"/><path d="M5 18c4-3 7 3 11 0s7 3 11 0v8a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3z" fill="#4aa8de"/>'),
 };
 export const tableIcon = (t) => TABLE_ICONS[t] || '';
 const RAIN_NOTE = { comet: '1 vez por semana, 20 minutos sin aviso: jugar no gasta boletos y cada victoria da 1 boleto más.', aurora: '1 vez por semana, 20 minutos sin aviso y solo con colección abierta: fichas ×2 y hasta 2 premios.', crystal: '1 vez cada dos semanas, 10 minutos sin aviso: cada nivel ganado puede dar una ayuda al azar (3★ 70%, 2★ 47%, 1★ 23%; el jugador no lo ve).' };
-const SCROLL_NAMES = { cohete: 'cohete', mesa: 'mesa enrollada', gravedad: 'gravedad', nebulosa: 'nebulosa', voltea: 'mesa que se voltea', hangar: 'hangar', bitacora: 'bitácora', portal: 'grúa de feria', tubos: 'tubos neumáticos' };
+const SCROLL_NAMES = { cohete: 'cohete', mesa: 'mesa enrollada', gravedad: 'gravedad', nebulosa: 'nebulosa', voltea: 'mesa que se voltea', hangar: 'hangar', bitacora: 'bitácora', portal: 'grúa de feria', tubos: 'cartas al vuelo' };
 // Mesas que van sobre un tablero normal (no son tira): se filtran por su bandera del nivel.
 // Mesas que son gravedad por dentro (13 nov 2026): se filtran por su bandera.
 const colKind = (L) => (L.flip ? 'voltea' : L.portal ? 'portal' : L.hangar ? 'hangar' : L.tubes ? 'tubos' : null);
-const COL_TABLES = [['hangar', 'Hangar', SCROLL_FROM.hangar + 1], ['bitacora', 'Bitácora', SCROLL_FROM.bitacora + 1], ['portal', 'Grúa de feria', SCROLL_FROM.portal + 1], ['voltea', 'Mesa que se voltea', SCROLL_FROM.voltea + 1], ['tubos', 'Tubos neumáticos', SCROLL_FROM.tubos + 1]];
+const COL_TABLES = [['hangar', 'Hangar', SCROLL_FROM.hangar + 1], ['bitacora', 'Bitácora', SCROLL_FROM.bitacora + 1], ['portal', 'Grúa de feria', SCROLL_FROM.portal + 1], ['voltea', 'Mesa que se voltea', SCROLL_FROM.voltea + 1], ['tubos', 'Cartas al vuelo', SCROLL_FROM.tubos + 1]];
 const OVERLAY_TABLES = [['marea', 'Marea', tideFirst() + 1, (L) => !!L.tide], ['hoyo', 'Agujero negro', holeFirst() + 1, (L) => !!L.hole], ['puertas', 'Puertas', doorsFirst() + 1, (L) => !!L.doors], ['banda', 'Banda transportadora', bandaFirst() + 1, (L) => !!L.belt], ['rocas', 'Asteroides', rocksFirst() + 1, (L) => !!L.rocks], ['zero', 'Gravedad cero', zeroFirst() + 1, (L) => !!L.zero], ['orbit', 'Planetas en órbita', orbitFirst() + 1, (L) => !!L.orbit], ['pong', 'Meteoro fugaz', pongFirst() + 1, (L) => !!L.pong]];
 const PIECES = [['steps', 3], ['cross', 3], ['crown', 8], ['rosette', 13], ['sandwich', 16], ['tiltFan', 21]];
 // Nombres en español de formas y piezas (galería e Info).
@@ -226,7 +226,11 @@ const TPL_GROUPS = [
 const mechDebut = (m) => (EXTRA.includes(m) ? extraDebut(m) : MECH_INTRO[m] * LEVELS_PER_WORLD) + 1;
 const MECH_ORDER = MECHANICS.slice().sort((a, b) => mechDebut(a) - mechDebut(b));
 const okTpl = (L, t) => t === 'todas' || (t === 'respiros' ? !!L.respite : t.startsWith('pz:') ? !!L.pieces?.includes(t.slice(3)) : t.startsWith('ov:') ? OVERLAY_TABLES.find(([k]) => k === t.slice(3))[3](L) : t.startsWith('cv:') ? (t === 'cv:bitacora' ? !!L.sheets : colKind(L) === t.slice(3)) : t === 'gravedad' ? L.template === t && !colKind(L) : L.template === t);
-const tplName = (L) => (TPL_NAMES[L.template] || L.template) + (L.pieces ? ` + ${L.pieces.map((k) => PIECE_NAMES[k] || k).join(', ')}` : '');
+// Mesas del nivel para las etiquetas de la galería (20 nov 2026, el usuario: «unos están mal y otros no tienen»): la de
+// tira o columnas y las que van sobre un tablero normal.
+const TABLE_TAGS = { mesa: 'Mesa enrollada', gravedad: 'Gravedad', nebulosa: 'Nebulosa', cohete: 'Cohete', bitacora: 'Bitácora', voltea: 'Se voltea', portal: 'Grúa', hangar: 'Hangar', tubos: 'Cartas al vuelo', ...Object.fromEntries(OVERLAY_TABLES.map(([k, name]) => [k, name])) };
+const tableKeys = (L) => [colKind(L) || (L.sheets ? 'bitacora' : L.rocket ? 'cohete' : L.scroll), ...OVERLAY_TABLES.filter(([, , , ok]) => ok(L)).map(([k]) => k)].filter(Boolean);
+const tplName = (L) => (colKind(L) ? TABLE_TAGS[colKind(L)] : TPL_NAMES[L.template] || L.template) + (L.pieces ? ` + ${L.pieces.map((k) => PIECE_NAMES[k] || k).join(', ')}` : '');
 // Etiqueta según el % del bot casual: fácil ≥75, medio ≥50, difícil ≥25, muy difícil ≥14, extremo ≥6 y demasiado
 // extremo (los niveles duros del camino buscan 18, 10 y 3%, ver TIERS).
 export const rateTag = (L, p) => (p >= 75 ? 'fácil' : p >= 50 ? 'medio' : p >= 25 ? 'difícil' : p >= 14 ? 'muy difícil' : p >= 6 ? 'extremo' : 'demasiado extremo');
@@ -335,7 +339,7 @@ export function galleryScreen({ onPlay, onPlayLevel, onBack }) {
   // Tarjeta: el tablero grande con su número y lo que lo distingue encima; abajo forma, cartas y dificultad.
   // pickI: índice en la lista del mes/día (se juega el tablero tal cual); si no, el id del nivel.
   const tile = (L, pickI) => {
-    const badges = [L.boss && `<i class="gb gb-boss">${icon(L.foe ? 'crown' : 'trophy')}${L.foe ? 'Jefe' : 'Final'}</i>`, L.tier && `<i class="gb gb-tier gb-t${L.tier}">${TIERS[L.tier].name}</i>`, L.respite && '<i class="gb gb-rest">Respiro</i>', (L.scroll || L.sheets) && `<i class="gb gb-mesa">${tableIcon(colKind(L) || (L.sheets ? 'bitacora' : L.rocket ? 'cohete' : L.scroll))}${{ voltea: 'Se voltea', portal: 'Grúa', hangar: 'Hangar' }[colKind(L)] || (L.sheets ? 'Bitácora' : L.rocket ? 'Cohete' : TPL_NAMES[L.scroll])}</i>`, L.tide && `<i class="gb gb-mesa">${tableIcon('marea')}Marea</i>`].filter(Boolean).join('');
+    const badges = [L.boss && `<i class="gb gb-boss">${icon(L.foe ? 'crown' : 'trophy')}${L.foe ? 'Jefe' : 'Final'}</i>`, L.tier && `<i class="gb gb-tier gb-t${L.tier}">${TIERS[L.tier].name}</i>`, L.respite && '<i class="gb gb-rest">Respiro</i>', ...tableKeys(L).map((k) => `<i class="gb gb-mesa">${tableIcon(k)}${TABLE_TAGS[k]}</i>`)].filter(Boolean).join('');
     const inSet = pickI != null;
     const num = inSet ? L.k + 1 : L.g + 1;
     const where = inSet ? `Nivel ${L.k + 1}` : `Mundo ${Math.floor(L.g / LEVELS_PER_WORLD) + 1} · nivel ${(L.g % LEVELS_PER_WORLD) + 1}`;

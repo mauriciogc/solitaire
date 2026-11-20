@@ -184,8 +184,8 @@ export const TABLE_TEXT = {
   portal: ['Unas <b>grúas de feria</b> jalan las columnas hacia arriba.', 'Solo juegas la carta de hasta arriba: al tocarla, la <b>garra</b> baja, la agarra y se la lleva. Luego sube la columna.'],
   // Astronauta (14 nov 2026, pedido del usuario: «no carta, un ayudante»): como la nave, va como mesa.
   astro: ['Aquí te acompaña <b>Peter</b>, un astronauta.', 'Tócalo y luego toca una carta libre: vuela por ella y te la <b>guarda</b>. Cuando conecte, tócalo otra vez y la <b>lleva al descarte</b>. Después se va.'],
-  // 19 nov 2026 (pedido del usuario; la v1 de dev/ideas-19-nov.html).
-  tubos: ['Unos <b>tubos de vidrio</b> están llenos de cartas.', 'Solo ves la carta de cada <b>hueco</b>. Cuando juegas una, un tubo <b>rellena su hueco</b> disparando la que sigue. Ganas al vaciar la mesa y los tubos.'],
+  // 19 nov 2026 (tubos neumáticos); 20 nov 2026 sin tubos: las cartas llegan volando.
+  tubos: ['Cada <b>hueco</b> tiene una pila de cartas escondida.', 'Solo ves la carta de cada hueco. Cuando la juegas, la que sigue <b>llega volando</b> de arriba, de abajo o de un lado. Ganas al vaciar todos los huecos.'],
   // 16 nov 2026 (pedido del usuario): el tapete, pero cohete.
   cohete: ['Las cartas van en un <b>cohete</b> muy largo.', 'Limpia las primeras cartas y el cohete <b>avanza</b>: salen más. Cada tramo que vacías te regala <b>monedas</b>.'],
   // 17 nov 2026 (pedido del usuario; escogidas en dev/ideas-dinamicas-2.html): cartas que se mueven.
@@ -198,7 +198,7 @@ export const TABLE_TEXT = {
 const METEOR_SVG = `<svg viewBox="0 0 64 40" aria-hidden="true"><path d="M40 6C26 8 10 12 0 20c10 8 26 12 40 14z" fill="#ff8a3d" stroke="#2a1f5c" stroke-width="2.4" stroke-linejoin="round"/><path d="M40 12c-9 1-19 4-26 8 7 4 17 7 26 8z" fill="#ffd54a"/><circle cx="46" cy="20" r="14" fill="#a07a5c" stroke="#2a1f5c" stroke-width="2.6"/><circle cx="50" cy="15" r="3.6" fill="#7d5a40"/><circle cx="43" cy="25" r="2.6" fill="#7d5a40"/><path d="M39 13q4-4 9-4" stroke="#d8b08c" stroke-width="2.2" fill="none" stroke-linecap="round"/></svg>`;
 // Fuego del cohete, ya acostado: la base (con el centro amarillo) a la derecha, pegada a la cola; la punta a la izquierda.
 const ROCKET_FIRE = `<svg class="rk-fire" viewBox="0 0 48 40" aria-hidden="true"><path d="M48 20C34 6 16 8 0 20c16 12 34 14 48 0z" fill="#ff8a3d" stroke="#2a1f5c" stroke-width="2.4"/><path d="M40 20c-7-6-16-5-25 0 9 5 18 6 25 0z" fill="#ffd54a"/></svg>`;
-const TABLE_NAME = { tubos: 'Tubos neumáticos', zero: 'Gravedad cero', orbit: 'Planetas en órbita', pong: 'Meteoro fugaz', cohete: 'Cohete', nave: 'Nave ladrona', mesa: 'Mesa enrollada', gravedad: 'Gravedad', nebulosa: 'Nebulosa', marea: 'Marea', puertas: 'Puertas', banda: 'Banda transportadora', hoyo: 'Agujero negro', rocas: 'Asteroides', voltea: 'Mesa que se voltea', hangar: 'Hangar', bitacora: 'Bitácora', portal: 'Grúa de feria', astro: 'Astronauta' };
+const TABLE_NAME = { tubos: 'Cartas al vuelo', zero: 'Gravedad cero', orbit: 'Planetas en órbita', pong: 'Meteoro fugaz', cohete: 'Cohete', nave: 'Nave ladrona', mesa: 'Mesa enrollada', gravedad: 'Gravedad', nebulosa: 'Nebulosa', marea: 'Marea', puertas: 'Puertas', banda: 'Banda transportadora', hoyo: 'Agujero negro', rocas: 'Asteroides', voltea: 'Mesa que se voltea', hangar: 'Hangar', bitacora: 'Bitácora', portal: 'Grúa de feria', astro: 'Astronauta' };
 const TABLE_HELP = { rocas: helpTip('hlaser', '<b>Láser:</b> rompe todas las piedras.', true), nave: helpTip('hescudo', '<b>Escudo:</b> la nave ya no te roba en todo el nivel.', true), astro: helpTip('hastro', '<b>Astronauta:</b> después también lo compras en tus ayudas.', true) };
 // ---------- Jefes de constelación (15 nov 2026, pedido del usuario) ----------
 // Dibujos de las criaturas (toon, contorno de tinta). El Kraken no se ve: solo su tinta (y su brazo en el manotazo).
@@ -518,6 +518,8 @@ export class Game {
     this.sync();
 
     this.el = this.build();
+    // Arena de jefes (20 nov 2026): sin tienda ni +5 cartas; solo las ayudas que escogiste (opts.arena.onEnd).
+    if (opts.arena) this.el.classList.add('arena-game');
     root.append(this.el);
     // Se vigila el propio tablero y no la ventana: en iOS, al girar, el aviso de la ventana llega con el tamaño viejo.
     this.wrapSize = '';
@@ -575,6 +577,8 @@ export class Game {
 
   // La primera vez que aparece una mecánica se explica (solo en modo jugador; en dev se ve en la galería).
   tips() {
+    // Arena de jefes (20 nov 2026, el usuario): entras directo a pelear, sin la ventana del jefe ni de cartas o mesas nuevas.
+    if (this.opts.arena) return this.astroHello();
     // Jefe de constelación: su ventana sale siempre, al empezar el nivel (15 nov 2026, pedido del usuario; sin letrero
     // de entrada: nada lo tiene), pero no al seguir una partida guardada (foeShown). save.seen solo marca que ya lo conoces.
     const F = this.level.foe;
@@ -915,6 +919,8 @@ export class Game {
   levelTag() {
     const L = this.level;
     if (L.event) return '';
+    // Arena de jefes: no es un nivel del camino; va la corona.
+    if (L.arena) return `<span class="lvl-tag arena-tag" aria-label="Arena de jefes"><small>Arena</small>${icon('crown')}</span>`;
     const [t, n] = L.secret ? ['Secreto', L.world + 1] : ['Nivel', L.g + 1];
     return `<span class="lvl-tag" aria-label="${t} ${n}"><small>${t}</small><b>${n.toLocaleString('es-MX')}</b></span>`;
   }
@@ -980,13 +986,8 @@ export class Game {
       // solo level.hangar rieles y la compuerta a la derecha.
       if (level.flip) el.classList.add('flip-pod');
       if (level.portal) el.classList.add('portal-mesa');
-      // Tubos: sin rieles a la vista; arriba los tubos de vidrio.
-      if (level.tubes) {
-        el.classList.add('tubes-mesa');
-        this.boardEl.insertAdjacentHTML('beforeend', Array.from({ length: level.tubes }, () => '<div class="tube"><span class="tb-fill"></span><i class="tb-mouth"></i></div>').join(''));
-        this.tubeEls = [...this.boardEl.querySelectorAll('.tube')];
-        this.tubeEls.forEach((t) => t.style.setProperty('--back', this.back));
-      }
+      // Cartas al vuelo: sin rieles a la vista, solo los huecos en fila.
+      if (level.tubes) el.classList.add('tubes-mesa');
       this.boardEl.insertAdjacentHTML('afterbegin', Array.from({ length: level.hangar || level.cols.length }, () => `<div class="g-rail">${level.portal ? CLAW : ''}<b class="g-n"></b></div>`).join(''));
       if (level.hangar) {
         this.boardEl.insertAdjacentHTML('beforeend', '<div class="hangar"><i class="hg-door"></i><i class="hg-lamp"></i></div>');
@@ -3196,79 +3197,54 @@ export class Game {
     return E.flipped(this.level, this.st) ? this.level.cols.length - 1 - i : i;
   }
 
-  // ---------- Tubos neumáticos (19 nov 2026, pedido del usuario; la v1 de dev/ideas-19-nov.html) ----------
-  // Es la gravedad: cada columna es un hueco y solo se ve su carta de abajo. Las demás van escondidas en 3 tubos de
-  // vidrio arriba (cada columna tiene su tubo: tubeOf); al vaciar un hueco, su tubo dispara la que sigue. El tubo
-  // enseña cuántas le quedan con cartitas de canto, sin número.
-  tubeOf(i) {
-    const n = this.level.cols.length, T = this.level.tubes;
-    return Math.round((i * (T - 1)) / Math.max(1, n - 1));
-  }
+  // ---------- Cartas al vuelo (antes tubos neumáticos; 20 nov 2026, el usuario: «quitar los tubos y que las cartas
+  // vengan de arriba, abajo, de los lados») ----------
+  // Es la gravedad: cada columna es un hueco en fila (de 4 a 8) y solo se ve su carta de abajo; las demás no se ven.
+  // Al vaciar un hueco, la que sigue llega volando de arriba, de abajo o de un lado, girando, y cae con un rebote.
   layoutTubes(r) {
-    const L = this.level, n = L.cols.length, gap = 0.42, pad = 0.25, T = L.tubes;
-    // 19 nov 2026: se probaron esferas, tubos con esferas, tubos largos con pantallita y con hoyo; el usuario pidió
-    // regresar a esta primera versión (tubos con cartitas de canto) mientras piensa otra idea.
-    const G = { tubes: true, gap, pad, th: 2.5, tw: 0.92 };
-    G.row0 = G.th + 0.55;
+    const n = this.level.cols.length, gap = n > 6 ? 0.28 : 0.42, pad = 0.25;
+    const G = { tubes: true, gap, pad, row0: 0.3 };
     G.bw = n + (n - 1) * gap + pad * 2;
-    G.bh = G.row0 + 1.4 + 0.25;
-    G.tx = Array.from({ length: T }, (_, t) => (G.bw * (t + 0.5)) / T);
+    G.bh = G.row0 * 2 + 1.4;
     this.u = Math.max(18, Math.min((r.width - 10) / G.bw, (r.height - 10) / G.bh, 120));
     this.gravG = G;
     const u = this.u;
     this.boardEl.style.width = `${G.bw * u}px`;
     this.boardEl.style.height = `${G.bh * u}px`;
     this.boardEl.style.setProperty('--cw', `${u}px`);
-    this.tubeEls?.forEach((el, t) => Object.assign(el.style, { left: `${(G.tx[t] - G.tw / 2) * u}px`, top: 0, width: `${G.tw * u}px`, height: `${G.th * u}px` }));
     this.cards.forEach((c) => c.el && this.place(c));
-    this.paintGrav();
     this.renderStock();
     this.coach?.update();
   }
   placeTube(c) {
     const G = this.gravG, u = this.u, k = this.gravIndex(c), hid = k > 0;
-    const x = hid ? G.tx[this.tubeOf(c.group)] - 0.5 : G.pad + this.gravSlot(c.group) * (1 + G.gap);
-    const y = hid ? G.th - 1.25 : G.row0;
+    const x = G.pad + this.gravSlot(c.group) * (1 + G.gap), y = G.row0;
     Object.assign(c.el.style, { left: `${x * u}px`, top: `${y * u}px`, rotate: '0deg', zIndex: hid ? 600 : 900, opacity: hid ? '0' : '', pointerEvents: hid ? 'none' : '' });
     c.el.classList.remove('g-next', 'g-deep');
     c.gPos = { x, y, k, hid };
   }
-  // ¡Fuuush! El tubo se infla y la carta sale por su boca, da una vuelta en el aire y cae en su hueco.
-  tubeShoot(c, dx, dy, hold) {
-    const u = this.u, tube = this.tubeEls?.[this.tubeOf(c.group)];
-    const delay = hold + 180;
-    setTimeout(() => {
-      if (!tube?.isConnected) return;
-      tube.classList.remove('puff');
-      void tube.offsetWidth;
-      tube.classList.add('puff');
-      buzz(10);
-    }, delay);
+  // ¡Fiuu! Llega de afuera de la pantalla (arriba, abajo o un lado; cada carta el suyo), girando, y aterriza en su
+  // hueco aplastándose un poco, con destellos.
+  tubeShoot(c, hold) {
+    const u = this.u, rc = c.el.getBoundingClientRect(), side = (c.id * 7 + c.group * 3) % 4;
+    const far = [-(rc.bottom + u), window.innerHeight - rc.top + u, -(rc.right + u), window.innerWidth - rc.left + u][side];
+    const [dx, dy] = side < 2 ? [((c.id % 3) - 1) * u * 0.8, far] : [far, -u * 0.6];
+    const spin = (c.id % 2 ? 1 : -1) * (side < 2 ? 200 : 300);
     c.el.animate([
-      { translate: `${dx}px ${dy}px`, scale: 0.4, rotate: '0deg', opacity: 0 },
-      { opacity: 1, offset: 0.12 },
-      { translate: `${dx * 0.45}px ${dy * 0.45 - u * 0.7}px`, scale: 0.95, rotate: '200deg', offset: 0.55 },
-      { translate: '0 0', scale: '1.06 .94', rotate: '360deg', offset: 0.88 },
-      { translate: '0 0', scale: 1, rotate: '360deg' },
-    ], { duration: 640, delay, easing: 'cubic-bezier(.25,.7,.4,1)', fill: 'backwards' }).finished.then(() => {
+      { translate: `${dx}px ${dy}px`, scale: 0.8, rotate: `${spin}deg` },
+      { translate: `${dx * 0.08}px ${dy * 0.08 - (side < 2 ? 0 : u * 0.25)}px`, scale: 1.08, rotate: `${spin * 0.04}deg`, offset: 0.7 },
+      { translate: '0 0', scale: '1.08 .9', rotate: '0deg', offset: 0.86 },
+      { translate: '0 0', scale: 1, rotate: '0deg' },
+    ], { duration: 620, delay: hold + 160, easing: 'cubic-bezier(.2,.75,.35,1)', fill: 'backwards' }).finished.then(() => {
       if (!c.el) return;
+      buzz(8);
       const [x, y] = center(c.el.getBoundingClientRect());
       sparkle({ x, y }, 5);
     }, () => {});
   }
   // Cuántas quedan en la pila de cada columna (en el hangar, de las que se ven).
   paintGrav() {
-    if (this.tubeEls) {
-      // Cartitas de canto en cada tubo (hasta 8), de abajo hacia arriba.
-      const left = this.tubeEls.map(() => 0);
-      this.level.cols.forEach((col, i) => (left[this.tubeOf(i)] += Math.max(0, col.filter((id) => !this.st.rem[id]).length - 1)));
-      this.tubeEls.forEach((el, t) => {
-        const f = el.querySelector('.tb-fill'), n = Math.min(8, left[t]);
-        if (f.childElementCount !== n) f.innerHTML = '<i></i>'.repeat(n);
-        el.classList.toggle('empty', !left[t]);
-      });
-      return;
-    }
+    if (this.level.tubes) return;
     const shown = this.gravShown();
     this.railEls?.forEach((el, j) => {
       const i = this.level.hangar ? shown[j] : this.gravSlot(j);
@@ -3306,12 +3282,12 @@ export class Game {
       const p = c.gPos;
       this.placeGrav(c);
       const dy = (p.y - c.gPos.y) * u, dx = ((p.x ?? c.gPos.x) - c.gPos.x) * u;
-      if (reduced() || (Math.abs(dy) < 0.5 && Math.abs(dx) < 0.5)) continue;
-      // Tubos: la que sigue sale disparada del tubo y cae girando en su hueco (al deshacer, regresa al tubo sin verse).
+      // Cartas al vuelo: la que sigue llega volando a su hueco (al deshacer, se esconde sin verse).
       if (this.gravG.tubes) {
-        if (p.hid && !c.gPos.hid) this.tubeShoot(c, dx, dy, hold);
+        if (p.hid && !c.gPos.hid && !reduced()) this.tubeShoot(c, hold);
         continue;
       }
+      if (reduced() || (Math.abs(dy) < 0.5 && Math.abs(dx) < 0.5)) continue;
       // Hangar: las columnas se recorren de lado (y la nueva sale de la compuerta).
       if (Math.abs(dx) >= 0.5) {
         const out = p.hid && !c.gPos.hid; // sale del hangar: espera a que se abra la compuerta
@@ -5631,6 +5607,7 @@ export class Game {
     };
     // 13 nov 2026 (pedido del usuario): de la más barata a la más cara; las que no se compran (ver 4 y 5 s), al final.
     const cost = (k) => (k === 'wild' || buyable(k) ? this.priceOf(k) : Infinity);
+    if (this.opts.arena) return ['wild', 'iman', 'varita', 'reloj', 'laser', 'escudo', 'ver2', 'ver3', 'ver4', 'ver5', 'astro', 'tele', 'llave'].filter((k) => this.helpHave(k) > 0);
     return ['wild', 'iman', 'varita', 'reloj', 'laser', 'escudo', 'ver2', 'ver3', 'ver4', 'ver5', 'astro', 'tele', 'llave'].filter((k) => k === 'wild' || ((buyable(k) || (save.helps[k] || 0) > 0) && useful[HELPS[k].secs ? 'ver' : k])).sort((a, b) => cost(a) - cost(b));
   }
   helpName(k) {
@@ -5649,6 +5626,7 @@ export class Game {
   }
   openHelps() {
     if (this.coach) return;
+    if (this.opts.arena && !this.helpKeys().length) return toast('Ya no tienes ayudas');
     if (this.el.querySelector('.help-sheet')) return this.closeHelps();
     const keys = this.helpKeys();
     const scrim = document.createElement('div');
@@ -6055,8 +6033,15 @@ export class Game {
     setTimeout(() => {
       // Se revisa de nuevo: pudo usar un comodín en este rato (y ya tener jugada).
       if (!this.isStuck()) return this.updateStuck();
+      // Arena (20 nov 2026, el usuario: «dale un +5 como oportunidad y ya, sin decir nada»): la primera vez que se
+      // atora, le llegan 5 cartas gratis, sin aviso.
+      if (this.opts.arena && !this.arenaExtra) {
+        this.arenaExtra = true;
+        this.el.classList.remove('no-moves');
+        return this.addExtra(0);
+      }
       if (this.broke()) return this.noWayOut();
-      toast('Sin jugadas: compra +5 cartas o finaliza el nivel');
+      toast(this.opts.arena ? 'Sin jugadas: usa una ayuda o finaliza' : 'Sin jugadas: compra +5 cartas o finaliza el nivel');
       if (reduced()) return;
       const pop = [{ scale: 0.4, opacity: 0 }, { scale: 1.15, opacity: 1, offset: 0.6 }, { scale: 1, opacity: 1 }];
       this.el.querySelector('.end-btn')?.animate(pop, { duration: 420, easing: 'ease-out' });
@@ -6073,6 +6058,12 @@ export class Game {
   // kind: 'stuck' (sin jugadas) · 'wild' o 'undo' (tocó uno que tiene en 0 y no le alcanza para comprarlo).
   noWayOut(kind = 'stuck') {
     if (this.done || this.modalOpen) return;
+    // Arena: sin ayudas para seguir, se acaba la pelea; sin deshacer, solo el aviso.
+    if (this.opts.arena) {
+      if (kind === 'undo') return toast('Ya no tienes deshacer');
+      this.done = true;
+      return setTimeout(() => this.opts.arena.onEnd(false), 500);
+    }
     this.modalOpen = true;
     const left = this.cards.filter((c) => !c.removed && !this.inDoor(c)).length, have = `(tienes ${save.coins})`;
     const lead = {
@@ -6104,6 +6095,12 @@ export class Game {
   // Tocar el hueco +5 del mazo: abre la ventana de compra (como deshacer).
   buyExtra() {
     if (this.done || this.busy || this.modalOpen) return;
+    if (this.opts.arena) {
+      if (!this.isStuck()) return toast('¡Aún tienes jugadas!');
+      if (this.arenaExtra) return this.endLevel();
+      this.arenaExtra = true;
+      return this.addExtra(0);
+    }
     if (this.broke() && this.isStuck()) return this.noWayOut();
     this.offerBuy('extra');
   }
@@ -6120,6 +6117,10 @@ export class Game {
   endLevel() {
     if (this.done || this.modalOpen) return;
     this.modalOpen = true;
+    if (this.opts.arena) {
+      return openModal({ title: '¿Finalizar la pelea?', color: 'pink', onClose: () => (this.modalOpen = false),
+        buttons: [{ label: 'Rendirse', cls: 'pink grow', onClick: () => this.opts.onAbandon(true) }, { label: 'Seguir jugando', cls: 'ghost grow' }] });
+    }
     const cost = this.extraCost(), short = save.coins < cost;
     const fan = [0, 1, 2, 3, 4].map((k) => `<div class="card mini-back" style="left:${6 + k * 9}px;rotate:${-14 + k * 7}deg"></div>`).join('');
     const m = openModal({
@@ -6181,6 +6182,7 @@ export class Game {
   win() {
     this.done = true;
     this.coach?.end();
+    if (this.opts.arena) return setTimeout(() => this.opts.arena.onEnd(true, !!this.foeBeat), 450);
     const left = this.stock.length;
     const stars = this.extras ? 1 : E.starsFor(this.level, left);
     const shown = shownCoins();
