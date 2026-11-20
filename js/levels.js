@@ -454,7 +454,9 @@ const RESPITE_MIN = 10;
 // (a +20 y +30 de la mesa): enrollada 51, gravedad 101, nebulosa 151, hangar 201, bitácora 251, marea 301, agujero
 // negro 351, puertas 401, banda 451, asteroides 501, grúa 551 y la que se voltea 601.
 // 16 nov 2026 (pedido del usuario): el cohete se estrena en el 651 (el lugar de la caja galáctica, que se quitó).
-export const SCROLL_FROM = { mesa: 50, gravedad: 100, nebulosa: 150, hangar: 200, bitacora: 250, portal: 550, voltea: 600, cohete: 650 };
+// Tubos neumáticos (19 nov 2026, pedido del usuario; la v1 de dev/ideas-19-nov.html) en el 851: la mesa que sigue al
+// meteoro fugaz (801).
+export const SCROLL_FROM = { mesa: 50, gravedad: 100, nebulosa: 150, hangar: 200, bitacora: 250, portal: 550, voltea: 600, cohete: 650, tubos: 850 };
 // Marea (7 nov 2026): el agua sube desde abajo cada 3 robos y baja cada 3 jugadas; lo que queda bajo el agua no se
 // juega. Desde el nivel MAREA_FROM + 1, ~1 de cada 10 normales del camino (sin otra mesa, respiro ni ayudas).
 export const TIDE_FROM = 300; // antes 340 (ver SCROLL_FROM)
@@ -603,6 +605,7 @@ export function scrollKind(g) {
   if (g >= SCROLL_FROM.bitacora && !((hash(g * 8297 + 19) >>> 6) % 12)) return 'bitacora';
   if (g >= SCROLL_FROM.portal && !((hash(g * 2389 + 503) >>> 9) % 12)) return 'portal';
   if (g >= SCROLL_FROM.cohete && !((hash(g * 5011 + 409) >>> 8) % 12)) return 'cohete';
+  if (g >= SCROLL_FROM.tubos && !((hash(g * 3253 + 151) >>> 7) % 12)) return 'tubos';
   // Los que eran de la plegable, antes de que se abra la marea, llevan una de estas tres (después, ver exFoldKind).
   return exFold(g) && g < TIDE_FROM ? ['mesa', 'gravedad', 'nebulosa'][hash(g * 613 + 29) % 3] : null;
 }
@@ -850,8 +853,10 @@ export function pickLevel(key, tier, make) {
 // El Reloj del vacío entra en el 600 (16 nov 2026): congela cartas y no deja deshacer, más complejo que la Ballena.
 // El Viento solar entra en el 400 (17 nov 2026), después de la Medusa: no bloquea cartas, solo se lleva las de tu
 // descarte justo cuando tienes jugada (más sencillo que Kraken, Ballena y Reloj, que se recorren a 500, 600 y 700).
-export const BOSS_ORDER = ['fenix', 'ilus', 'medusa', 'wind', 'kraken', 'whale', 'clock'];
-export const BOSS_NAMES = { fenix: 'Fénix estelar', ilus: 'El Ilusionista', medusa: 'Medusa de plasma', kraken: 'Kraken', whale: 'Ballena glotona', clock: 'Reloj del vacío', wind: 'Viento solar' };
+// La Mano alien entra en el 500 (19 nov 2026, pedido del usuario: «muévela de lugar, estamos a tiempo»; por
+// dificultad va después del Viento: solo toca tu mazo y no bloquea cartas). Kraken, Ballena y Reloj pasan a 600, 700 y 800.
+export const BOSS_ORDER = ['fenix', 'ilus', 'medusa', 'wind', 'hand', 'kraken', 'whale', 'clock'];
+export const BOSS_NAMES = { fenix: 'Fénix estelar', ilus: 'El Ilusionista', medusa: 'Medusa de plasma', kraken: 'Kraken', whale: 'Ballena glotona', clock: 'Reloj del vacío', wind: 'Viento solar', hand: 'Mano alien' };
 export const BOSS_MIN = 0.15;
 // Vida del jefe: 60% de las cartas + bossExtra por vuelta. Si con ella ningún tablero llega a BOSS_MIN, se baja por pasos
 // (15 nov 2026, el usuario: «si son jefes, buscar un tablero que cumpla mayor a 15%»; la Ballena enterraba el 1600):
@@ -961,15 +966,18 @@ export const TIERS = [
 // Los números que juega la solución de referencia, en orden (lo que queda en el descarte tras cada jugada).
 export function refRanks(L) {
   let s = initState(L);
-  const out = [];
-  for (const id of L.solution) {
+  const out = [], al = {};
+  for (const id0 of L.solution) {
+    const id = al[id0] ?? id0;
     if (s.rem[id]) continue;
     const c = L.cards[id], w = refStep(c, s);
     while (!refReady(L, c, s, w)) {
       if (!s.stock.length) return out;
       s = drawCard(L, s).s;
     }
-    s = playCard(L, s, id, w.low ?? false).s;
+    const r = playCard(L, s, id, w.low ?? false);
+    s = r.s;
+    if (r.ev.tug != null) al[r.ev.tug] = id;
     if (!s.top.wild && s.top.rank != null) out.push(s.top.rank);
   }
   return out;
@@ -977,7 +985,10 @@ export function refRanks(L) {
 
 export function refLeft(L) {
   let s = initState(L);
-  for (const id of L.solution) {
+  // Cartas con cable: la pareja se juega desde el lugar de la otra (al[pareja] = lugar donde quedó).
+  const al = {};
+  for (const id0 of L.solution) {
+    const id = al[id0] ?? id0;
     if (s.rem[id]) continue;
     // Boleto partido entero: la solución juega primero la mitad de arriba; el triple, arriba, abajo y en medio.
     const c = L.cards[id], w = refStep(c, s);
@@ -985,7 +996,9 @@ export function refLeft(L) {
       if (!s.stock.length) return -1;
       s = drawCard(L, s).s;
     }
-    s = playCard(L, s, id, w.low ?? false).s;
+    const r = playCard(L, s, id, w.low ?? false);
+    s = r.s;
+    if (r.ev.tug != null) al[r.ev.tug] = id;
   }
   return won(s, L) ? s.stock.length : -1;
 }
@@ -1013,11 +1026,13 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
   // level.flip, c.flipBy; los duros no la llevan: su tablero y sus estrellas salen del camino acertado, que no sabe de
   // la vuelta), los portales (la gravedad al revés: solo se ve distinta) y el hangar (solo se ven HANGAR_SHOW columnas;
   // al vaciar una sale otra, con la regla de la nebulosa). La bitácora es un tablero normal de hojas encimadas.
-  const flipOn = want === 'voltea' && !T, portalOn = want === 'portal', hangarOn = want === 'hangar', bitaOn = want === 'bitacora';
+  // Tubos (19 nov 2026): la gravedad con solo la carta de abajo de cada columna a la vista; lo demás va escondido en 3
+  // tubos de vidrio que disparan la siguiente al hueco que vacías (solo se dibuja distinto).
+  const flipOn = want === 'voltea' && !T, portalOn = want === 'portal', hangarOn = want === 'hangar', bitaOn = want === 'bitacora', tubesOn = want === 'tubos';
   // Cohete (16 nov 2026, el usuario: «exactamente las mismas mecánicas del tapete, solo otra animación»): es la mesa
   // enrollada (scroll 'mesa') con level.rocket; el juego la dibuja como cohete y regala monedas por tramo.
   const rocketOn = want === 'cohete';
-  const scroll = ['voltea', 'portal', 'hangar'].includes(want) ? 'gravedad' : bitaOn ? null : rocketOn ? 'mesa' : want;
+  const scroll = ['voltea', 'portal', 'hangar', 'tubos'].includes(want) ? 'gravedad' : bitaOn ? null : rocketOn ? 'mesa' : want;
   const d0 = ev ? ev.d : secret ? Math.min(1, difficulty(base) + 0.05) : difficulty(base);
   // Mesa enrollada: la tira es larga y solo se ve un pedazo; el mazo va más amable (y con más sobrantes, abajo).
   // La nebulosa, algo menos (medido con el bot casual).
@@ -1186,7 +1201,7 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
   }
 
   // Candado de palo, pintura, telescopio y gemelas: solas en los 5 primeros niveles de su mundo (se ponen al final de buildLevel).
-  if ((world === MECH_INTRO.slock || world === MECH_INTRO.paint || world === MECH_INTRO.scope || world === MECH_INTRO.twin || world === MECH_INTRO.lasso || world === MECH_INTRO.wand) && index < 5) [...mech].filter((x) => x !== 'comet').forEach((x) => mech.delete(x));
+  if ((world === MECH_INTRO.slock || world === MECH_INTRO.paint || world === MECH_INTRO.scope || world === MECH_INTRO.twin || world === MECH_INTRO.tug || world === MECH_INTRO.lasso || world === MECH_INTRO.wand) && index < 5) [...mech].filter((x) => x !== 'comet').forEach((x) => mech.delete(x));
 
   // Carta regalo: una carta especial (sin número) que se activa sola al quedar destapada del todo
   // y manda 2-5 cartas al final del mazo. Va tapada y en el primer 40% del orden de retirada.
@@ -1662,6 +1677,7 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
     ...(rocketOn && { rocket: 1 }),
     ...(hangarOn && { hangar: HANGAR_SHOW }),
     ...(portalOn && { portal: 1 }),
+    ...(tubesOn && { tubes: 3 }),
     ...(sheets && { sheets, peek }),
     ...(grav && { cols: segments }),
     ...(flipOn && { flip: 1 }),
@@ -1790,6 +1806,26 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
         else delete a.twin, delete b.twin, delete a.twinC, delete b.twinC;
       }
     }
+    // Cartas con cable (19 nov 2026, pedido del usuario: «son otro tipo de cartas»): parejas como las gemelas (c.twin)
+    // con c.tug: al jugar una, la otra llega jalada a su lugar (ver play en engine.js). Mismo armado que las gemelas,
+    // con su propio sorteo (los niveles de antes no cambian); 1 o 2 parejas.
+    const rtg = mulberry32(hash(g * 6007 + t * 131 + 23));
+    if (world >= MECH_INTRO.tug && (world === MECH_INTRO.tug || rtg() < TUG_ODDS * fin)) {
+      const ok = (k) => plain(play[k]) && !cards[play[k]].cst;
+      const want = 1 + Math.floor(rtg() * (n >= 24 ? 2 : 1));
+      for (let pc = 0, tries = 0; pc < want && tries < 5 * want; tries++) {
+        const as = [], k0 = Math.floor(np * 0.15);
+        for (let k = k0; k < Math.ceil(np * 0.6); k++) if (ok(k)) as.push(k);
+        if (!as.length) break;
+        const ka = pick(rtg, as), bs = [];
+        for (let k = ka + 2; k < np; k++) if (ok(k)) bs.push(k);
+        if (!bs.length) continue;
+        const a = cards[play[ka]], b = cards[play[pick(rtg, bs)]];
+        (a.twin = b.id), (b.twin = a.id), (a.tug = b.tug = 1), (a.twinC = b.twinC = pc);
+        if (refLeft(level) >= 0 || (!T && solve(level, initState(level), 60000))) pc++;
+        else delete a.twin, delete b.twin, delete a.tug, delete b.tug, delete a.twinC, delete b.twinC;
+      }
+    }
     // Astronauta (14 nov 2026, pedido del usuario): llega al nivel para guardarte una carta. Solo ayuda (el
     // solucionador no lo usa): no se comprueba. Solo en mesas normales.
     const ras = mulberry32(hash(g * 4919 + t * 127 + 97));
@@ -1902,7 +1938,7 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
       if (!(refLeft(level) >= 0 || (!T && solve(level, initState(level), 60000)))) delete c.paint;
     }
   }
-  level.meta.mechs = MECHANICS.filter((m) => cards.some((c) => c[MECH_FIELD[m]] != null) || (m === 'turbo' && stock.some((c) => c.turbo)) || (m === 'ship' && level.ship) || (m === 'astro' && level.astro));
+  level.meta.mechs = MECHANICS.filter((m) => cards.some((c) => c[MECH_FIELD[m]] != null && !(m === 'twin' && c.tug)) || (m === 'turbo' && stock.some((c) => c.turbo)) || (m === 'ship' && level.ship) || (m === 'astro' && level.astro));
   return level;
 }
 
@@ -2019,10 +2055,10 @@ export function festivalLevel(day, k, world, n = FESTIVAL_PER_PLANET) {
 }
 
 // ---------- Mecánicas por mundo ----------
-export const MECHANICS = ['lock', 'pack', 'ice', 'double', 'arrow', 'curtain', 'bomb', 'live', 'ticket', 'comet', 'turbo', 'ghost', 'ship', 'coin', 'cham', 'bolt', 'cst', 'vine', 'magnet', 'rainbow', 'sleep', 'domino', 'triple', 'slock', 'paint', 'scope', 'twin', 'astro', 'lasso', 'wand'];
-const MECH_FIELD = { lock: 'lock', pack: 'pack', ice: 'ice', double: 'alt', arrow: 'arrow', curtain: 'curtain', bomb: 'bomb', live: 'live', ticket: 'half', comet: 'comet', turbo: 'turbo', ghost: 'ghost', ship: 'ship', coin: 'coin', cham: 'cham', bolt: 'bolt', cst: 'cst', vine: 'vine', magnet: 'magnet', rainbow: 'rainbow', sleep: 'sleep', domino: 'dom', triple: 'tri', slock: 'sl', paint: 'paint', scope: 'scope', twin: 'twin', astro: 'astro', lasso: 'lasso', wand: 'wand' };
+export const MECHANICS = ['lock', 'pack', 'ice', 'double', 'arrow', 'curtain', 'bomb', 'live', 'ticket', 'comet', 'turbo', 'ghost', 'ship', 'coin', 'cham', 'bolt', 'cst', 'vine', 'magnet', 'rainbow', 'sleep', 'domino', 'triple', 'slock', 'paint', 'scope', 'twin', 'astro', 'lasso', 'wand', 'tug'];
+const MECH_FIELD = { lock: 'lock', pack: 'pack', ice: 'ice', double: 'alt', arrow: 'arrow', curtain: 'curtain', bomb: 'bomb', live: 'live', ticket: 'half', comet: 'comet', turbo: 'turbo', ghost: 'ghost', ship: 'ship', coin: 'coin', cham: 'cham', bolt: 'bolt', cst: 'cst', vine: 'vine', magnet: 'magnet', rainbow: 'rainbow', sleep: 'sleep', domino: 'dom', triple: 'tri', slock: 'sl', paint: 'paint', scope: 'scope', twin: 'twin', astro: 'astro', lasso: 'lasso', wand: 'wand', tug: 'tug' };
 // Van con su sorteo, fuera de chooseMechanics (si entraran, cambiarían todos los niveles ya probados).
-const OWN_DRAW = ['ticket', 'ghost', 'ship', 'coin', 'cham', 'bolt', 'cst', 'vine', 'magnet', 'rainbow', 'sleep', 'domino', 'triple', 'slock', 'paint', 'scope', 'twin', 'astro', 'lasso', 'wand'];
+const OWN_DRAW = ['ticket', 'ghost', 'ship', 'coin', 'cham', 'bolt', 'cst', 'vine', 'magnet', 'rainbow', 'sleep', 'domino', 'triple', 'slock', 'paint', 'scope', 'twin', 'astro', 'lasso', 'wand', 'tug'];
 // Mundo (índice desde 0) en el que se presenta cada una.
 // 8 nov 2026: corridas para que cada estreno quede a 10 niveles o más del anterior (antes lock 1, pack 2, ice 4, double 7,
 // arrow 11, curtain 15, bomb 19, live 24, ticket 20, comet 12, turbo 16, ghost 29, ship 34, coin 26, cham 32).
@@ -2040,9 +2076,9 @@ const OWN_DRAW = ['ticket', 'ghost', 'ship', 'coin', 'cham', 'bolt', 'cst', 'vin
 // 15 nov 2026 (pedido del usuario): lazo 67 (671) y varita 68 (681); la raspadita se recorre al final, 72 (721). La caja
 // galáctica (mesa del 651) se quitó el 16 nov 2026. 17 nov 2026 (pedido del usuario): se quitó la raspadita; en su
 // lugar, candado de palo 72 (721) y pintura 73 (731).
-export const MECH_INTRO = { lock: 1, pack: 2, ice: 7, scope: 8, twin: 12, double: 13, astro: 17, arrow: 18, comet: 22, curtain: 23, turbo: 27, bomb: 28, ticket: 32, live: 33, coin: 37, ghost: 38, cham: 42, ship: 43, bolt: 47, cst: 48, vine: 52, magnet: 53, rainbow: 57, sleep: 58, domino: 62, triple: 63, lasso: 67, wand: 68, slock: 72, paint: 73 };
+export const MECH_INTRO = { lock: 1, pack: 2, ice: 7, scope: 8, twin: 12, double: 13, astro: 17, arrow: 18, comet: 22, curtain: 23, turbo: 27, bomb: 28, ticket: 32, live: 33, coin: 37, ghost: 38, cham: 42, ship: 43, bolt: 47, cst: 48, vine: 52, magnet: 53, rainbow: 57, sleep: 58, domino: 62, triple: 63, lasso: 67, wand: 68, slock: 72, paint: 73, tug: 77 };
 export const MECH_NAMES = {
-  lock: 'Candado', pack: 'Carta regalo', ice: 'Hielo', double: 'Carta doble', arrow: 'Flecha', curtain: 'Cortina', bomb: 'Bomba', live: 'Carta viva', ticket: 'Boleto partido', comet: 'Cometa', turbo: 'Cohete turbo', ghost: 'Fantasma', ship: 'Nave ladrona', coin: 'Carta moneda', cham: 'Camaleón', bolt: 'Rayo', cst: 'Constelación', vine: 'Enredadera', magnet: 'Imán', rainbow: 'Arcoíris', sleep: 'Carta dormida', domino: 'Dominó', triple: 'Boleto triple', slock: 'Candado de palo', paint: 'Pintura', scope: 'Telescopio', twin: 'Cartas gemelas', astro: 'Astronauta', lasso: 'Lazo', wand: 'Varita',
+  lock: 'Candado', pack: 'Carta regalo', ice: 'Hielo', double: 'Carta doble', arrow: 'Flecha', curtain: 'Cortina', bomb: 'Bomba', live: 'Carta viva', ticket: 'Boleto partido', comet: 'Cometa', turbo: 'Cohete turbo', ghost: 'Fantasma', ship: 'Nave ladrona', coin: 'Carta moneda', cham: 'Camaleón', bolt: 'Rayo', cst: 'Constelación', vine: 'Enredadera', magnet: 'Imán', rainbow: 'Arcoíris', sleep: 'Carta dormida', domino: 'Dominó', triple: 'Boleto triple', slock: 'Candado de palo', paint: 'Pintura', scope: 'Telescopio', twin: 'Cartas gemelas', astro: 'Astronauta', lasso: 'Lazo', wand: 'Varita', tug: 'Cartas con cable',
 };
 // Cartas de regalo (cometa y cohete turbo): no entran al sorteo de mecánicas, van aparte (buildLevel).
 // En el camino sin ayudas cada una sale de 1 a 4 veces en cada tramo de 30-35 niveles (extraPlan, pedido 6 nov 2026).
@@ -2070,7 +2106,7 @@ export const DOM_ODDS = 0.12, TRI_ODDS = 0.1;
 // Candado de palo y pintura (17 nov 2026): al final de buildLevel, con su sorteo.
 export const SL_ODDS = 0.1, PAINT_ODDS = 0.1;
 // Telescopio, gemelas y astronauta (14 nov 2026): al final de buildLevel, con su sorteo.
-export const SCOPE_ODDS = 0.1, TWIN_ODDS = 0.12, ASTRO_ODDS = 0.1;
+export const SCOPE_ODDS = 0.1, TWIN_ODDS = 0.12, ASTRO_ODDS = 0.1, TUG_ODDS = 0.12;
 // Lazo y varita (15 nov 2026): al final de buildLevel, con su sorteo.
 export const LASSO_ODDS = 0.1, WAND_ODDS = 0.1;
 export const EXTRA_ODDS = 0.047;
@@ -2144,7 +2180,7 @@ export function variantLevel(level, v) {
 
 // Acomoda los grupos en filas: prueba 1..n filas y elige la que deja las cartas más grandes.
 // Devuelve el tamaño de carta (u, en px), el tablero (bw, bh, en unidades) y la posición de cada grupo.
-export function packGroups(groups, availW, availH, gap = 0.7, maxU = 120) {
+export function packRows(groups, availW, availH, gap = 0.7, maxU = 120) {
   let best = null;
   for (let rows = 1; rows <= groups.length; rows++) {
     const per = Math.ceil(groups.length / rows);
@@ -2170,3 +2206,58 @@ export function packGroups(groups, availW, availH, gap = 0.7, maxU = 120) {
   });
   return { u: best.u, bw: best.bw, bh: best.bh, offsets };
 }
+// Acomodo de los grupos del tablero: el de renglones (packRows, el de siempre) o, si las cartas salen al menos 6% más
+// grandes y la pantalla está acostada, uno libre (19 nov 2026, el usuario: «cuando es vertical hay un acomodo bonito de cartas y cuando es
+// horizontal no… pueden acomodarse bonito en H y verse hasta más grandes»): parte los grupos en dos y los pone lado a
+// lado o uno encima del otro, y así cada parte (por ejemplo, el aro a la izquierda y los demás apilados a su lado).
+export function packGroups(groups, availW, availH, gap = 0.7, maxU = 120) {
+  const rows = packRows(groups, availW, availH, gap, maxU);
+  const n = groups.length;
+  // Parado se queda el de siempre (al usuario le gusta así); solo acostado se busca uno mejor.
+  if (n < 3 || n > 8 || availW <= availH) return rows;
+  // front[mask] = acomodos que no le ganan otro (ni más angosto ni más bajo) de esos grupos.
+  const front = new Map();
+  const add = (list, o) => {
+    if (list.some((x) => x.w <= o.w + 1e-6 && x.h <= o.h + 1e-6)) return;
+    for (let k = list.length - 1; k >= 0; k--) if (o.w <= list[k].w + 1e-6 && o.h <= list[k].h + 1e-6) list.splice(k, 1);
+    list.push(o);
+  };
+  const all = (1 << n) - 1;
+  const masks = Array.from({ length: all }, (_, k) => k + 1).sort((a, b) => popcount(a) - popcount(b));
+  for (const m of masks) {
+    const list = [];
+    if ((m & (m - 1)) === 0) {
+      const i = 31 - Math.clz32(m);
+      list.push({ w: groups[i].w, h: groups[i].h, i });
+    } else {
+      // Cada forma de partirlo en dos (A con el bit más bajo para no repetir).
+      const low = m & -m;
+      for (let a = (m - 1) & m; a > 0; a = (a - 1) & m) {
+        if (!(a & low)) continue;
+        const b = m ^ a;
+        for (const x of front.get(a)) for (const y of front.get(b)) {
+          add(list, { w: x.w + gap + y.w, h: Math.max(x.h, y.h), side: true, a: x, b: y });
+          add(list, { w: Math.max(x.w, y.w), h: x.h + gap + y.h, side: false, a: x, b: y });
+        }
+      }
+    }
+    front.set(m, list);
+  }
+  const uOf = (o) => Math.min(availW / o.w, availH / o.h, maxU);
+  const best = front.get(all).reduce((p, o) => (uOf(o) > uOf(p) ? o : p));
+  if (uOf(best) < rows.u * 1.06) return rows;
+  const offsets = [];
+  const put = (o, x, y) => {
+    if (o.i != null) return void (offsets[o.i] = { x, y });
+    if (o.side) {
+      put(o.a, x, y + (o.h - o.a.h) / 2);
+      put(o.b, x + o.a.w + gap, y + (o.h - o.b.h) / 2);
+    } else {
+      put(o.a, x + (o.w - o.a.w) / 2, y);
+      put(o.b, x + (o.w - o.b.w) / 2, y + o.a.h + gap);
+    }
+  };
+  put(best, 0, 0);
+  return { u: uOf(best), bw: best.w, bh: best.h, offsets };
+}
+const popcount = (m) => { let k = 0; for (; m; m &= m - 1) k++; return k; };

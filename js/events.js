@@ -22,7 +22,7 @@ import { EVENT_LEVELS, EVENT_PER_PLANET, EVENT_PLANETS, FESTIVAL_LEVELS, FESTIVA
 // 14 nov 2026 (pedido del usuario): fiesta5 = fiestas de Europa, fiesta6 = fiestas de Oriente.
 // carrera: Carrera de 7 (18 nov 2026), desde el nivel 61.
 // construir (18 nov 2026): estaciones de bloques en cada planeta, desde el nivel 21.
-export const UNLOCK = { construir: 20, racha: 30, mis: 40, logros: 50, carrera: 60, col: 90, mes: 130, col2: 140, fiesta: 180, col3: 190, fiesta2: 230, fiesta3: 280, fiesta4: 330, fiesta5: 380, fiesta6: 430 };
+export const UNLOCK = { construir: 20, racha: 30, mis: 40, logros: 50, carrera: 60, col: 90, tripulacion: 110, mes: 130, col2: 140, fiesta: 180, col3: 190, fiesta2: 230, fiesta3: 280, fiesta4: 330, fiesta5: 380, fiesta6: 430 };
 export const isOn = (k) => (save.next || 0) >= UNLOCK[k];
 
 // En estrellas (7 nov 2026: llegaba a 30 victorias sin problema porque contaba cualquiera): cada victoria suma sus

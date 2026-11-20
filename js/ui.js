@@ -35,9 +35,9 @@ export const wait = (ms) => new Promise((ok) => setTimeout(ok, ms));
 // Colores de cabecera por tipo de ventana.
 export const HEADS = {
   violet: ['#8a5cf0', '#6c3fd4'], blue: ['#4aa8de', '#2f86c0'], green: ['#47c27a', '#2f9e5c'], orange: ['#ff9c5b', '#e2753a'],
-  gold: ['#ffc83d', '#e89a17'], pink: ['#ff5f7e', '#d63d5f'], red: ['#e8434f', '#c22c3c'], gray: ['#9188c0', '#6e66a3'],
+  gold: ['#ffc83d', '#e89a17'], pink: ['#ff5f7e', '#d63d5f'], red: ['#e8434f', '#c22c3c'], gray: ['#9188c0', '#6e66a3'], moon: ['#5a63d6', '#3f46a8'],
   // Jefes derrotados (15 nov 2026): un poco más oscuros que su botón.
-  'foe-fenix': ['#f2701f', '#c94d14'], 'foe-ilus': ['#3f5cf0', '#2a3fc0'], 'foe-medusa': ['#26b3cc', '#1a8a9e'], 'foe-kraken': ['#a24fbf', '#7e3499'], 'foe-whale': ['#3fb56b', '#2a8f50'], 'foe-clock': ['#8a5ce0', '#6a3fc0'], 'foe-wind': ['#e09a12', '#b8760a'],
+  'foe-fenix': ['#f2701f', '#c94d14'], 'foe-ilus': ['#3f5cf0', '#2a3fc0'], 'foe-medusa': ['#26b3cc', '#1a8a9e'], 'foe-kraken': ['#a24fbf', '#7e3499'], 'foe-whale': ['#3fb56b', '#2a8f50'], 'foe-clock': ['#8a5ce0', '#6a3fc0'], 'foe-wind': ['#e09a12', '#b8760a'], 'foe-hand': ['#6fb83a', '#4f9222'],
 };
 
 // Ventana con cabecera de color, botón de cerrar y botones abajo.

@@ -11,7 +11,9 @@ const stats = { cards: [], stock: [], tpl: {}, mechs: {}, tiers: {} };
 
 function reference(L) {
   let s = initState(L);
-  for (const id of L.solution) {
+  const al = {};
+  for (const id0 of L.solution) {
+    const id = al[id0] ?? id0;
     if (s.rem[id]) continue;
     // Boleto partido entero: la solución juega primero la mitad de arriba; el triple, arriba, abajo y en medio.
     const c = L.cards[id], w = refStep(c, s);
@@ -19,7 +21,9 @@ function reference(L) {
       if (!s.stock.length) return false;
       s = draw(L, s).s;
     }
-    s = play(L, s, id, w.low ?? false).s;
+    const r = play(L, s, id, w.low ?? false);
+    s = r.s;
+    if (r.ev.tug != null) al[r.ev.tug] = id;
   }
   return won(s, L);
 }

@@ -22,6 +22,7 @@ import { mulberry32, hash } from './rng.js';
 import { starCSS } from './starshower.js';
 import { PrizeStage, METALS } from './prizes3d.js';
 import { STATION_STYLES, PIECES, PIECE_COST, buildOn, styleOf, built, pieceCost, bloques, canBuild, startBuild, earnBloques, buyPiece, pieceThumbs, stationTint } from './station.js';
+import { CREW_GOALS, CREW_METAL, crew, crewDone, crewJoin, crewAdd, crewCheck, crewTotal, crewPrize, crewLeft, crewDay, botStars } from './crew.js';
 import { RACE_STEPS, race, raceOn, raceWaitLeft, raceStart, raceBegin, raceWin, raceLose, raceClose, racePrize, raceLosePrize, botAt, myStars } from './race.js';
 import { PASS_MAX, secretGoal, passFrameOf, passGoal, passPrize, secretPrize, passCount, secretCount, passCSS } from './passport.js';
 // Caras, fondos y marcos de las temáticas de la tienda (themes.js): su CSS se arma de su paleta.
@@ -1024,6 +1025,8 @@ const ticketGift = () => ticketCost(Math.min(save.next, TOTAL_LEVELS - 1));
 const shortLeft = (ms) => (ms >= 864e5 ? `${Math.floor(ms / 864e5)} d` : ms >= 3600e3 ? `${Math.floor(ms / 3600e3)} h` : `${Math.max(1, Math.ceil(ms / 6e4))} m`);
 const leftText = (ms) => (ms >= 3600e3 ? `${Math.ceil(ms / 3600e3)} h` : `${Math.max(1, Math.ceil(ms / 60e3))} min`);
 const clock = (ms) => { const t = Math.ceil(ms / 1000), d = Math.floor(t / 86400); return `${d ? `${d} d ` : ''}${Math.floor(t / 3600) % (d ? 24 : Infinity)}:${String(Math.floor(t / 60) % 60).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`; };
+// Solo en horas (19 nov 2026, el usuario: el descuentazo decía «1 d 0:00:00»): 24:00:00, 23:59:59…
+const hclock = (ms) => { const t = Math.ceil(ms / 1000); return `${Math.floor(t / 3600)}:${String(Math.floor(t / 60) % 60).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`; };
 const ticketBtn = () => {
   const left = ticketLeft();
   return `<button class="iconbtn tb press tk-btn ${left ? 'waiting' : 'ready'}" data-a="dticket" aria-label="Boletos de regalo" title="Boletos de regalo">${icon('ticket')}${left ? `<small class="wait">${leftText(left)}</small>` : '<span class="dot"></span>'}</button>`;
@@ -1093,14 +1096,14 @@ const grouped = (k, label, html) => {
 };
 const eventButtons = (res) => {
   // Siempre en este orden (8 nov 2026, pedido del usuario): mes, día, colección, racha, misiones, logros.
-  const all = evBtn() + festBtn() + colBtn() + streakBtn(res?.racha ? res.racha - 1 : null) + raceBtn() + missionsBtn() + achievementsBtn();
+  const all = evBtn() + festBtn() + colBtn() + streakBtn(res?.racha ? res.racha - 1 : null) + raceBtn() + crewBtn() + missionsBtn() + achievementsBtn();
   return grouped('r', 'Eventos', all);
 };
 // Tu camino (8 nov 2026) va en el menú después del álbum, con su puntito cuando hay algo nuevo que ver.
 const sideButtons = () => grouped('l', 'Menú', `${ibtn('gift', 'Regalo diario', 'daily', !dailyState(save.daily).claimed)}${ticketBtn()}${shopBtn()}${vipBtn()}${ibtn('album', 'Álbum de postales', 'album')}${roadBtn()}${ibtn('gear', 'Ajustes', 'settings')}`);
 function sideAction(a) {
   if (a === 'grp-r' || a === 'grp-l') return openGroup(a.slice(4)), true;
-  const act = { me: () => !document.querySelector('.touring') && openProfile(), camino: openRoad, shop: () => openShop(), vip: () => openVIP(), daily: openDaily, dticket: openDailyTicket, racha: openStreak, carrera: () => openRace({ play: true }), mis: openMis, logros: openAchievements, col: openCol, evento: openEvent, 'evento-next': openEventNext, fiesta: () => openFestival(), 'fiesta-next': () => openFestival(festivalSoon(), 'fiesta-next'), album: openAlbum, settings: openSettings, dev: () => openDevMenu({ onGallery: () => showGallery(save.next), onPlanets: showPlanets, onFestivals: openFestivalPack, onGoLevel: openGoLevel, onRefresh: boot, onRescue: () => (document.getElementById('modal-root').replaceChildren(), openRescue()), onPrize: devPrize, card: mechCard }) }[a];
+  const act = { me: () => !document.querySelector('.touring') && openProfile(), camino: openRoad, shop: () => openShop(), vip: () => openVIP(), daily: openDaily, dticket: openDailyTicket, racha: openStreak, carrera: () => openRace({ play: true }), tripulacion: () => openCrew(), mis: openMis, logros: openAchievements, col: openCol, evento: openEvent, 'evento-next': openEventNext, fiesta: () => openFestival(), 'fiesta-next': () => openFestival(festivalSoon(), 'fiesta-next'), album: openAlbum, settings: openSettings, dev: () => openDevMenu({ onGallery: () => showGallery(save.next), onPlanets: showPlanets, onFestivals: openFestivalPack, onGoLevel: openGoLevel, onRefresh: boot, onRescue: () => (document.getElementById('modal-root').replaceChildren(), openRescue()), onPrize: devPrize, card: mechCard }) }[a];
   // Usar un botón cierra su cajón (menos durante el recorrido, que los va enseñando).
   if (act && !document.querySelector('.side-touring')) closeGroups();
   act?.();
@@ -1164,6 +1167,7 @@ function mechCard(m, x = 0) {
   if (m === 'lasso') return mini(x, '6', 'd', { lasso: 1 });
   if (m === 'wand') return mini(x, '7', 's', { wand: 1 });
   if (m === 'twin') return mini(x, '5', 'h', { twin: 1 });
+  if (m === 'tug') return mini(x, '8', 'c', { twin: 1, tug: 1 });
   if (m === 'rainbow') return mini(x, '6', 'c', { rainbow: 1 });
   if (m === 'sleep') return mini(x, '8', 'd', { marks: `<span class="sleep-ov"><i class="sl-cap">${icon('dormida')}</i><span class="zz"><i>z</i><i>z</i><i>z</i></span><b>3</b></span>` }, 'asleep');
   if (m === 'comet') return `<div class="card comet-card up" style="left:${x}px"><div class="inner"><div class="face front"></div></div><span class="comet-face">${icon('comet')}<b>4</b><em>+3</em></span></div>`;
@@ -1198,6 +1202,7 @@ const ROAD_TABLES = [
   ['portal', 'Grúa de feria', ''],
   ['voltea', 'Mesa que se voltea', 'Columnas dentro de una cápsula: solo juegas la de abajo. Cada 5 jugadas o robos da media vuelta.'],
   ['cohete', 'Cohete', ''],
+  ['tubos', 'Tubos neumáticos', ''],
 ];
 function roadItems() {
   const t = streakTheme();
@@ -1207,6 +1212,7 @@ function roadItems() {
     ['mis', UNLOCK.mis, 'Misiones del día', 'misiones', 'Cada día 3 misiones con monedas, y un cofre si cumples las 3.'],
     ['logros', UNLOCK.logros, 'Logros', 'trophy', 'Todo suma para siempre: bronce, plata, oro, platino y diamante.'],
     ['carrera', UNLOCK.carrera, 'Carrera de 7', 'carrera', 'Gana 7 niveles nuevos seguidos al primer intento contra 4 viajeros: el lugar se decide por estrellas.'],
+    ['tripulacion', UNLOCK.tripulacion, 'Tripulación lunar', 'tripulacion', 'Cada semana juntas estrellas con 4 viajeros: el vehículo lunar llega a 3 bases y cada una te da un cofre.'],
     ['meteoro', MET_FROM, 'Lluvia de meteoritos', 'meteoro', 'Cae sin aviso 30 minutos: doble de monedas y un premio sorpresa.'],
     ['estrellas', STAR_FROM, 'Lluvia de estrellas', 'starFall', 'Cae sin aviso 15 minutos: triple de monedas y hasta 3 premios.'],
     ['cometas', SHOWERS.comet.from, 'Lluvia de cometas', 'cometaLluvia', 'Cae sin aviso 20 minutos: niveles sin gastar boletos, 1 boleto más por victoria y un premio sorpresa.'],
@@ -1237,7 +1243,7 @@ function roadItems() {
     { id: 'rocas', n: rocksFirst() + 1, name: 'Asteroides', text: '' },
     { id: 'zero', n: zeroFirst() + 1, name: 'Gravedad cero', text: '' },
     { id: 'orbit', n: orbitFirst() + 1, name: 'Planetas en órbita', text: '' },
-    { id: 'pong', n: pongFirst() + 1, name: 'Ping-pong', text: '' },
+    { id: 'pong', n: pongFirst() + 1, name: 'Meteoro fugaz', text: '' },
     { id: 'astro', n: MECH_INTRO.astro * LEVELS_PER_WORLD + 1, name: 'Astronauta', text: '' },
   ].map((x) => ({ ...x, k: 'mesa', pic: x.id === 'nave' ? icon('nave') : x.id === 'astro' ? icon('astronauta') : tableIcon(x.id), text: TABLE_TEXT[x.id] ? TABLE_TEXT[x.id].join(' ') : x.text }));
   // Pasaporte y secretos (12 nov 2026): los sellos y premios ganados, en el nivel en que ibas; el siguiente sello, en el
@@ -1931,6 +1937,7 @@ function startLevelNow(g, { resume = false, free = false, anim = 'up', bet = 1, 
       save.cgold = (save.cgold || 0) + cgold;
       const streakOn = isOn('racha'); // la racha cuenta desde el nivel siguiente al que la abre
       if (!prev) raceWin(g, stars);
+      crewAdd(stars - prev); // tripulación lunar: tus estrellas nuevas
       if (g >= save.next) save.next = g + 1;
       if (g === 0) save.tutorial = true;
       // Cofre del jefe (primera vez): según el % de estrellas del mundo. Se guarda ya, aunque salgas antes de verlo.
@@ -3201,15 +3208,15 @@ function evPlay() {
 function passHTML(e, { ico = e.tk || e.ico, state = 'buy', label = 'Boleto de entrada', sub = '', off = '' } = {}) {
   const [hc, hd] = HEADS[e.color] || HEADS.violet;
   return `<div class="ev-pass-wrap"><div class="rays"></div><div class="ev-pass ${state}" style="--pc:${hc};--pd:${hd}">
-    <div class="ep-card"><span class="ep-stub">${icon(ico, 0, 0, 'big')}</span>
+    <div class="ep-card"><span class="ep-stub">${icon(ico, 0, 0, 'big')}</span><i class="ep-nt t"></i><i class="ep-nt b"></i>
     <span class="ep-main"><small>${label}</small><b>${e.name}</b>${e.zone ? `<small class="ep-zone">Celebrando en ${e.zone}</small>` : ''}<em>${sub}</em></span></div>
     ${off ? `<i class="ep-off">${off}</i>` : ''}${state === 'owned' ? `<i class="ep-stamp">${icon('check')}¡Lista!</i>` : ''}
   </div></div>${e.note ? `<p class="ep-note">${icon(e.deco)}${e.note}</p>` : ''}`;
 }
 // Reloj que corre dentro del pase (cierra la ventana cuando llega a 0). get: ms que faltan (0 = ya).
-function passClock(m, get, done) {
+function passClock(m, get, done, fmt = clock) {
   const c = m.el.querySelector('[data-pclock]');
-  const t = setInterval(() => (c?.isConnected ? (get() > 0 ? (c.textContent = clock(get())) : (clearInterval(t), m.close(), done?.())) : clearInterval(t)), 1000);
+  const t = setInterval(() => (c?.isConnected ? (get() > 0 ? (c.textContent = fmt(get())) : (clearInterval(t), m.close(), done?.())) : clearInterval(t)), 1000);
 }
 // Botón para pagar la entrada o el boleto: las monedas salen del monedero. after: qué hacer ya pagado.
 // verb: lo que dice el botón ("Entrar", "Comprar boleto"…). Con descuento se ve el precio de antes tachado.
@@ -3795,7 +3802,7 @@ async function notices() {
     if (!(await calm(gen))) return;
     if (rescueDue()) await openRescue();
   }
-  for (const k of ['construir', 'racha', 'mis', 'logros', 'carrera', 'meteoro', 'col', 'apuesta', 'estrellas', 'mes', 'col2', 'cometas', 'fiesta', 'col3', 'aurora', 'fiesta2', 'cristales', 'fiesta3', 'fiesta4', 'fiesta5', 'fiesta6']) {
+  for (const k of ['construir', 'racha', 'mis', 'logros', 'carrera', 'meteoro', 'col', 'tripulacion', 'apuesta', 'estrellas', 'mes', 'col2', 'cometas', 'fiesta', 'col3', 'aurora', 'fiesta2', 'cristales', 'fiesta3', 'fiesta4', 'fiesta5', 'fiesta6']) {
     // La lluvia: solo si nunca se ha visto una (quien ya la vio caer no necesita la ventana). La apuesta: nivel 101.
     // Las lluvias nuevas (14 nov 2026), igual: al llegar a su nivel, si todavía no ha visto caer una.
     const rk = RAIN_KEY[k];
@@ -3808,6 +3815,20 @@ async function notices() {
       persist();
       paintBetSticker();
     }
+  }
+  // Tripulación lunar: llegaron a otra base (también con lo que juntaron los viajeros mientras no jugabas).
+  if (isOn('tripulacion')) {
+    crewCheck();
+    // Cofres de la semana pasada (llegaron a la base cuando no estabas): primero esos.
+    while (save.crewOwed?.length) {
+      if (!(await calm(gen))) return;
+      await openCrewPrize(save.crewOwed[0], true);
+    }
+    while (crew().pending?.length) {
+      if (!(await calm(gen))) return;
+      await openCrewPrize(crew().pending[0]);
+    }
+    refreshCrew();
   }
   // Carrera de 7: te caíste (abandonaste) o quedó una ventana sin ver.
   if (isOn('carrera') && race()?.pending) {
@@ -3892,7 +3913,7 @@ function openVIP() {
       title: '¡Descuentazo!',
       color: 'gold',
       cls: 'entry-modal vip-modal',
-      body: `${passHTML({ name: 'Toda la tienda', color: 'gold' }, { ico: 'bag', label: 'Boleto de descuento', sub: `Canjéalo en <span class="ep-clock" data-pclock>${clock(vipClaimLeft())}</span>`, off: `−${pct}%` })}
+      body: `${passHTML({ name: 'Toda la tienda', color: 'gold' }, { ico: 'bag', label: 'Boleto de descuento', sub: `Vence en <span class="ep-clock" data-pclock>${hclock(vipClaimLeft())}</span>`, off: `−${pct}%` })}
         <p class="lead">${pct}% menos en todo por <b>24 horas</b> desde que lo canjees.</p>`,
       onClose: done,
       buttons: [{ label: `${icon('check')} Canjear`, cls: 'green wide', onClick: () => {
@@ -3905,7 +3926,7 @@ function openVIP() {
         toast(`${icon('boletoDesc')} ¡−${pct}% en toda la tienda por 24 horas!`);
       } }],
     });
-    passClock(m, vipClaimLeft, paintVIP);
+    passClock(m, vipClaimLeft, paintVIP, hclock);
   });
 }
 
@@ -4050,6 +4071,11 @@ const UNLOCK_INFO = {
     lead: ulLead(UNLOCK.carrera + 1, 'la carrera de 7', 'Gana 7 seguidos y sube al podio.'),
     rules: [...RACE_RULES, ['flag', 'La ves a la <b>derecha</b>. Empieza cuando tú quieras.']],
   }),
+  tripulacion: () => ({
+    title: '¡Nueva: Tripulación lunar!', ico: 'tripulacion', color: 'moon', hero: icon('tripulacion', 0, 0, 'big'),
+    lead: ulLead(UNLOCK.tripulacion + 1, 'la tripulación lunar', 'Junta estrellas con 4 viajeros cada semana.'),
+    rules: [...CREW_RULES, ['flag', 'La ves a la <b>derecha</b>. Únete cuando quieras.']],
+  }),
   racha: () => {
     const t = streakTheme();
     return {
@@ -4158,7 +4184,7 @@ function evHeroIcons(main, list = Object.keys(EVENTS).map(Number).sort((a, b) =>
   return [at(-1), at(0), at(1)].map((x, k) => icon(x, 0, 0, k === 1 ? 'main' : '')).join('');
 }
 async function openUnlock(k) {
-  const sel = k === 'meteoro' || k === 'estrellas' || k === 'construir' || RAIN_KEY[k] || k.startsWith('apuesta') ? null : `.side.r [data-a="${{ racha: 'racha', carrera: 'carrera', mis: 'mis', logros: 'logros', col: 'col', mes: 'evento', col2: 'col', col3: 'col', fiesta: 'fiesta', fiesta2: 'fiesta', fiesta3: 'fiesta', fiesta4: 'fiesta', fiesta5: 'fiesta', fiesta6: 'fiesta' }[k]}"]`;
+  const sel = k === 'meteoro' || k === 'estrellas' || k === 'construir' || RAIN_KEY[k] || k.startsWith('apuesta') ? null : `.side.r [data-a="${{ racha: 'racha', carrera: 'carrera', tripulacion: 'tripulacion', mis: 'mis', logros: 'logros', col: 'col', mes: 'evento', col2: 'col', col3: 'col', fiesta: 'fiesta', fiesta2: 'fiesta', fiesta3: 'fiesta', fiesta4: 'fiesta', fiesta5: 'fiesta', fiesta6: 'fiesta' }[k]}"]`;
   if (sel) openGroup('r', 'open');
   const btn = sel && document.querySelector(sel);
   revealed.add(k);
@@ -4482,7 +4508,7 @@ function openBossReward(w, res) {
 
 // Jefe derrotado (15 nov 2026, pedido del usuario): después del cofre del planeta, su cofre de jefe, más grande y de
 // su color, con su dibujo al frente. Cae, se sacude cada vez más fuerte, se abre con destello y suelta sus regalos.
-const FOE_CHEST = { fenix: ['#ff7a2a', '#c94d14', '#ffb36b'], ilus: ['#4f6cff', '#3349d6', '#9db0ff'], medusa: ['#2fc4dc', '#1f97ad', '#9ff3ff'], kraken: ['#b25fd0', '#8a3fae', '#e3a6f0'], whale: ['#47c27a', '#2f9e5c', '#a6ecbf'], clock: ['#9a6cf0', '#7448d0', '#d9c4ff'], wind: ['#f2b233', '#c98a10', '#ffe08a'] };
+const FOE_CHEST = { fenix: ['#ff7a2a', '#c94d14', '#ffb36b'], ilus: ['#4f6cff', '#3349d6', '#9db0ff'], medusa: ['#2fc4dc', '#1f97ad', '#9ff3ff'], kraken: ['#b25fd0', '#8a3fae', '#e3a6f0'], whale: ['#47c27a', '#2f9e5c', '#a6ecbf'], clock: ['#9a6cf0', '#7448d0', '#d9c4ff'], wind: ['#f2b233', '#c98a10', '#ffe08a'], hand: ['#8fd14f', '#5fa82a', '#d4f7a8'] };
 function openFoeReward(fc) {
   return new Promise((done) => {
     const c = FOE_CHEST[fc.kind] || ['#8a5cf0', '#6c3fd4', '#a785ff'];
@@ -5646,7 +5672,7 @@ const raceChips = (p) => [p.coins && `${coin()}<b>${money(p.coins)}</b>`, p.wild
   .filter(Boolean).map((x) => `<span class="rc-chip">${x}</span>`).join('');
 const RACE_CHEST = { oro: 'cofreOro', plata: 'cofrePlata', bronce: 'cofreBronce', cobre: 'cofreCobre' };
 // Un carril (18 nov 2026, el usuario: renglón sencillo, sin verse botón): lugar, avatar, nombre, 6 escalones
-// y la bandera de meta con su nave, y las estrellas.
+// y la luna de meta con su nave, y las estrellas.
 // Tu carril va del color del fondo de tu avatar (contorno y fondo clarito); los de los viajeros, todos iguales.
 const myLane = () => AVATAR_COLORS[(save.avatar || 0) % AVATAR_COLORS.length];
 const raceLane = (row, n) => `<li class="rc-lane${row.me ? ' me' : ''}${row.out ? ' out' : ''}" data-k="${row.me ? 'me' : row.i}"${row.me ? ` style="--lc:${myLane()}"` : ''}>
@@ -5662,7 +5688,9 @@ const raceSort = (rows) => [...rows].sort((a, b) => (a.out ? 1 : 0) - (b.out ? 1
 // el mismo boleto, gris, con el reloj.
 // 18 nov 2026 (el usuario): la carrera es azul (boleto y cabecera de sus ventanas), como el anillo de su botón.
 const RACE_PASS = { name: 'Carrera de 7', color: 'blue', ico: 'carrera' };
-const RACE_FEE = 500;
+// Inscripción de la carrera y de la tripulación lunar: 1,000 tachado y gratis; la cinta del boleto dice −100% (19 nov
+// 2026, el usuario).
+const RACE_FEE = 1000;
 function openRaceIdle() {
   const left = raceWaitLeft();
   if (left) {
@@ -5675,7 +5703,7 @@ function openRaceIdle() {
   const prizes = [1, 2, 3, 4].map((n) => { const p = racePrize(n); return `<li class="rc-prize p${n}"><b class="rc-pl">${RACE_PLACE[n - 1]}</b><span class="rc-pchest">${icon(RACE_CHEST[p.metal])}</span><span class="rc-chips">${raceChips(p)}</span></li>`; }).join('');
   return new Promise((done) => {
     const m = openModal({ title: 'Carrera de 7', color: 'blue', wide: true, cls: 'entry-modal race-win race-idle',
-      body: `${passHTML(RACE_PASS, { label: 'Inscripción', sub: `${RACE_STEPS} niveles seguidos · 4 viajeros`, off: '¡Gratis!' })}
+      body: `${passHTML(RACE_PASS, { label: 'Inscripción', sub: `${RACE_STEPS} niveles seguidos · 4 viajeros`, off: '−100%' })}
         <ol class="rc-prizes">${prizes}</ol>`,
       buttons: [{ label: `Inscribirme · ${coin()} <s>${money(RACE_FEE)}</s> ¡Gratis!`, cls: 'green wide', onClick: () => { raceStart(); refreshRace(); setTimeout(() => openRace({ play: true, fresh: true }).then(done), 60); } }],
       onClose: () => !race()?.on && done() });
@@ -5819,6 +5847,149 @@ function openRacePrize(r) {
   });
 }
 
+// ---------- Tripulación lunar (19 nov 2026; reglas en crew.js) ----------
+// Como la carrera de 7, pero lo que importa son los cofres (el usuario): arriba el camino en la luna con el vehículo y
+// las 3 bases con su cofre; abajo cada tripulante con lo que lleva; al final los días de la semana y lo que falta.
+const CREW_RULES = [
+  ['tripulacion', 'Cada semana juntas <b>estrellas</b> con <b>4 viajeros</b>.'],
+  ['star', 'Suman las <b>estrellas nuevas</b> que ganes en tu camino.'],
+  ['cofreOro', 'El módulo pasa por <b>3 bases</b>: bronce, plata y oro. Te llevas <b>un cofre</b>: el de la base más alta a la que lleguen.'],
+  ['reloj', 'Se cobra el <b>domingo</b> a medianoche, o en cuanto lleguen al <b>oro</b>.'],
+];
+const CREW_BASE = ['de bronce', 'de plata', 'de oro'];
+const CREW_CHEST = { oro: 'cofreOro', plata: 'cofrePlata', bronce: 'cofreBronce' };
+const crewMax = () => CREW_GOALS[CREW_GOALS.length - 1];
+// Botón: sin inscribirte, punto; inscrito, anillo con lo que llevan y abajo los cofres; ya en el oro, arriba lo que
+// falta para la siguiente semana (como la carrera esperando).
+const crewBtn = () => {
+  if (!isOn('tripulacion')) return '';
+  const c = crew(), p = Math.min(1, crewTotal(c) / crewMax()), wait = c.on && crewDone(c) && !c.pending?.length;
+  return `<button class="iconbtn tb press prog crew-btn ${fresh('tripulacion')}${c.on ? '' : ' ready'}${wait ? ' waiting' : ''}" data-a="tripulacion" style="--p:${c.on && !wait ? p.toFixed(3) : 0}" aria-label="Tripulación lunar" title="Tripulación lunar">${icon('tripulacion')}${wait ? `<small class="tl">${shortLeft(crewLeft())}</small>` : c.on ? (c.got ? `<small class="rn">${c.got}</small>` : '') : '<span class="dot"></span>'}</button>`;
+};
+// El boleto (19 nov 2026, el usuario: «el mismo estilo de boleto… que se inscriba y no sepa cuánto llevan hasta que se
+// inscribe»): morado como su cabecera; debajo los 3 cofres con lo que traen. Ya en el oro, el mismo boleto gris con el
+// reloj de la semana que sigue.
+const CREW_PASS = { name: 'Tripulación lunar', color: 'moon', ico: 'tripulacion' };
+function openCrewJoin() {
+  const prizes = CREW_GOALS.map((g, k) => { const p = crewPrize(k); return `<li class="rc-prize p${3 - k}"><b class="rc-pl">${g} ★</b><span class="rc-pchest">${icon(CREW_CHEST[p.metal])}</span><span class="rc-chips">${raceChips(p)}</span></li>`; }).join('');
+  return new Promise((done) => {
+    const m = openModal({ title: 'Tripulación lunar', color: 'moon', wide: true, cls: 'entry-modal race-win race-idle crew-idle',
+      body: `${passHTML(CREW_PASS, { label: 'Inscripción', sub: 'Esta semana · 4 viajeros', off: '−100%' })}
+        <ol class="rc-prizes">${prizes}</ol>`,
+      buttons: [{ label: `Inscribirme · ${coin()} <s>${money(RACE_FEE)}</s> ¡Gratis!`, cls: 'green wide', onClick: () => { crewJoin(); refreshCrew(); setTimeout(() => openCrew().then(done), 60); } }],
+      onClose: () => !crew().on && done() });
+    helpTip(m, CREW_RULES.map(([, x]) => x).join(' '));
+    if (reduced()) return;
+    m.el.querySelectorAll('.rc-prize').forEach((el, i) => el.animate([{ opacity: 0, scale: 0.6, translate: '0 -14px' }, { opacity: 1, scale: 1.06, translate: '0 0', offset: 0.7 }, { opacity: 1, scale: 1, translate: '0 0' }], { duration: 420, delay: 350 + i * 110, easing: 'ease-out', fill: 'backwards' }));
+  });
+}
+function openCrewWait() {
+  const m = openModal({ title: 'Tripulación lunar', color: 'moon', cls: 'entry-modal race-win',
+    body: `${passHTML(CREW_PASS, { state: 'wait', label: 'La siguiente empieza en', sub: `<span class="ep-clock" data-pclock>${clock(crewLeft())}</span>` })}
+      <p class="lead">¡Llegaron al <b>oro</b> esta semana! El lunes, otra tripulación.</p>`,
+    buttons: [{ label: '¡Entendido!', cls: 'gold wide' }] });
+  passClock(m, crewLeft, refreshCrew);
+  return Promise.resolve();
+}
+const refreshCrew = () => swapBtn('tripulacion', crewBtn());
+setInterval(() => document.querySelector('[data-a="tripulacion"]') && refreshCrew(), 60000);
+// Lo que trae cada cofre, en chips (los de la carrera).
+// El camino, como el carril de la carrera de 7 (19 nov 2026, el usuario: «se ve limpio, son rayas, no requiere pintar
+// nada… y va en medio»): línea punteada con un puntito cada 30 estrellas que se prende al pasarlo, las metas de bronce
+// y plata como aros de su metal con su número, el cofre de oro al final y el módulo lunar volando sobre la línea.
+const CREW_DOT = 30;
+const crewRoad = (t) => {
+  const pc = (x) => Math.min(100, (x / crewMax()) * 100), mid = CREW_GOALS.slice(0, -1);
+  const dots = Array.from({ length: crewMax() / CREW_DOT - 1 }, (_, k) => (k + 1) * CREW_DOT).map((x) => {
+    const m = mid.indexOf(x);
+    return m >= 0 ? `<span class="cw-mark m${m}${t >= x ? ' got' : ''}" style="left:${pc(x)}%"><i></i><b>${x}</b></span>` : `<i class="cw-dot${t >= x ? ' on' : ''}" style="left:${pc(x)}%"></i>`;
+  }).join('');
+  return `<div class="cw-road">${dots}<span class="cw-gold${t >= crewMax() ? ' got' : ''}">${icon('cofreOro')}</span><span class="cw-rover" style="left:${pc(t)}%">${icon('modulo')}</span></div>`;
+};
+const crewRows = (c) => [{ me: true, name: 'Tú', stars: c.mine }, ...c.bots.map((b, i) => ({ i, name: b.name, av: b.av, stars: botStars(b) }))].sort((a, b) => b.stars - a.stars || (b.me ? 1 : 0) - (a.me ? 1 : 0));
+// Cada tripulante en una ficha pareja (avatar, nombre y estrellas), en orden; parado van de 2 en 2 y acostado en una
+// fila (el usuario: «en horizontal y en el teléfono se ve amontonado»; los círculos de tamaños no funcionaron).
+const crewPerson = (row, i) => `<li class="cw-p${row.me ? ' me' : ''}"${row.me ? ` style="--lc:${myLane()}"` : ''}><b class="cw-n">${i + 1}</b>${row.me ? avatarHTML(save) : avatarHTML({ name: row.name, avatar: row.av })}<span class="cw-name">${row.me ? 'Tú' : esc(row.name)}</span><span class="cw-st">${star()}${row.stars}</span></li>`;
+function openCrew() {
+  const c = crew();
+  if (!c.on) return openCrewJoin();
+  crewCheck();
+  if (crewDone(c) && !c.pending?.length) return openCrewWait();
+  const t = crewTotal(c), rows = crewRows(c);
+  const days = ['L', 'M', 'M', 'J', 'V', 'S', 'D'].map((d, i) => `<span class="${i < crewDay() ? 'past' : i === crewDay() ? 'now' : ''}">${d}</span>`).join('');
+  const now = `${star()}<b>${Math.min(t, crewMax())}</b>`;
+  // Lo que faltan y, si ya pasaron una base, el cofre que te llevas si la semana terminara hoy.
+  const lead = c.got >= CREW_GOALS.length ? `${now} ¡Llegaron al <b>oro</b>!` : `Llevan ${now} · faltan <b>${CREW_GOALS[c.got] - t}</b> para la base ${CREW_BASE[c.got]}.${c.got ? ` Hoy: cofre ${CREW_BASE[c.got - 1]}.` : ''}`;
+  return new Promise((done) => {
+    const m = openModal({ title: 'Tripulación lunar', color: 'moon', wide: true, cls: 'race-win crew-win',
+      // 19 nov 2026 (el usuario): el «faltan…» arriba del camino y más aire entre cada parte.
+      body: `<p class="lead rc-lead cw-lead">${lead}</p>
+        <div class="cw-goal">${crewRoad(c.seen ?? 0)}</div>
+        <ol class="cw-crew">${rows.map(crewPerson).join('')}</ol>
+        <div class="cw-week"><span class="cw-days">${days}</span><span class="cw-left">Termina en <b data-pclock>${clock(crewLeft())}</b></span></div>`,
+      buttons: [{ label: `${icon('play')} ¡A jugar!`, cls: 'green wide', onClick: () => { done(); enterLevel(save.next); } }],
+      onClose: done });
+    helpTip(m, CREW_RULES.map(([, x]) => x).join(' '));
+    passClock(m, crewLeft, refreshCrew);
+    // El vehículo avanza de lo que viste la última vez a lo de ahora; las bases que alcanza brincan.
+    const road = m.el.querySelector('.cw-road');
+    const to = (x) => `${Math.min(100, (x / crewMax()) * 100)}%`;
+    const from = c.seen ?? 0;
+    c.seen = t;
+    persist();
+    if (reduced() || from === t) return void road.replaceWith(document.createRange().createContextualFragment(crewRoad(t)));
+    setTimeout(() => {
+      road.querySelector('.cw-rover').style.left = to(t);
+      road.querySelectorAll('.cw-dot').forEach((d) => setTimeout(() => d.classList.toggle('on', t >= (parseFloat(d.style.left) / 100) * crewMax()), 500));
+      road.querySelectorAll('.cw-mark, .cw-gold').forEach((b, k) => {
+        if (from < CREW_GOALS[k] && t >= CREW_GOALS[k]) setTimeout(() => (b.classList.add('got'), sparkleAt(b, 14), buzz(15)), 900 * ((CREW_GOALS[k] - from) / Math.max(1, t - from)));
+      });
+    }, 350);
+  });
+}
+// El cofre de una base: como el de la carrera (llega de atrás, se sacude, se abre y suelta sus premios). Ya se cobró
+// en crew.js; al cerrar sale de pendientes.
+function openCrewPrize(k, owed = false) {
+  return new Promise((done) => {
+    const p = crewPrize(k);
+    const m = openModal({
+      title: `¡Base ${CREW_BASE[k]}!`,
+      color: 'gold',
+      closable: false,
+      cls: 'boss-win foe-win side-win race-prize',
+      body: `<div class="ww-hero"><div class="rays"></div><span class="ww-pl">${icon('tripulacion')}</span></div>
+        <b class="ww-name">Tripulación lunar</b>
+        <p class="ww-lead">${owed ? `La semana terminó en la base ${CREW_BASE[k]}. ¡Aquí está tu cofre!` : `¡El módulo llegó a la base ${CREW_BASE[k]}! Este cofre es para toda la tripulación.`}</p>
+        <div class="chest-row"><div class="chest foe-chest p3d"></div></div>`,
+      buttons: [{ label: 'Continuar', cls: 'green wide', onClick: () => {
+        const b = m.el.querySelector('.chest').getBoundingClientRect();
+        if (owed) save.crewOwed.shift();
+        else { const c = crew(); c.pending = (c.pending || []).filter((x) => x !== k); }
+        persist();
+        refreshCrew();
+        if (p.coins) flyToWallet('coins', { x: b.left + b.width / 2, y: b.top + b.height / 2 }, p.coins);
+        done();
+      } }],
+    });
+    const row = m.el.querySelector('.chest-row'), chest = m.el.querySelector('.chest');
+    const stage = new PrizeStage(chest, 'chest', { metal: p.metal });
+    const loot = () => lootBubbles(m, prizeIcons(p), chest);
+    if (reduced()) return row.classList.add('open', 'done'), stage.open(), loot();
+    m.el.querySelectorAll('.ww-pl, .ww-name, .ww-lead').forEach((el, i) => el.animate([{ opacity: 0, scale: 0.6 }, { opacity: 1, scale: 1.08, offset: 0.7 }, { opacity: 1, scale: 1 }], { duration: 380, delay: 120 + i * 110, easing: 'ease-out', fill: 'backwards' }));
+    chest.animate(FROM_BACK, { duration: 650, delay: 500, easing: 'ease-out', fill: 'backwards' });
+    setTimeout(async () => {
+      await stage.shake(k + 1);
+      row.classList.add('open');
+      await stage.open();
+      const c = chest.getBoundingClientRect();
+      sparkle({ x: c.left + c.width / 2, y: c.top + c.height / 3 }, 20);
+      if (k === 2) confetti(60);
+      await loot();
+      row.classList.add('done');
+    }, 900);
+  });
+}
+
 // ---------- Construir (station.js) ----------
 // Los bloques vuelan de tu contador a la estación (en arco, uno tras otro; hasta 6).
 function flyBlocks(from, to, n, onLand) {
@@ -5908,6 +6079,7 @@ function devPrize(k) {
   if (k === 'codigo') return openGiftPrize({ item: it });
   if (k === 'codigo-monedas') return openGiftPrize({ coins: 500 });
   if (k === 'carrera') return refreshRace(), openRace({ play: true });
+  if (k === 'tripulacion') return refreshCrew(), openCrew();
   // Cofre de la carrera (solo se ve: el premio de mentira no se suma; al cerrar no toca una carrera que vaya).
   if (k.startsWith('carrera-')) { const n = +k.slice(8); return openRacePrize(n ? { done: true, place: n, stars: Array(RACE_STEPS).fill(3), prize: racePrize(n) } : { out: true, step: 3, prize: raceLosePrize(3) }); }
   // Con un evento y una festividad de verdad (el primero de su lista), para ver su planeta y su color.
@@ -5947,6 +6119,7 @@ const HELP_FOE = {
   clock: '<b>rebobina</b> tus cartas y las <b>congela</b>. No deja deshacer.',
   wind: 'sopla y se lleva cartas de tu <b>descarte</b> justo cuando tienes jugada. Con 3 seguidas tus cartas <b>pesan</b>.',
   whale: 'se <b>traga</b> cartas y las <b>escupe</b> encima de otras.',
+  hand: 'una <b>mano</b> se lleva cartas de tu <b>mazo</b>. Con 5 seguidas te las regresa; si robas 2 veces, las avienta.',
 };
 // Cómo jugar homologado (17 nov 2026, el usuario: «aplica el diseño de la ficha de los jefes en las otras»): cada
 // sección con su frase de entrada, cada ficha con un solo dibujo chico y texto corto (lo completo sale en su ventana).
@@ -5955,6 +6128,7 @@ const S = (ill, txt, u) => `<div class="step"${u ? ` data-u="${u}"` : ''}><div c
 const hcard = (k) => `<span class="help-card" style="background-image:${cardBackURL(k)}"></span>`;
 const MECH_INTRO_HELP = { 'Se abren después': 'Esperan algo para poder jugarse.', 'Cambian con los turnos': 'Cambian solas mientras juegas.', 'Reglas al jugar': 'Se juegan distinto a las demás.', 'No se juegan': 'Se destapan, no se juegan.', 'Te ayudan': 'Al jugarlas te dan algo extra.' };
 const CARD_SHORT = {
+  tug: 'al jugar una, el <b>cable</b> jala a la otra a su <b>lugar</b>.',
   lock: 'se abre al jugar la carta con la <b>llave</b> de su color.', slock: 'juega cartas de su <b>palo</b> para romper sus cadenas; te da monedas.', curtain: 'sigue <b>boca abajo</b> hasta jugar la del <b>telón</b>.', ice: 'se <b>derrite</b> con cada carta que juegas.', vine: 'la tapa la <b>enredadera</b>; la carta de <b>fuego</b> la quema.', sleep: 'despierta con su número de cartas <b>seguidas</b>.',
   live: 'su número <b>sube o baja</b> con cada turno.', ghost: '<b>aparece y desaparece</b>; juégala cuando se vea.', cham: 'a ratos se vuelve <b>comodín</b>.',
   double: 'vale <b>dos números</b>.', arrow: 'la siguiente tiene que ir hacia donde marca la <b>flecha</b>.', ticket: '<b>dos mitades</b>: juega una y la otra se queda.', domino: 'entras por un número y en el descarte queda <b>el otro</b>.', triple: '<b>3 talones</b>: primero los de las puntas.', twin: 'al jugar una, la <b>otra</b> cae al descarte.',
@@ -5964,9 +6138,9 @@ const CARD_SHORT = {
 const TABLE_HELP = [
   ['nave', 'ship', 'Nave ladrona', 'se lleva cartas de tu <b>mazo</b>; con racha de 4 te regresa una.'], ['mesa', 'mesa', 'Mesa enrollada', 'limpia las primeras y salen más del <b>rollo</b>.'], ['nebulosa', 'nebulosa', 'Nebulosa', 'vacía un grupo y sale <b>otro</b>.'], ['gravedad', 'gravedad', 'Gravedad', 'juegas la de <b>abajo</b> y la columna cae.'],
   ['hangar', 'hangar', 'Hangar', 'vacía una columna y del <b>hangar</b> sale otra.'], ['bitacora', 'bitacora', 'Bitácora', 'por las <b>escotillas</b> juegas cartas de la hoja de abajo.'], ['portal', 'portal', 'Grúa de feria', 'la <b>garra</b> se lleva la carta de arriba de cada columna.'], ['voltea', 'voltea', 'Mesa que se voltea', 'cada 5 turnos la cápsula da <b>media vuelta</b>.'],
-  ['cohete', 'cohete', 'Cohete', 'limpia y el <b>cohete avanza</b>; cada tramo da monedas.'], ['marea', 'marea', 'Marea', 'robar sube el <b>agua</b> y jugar la baja.'], ['hoyo', 'hoyo', 'Agujero negro', 'cada 4 turnos <b>revuelve</b> los números.'], ['astro', 'astro', 'Astronauta', 'te <b>guarda</b> una carta y luego la lleva al descarte.'],
+  ['cohete', 'cohete', 'Cohete', 'limpia y el <b>cohete avanza</b>; cada tramo da monedas.'], ['tubos', 'tubos', 'Tubos neumáticos', 'vacía un hueco y un <b>tubo</b> lo rellena disparando otra carta.'], ['marea', 'marea', 'Marea', 'robar sube el <b>agua</b> y jugar la baja.'], ['hoyo', 'hoyo', 'Agujero negro', 'cada 4 turnos <b>revuelve</b> los números.'], ['astro', 'astro', 'Astronauta', 'te <b>guarda</b> una carta y luego la lleva al descarte.'],
   ['rocas', 'rocas', 'Asteroides', 'robar hace caer <b>piedras</b> que tapan cartas.'], ['puertas', 'puertas', 'Puertas', 'juega una <b>carta llave</b> y abre la puerta que quieras.'], ['banda', 'banda', 'Banda transportadora', 'las cartas <b>dan vueltas</b>; atrápalas al pasar.'],
-  ['zero', 'zero', 'Gravedad cero', 'al jugar, una carta <b>flota</b> encima de otra.'], ['orbit', 'orbit', 'Planetas en órbita', 'la carta con un <b>planeta</b> encima no se juega.'], ['pong', 'pong', 'Ping-pong', 'la pelota pone enfrente la carta de <b>abajo</b>.'],
+  ['zero', 'zero', 'Gravedad cero', 'al jugar, una carta <b>flota</b> encima de otra.'], ['orbit', 'orbit', 'Planetas en órbita', 'la carta con un <b>planeta</b> encima no se juega.'], ['pong', 'pong', 'Meteoro fugaz', 'el meteoro pone enfrente la carta de <b>abajo</b>.'],
 ];
 function openHelp(tab = 'basico', then) {
   const reached = new Set(roadItems().filter((x) => x.n <= roadAt()).map((x) => x.id));

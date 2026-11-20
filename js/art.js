@@ -364,9 +364,23 @@ const ICONS = {
   cofrePlata: () => chest2D('#e4ebf5', '#a9b4c8'),
   cofreBronce: () => chest2D('#eaa565', '#b8743a'),
   cofreCobre: () => chest2D('#d77a5c', '#a8543a'),
-  // Meta de la carrera: bandera a cuadros.
-  meta: () => `<path d="M7 4v25" stroke="${K}" stroke-width="3.2" stroke-linecap="round"/>`
-    + tshape('M8.5 5h17v12h-17z', '#ffffff', '#e3dcf2', `<path d="M8.5 5h4.25v4H8.5zM17 5h4.25v4H17zM12.75 9H17v4h-4.25zM21.25 9h4.25v4h-4.25zM8.5 13h4.25v4H8.5zM17 13h4.25v4H17z" fill="${K}"/>`, 2),
+  // Tripulación lunar (19 nov 2026): la luna con un casco de astronauta asomándose y una estrellita.
+  tripulacion: () => tshape(CIRCLE(14.5, 17.5, 11.5), '#eee8d2', '#d9cfae', `<circle cx="10" cy="14" r="2.6" fill="#d9d2b8"/><circle cx="17" cy="22" r="2" fill="#d9d2b8"/><circle cx="9.5" cy="22.5" r="1.4" fill="#d9d2b8"/>`, 2.2)
+    + tshape(CIRCLE(23.5, 21, 6.6), '#ffffff', '#d9dbe8', '', 2) + tshape('M19.4 20.4a4.4 3.6 0 0 1 8.2 0v1.6a4.4 3 0 0 1-8.2 0z', '#5fc7e8', '#2f86c0', '<path d="M21 19.6q1.4-1.4 3.2-1.2" stroke="#fff" stroke-width="1.2" fill="none" stroke-linecap="round"/>', 1.6)
+    + `<path d="M26.5 4l.8 1.8 1.8.8-1.8.8-.8 1.8-.8-1.8-1.8-.8 1.8-.8z" fill="#ffd54a" stroke="${K}" stroke-width="1" stroke-linejoin="round"/>`,
+  // Módulo lunar (la tripulación; 19 nov 2026, el usuario: «algo volador»): cápsula con ventana, patitas y su fueguito.
+  modulo: () => tshape('M12.5 25.5h7l-3.5 5z', '#ffc83d', '#ff8a3d', '', 1.6)
+    + `<path d="M9 21.5 5.5 27M23 21.5l3.5 5.5M4 27h3.5M24.5 27H28" stroke="${K}" stroke-width="2" stroke-linecap="round"/>`
+    + tshape('M10 9h12l4 13H6z', '#e4ebf5', '#a9b4c8', '<path d="M8.5 18.5h15" stroke="#ffc83d" stroke-width="2.2"/>', 2.2)
+    + tshape('M11 9a5 5 0 0 1 10 0z', '#ffffff', '#cfd2e6', '', 2) + tshape(CIRCLE(16, 14, 2.8), '#5fc7e8', '#2f86c0', '', 1.6)
+    + `<path d="M16 4V1.5" stroke="${K}" stroke-width="1.8"/><circle cx="16" cy="1.6" r="1.4" fill="#ff5f7e"/>`,
+  // Vehículo lunar (la tripulación): cabina de vidrio, antena y ruedas.
+  rover: () => tshape('M4 15h24a2 2 0 0 1 2 2v4H2v-4a2 2 0 0 1 2-2z', '#ffffff', '#cfd2e6', '', 2) + tshape('M9 15V9.5h8.5L21 15z', '#bfe9ff', '#7ec8f0', '', 1.8)
+    + `<path d="M25 15V6" stroke="${K}" stroke-width="1.8"/><circle cx="25" cy="5.5" r="1.8" fill="#ff5f7e" stroke="${K}" stroke-width="1.3"/>` + tshape(CIRCLE(8, 23, 4.2), '#7d88a8', '#5d6788', '<circle cx="8" cy="23" r="1.4" fill="#cfd6ea"/>', 2) + tshape(CIRCLE(24, 23, 4.2), '#7d88a8', '#5d6788', '<circle cx="24" cy="23" r="1.4" fill="#cfd6ea"/>', 2),
+  // Meta de la carrera (19 nov 2026, el usuario: en vez de bandera, una luna a la que llegan, bonita como la nave):
+  // luna crema con cráteres, su brillo y dos destellos.
+  meta: () => tshape(CIRCLE(16, 16.5, 11.5), '#fff2c2', '#f0cf73', `<circle cx="12" cy="13" r="3" fill="#f0d58a"/><circle cx="20.5" cy="20.5" r="2.2" fill="#f0d58a"/><circle cx="19" cy="11" r="1.4" fill="#f0d58a"/><path d="M8.2 18.5q.6 4 4 6" stroke="#fff" stroke-width="1.6" fill="none" stroke-linecap="round" opacity=".8"/>`, 2.2)
+    + `<path d="M27.5 3.5l.9 2.1 2.1.9-2.1.9-.9 2.1-.9-2.1-2.1-.9 2.1-.9z" fill="#fff" stroke="${K}" stroke-width="1" stroke-linejoin="round"/><circle cx="4" cy="6" r="1.3" fill="#fff"/>`,
   capsula: () => tshape('M16 9.5H9.5a6.5 6.5 0 0 0 0 13H16z', '#3b3f8f', '#2c2f70', '<path d="M5.8 13.6q1.5-2.6 4-2.9" stroke="#fff" stroke-width="1.4" fill="none" stroke-linecap="round" opacity=".7"/>')
     + tshape('M16 9.5h6.5a6.5 6.5 0 0 1 0 13H16z', '#3b3f8f', '#2c2f70')
     + tshape('M11 8.5h3v15h-3zM18 8.5h3v15h-3z', '#ffc83d', '#ec9a17', '', 1.6)
@@ -429,7 +443,8 @@ const ICONS = {
   flame: () => tshape('M16 3c1.5 5 8 7 8 15a8 8 0 0 1-16 0c0-4 2-6 3.5-8 .5 2.5 2 4 3.5 4-1-5 0-8.5 1-11z', '#ff6a3d', '#e04a20', '<path d="M16 15c1 3 4 4 4 7a4 4 0 0 1-8 0c0-2 1.5-3.5 4-7z" fill="#ffc83d"/>', 2.2),
   vibra: () => tshape('M11 4h10a2 2 0 0 1 2 2v20a2 2 0 0 1-2 2H11a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z', '#4aa8de', '#2f86c0', '<path d="M11 7h10v15H11z" fill="#d8f0ff"/>', 2.2) + `<path d="M5 11v10M27 11v10M2 13.5v5M30 13.5v5" stroke="${K}" stroke-width="2.4" stroke-linecap="round"/>`,
   snail: () => tshape('M4 25h20c3 0 4-2 4-4v-2l-2-1-2 3H4z', '#ffd27a', '#e8a94a', '', 2) + tshape(CIRCLE(14, 16, 8), '#ff9c5b', '#e2753a', `<path d="M14 16a3 3 0 1 1 3-3" fill="none" stroke="${K}" stroke-width="1.8"/>`, 2.2) + `<path d="M26 18l1-6M28.5 18.5l2.5-5" stroke="${K}" stroke-width="1.8" stroke-linecap="round"/>`,
-  wild: () => `<g transform="rotate(8 16 16)">${tshape('M9 4h14a3 3 0 0 1 3 3v18a3 3 0 0 1-3 3H9a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3z', '#fffaf0', '#eadcc2', '', 2.2)}${tshape(starPath(16, 16.5, 7.5, 3.4), '#ff9c2b', '#e8761a', '', 1.8)}</g>`,
+  // Comodín (19 nov 2026): la carta dorada con su estrella blanca (como la carta morada de premio), en chiquito.
+  wild: () => `<g transform="rotate(8 16 16)">${tshape('M9 3.5h14a3 3 0 0 1 3 3v19a3 3 0 0 1-3 3H9a3 3 0 0 1-3-3v-19a3 3 0 0 1 3-3z', '#ffc83d', '#eca21f', '', 2.2)}${[['#ff7aa0', 7.6], ['#7dffb0', 6.2], ['#5fc7e8', 4.8]].map(([c, r]) => `<path d="M${16 - r} 21.5A${r} ${r} 0 0 1 ${16 + r} 21.5" fill="none" stroke="${c}" stroke-width="1.4"/>`).join('')}${tshape(starPath(16, 16.5, 7, 3.2), '#fff6e6', '#ffe3a0', '', 1.8)}</g>`,
   // Una sola carta de reverso (botón Cartas de la tienda).
   card: () => `<g transform="rotate(-10 16 16)">${tshape('M10 4h12a3 3 0 0 1 3 3v18a3 3 0 0 1-3 3H10a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3z', '#fff6e6', '#e3d8c4', '<rect x="9.6" y="6.6" width="12.8" height="18.8" rx="1.8" fill="#4a4ac0"/>', 1.8)}<path d="${starPath(16, 16, 5, 2.3)}" fill="#ffc83d" stroke="#2a1f5c" stroke-width="1.4" stroke-linejoin="round"/></g>`,
   // Mazo (10 nov 2026: antes las de atrás se dibujaban encima y salía una mancha azul): tres reversos, de atrás hacia
@@ -758,7 +773,12 @@ export const BACKS = {
       + [[66, 22, 0.5], [84, 58, 0.42], [22, 40, 0.38], [74, 104, 0.46]].map(([x, y, k]) => `<g transform="translate(${x - 16 * k} ${y - 16 * k}) scale(${k})">${ICONS.meteoro()}</g>`).join(''),
     art: () => `<g transform="translate(14 38) scale(2.1)">${ICONS.meteoro()}</g>` },
   regalo: { a: '#7b4ee6', b: '#6438c8', star: ['#fff6e6', '#e3d3ff'] },
-  comodin: { a: '#ffc83d', b: '#eca21f', star: ['#ff9c2b', '#e8761a'], dots: '#fff4c7' },
+  // Comodín (19 nov 2026, el usuario: «como la morada extra», la carta de premio con su estrella, pero dorada).
+  // Con su toque de arcoíris detrás de la estrella (el usuario: «solo ponle su toque de arcoíris»), dentro del panel.
+  comodin: { a: '#ffc83d', b: '#eca21f', dots: '#fff4c7',
+    art: () => [['#ff7aa0', 30], ['#ffd54a', 25.5], ['#7dffb0', 21], ['#5fc7e8', 16.5]].map(([c, r]) => `<path d="M${50 - r} 88A${r} ${r} 0 0 1 ${50 + r} 88" fill="none" stroke="${c}" stroke-width="4.6" stroke-linecap="round"/>`).join('')
+      + `<path d="M15.5 88A34.5 34.5 0 0 1 84.5 88" fill="none" stroke="${K}" stroke-width="2.2" stroke-linecap="round"/>`
+      + `<path d="${starPath(50, 72, 27, 12.5)}" fill="#ffe3a0" stroke="${K}" stroke-width="4" stroke-linejoin="round"/><path d="${starPath(48.5, 69.5, 24, 11)}" fill="#fff6e6"/>` },
   // Cartas de ayuda (8 nov 2026): de la misma baraja que el comodín, cada una con su dibujo grande al centro.
   hreloj: { a: '#ffb35c', b: '#ec8a2f', dots: '#fff1d6', art: () => `<g transform="translate(19 39) scale(1.95)">${ICONS.arena()}</g>` },
   hver: { a: '#5fc7e8', b: '#3aa0c8', dots: '#e6fbff', art: () => `<g transform="translate(17 37) scale(2.06)">${ICONS.ojo()}</g>` },

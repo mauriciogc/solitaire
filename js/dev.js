@@ -4,7 +4,7 @@ import { save, prefs, persist, backupOnce, restoreBackup, setDev, backupInfo } f
 import { missions, missionDone, ACHIEVEMENTS, ACHIEVEMENT_TOP, achievementGot, achievementNeed, achievementsVisible } from './missions.js';
 import { streakWin, streakLose, dailyStreak, nextGoal, col, daysToNextCol, ev, daysToNextEvent, evEnter, evWin, EVENT_PER_PLANET, EVENT_LEVELS, festival, festEnter, festWin, nextFestival, daysToNextFestival, daysToFestival, festShape, isOn, UNLOCK } from './events.js';
 import { TIERS, generateLevel, hardHelp, scrollKind, festivalLevel, eventLevel, eventGroup, EVENT_WORLDS, packGroups, worldInfo, TOTAL_LEVELS, LEVELS_PER_WORLD, MECH_NAMES, MECHANICS, MECH_INTRO, SCROLL_FROM, EXTRA, extraDebut, tideFirst, holeFirst, doorsFirst, bandaFirst, rocksFirst, zeroFirst, orbitFirst, pongFirst, BOSS_ORDER, BOSS_NAMES, BOSS_KILL, bossExtra } from './levels.js';
-import { playCasual, solve, initState, BOSS_EVERY, BOSS_FIRST, KRAKEN_TICKLE, KRAKEN_SLAM, WHALE_SPIT, MEDUSA_HOP, MEDUSA_CALM, medusaMax, CLOCK_FREEZE, CLOCK_SEAL, CLOCK_HIT, CLOCK_CARD, clockSeal, WIND_HOLD, WIND_HIT } from './engine.js';
+import { playCasual, solve, initState, BOSS_EVERY, BOSS_FIRST, KRAKEN_TICKLE, KRAKEN_SLAM, WHALE_SPIT, MEDUSA_HOP, MEDUSA_CALM, medusaMax, CLOCK_FREEZE, CLOCK_SEAL, CLOCK_HIT, CLOCK_CARD, clockSeal, WIND_HOLD, WIND_HIT, HAND_BACK, HAND_HIT, HAND_DROP } from './engine.js';
 import { openModal, toast, updateCoins, popGoal } from './ui.js';
 import { openSlot, slotWhy, SLOT_PAY, SLOT_PAY_RICH, SLOT_EXTRA, SLOT_MONTH_DAYS } from './slot.js';
 import { mulberry32 } from './rng.js';
@@ -18,6 +18,7 @@ import { ITEMS, SECTIONS, owns, lockedUntil } from './shop.js';
 import { PASS_MAX, SECRET_MAX, secretGoal, passGoal, passPrize, secretPrize, passCount, secretCount } from './passport.js';
 import { meteor, nextShowers, metItems, MET_FROM, STAR_FROM, metPrizes, SHOWERS, NEW_RAINS } from './meteor.js';
 import { BET_STEPS, BET_BOSS_FEE, BET_FEE, maxBet, RESCUE_WEEK, RESCUE_COINS, RESCUE_ITEMS, ticketCost, TICKET_PRICE, foeBeatPrize, RICH_OFF, richOff } from './economy.js';
+import { crew, crewTotal, CREW_GOALS } from './crew.js';
 import { race, raceOn, raceStart, raceWin, raceLose, RACE_STEPS, RACE_BOTS, RACE_WAIT, RACE_LOSE, racePrize, raceLosePrize, raceK } from './race.js';
 import { KINDS, TREASURE, makeLot, makeCode, rewardName, lotText, usedHere, lotNonces } from './codes.js';
 // Darte los exclusivos del pasaporte (kind 'pase') o de los secretos ('secreto'), sin cobrar sus premios.
@@ -197,17 +198,20 @@ const TABLE_ICONS = {
   // 17 nov 2026: cartas que se mueven.
   zero: SV('<rect x="4" y="12" width="10" height="14" rx="2" fill="#fff" transform="rotate(-10 9 19)"/><rect x="16" y="5" width="10" height="14" rx="2" fill="#fff" transform="rotate(8 21 12)"/><path d="M6 6l1 2 2 1-2 1-1 2-1-2-2-1 2-1zM27 24l.8 1.6 1.6.8-1.6.8-.8 1.6-.8-1.6-1.6-.8 1.6-.8z" fill="#9fe6ff" stroke-width="1"/>'),
   orbit: SV('<ellipse cx="16" cy="17" rx="13" ry="5" stroke-dasharray="2 2"/><circle cx="16" cy="16" r="5" fill="#ffc23a"/><circle cx="27" cy="17" r="4" fill="#ff8aa6"/><circle cx="6" cy="15" r="3" fill="#7fd8ff"/>'),
-  pong: SV('<rect x="2" y="9" width="4" height="14" rx="2" fill="#ff8aa6"/><rect x="26" y="9" width="4" height="14" rx="2" fill="#7fd8ff"/><circle cx="16" cy="12" r="3" fill="#ffe9a8"/><path d="M8 20q8-12 16 0" stroke-dasharray="2 2"/>'),
+  // Tubos neumáticos (19 nov 2026): tres tubos de vidrio con cartas y una que sale disparada.
+  tubos: SV('<rect x="3" y="3" width="7" height="17" rx="3.5" fill="#bfe9ff"/><rect x="12.5" y="3" width="7" height="17" rx="3.5" fill="#bfe9ff"/><rect x="22" y="3" width="7" height="17" rx="3.5" fill="#bfe9ff"/><rect x="4.5" y="12" width="4" height="6" rx="1" fill="#8a5cf0" stroke="none"/><rect x="23.5" y="9" width="4" height="9" rx="1" fill="#8a5cf0" stroke="none"/><rect x="12" y="20" width="8" height="10" rx="1.6" fill="#fff" transform="rotate(14 16 25)"/><path d="M7 22l3 3M25 22l-3 3" stroke="#ffc83d" stroke-width="1.8" stroke-linecap="round"/>'),
+  // Meteoro fugaz (19 nov 2026, antes ping-pong): piedra con su cola de fuego.
+  pong: SV('<path d="M17 7C11 11 6 18 3 29c10-3 16-8 20-15z" fill="#ff8a3d"/><path d="M16 12c-4 3-7 7-9 12 5-2 9-5 11-9z" fill="#ffd54a" stroke="none"/><circle cx="21" cy="11" r="7" fill="#a07a5c"/><circle cx="23" cy="9" r="1.8" fill="#7d5a40" stroke="none"/><circle cx="19" cy="14" r="1.4" fill="#7d5a40" stroke="none"/>'),
   marea: SV('<rect x="5" y="3" width="22" height="26" rx="3" fill="#fff6e6"/><path d="M5 18c4-3 7 3 11 0s7 3 11 0v8a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3z" fill="#4aa8de"/>'),
 };
 export const tableIcon = (t) => TABLE_ICONS[t] || '';
 const RAIN_NOTE = { comet: '1 vez por semana, 20 minutos sin aviso: jugar no gasta boletos y cada victoria da 1 boleto más.', aurora: '1 vez por semana, 20 minutos sin aviso y solo con colección abierta: fichas ×2 y hasta 2 premios.', crystal: '1 vez cada dos semanas, 10 minutos sin aviso: cada nivel ganado puede dar una ayuda al azar (3★ 70%, 2★ 47%, 1★ 23%; el jugador no lo ve).' };
-const SCROLL_NAMES = { cohete: 'cohete', mesa: 'mesa enrollada', gravedad: 'gravedad', nebulosa: 'nebulosa', voltea: 'mesa que se voltea', hangar: 'hangar', bitacora: 'bitácora', portal: 'grúa de feria' };
+const SCROLL_NAMES = { cohete: 'cohete', mesa: 'mesa enrollada', gravedad: 'gravedad', nebulosa: 'nebulosa', voltea: 'mesa que se voltea', hangar: 'hangar', bitacora: 'bitácora', portal: 'grúa de feria', tubos: 'tubos neumáticos' };
 // Mesas que van sobre un tablero normal (no son tira): se filtran por su bandera del nivel.
 // Mesas que son gravedad por dentro (13 nov 2026): se filtran por su bandera.
-const colKind = (L) => (L.flip ? 'voltea' : L.portal ? 'portal' : L.hangar ? 'hangar' : null);
-const COL_TABLES = [['hangar', 'Hangar', SCROLL_FROM.hangar + 1], ['bitacora', 'Bitácora', SCROLL_FROM.bitacora + 1], ['portal', 'Grúa de feria', SCROLL_FROM.portal + 1], ['voltea', 'Mesa que se voltea', SCROLL_FROM.voltea + 1]];
-const OVERLAY_TABLES = [['marea', 'Marea', tideFirst() + 1, (L) => !!L.tide], ['hoyo', 'Agujero negro', holeFirst() + 1, (L) => !!L.hole], ['puertas', 'Puertas', doorsFirst() + 1, (L) => !!L.doors], ['banda', 'Banda transportadora', bandaFirst() + 1, (L) => !!L.belt], ['rocas', 'Asteroides', rocksFirst() + 1, (L) => !!L.rocks], ['zero', 'Gravedad cero', zeroFirst() + 1, (L) => !!L.zero], ['orbit', 'Planetas en órbita', orbitFirst() + 1, (L) => !!L.orbit], ['pong', 'Ping-pong', pongFirst() + 1, (L) => !!L.pong]];
+const colKind = (L) => (L.flip ? 'voltea' : L.portal ? 'portal' : L.hangar ? 'hangar' : L.tubes ? 'tubos' : null);
+const COL_TABLES = [['hangar', 'Hangar', SCROLL_FROM.hangar + 1], ['bitacora', 'Bitácora', SCROLL_FROM.bitacora + 1], ['portal', 'Grúa de feria', SCROLL_FROM.portal + 1], ['voltea', 'Mesa que se voltea', SCROLL_FROM.voltea + 1], ['tubos', 'Tubos neumáticos', SCROLL_FROM.tubos + 1]];
+const OVERLAY_TABLES = [['marea', 'Marea', tideFirst() + 1, (L) => !!L.tide], ['hoyo', 'Agujero negro', holeFirst() + 1, (L) => !!L.hole], ['puertas', 'Puertas', doorsFirst() + 1, (L) => !!L.doors], ['banda', 'Banda transportadora', bandaFirst() + 1, (L) => !!L.belt], ['rocas', 'Asteroides', rocksFirst() + 1, (L) => !!L.rocks], ['zero', 'Gravedad cero', zeroFirst() + 1, (L) => !!L.zero], ['orbit', 'Planetas en órbita', orbitFirst() + 1, (L) => !!L.orbit], ['pong', 'Meteoro fugaz', pongFirst() + 1, (L) => !!L.pong]];
 const PIECES = [['steps', 3], ['cross', 3], ['crown', 8], ['rosette', 13], ['sandwich', 16], ['tiltFan', 21]];
 // Nombres en español de formas y piezas (galería e Info).
 const TPL_NAMES = { cohete: 'Cohete', pyramid: 'Pirámide', peaks: 'Picos', clusters: 'Grupitos', star: 'Estrella', layers: 'Capas', wall: 'Muro', towers: 'Torres', butterfly: 'Mariposa', diamond: 'Diamante', spiral: 'Espiral', mesa: 'Mesa enrollada', heart: 'Corazón', gravedad: 'Gravedad', scatter: 'Dispersas', nebulosa: 'Nebulosa', invPyramid: 'Pirámide invertida', hourglass: 'Reloj de arena', bitacora: 'Bitácora' };
@@ -746,6 +750,7 @@ export function openDevMenu({ onGallery, onPlanets, onFestivals, onGoLevel, onRe
     ['Misiones del día', UNLOCK.mis, 'misiones', null, '3 cada día (las de cartas especiales, cuando ya llegaste a su mundo). Se cambian a medianoche.'],
     ['Logros', UNLOCK.logros, 'trophy', null, 'Para siempre. Los de cartas especiales salen al llegar al mundo de su carta.'],
     ['Carrera de 7', UNLOCK.carrera, 'carrera', null, 'Sale «¡Nueva: Carrera de 7!» con sus reglas. Tú le das Empezar; al terminar, 30 minutos para la siguiente.'],
+    ['Tripulación lunar', UNLOCK.tripulacion, 'tripulacion', null, 'Cada semana (lunes a domingo), con 4 viajeros: 3 bases con cofre (90, 150 y 210 estrellas de todos).'],
     // Las próximas lluvias del horario: iguales en todos los teléfonos, a la misma hora de cada uno.
     ['Lluvia de meteoritos', MET_FROM, 'meteoro', nextShowers(6).map((x) => ['meteoro', when(x), until(x), '']), '2 o 3 veces por semana, 30 minutos a cualquier hora, sin aviso. Es igual en todos los teléfonos.'],
     ['Lluvia de estrellas', STAR_FROM, 'starFall', nextShowers(6, true).map((x) => ['starFall', when(x), until(x), '']), '2 o 3 veces por semana, 15 minutos sin aviso, en días sin lluvia de meteoritos: monedas ×3 y hasta 3 premios (con sus 5 exclusivos). Igual en todos los teléfonos.'],
@@ -807,6 +812,7 @@ export function openDevMenu({ onGallery, onPlanets, onFestivals, onGoLevel, onRe
     whale: ['Jala 1-2', 'Jala 2', 'Jala 2-3', 'Jala 3-4'][Math.min(3, r)],
     clock: `Rebobina ${r ? 2 : '1-2'} y congela ${CLOCK_FREEZE}; sello de ${clockSeal(r)}`,
     wind: `Se lleva ${r ? '2-3' : '1-2'} del descarte`,
+    hand: `Se lleva 3 del mazo; con ${HAND_BACK} seguidas las regresa y con ${HAND_DROP} robos las avienta`,
   })[k];
   const foeRows = [];
   for (let g = 99, i = 0; g < TOTAL_LEVELS; g += 100, i++) {
@@ -823,6 +829,7 @@ export function openDevMenu({ onGallery, onPlanets, onFestivals, onGoLevel, onRe
     kraken: ['La carta con tinta no se juega hasta quedar limpia.', `Con ${KRAKEN_TICKLE} jugadas seguidas se lava la mancha más vieja.`, `Con ${KRAKEN_SLAM} robos con tinta, manotazo: revuelve el 90% de las que no tienen tinta y limpia la mitad de las manchadas.`, 'Si no queda nada que jugar por la tinta, la mancha más vieja se limpia sola.'],
     clock: ['Rebobina como video las últimas cartas que bajaste de la mesa, aunque después hayas robado (solo sin mecánica o ya liberadas: hielo, enredadera, cortina, candado). El descarte vuelve al de antes solo si seguían arriba.', `Se quedan congeladas ${CLOCK_FREEZE} acciones.`, 'Si lo último fue robar, la robada sube encima de una libre de la mesa (como la Ballena), congelada; la de abajo queda tapada hasta jugarla. El descarte vuelve al de antes.', 'Si todavía no bajas ninguna que se pueda rebobinar, espera a tu siguiente jugada.', `Con ${CLOCK_SEAL} cartas seguidas desde tu último robo (${CLOCK_SEAL + 1} desde la 2.ª vuelta; el comodín cuenta) tu descarte queda sellado: si ataca, se le traba la cinta y pierde ${CLOCK_HIT} de vida.`, `Le pega cada carta desde la 3.ª de la racha y cada una le quita ${CLOCK_CARD} (a los demás, 1 desde la 2.ª).`, 'Mientras esté, no se puede deshacer.', 'Si lo congelado te deja sin ninguna jugada, se descongela con 2 robos (no 3).'],
     wind: ['Cuando le toca, sopla solo si tu descarte tiene jugada en la mesa; si no, espera (tu descarte sigue temblando).', 'Se lleva cartas del descarte: 1-2 en la 1.ª vuelta y 2-3 desde la 2.ª. Si es 1, va al fondo del mazo; si son más, la de arriba se pierde y las demás van al fondo.', `Con ${WIND_HOLD} cartas seguidas desde tu último robo (el comodín cuenta) tus cartas pesan: sopla, no se lleva nada y pierde ${WIND_HIT} de vida.`, 'Lo que hace no se deshace.'],
+    hand: ['Cuando le toca, sale de la orilla (abajo; acostado, de la derecha) y se lleva 3 cartas de arriba del mazo. Siempre deja al menos 1.', `Con ${HAND_BACK} cartas seguidas sin robar (el comodín cuenta) regresa todo arriba del mazo y pierde ${HAND_HIT} de vida.`, 'Sin mazo ni nada que jugar, regresa todo sin perder vida. Al vencerla también.', `Si robas ${HAND_DROP} veces mientras tiene tus cartas, las avienta al espacio: se pierden.`],
     whale: ['Jala cualquier volteada (siempre al menos 1).', `La escupe ${WHALE_SPIT} acciones después encima de otra: la de abajo queda tapada.`, 'Para ganar no se puede quedar con ninguna; sin mazo ni nada que jugar, escupe todo ya.'],
   };
   const foeTable = `<ul class="dfacts">
@@ -990,6 +997,15 @@ export function openDevMenu({ onGallery, onPlanets, onFestivals, onGoLevel, onRe
         { l: 'Perder', title: 'Te caes: cofre chico por los escalones que llevabas', fn: () => { if (!raceOn()) raceStart(); race().lv = save.next; raceLose(save.next); onPrize('carrera'); } },
         ...[1, 2, 3, 4].map((n) => ({ l: `Terminar ${n}.º`, title: 'Te deja en el escalón 6 con los viajeros acomodados para ese lugar y gana el 7', fn: () => devRaceEnd(n) })),
         { l: 'Sin espera', title: 'Se puede empezar otra ya', fn: () => { if (race()) race().next = 0; persist(); onRefresh(); } },
+      ] },
+      // Tripulación lunar (19 nov 2026): unirte, sumar tus estrellas (los cofres salen al volver al mapa) y otra semana.
+      { k: 'tripulacion', h: 'Tripulación lunar', ico: 'tripulacion', sub: crew().on ? `${crewTotal()} de ${CREW_GOALS.at(-1)} estrellas · ${crew().got} de 3 bases${crew().paid ? ' · cobrado' : ''}` : 'sin unirte esta semana', items: [
+        { l: 'Ver la tripulación', cls: 'gold', fn: () => onPrize('tripulacion') },
+        { l: 'Ver el aviso de bienvenida', title: 'La ventana «¡Nueva: Tripulación lunar!» con sus reglas: sale al volver al mapa', fn: () => { if (save.intro) delete save.intro.tripulacion; persist(); onRefresh(); } },
+        ...[10, 30, 60].map((n) => ({ l: `+${n} mías`, title: 'Suma estrellas tuyas a la semana (te une si no estabas); los cofres salen al volver al mapa', fn: () => { const c = crew(); c.on = true; c.mine += n; persist(); onRefresh(); } })),
+        { l: 'Terminar', cls: 'gold', title: 'Te inscribe y suma lo que falta para llegar al oro: al volver al mapa salen los cofres que falten y luego queda bloqueada con su reloj', fn: () => { const c = crew(); c.on = true; c.mine += Math.max(0, CREW_GOALS.at(-1) - crewTotal(c)); persist(); onRefresh(); } },
+        { l: 'Cerrar la semana', title: 'Como si ya fuera lunes: te paga el cofre de la base más alta (si no llegaron al oro) y sale al volver al mapa; luego el boleto', fn: () => { const c = crew(); c.w--; persist(); onRefresh(); } },
+        { l: 'Otra semana', title: 'Borra la de esta semana: viajeros nuevos y otra vez el boleto para inscribirte', fn: () => { delete save.crew; persist(); onRefresh(); } },
       ] },
       // Pasaporte y secretos (11 nov 2026): sumar lo que falta para el siguiente sello o premio (se festeja al volver al
       // mapa) y darte sus exclusivos sin cobrarlos. Van al final del grupo (Premios mezclados no los incluye).

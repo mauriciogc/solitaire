@@ -54,6 +54,8 @@
 //             despierta (s.awake = ids)
 //   twin      cartas gemelas (14 nov 2026): id de su pareja (atadas con un lazo). Al jugar una, la otra sale de donde
 //             esté (aunque esté tapada) y cae al descarte encima: se sigue desde ella. Suma su punto de racha
+//   tug       cartas con cable (19 nov 2026): pareja de gemelas (c.twin) con c.tug. Al jugar una, la otra sale de donde
+//             esté y se queda en el lugar de la jugada (s.shift y s.suit de ese lugar); no cae al descarte
 //   wand      varita (15 nov 2026): al jugarla, puedes tocar una carta libre de número fijo y subirle o bajarle hasta
 //             WAND_MAX (useWand; no es jugada ni robo). s.wand = está esperando; se pierde con tu siguiente jugada o
 //             robo. s.shift[id] = lo que se le sumó a esa carta (rankOf lo aplica)
@@ -157,13 +159,13 @@ export function initState(level, extra = {}) {
     // Jefe de constelación: su vida y lo que tiene agarrado (ver bossStep).
     // Gravedad cero: las cartas que flotaron encima de otra (como lo que escupe la Ballena).
     ...(level.zero && { ontop: {}, under: {} }),
-    ...(level.foe && { hp: level.foe.hp, ash: [], melt: [], ink: [], tickle: 0, belly: [], ontop: {}, under: {}, zap: [], zd: 0, zt: 0, wh: [], frz: {}, cpend: false, sc: 0, spot: {}, wp: [], ws: 0, wpend: false }),
+    ...(level.foe && { hp: level.foe.hp, ash: [], melt: [], ink: [], tickle: 0, belly: [], ontop: {}, under: {}, zap: [], zd: 0, zt: 0, wh: [], frz: {}, cpend: false, sc: 0, spot: {}, wp: [], ws: 0, wpend: false, grab: [], hs: 0 }),
     ...extra,
   };
 }
 
 // (Partidas guardadas antes del boleto partido no traen cut.)
-export const cloneState = (s) => ({ ...s, rem: s.rem.slice(), stock: s.stock.slice(), boom: s.boom.slice(), cut: (s.cut || []).slice(), ...(s.awake && { awake: s.awake.slice() }), ...(s.open && { open: s.open.slice() }), ...(s.lift && { lift: s.lift.slice() }), ...(s.rock && { rock: { ...s.rock } }), ...(s.sp && { sp: s.sp.slice() }), ...(s.ontop && !s.ash && { ontop: { ...s.ontop }, under: { ...s.under } }), ...(s.paint && { paint: { ...s.paint } }), ...(s.shift && { shift: { ...s.shift } }), ...(s.ash && { ash: s.ash.slice(), melt: (s.melt || []).slice(), ink: (s.ink || []).map((t) => ({ ...t, ids: t.ids.slice() })), belly: s.belly.map((b) => ({ ...b })), ontop: { ...s.ontop }, under: { ...s.under }, zap: (s.zap || []).slice(), wh: (s.wh || []).slice(), frz: { ...s.frz }, spot: { ...s.spot }, wp: (s.wp || []).slice() }), ...(s.suit && { suit: { ...s.suit } }) });
+export const cloneState = (s) => ({ ...s, rem: s.rem.slice(), stock: s.stock.slice(), boom: s.boom.slice(), cut: (s.cut || []).slice(), ...(s.awake && { awake: s.awake.slice() }), ...(s.open && { open: s.open.slice() }), ...(s.lift && { lift: s.lift.slice() }), ...(s.rock && { rock: { ...s.rock } }), ...(s.sp && { sp: s.sp.slice() }), ...(s.ontop && !s.ash && { ontop: { ...s.ontop }, under: { ...s.under } }), ...(s.paint && { paint: { ...s.paint } }), ...(s.shift && { shift: { ...s.shift } }), ...(s.ash && { ash: s.ash.slice(), melt: (s.melt || []).slice(), ink: (s.ink || []).map((t) => ({ ...t, ids: t.ids.slice() })), belly: s.belly.map((b) => ({ ...b })), ontop: { ...s.ontop }, under: { ...s.under }, zap: (s.zap || []).slice(), wh: (s.wh || []).slice(), frz: { ...s.frz }, spot: { ...s.spot }, wp: (s.wp || []).slice(), grab: (s.grab || []).slice() }), ...(s.suit && { suit: { ...s.suit } }) });
 
 // Mitad del boleto partido que ya se jugó (0 = está entero, 1 = la de arriba, 2 = la de abajo).
 export const cutOf = (c, s) => (c.half != null && s.cut?.[c.id]) || 0;
@@ -673,6 +675,8 @@ export function play(level, s0, id, low = false, forced = false) {
   }
   // Viento: cartas seguidas desde tu último robo (con WIND_HOLD tu descarte pesa y no se lo lleva).
   if (level.foe?.kind === 'wind') s.ws = (s0.ws || 0) + 1;
+  // Mano alien: cartas seguidas desde tu último robo (con HAND_BACK te regresa lo que se llevó).
+  if (level.foe?.kind === 'hand') s.hs = (s0.hs || 0) + 1;
   // Medusa: jugarla la descarga.
   const zapOff = !!s0.zap?.includes(id);
   if (zapOff) s.zap = s.zap.filter((j) => j !== id);
@@ -699,13 +703,25 @@ export function play(level, s0, id, low = false, forced = false) {
   if (boosted) s.streak++;
   s.turbo = c.turbo ? TURBO : boosted ? s0.turbo - 1 : 0;
   // Gemelas: la pareja sale de donde esté y cae al descarte encima (suma su punto; su premio va en wishes).
-  const twin = c.twin != null && !s.rem[c.twin] && !split && !tri?.left ? c.twin : null;
+  const twin = c.twin != null && !c.tug && !s.rem[c.twin] && !split && !tri?.left ? c.twin : null;
   if (twin != null) {
     const t = level.cards[twin];
     s.rem[twin] = true;
     s.top = { rank: t.rank, suit: t.suit };
     s.plays++;
     s.streak++;
+  }
+  // Cartas con cable (19 nov 2026, el usuario: «que se vea que la jala a su lugar… son otro tipo de cartas»): van en
+  // parejas como las gemelas (c.twin + c.tug), pero al jugar una la otra sale de donde esté (aunque esté tapada) y se
+  // queda en el lugar de la que jugaste, con su número y palo (s.shift, s.suit); su lugar de antes queda vacío. No cae
+  // al descarte ni suma racha. El lugar de la jugada sigue tapando lo que tapaba. El lazo (forced) no la activa.
+  const tug = c.twin != null && c.tug && !forced && !s.rem[c.twin] && !split && !tri?.left && s.rem[id] ? c.twin : null;
+  if (tug != null) {
+    const t = level.cards[tug];
+    s.rem[tug] = true;
+    s.rem[id] = false;
+    s.shift = { ...s.shift, [id]: mod13(rankOf(t, s0) - c.rank) };
+    s.suit = { ...s.suit, [id]: suitOf(level, s0, tug) };
   }
   // Candado de palo y pintura: los palos de lo que bajaste (la gemela también cuenta; el camaleón de comodín no).
   const down = (chamWild(c, s0) ? [] : [id]).concat(twin != null ? [twin] : []);
@@ -744,7 +760,7 @@ export function play(level, s0, id, low = false, forced = false) {
   const zero = level.zero ? zeroStep(level, s) : null;
   const pong = level.pong ? pongStep(level, s0, s) : null;
   const boss = bossStep(level, s0, s, true);
-  return { s, ev: { t: 'play', ...(zero && { zero }), ...(pong && { pong }), id, rank: r, ...(boss && { boss }), packs, defused, reward, boost, boom, wished, wishes, gone, ...(c.turbo && { turbo: true }), ...(twin != null && { twin }), ...(split && { split }), ...(tri && { tri }), ...(exit != null && { exit }), ...(shipBack && { shipBack }), ...(c.doorKey && { key: true }), ...(cst && { cst }), ...(rockOff.length && { rockOff }), ...(bolted.length && { bolted }), ...(burnt && { burnt }), ...(zapOff && { zapOff }), ...(slOpen.length && { slOpen }), ...(paint && { paint }) } };
+  return { s, ev: { t: 'play', ...(zero && { zero }), ...(pong && { pong }), id, rank: r, ...(boss && { boss }), packs, defused, reward, boost, boom, wished, wishes, gone, ...(c.turbo && { turbo: true }), ...(twin != null && { twin }), ...(tug != null && { tug }), ...(split && { split }), ...(tri && { tri }), ...(exit != null && { exit }), ...(shipBack && { shipBack }), ...(c.doorKey && { key: true }), ...(cst && { cst }), ...(rockOff.length && { rockOff }), ...(bolted.length && { bolted }), ...(burnt && { burnt }), ...(zapOff && { zapOff }), ...(slOpen.length && { slOpen }), ...(paint && { paint }) } };
 }
 
 // Abrir la puerta d con una llave. No es jugada ni robo: no mueve la racha ni las cuentas, salvo su premio
@@ -838,8 +854,20 @@ export function astroSend(level, s0) {
 //           son 2-3, la de arriba se pierde en el espacio y las demás van al fondo. Te queda la de abajo. Defensa:
 //           con WIND_HOLD cartas seguidas desde tu último robo (s.ws; el comodín cuenta) tu descarte pesa: sopla, no
 //           se lleva nada y pierde WIND_HIT de vida
+//   hand    Mano alien, no se ve hasta que sale (19 nov 2026, pedido del usuario; antes «ardilla cósmica»): cuando le
+//           toca, sale de la orilla y se lleva cartas de arriba de tu mazo (s.grab): 2 en la 1.ª vuelta y 2-3 desde la
+//           2.ª, siempre te deja al menos 1. Defensa: con HAND_BACK cartas seguidas desde tu último robo (s.hs; el
+//           comodín cuenta) te regresa todo arriba del mazo y pierde HAND_HIT de vida. Sin mazo ni jugadas, te las
+//           regresa sin perder vida (si no, solo quedaba perder). Al vencerla también las regresa. Si robas HAND_DROP
+//           veces mientras las tiene (s.hd), las avienta al espacio y se pierden
 // Cada cuántas acciones ataca, por vuelta (la primera vez más espaciado; luego más seguido).
-export const BOSS_EVERY = { fenix: [4, 4, 4, 3], ilus: [6, 5, 4, 3], medusa: [5, 5, 5, 4], clock: [6, 5, 5, 4], kraken: [7, 6, 5, 4], whale: [5, 4, 4, 4], wind: [6, 5, 5, 4] };
+export const BOSS_EVERY = { fenix: [4, 4, 4, 3], ilus: [6, 5, 4, 3], medusa: [5, 5, 5, 4], clock: [6, 5, 5, 4], kraken: [7, 6, 5, 4], whale: [5, 4, 4, 4], wind: [6, 5, 5, 4], hand: [4, 4, 4, 3] };
+// Mano alien: cartas seguidas sin robar para que te regrese lo que se llevó y lo que pierde al hacerlo.
+// Si robas HAND_DROP veces mientras tiene tus cartas, las avienta al espacio (19 nov 2026, el usuario: «no me genera
+// trabajo… podemos agregarle algo más?»).
+export const HAND_BACK = 5, HAND_HIT = 1, HAND_DROP = 2;
+// ¿Le toca regresar? (el juego hace temblar la mano escondida: solo si se llevó algo).
+export const handSoon = (level, s) => level.foe?.kind === 'hand' && s.hp > 0 && (s.grab?.length || 0) > 0 && (s.hs || 0) === HAND_BACK - 1;
 // Viento: cartas seguidas para que tu descarte pese, lo que pierde si sopla contra él y cuántas de debajo del tope
 // recuerda (se lleva hasta 3).
 export const WIND_HOLD = 3, WIND_HIT = 2, WIND_KEEP = 6;
@@ -861,7 +889,7 @@ export const clockSeal = (r) => (r ? CLOCK_SEAL + 1 : CLOCK_SEAL);
 export const clockSealed = (level, s) => level.foe?.kind === 'clock' && s.hp > 0 && (s.sc || 0) >= clockSeal(level.foe.r);
 // El comodín del inventario (lo usa el juego): suma al sello.
 // Viento: el comodín también suma al peso.
-export const clockWild = (level, s) => (level.foe?.kind === 'clock' ? { ...s, sc: (s.sc || 0) + 1, dl: null, wh: [] } : level.foe?.kind === 'wind' ? { ...s, ws: (s.ws || 0) + 1 } : s);
+export const clockWild = (level, s) => (level.foe?.kind === 'clock' ? { ...s, sc: (s.sc || 0) + 1, dl: null, wh: [] } : level.foe?.kind === 'wind' ? { ...s, ws: (s.ws || 0) + 1 } : level.foe?.kind === 'hand' ? { ...s, hs: (s.hs || 0) + 1 } : s);
 // Reloj: solo rebobina cartas sin mecánica (rebobinar una llave, una moneda o una gemela la volvería a cobrar), o con
 // una que ya liberaste: hielo, enredadera, cortina y candado (17 nov 2026, el usuario). Al regresar no vuelven a quedar
 // tapadas (el hielo y la enredadera se marcan en s.melt; la cortina y el candado siguen abiertos por su llave).
@@ -919,6 +947,14 @@ function bossStep(level, s0, s, played) {
   if (level.foe?.kind === 'whale' && s.belly?.length && !s.stock.length && !level.cards.some((c) => isOpen(level, c, s))) {
     const r = out || {};
     r.spit = [...(r.spit || []), ...whaleSpit(level, s, true)];
+    return r;
+  }
+  // Mano alien: sin mazo y sin nada que jugar, te regresa lo que se llevó (sin perder vida).
+  if (level.foe?.kind === 'hand' && s.hp > 0 && s.grab?.length && !s.stock.length && !legal(level, s).length) {
+    const r = out || {};
+    r.back = (r.back || 0) + s.grab.length;
+    s.stock.unshift(...s.grab);
+    s.grab = [];
     return r;
   }
   // Medusa: sin mazo y sin nada que jugar por las chispas, se apagan todas (si no, solo quedaba perder).
@@ -1109,6 +1145,7 @@ function bossAct(level, s0, s, played) {
     s.cpend = false;
     for (const b of s.belly) s.rem[b.id] = false;
     s.belly = [];
+    if (s.grab?.length) (out.back = s.grab.length), s.stock.unshift(...s.grab), (s.grab = []);
     out.gone = true;
     return out;
   }
@@ -1124,6 +1161,34 @@ function bossAct(level, s0, s, played) {
     s.wpend = !windAim(level, s);
     if (!s.wpend) windAct(level, s, out);
     if (s.hp <= 0) (s.wpend = false), (out.gone = true);
+    return Object.keys(out).length ? out : null;
+  }
+  // Mano alien: con HAND_BACK seguidas te regresa lo que se llevó (y pierde vida); cuando le toca, se lleva más.
+  if (B.kind === 'hand') {
+    s.grab ||= [];
+    if (played && (s.hs || 0) >= HAND_BACK && s.grab.length) {
+      out.back = s.grab.length;
+      s.stock.unshift(...s.grab);
+      s.grab = [];
+      s.hs = 0;
+      s.hp = Math.max(0, s.hp - HAND_HIT);
+      out.hold = HAND_HIT;
+    }
+    // Robaste con tus cartas en su mano: con HAND_DROP robos las avienta al espacio (se pierden).
+    if (!played && s.grab.length && s.hp > 0 && (s.hd = (s.hd || 0) + 1) >= HAND_DROP) {
+      out.drop = s.grab.length;
+      s.grab = [];
+      s.hd = 0;
+    }
+    if (!s.grab.length) s.hd = 0;
+    if (s.hp <= 0) {
+      if (s.grab.length) (out.back = (out.back || 0) + s.grab.length), s.stock.unshift(...s.grab), (s.grab = []);
+      out.gone = true;
+    } else if (due && s.stock.length > 1) {
+      const h = bossHash(level, s, 9), n = Math.min(s.stock.length - 1, 3);
+      s.grab.push(...s.stock.splice(0, n));
+      out.grab = n;
+    }
     return Object.keys(out).length ? out : null;
   }
   // Reloj: si le tocó justo después de un robo, ataca en tu siguiente jugada.
@@ -1276,6 +1341,7 @@ export function draw(level, s0) {
   if (s.wh?.length) s.wh = [];
   // Viento: robar quita el peso.
   if (s.ws) s.ws = 0;
+  if (s.hs) s.hs = 0;
   // Imán: la carta que más sirve pasa al tope antes de robar (de dónde salió, para animarlo).
   // Si ninguna sirve, no se gasta: robas normal y sigue esperando el siguiente robo. Si sí, la carta jalada no corta la
   // racha (aim = la del tablero que conviene jugar, para señalarla).
@@ -1332,7 +1398,7 @@ export function solve(level, s0, limit = 250000, wilds = 0, kill = false) {
   const dfs = (s, w = wilds) => {
     if (won(s, level)) return !kill || s.hp <= 0;
     if (++nodes > limit) return false;
-    const key = `${w}|${s.rem.map((b, i) => (b ? 1 : s.cut?.[i] ? s.cut[i] + 1 : 0)).join('')}|${s.stock.map(sig).join(',')}|${sig(s.top)}|${(s.streak <= LAST_REWARD ? s.streak : LAST_REWARD + 1 + ((s.streak - LAST_REWARD) % 3))}${timed ? `|${s.actions}|${s.boom}|${s.freeze || 0}` : ''}${level.ship ? `|${s.shipIn}|${s.stolen.map(sig).join('.')}` : ''}${level.tide ? `|${s.tq}` : ''}${s.master ? '|m' : ''}${turbo ? `|${s.turbo}` : ''}${level.rocks ? `|${s.rq}|${Object.entries(s.rock).join(';')}` : ''}${s.lift ? `|${s.lift}` : ''}${s.shield ? '|S' : ''}${s.burnt ? '|B' : ''}${s.magnet ? '|M' : ''}${s.awake ? `|a${s.awake}` : ''}${s.sp ? `|p${s.sp}` : ''}${level.zero ? `|o${Object.entries(s.ontop)}` : ''}${level.pong && s.suit ? `|u${Object.entries(s.suit)}` : ''}${s.paint ? `|q${s.paint.red ? 1 : 0}${s.paint.n}` : ''}${s.shift ? `|w${Object.entries(s.shift).join(';')}` : ''}${level.foe ? `|b${s.hp}|${s.tickle}|${(s.ink || []).map((t) => `${t.ids}:${t.d}`).join('/')}|${s.belly.map((b) => `${b.id}:${b.at}`).join('/')}|${Object.entries(s.ontop).join('/')}|${s.ash}|${s.melt || ''}|z${s.zap || ''}:${s.zd || 0}:${s.zt || 0}|c${(s.wh || []).map((w) => w.id)}:${Object.entries(s.frz || {}).filter(([, a]) => a > s.actions)}:${s.cpend ? 1 : 0}:${s.sc || 0}:${s.dl ? 1 : 0}:${s.suit ? Object.entries(s.suit) : ''}:${Object.entries(s.spot || {})}|v${(s.wp || []).map(sig)}:${s.ws || 0}:${s.wpend ? 1 : 0}` : ''}`;
+    const key = `${w}|${s.rem.map((b, i) => (b ? 1 : s.cut?.[i] ? s.cut[i] + 1 : 0)).join('')}|${s.stock.map(sig).join(',')}|${sig(s.top)}|${(s.streak <= LAST_REWARD ? s.streak : LAST_REWARD + 1 + ((s.streak - LAST_REWARD) % 3))}${timed ? `|${s.actions}|${s.boom}|${s.freeze || 0}` : ''}${level.ship ? `|${s.shipIn}|${s.stolen.map(sig).join('.')}` : ''}${level.tide ? `|${s.tq}` : ''}${s.master ? '|m' : ''}${turbo ? `|${s.turbo}` : ''}${level.rocks ? `|${s.rq}|${Object.entries(s.rock).join(';')}` : ''}${s.lift ? `|${s.lift}` : ''}${s.shield ? '|S' : ''}${s.burnt ? '|B' : ''}${s.magnet ? '|M' : ''}${s.awake ? `|a${s.awake}` : ''}${s.sp ? `|p${s.sp}` : ''}${level.zero ? `|o${Object.entries(s.ontop)}` : ''}${s.suit ? `|u${Object.entries(s.suit)}` : ''}${s.paint ? `|q${s.paint.red ? 1 : 0}${s.paint.n}` : ''}${s.shift ? `|w${Object.entries(s.shift).join(';')}` : ''}${level.foe ? `|b${s.hp}|${s.tickle}|${(s.ink || []).map((t) => `${t.ids}:${t.d}`).join('/')}|${s.belly.map((b) => `${b.id}:${b.at}`).join('/')}|${Object.entries(s.ontop).join('/')}|${s.ash}|${s.melt || ''}|z${s.zap || ''}:${s.zd || 0}:${s.zt || 0}|c${(s.wh || []).map((w) => w.id)}:${Object.entries(s.frz || {}).filter(([, a]) => a > s.actions)}:${s.cpend ? 1 : 0}:${s.sc || 0}:${s.dl ? 1 : 0}:${s.suit ? Object.entries(s.suit) : ''}:${Object.entries(s.spot || {})}|v${(s.wp || []).map(sig)}:${s.ws || 0}:${s.wpend ? 1 : 0}|h${(s.grab || []).map(sig)}:${s.hs || 0}:${s.hd || 0}` : ''}`;
     if (seen.has(key)) return false;
     seen.add(key);
     const moves = legal(level, s);

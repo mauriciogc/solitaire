@@ -22,7 +22,7 @@ const FLY_EASE = 'cubic-bezier(0.33, 0.6, 0.35, 1)';
 export const MECH_KINDS = [
   ['Se abren después', ['lock', 'slock', 'curtain', 'ice', 'vine', 'sleep']],
   ['Cambian con los turnos', ['live', 'ghost', 'cham']],
-  ['Reglas al jugar', ['double', 'arrow', 'ticket', 'domino', 'triple', 'twin']],
+  ['Reglas al jugar', ['double', 'arrow', 'ticket', 'domino', 'triple', 'twin', 'tug']],
   ['No se juegan', ['pack', 'bomb', 'comet']],
   ['Te ayudan', ['coin', 'turbo', 'bolt', 'cst', 'magnet', 'rainbow', 'paint', 'scope', 'lasso', 'wand']],
 ];
@@ -61,6 +61,7 @@ export const TIPS = {
   // (TIP_HELP: la carta presenta también la ayuda Varita.)
   wand: 'Se juega normal. Después tocas una carta libre y le sale una pestaña con <b>+</b> y <b>−</b>: le <b>subes o bajas hasta 3</b>. Con la palomita queda así.',
   twin: 'Van atadas con un <b>lazo</b>. Al jugar una, la otra sale de donde esté, aunque esté tapada, y cae al <b>descarte</b>: sigues desde ella.',
+  tug: 'Van unidas con un <b>cable</b>. Al jugar una, el cable <b>jala</b> a la otra de donde esté, aunque esté tapada, y la deja en el <b>lugar</b> de la que jugaste.',
   vine: 'No se juega mientras la tape la <b>enredadera</b>, que <b>crece</b> cada 5 jugadas o robos. Juega la carta de <b>fuego</b> y las quema todas.',
 };
 // La ayuda que sirve contra cada carta (11 nov 2026, pedido del usuario): sale con su carta en la ventana de la primera
@@ -79,7 +80,7 @@ export const TIP_HELP = {
   ghost: ['reloj', 'hreloj', '<b>Reloj de arena:</b> congela 3 turnos todo lo que cuenta.'],
   vine: ['reloj', 'hreloj', '<b>Reloj de arena:</b> congela 3 turnos todo lo que cuenta.'],
 };
-const MECH_FIELD = { lasso: 'lasso', wand: 'wand', lock: 'lock', pack: 'pack', ice: 'ice', double: 'alt', arrow: 'arrow', curtain: 'curtain', bomb: 'bomb', live: 'live', ticket: 'half', comet: 'comet', turbo: 'turbo', ghost: 'ghost', ship: 'ship', coin: 'coin', cham: 'cham', bolt: 'bolt', cst: 'cst', vine: 'vine', magnet: 'magnet', rainbow: 'rainbow', sleep: 'sleep', domino: 'dom', triple: 'tri', slock: 'sl', paint: 'paint', scope: 'scope', twin: 'twin' };
+const MECH_FIELD = { tug: 'tug', lasso: 'lasso', wand: 'wand', lock: 'lock', pack: 'pack', ice: 'ice', double: 'alt', arrow: 'arrow', curtain: 'curtain', bomb: 'bomb', live: 'live', ticket: 'half', comet: 'comet', turbo: 'turbo', ghost: 'ghost', ship: 'ship', coin: 'coin', cham: 'cham', bolt: 'bolt', cst: 'cst', vine: 'vine', magnet: 'magnet', rainbow: 'rainbow', sleep: 'sleep', domino: 'dom', triple: 'tri', slock: 'sl', paint: 'paint', scope: 'scope', twin: 'twin' };
 // Constelación (10 nov 2026, pedido del usuario): al juntarla, CST_HELP de las veces una ayuda y si no monedas, de 50 a
 // 200 (casi siempre de las bajas: el promedio queda en ~100, unas 2 veces lo que paga un nivel ahí).
 const CST_HELP = 0.15;
@@ -155,8 +156,11 @@ export function faceHTML(c, rank = c.rank) {
 // Gemelas (14 nov 2026; el usuario: «una perforación abajo al centro y ahí su nodo con la otra, más delgada»): un ojal
 // abajo al centro con su nudo, del color de la pareja (hay hasta 3), de frente y boca abajo.
 export const TWIN_COLORS = ['#ff6fb0', '#36c2ff', '#ffb020'];
-const twinColor = (c) => TWIN_COLORS[(c.twinC || 0) % TWIN_COLORS.length];
-const twinEye = (c) => `<i class="twin-eye" style="--tc:${twinColor(c)}"><b></b></i>`;
+// Cartas con cable: siempre gris (19 nov 2026, el usuario: «son cables»), sin importar cuántas parejas haya.
+export const CABLE_COLOR = '#a9b2c8';
+const twinColor = (c) => (c.tug ? CABLE_COLOR : TWIN_COLORS[(c.twinC || 0) % TWIN_COLORS.length]);
+// Cartas con cable: el ojal es un aro de metal (las gemelas, de color).
+const twinEye = (c) => `<i class="twin-eye${c.tug ? ' tug' : ''}" style="--tc:${twinColor(c)}"><b></b></i>`;
 // Ayuda en una ventana de presentación (11 nov 2026): su carta y, al lado, para qué sirve, en su propio renglón.
 // small: nota chiquita abajo (11 nov 2026, el usuario: «agrupar las ayudas en pequeño, o una nota»).
 const helpTip = (back, text, small = false) => `<div class="help-tip${small ? ' small' : ''}"><span class="help-tip-card" style="background-image:${cardBackURL(back)}"></span><p>${text}</p></div>`;
@@ -180,17 +184,21 @@ export const TABLE_TEXT = {
   portal: ['Unas <b>grúas de feria</b> jalan las columnas hacia arriba.', 'Solo juegas la carta de hasta arriba: al tocarla, la <b>garra</b> baja, la agarra y se la lleva. Luego sube la columna.'],
   // Astronauta (14 nov 2026, pedido del usuario: «no carta, un ayudante»): como la nave, va como mesa.
   astro: ['Aquí te acompaña <b>Peter</b>, un astronauta.', 'Tócalo y luego toca una carta libre: vuela por ella y te la <b>guarda</b>. Cuando conecte, tócalo otra vez y la <b>lleva al descarte</b>. Después se va.'],
+  // 19 nov 2026 (pedido del usuario; la v1 de dev/ideas-19-nov.html).
+  tubos: ['Unos <b>tubos de vidrio</b> están llenos de cartas.', 'Solo ves la carta de cada <b>hueco</b>. Cuando juegas una, un tubo <b>rellena su hueco</b> disparando la que sigue. Ganas al vaciar la mesa y los tubos.'],
   // 16 nov 2026 (pedido del usuario): el tapete, pero cohete.
   cohete: ['Las cartas van en un <b>cohete</b> muy largo.', 'Limpia las primeras cartas y el cohete <b>avanza</b>: salen más. Cada tramo que vacías te regala <b>monedas</b>.'],
   // 17 nov 2026 (pedido del usuario; escogidas en dev/ideas-dinamicas-2.html): cartas que se mueven.
   zero: ['Aquí no hay <b>gravedad</b>: las cartas flotan.', 'Cada vez que juegas una, otra carta <b>flota</b> y cae encima de otra: destapa lo que tenía abajo y tapa a la nueva.'],
   orbit: ['Unos <b>planetas</b> dan vueltas sobre la mesa.', 'La carta que tiene un planeta encima <b>no se juega</b>. Con cada jugada o robo avanzan: destapan unas y tapan otras.'],
-  pong: ['Aquí juegan <b>ping-pong</b>.', 'Cada <b>4 jugadas o robos</b> la pelota cruza la mesa y voltea el orden: la carta de abajo pasa <b>enfrente</b> y la de enfrente se va atrás. Cuando tiemblan las raquetas, ¡ahí viene!'],
+  pong: ['Por aquí pasan <b>meteoros</b>.', 'Cada <b>4 jugadas o robos</b> cruza un meteoro y voltea el orden de las cartas que toca: la de abajo pasa <b>enfrente</b> y la de enfrente se va atrás.'],
   voltea: ['Las cartas van en <b>columnas</b> dentro de una cápsula.', 'Solo juegas la de <b>abajo</b>. Cada <b>5 jugadas o robos</b> la cápsula da <b>media vuelta</b>. Cuando tiembla, ¡cuidado!'],
 };
+// Meteoro fugaz (19 nov 2026): piedra con cráteres y su cola de fuego hacia atrás (va apuntando a la derecha; se gira).
+const METEOR_SVG = `<svg viewBox="0 0 64 40" aria-hidden="true"><path d="M40 6C26 8 10 12 0 20c10 8 26 12 40 14z" fill="#ff8a3d" stroke="#2a1f5c" stroke-width="2.4" stroke-linejoin="round"/><path d="M40 12c-9 1-19 4-26 8 7 4 17 7 26 8z" fill="#ffd54a"/><circle cx="46" cy="20" r="14" fill="#a07a5c" stroke="#2a1f5c" stroke-width="2.6"/><circle cx="50" cy="15" r="3.6" fill="#7d5a40"/><circle cx="43" cy="25" r="2.6" fill="#7d5a40"/><path d="M39 13q4-4 9-4" stroke="#d8b08c" stroke-width="2.2" fill="none" stroke-linecap="round"/></svg>`;
 // Fuego del cohete, ya acostado: la base (con el centro amarillo) a la derecha, pegada a la cola; la punta a la izquierda.
 const ROCKET_FIRE = `<svg class="rk-fire" viewBox="0 0 48 40" aria-hidden="true"><path d="M48 20C34 6 16 8 0 20c16 12 34 14 48 0z" fill="#ff8a3d" stroke="#2a1f5c" stroke-width="2.4"/><path d="M40 20c-7-6-16-5-25 0 9 5 18 6 25 0z" fill="#ffd54a"/></svg>`;
-const TABLE_NAME = { zero: 'Gravedad cero', orbit: 'Planetas en órbita', pong: 'Ping-pong', cohete: 'Cohete', nave: 'Nave ladrona', mesa: 'Mesa enrollada', gravedad: 'Gravedad', nebulosa: 'Nebulosa', marea: 'Marea', puertas: 'Puertas', banda: 'Banda transportadora', hoyo: 'Agujero negro', rocas: 'Asteroides', voltea: 'Mesa que se voltea', hangar: 'Hangar', bitacora: 'Bitácora', portal: 'Grúa de feria', astro: 'Astronauta' };
+const TABLE_NAME = { tubos: 'Tubos neumáticos', zero: 'Gravedad cero', orbit: 'Planetas en órbita', pong: 'Meteoro fugaz', cohete: 'Cohete', nave: 'Nave ladrona', mesa: 'Mesa enrollada', gravedad: 'Gravedad', nebulosa: 'Nebulosa', marea: 'Marea', puertas: 'Puertas', banda: 'Banda transportadora', hoyo: 'Agujero negro', rocas: 'Asteroides', voltea: 'Mesa que se voltea', hangar: 'Hangar', bitacora: 'Bitácora', portal: 'Grúa de feria', astro: 'Astronauta' };
 const TABLE_HELP = { rocas: helpTip('hlaser', '<b>Láser:</b> rompe todas las piedras.', true), nave: helpTip('hescudo', '<b>Escudo:</b> la nave ya no te roba en todo el nivel.', true), astro: helpTip('hastro', '<b>Astronauta:</b> después también lo compras en tus ayudas.', true) };
 // ---------- Jefes de constelación (15 nov 2026, pedido del usuario) ----------
 // Dibujos de las criaturas (toon, contorno de tinta). El Kraken no se ve: solo su tinta (y su brazo en el manotazo).
@@ -219,9 +227,15 @@ const CLOCK_ICO = () => `<svg viewBox="0 0 40 40"><circle cx="20" cy="21" r="15"
 // Icono del Viento solar (17 nov 2026): remolino blanco con chispas doradas (el usuario escogió el remolino y las
 // chispas del viento solar, sin el sol de la esquina).
 const WIND_ICO = () => `<svg viewBox="0 0 40 40"><g fill="none" stroke-linecap="round"><path d="M20 21m-14 0a14 14 0 1 1 7.4 12.4" stroke="${INKF}" stroke-width="6.4"/><path d="M20 21m-14 0a14 14 0 1 1 7.4 12.4" stroke="#fff" stroke-width="3.4"/><path d="M20 21m-8 0a8 8 0 1 1 4.2 7" stroke="${INKF}" stroke-width="6"/><path d="M20 21m-8 0a8 8 0 1 1 4.2 7" stroke="#ffe08a" stroke-width="3"/><path d="M20 21m-2.6 0a2.6 2.6 0 1 1 1.4 2.3" stroke="${INKF}" stroke-width="3"/></g>${star4(34, 7, 4.6, '#ffd54a', 1.6)}${star4(5, 33, 3.6, '#ffb347', 1.4)}<circle cx="35" cy="31" r="2" fill="#ffd54a" stroke="${INKF}" stroke-width="1.2"/><circle cx="6" cy="9" r="1.6" fill="#ffd54a"/></svg>`;
-export const FOE_ICON = { fenix: FIRE_ICO, ilus: () => SPARK_SVG, medusa: MEDUSA_ICO, kraken: () => KRAKEN_ICO(), whale: WHALE_ICO, clock: CLOCK_ICO, wind: WIND_ICO };
-export const FOE_NAME = { fenix: 'Fénix estelar', ilus: 'el Ilusionista', medusa: 'la Medusa de plasma', kraken: 'el Kraken', whale: 'la Ballena glotona', clock: 'el Reloj del vacío', wind: 'el Viento solar' };
-export const FOE_TITLE = { fenix: 'Fénix estelar', ilus: 'El Ilusionista', medusa: 'Medusa de plasma', kraken: 'Kraken', whale: 'Ballena glotona', clock: 'Reloj del vacío', wind: 'Viento solar' };
+// Brazo de la Mano alien (lo que sale por el mazo): la palma con sus 3 dedos a la izquierda y el brazo largo a la
+// derecha (se gira para salir de abajo o del lado).
+const ALIEN_ARM = `<svg class="ah-arm" viewBox="0 0 240 44" aria-hidden="true"><rect x="20" y="13" width="232" height="18" rx="9" fill="#57d36b" stroke="${INKF}" stroke-width="3"/><circle cx="90" cy="22" r="3" fill="#2fa84a"/><circle cx="150" cy="18" r="2.4" fill="#2fa84a"/><circle cx="196" cy="25" r="2.8" fill="#2fa84a"/><g class="ah-fing"><path d="M18 18 4 6M14 22H1M18 26 4 38" stroke="${INKF}" stroke-width="9" stroke-linecap="round"/><path d="M18 18 4 6M14 22H1M18 26 4 38" stroke="#6be07c" stroke-width="4.5" stroke-linecap="round"/><circle cx="4" cy="6" r="4.5" fill="#9cf0a8" stroke="${INKF}" stroke-width="2.2"/><circle cx="2" cy="22" r="4.5" fill="#9cf0a8" stroke="${INKF}" stroke-width="2.2"/><circle cx="4" cy="38" r="4.5" fill="#9cf0a8" stroke="${INKF}" stroke-width="2.2"/></g><circle cx="22" cy="22" r="12" fill="#6be07c" stroke="${INKF}" stroke-width="3"/><path d="M15 17q4-4 9-3" stroke="#c4f7c0" stroke-width="2.2" fill="none" stroke-linecap="round"/></svg>`;
+// Icono de la Mano alien (19 nov 2026): mano verde de tres dedos con puntas redondas, como la que sale por el mazo.
+export const HAND_SVG = `<svg viewBox="0 0 40 40"><path d="M15 37V27M20 23l-1-16M24 23l6-13M14 25 6 12" stroke="${INKF}" stroke-width="8.6" stroke-linecap="round"/><path d="M20 23l-1-16M24 23l6-13M14 25 6 12" stroke="#7ee08a" stroke-width="4.4" stroke-linecap="round"/><path d="M15 38V28" stroke="#57d36b" stroke-width="5" stroke-linecap="round"/><circle cx="19" cy="25" r="8.6" fill="#7ee08a" stroke="${INKF}" stroke-width="2.6"/><circle cx="19" cy="6.5" r="3.6" fill="#c4f7c0" stroke="${INKF}" stroke-width="2"/><circle cx="30.4" cy="9.4" r="3.6" fill="#c4f7c0" stroke="${INKF}" stroke-width="2"/><circle cx="5.6" cy="11.4" r="3.6" fill="#c4f7c0" stroke="${INKF}" stroke-width="2"/><circle cx="21" cy="25" r="2.2" fill="#3fb256"/><path d="M14 21q2-3 5-3" stroke="#d8fbd2" stroke-width="2" fill="none" stroke-linecap="round"/></svg>`;
+const HAND_ICO = () => HAND_SVG;
+export const FOE_ICON = { fenix: FIRE_ICO, ilus: () => SPARK_SVG, medusa: MEDUSA_ICO, kraken: () => KRAKEN_ICO(), whale: WHALE_ICO, clock: CLOCK_ICO, wind: WIND_ICO, hand: HAND_ICO };
+export const FOE_NAME = { fenix: 'Fénix estelar', ilus: 'el Ilusionista', medusa: 'la Medusa de plasma', kraken: 'el Kraken', whale: 'la Ballena glotona', clock: 'el Reloj del vacío', wind: 'el Viento solar', hand: 'la Mano alien' };
+export const FOE_TITLE = { fenix: 'Fénix estelar', ilus: 'El Ilusionista', medusa: 'Medusa de plasma', kraken: 'Kraken', whale: 'Ballena glotona', clock: 'Reloj del vacío', wind: 'Viento solar', hand: 'Mano alien' };
 export const FOE_TEXT = {
   fenix: ['Nunca lo ves: solo su fuego.', 'Cuando <b>tus cartas tiemblan</b>, cae <b>fuego</b> sobre las libres, pero <b>las puedes seguir jugando</b>. El fuego se mueve y deja ver su número <b>por partes</b>. Con <b>racha de 5</b> el fuego baja un turno y ves el número.'],
   ilus: ['Nunca lo ves: solo su magia.', 'Cuando <b>todas tus cartas boca arriba tiemblan</b>, en tu siguiente turno <b>cambian de número</b>, como por magia. Juega antes las que te sirven.'],
@@ -229,11 +243,12 @@ export const FOE_TEXT = {
   clock: ['Nunca lo ves: solo su tiempo.', 'Cuando <b>tu descarte tiembla</b>, <b>rebobina</b>: tus últimas cartas regresan a su lugar <b>congeladas</b> 3 turnos. Si lo último fue robar, la carta robada <b>sube encima de una carta</b> de la mesa, congelada. Con <b>4 cartas seguidas</b> (5 cuando vuelve más fuerte; el comodín cuenta) tu descarte queda <b>sellado</b>: si ataca, se le traba la cinta y pierde vida. Mientras esté, <b>no puedes deshacer</b>.'],
   kraken: ['Nunca lo ves: solo su tinta.', 'Cuando <b>tus cartas tiemblan</b>, salpica <b>tinta</b> en varias cartas y las <b>bloquea</b>: no se juegan hasta que estén <b>limpias</b>. Con <b>3 cartas seguidas</b> se lava una mancha. Si robas 3 veces con tinta en la mesa, da un <b>manotazo</b>: revuelve las cartas y limpia la mitad de la tinta.'],
   wind: ['Nunca lo ves: solo su soplo.', 'Cuando <b>tu descarte tiembla</b> y tienes jugada, sopla y se lleva cartas de tu <b>descarte</b>. Si se lleva <b>una</b>, se va al <b>fondo del mazo</b>. Si se lleva <b>más</b>, la de arriba <b>se pierde en el espacio</b> y las demás van al fondo. Con <b>3 cartas seguidas</b> (el comodín cuenta) tu descarte <b>pesa</b>: sopla, no se lleva nada y pierde vida.'],
+  hand: ['Solo ves su mano cuando sale.', 'Cuando <b>tu mazo tiembla</b>, sale una <b>mano</b> y se lleva cartas de <b>arriba de tu mazo</b>. Con <b>5 cartas seguidas</b> sin robar (el comodín cuenta) te las <b>regresa</b> y pierde vida. Pero si <b>robas 2 veces</b> mientras las tiene, las <b>avienta al espacio</b>.'],
   whale: ['Nunca la ves: solo su aire.', 'Cuando <b>tus cartas tiemblan</b>, <b>jala</b> cartas volteadas a su panza y <b>3 turnos</b> después las <b>escupe encima</b> de otras: las de abajo quedan tapadas hasta que juegues las escupidas. Para ganar no se puede quedar con ninguna.'],
 };
-export const FOE_BTN = { fenix: 'orange', ilus: 'blue', medusa: 'cyan', kraken: 'purple', whale: 'green', clock: 'lilac', wind: 'amber' };
+export const FOE_BTN = { fenix: 'orange', ilus: 'blue', medusa: 'cyan', kraken: 'purple', whale: 'green', clock: 'lilac', wind: 'amber', hand: 'lime' };
 // Jefes que no se ven en el tablero (solo lo que hacen): no ocupan la orilla.
-const FOE_HIDDEN = ['fenix', 'ilus', 'medusa', 'kraken', 'whale', 'clock', 'wind'];
+const FOE_HIDDEN = ['fenix', 'ilus', 'medusa', 'kraken', 'whale', 'clock', 'wind', 'hand'];
 export const FOE_ALL = '<span class="fa-bar" aria-hidden="true"><b></b></span><span>Cada carta que juegas en <b>racha</b> le baja vida. Si se la acabas, se va y te deja un <b>premio más grande</b>.</span>';
 // Lo que el jefe le hace al tablero no se deshace (lo de antes tampoco).
 // La ayuda que sirve contra cada uno, en su ventana: el reloj de arena los detiene.
@@ -256,7 +271,7 @@ const zapEdge = (t) => {
   if ((d -= 140) < 100) return [100 - d, 140];
   return [0, 140 - (d - 100)];
 };
-const foeLock = (ev) => !!(ev?.boss && (ev.boss.ash || ev.boss.ilus || ev.boss.ink || ev.boss.slam || ev.boss.eat || ev.boss.spit || ev.boss.zap || ev.boss.hop || ev.boss.rewind || ev.boss.crash || ev.boss.raise != null || ev.boss.gust || ev.boss.hold));
+const foeLock = (ev) => !!(ev?.boss && (ev.boss.ash || ev.boss.ilus || ev.boss.ink || ev.boss.slam || ev.boss.eat || ev.boss.spit || ev.boss.zap || ev.boss.hop || ev.boss.rewind || ev.boss.crash || ev.boss.raise != null || ev.boss.gust || ev.boss.hold || ev.boss.grab || ev.boss.back || ev.boss.drop));
 
 // Tinta del Kraken (15 nov 2026, el usuario escogió la «mancha B» de dev/kraken-tinta.html): una mancha que tapa la
 // carta (y su número) con chorros que nacen dentro de ella, se angostan y terminan en gota; gotas que caen sin parar y
@@ -600,7 +615,7 @@ export class Game {
       });
     }
     // Mesas de columnas nuevas y la bitácora (13 nov 2026): su ventana la primera vez.
-    const tk = this.level.flip ? 'voltea' : this.level.portal ? 'portal' : this.level.hangar ? 'hangar' : this.level.sheets ? 'bitacora' : null;
+    const tk = this.level.flip ? 'voltea' : this.level.portal ? 'portal' : this.level.hangar ? 'hangar' : this.level.tubes ? 'tubos' : this.level.sheets ? 'bitacora' : null;
     if (tk && !save.seen[tk]) {
       save.seen[tk] = true;
       persist();
@@ -839,7 +854,7 @@ export class Game {
     if (!next) return this.astroHello();
     save.seen[next] = true;
     persist();
-    const c = this.cards.find((x) => !x.removed && x.el && x[MECH_FIELD[next]] != null);
+    const c = this.cards.find((x) => !x.removed && x.el && x[MECH_FIELD[next]] != null && !(next === 'twin' && x.tug));
     this.modalOpen = true;
     openModal({
       title: `Nuevo: ${MECH_NAMES[next].toLowerCase()}`,
@@ -965,6 +980,13 @@ export class Game {
       // solo level.hangar rieles y la compuerta a la derecha.
       if (level.flip) el.classList.add('flip-pod');
       if (level.portal) el.classList.add('portal-mesa');
+      // Tubos: sin rieles a la vista; arriba los tubos de vidrio.
+      if (level.tubes) {
+        el.classList.add('tubes-mesa');
+        this.boardEl.insertAdjacentHTML('beforeend', Array.from({ length: level.tubes }, () => '<div class="tube"><span class="tb-fill"></span><i class="tb-mouth"></i></div>').join(''));
+        this.tubeEls = [...this.boardEl.querySelectorAll('.tube')];
+        this.tubeEls.forEach((t) => t.style.setProperty('--back', this.back));
+      }
       this.boardEl.insertAdjacentHTML('afterbegin', Array.from({ length: level.hangar || level.cols.length }, () => `<div class="g-rail">${level.portal ? CLAW : ''}<b class="g-n"></b></div>`).join(''));
       if (level.hangar) {
         this.boardEl.insertAdjacentHTML('beforeend', '<div class="hangar"><i class="hg-door"></i><i class="hg-lamp"></i></div>');
@@ -1094,7 +1116,7 @@ export class Game {
         ? `<div class="inner"><div class="face front"></div><div class="face back"></div></div><span class="bomb-face">${icon('bomb')}<b></b></span>`
         : c.comet
           ? `<div class="inner"><div class="face front"></div><div class="face back"></div></div><span class="comet-face">${icon('comet')}<b></b><em></em></span>`
-          : `<div class="inner">${faceHTML(c, E.rankOf(c, this.st))}${backHTML(c)}</div>` + marks(c);
+          : `<div class="inner">${faceHTML(this.look(c), E.rankOf(c, this.st))}${backHTML(this.look(c))}</div>` + marks(c);
     if (c.curtain != null) d.classList.add('curtain');
     if (c.alt != null) d.classList.add('dbl-card');
     if (this.inDoor(c)) d.classList.add('in-door');
@@ -1511,6 +1533,8 @@ export class Game {
       if (heavy && !this.wasteEl.classList.contains('wnd-heavy')) setTimeout(() => this.windStamp(), FLY_MS);
       this.wasteEl.classList.toggle('wnd-heavy', heavy);
     }
+    // Mano alien: tiembla tu mazo una acción antes de que salga (solo si tiene qué llevarse).
+    if (F.kind === 'hand') this.stockEl.classList.toggle('foe-warn', st.hp > 0 && soon && st.stock.length > 1);
     // Ballena: solo las que se puede llevar (no las que ella escupió encima de otra).
     const ilus = !soon ? null : F.kind === 'whale' ? new Set(E.whaleEatable(this.level, st).map((c) => c.id)) : F.kind === 'medusa' ? (zapRoom ? new Set(E.medusaCan(this.level, st).map((c) => c.id)) : null) : F.kind === 'ilus' || F.kind === 'fenix' || grab ? new Set(this.cards.filter((c) => c.el && !c.removed && c.rank != null && !c.pack && !c.bomb && !c.comet && E.isOpen(this.level, c, st)).map((c) => c.id)) : null;
     for (const c of this.cards) {
@@ -1682,7 +1706,11 @@ export class Game {
     if (b.crash) this.clockCrash();
     // Viento: sopla y se lleva cartas del descarte, o tus cartas pesan y no puede.
     if (b.gust) this.windGust(b.gust);
-    if (b.hold) this.windHold();
+    if (b.hold && F.kind === 'wind') this.windHold();
+    // Mano alien: sale y se lleva cartas del mazo, o te las regresa.
+    if (b.grab) this.handGrab(b.grab);
+    if (b.back) this.handBack(b.back);
+    if (b.drop) this.handDrop(b.drop);
     // Medusa: la corriente entra por la orilla y brinca de carta en carta; al robar 3 veces, un arco la pasa a otra.
     if (b.zap) this.zapChain(b.zap);
     if (b.hop) this.zapHop(b.hop);
@@ -1700,6 +1728,103 @@ export class Game {
     if (b.spit) this.whaleSpit(b.spit);
     if (b.gone) this.foeBeaten();
     this.foePaint();
+  }
+  // ---------- Mano alien (19 nov 2026, pedido del usuario; escogida en dev/ideas-19-nov-3.html) ----------
+  // La mano sale de la orilla más cercana al mazo (parado, de abajo; acostado, de la derecha), con el brazo largo
+  // detrás. Al llevarse cartas, la palma llega al mazo, las agarra (se ven en su mano) y se va; al regresarlas llega
+  // con ellas, las suelta en el mazo y se va.
+  // opp: de la orilla contraria (la mano que avienta tus cartas; así se entiende que ya no regresan).
+  handEl(opp = false) {
+    const top = this.stockTop()?.getBoundingClientRect() || this.stockEl.getBoundingClientRect(), box = this.el.getBoundingClientRect();
+    const k = Math.max(1, top.width / 26), far = Math.max(innerWidth, innerHeight) + 300;
+    const [cx, cy] = center(top);
+    // De la orilla más cercana al mazo (19 nov 2026, el usuario: «¿no iba a salir del lado más cerca de las cartas?»):
+    // abajo, a la izquierda o a la derecha.
+    const edges = [[90, innerHeight - cy], [180, cx], [0, innerWidth - cx]];
+    let [ang, dist] = edges.reduce((a, b) => (b[1] < a[1] ? b : a));
+    if (opp) [ang, dist] = ang === 90 ? [270, cy] : ang === 180 ? [0, innerWidth - cx] : [180, cx];
+    const h = document.createElement('div');
+    h.className = 'alien-hand';
+    // El brazo sigue (.ah-ext) hasta salirse de la pantalla: en PC el dibujo no alcanzaba la orilla y se veía cortado.
+    h.innerHTML = `<i class="ah-ext"></i><span class="ah-grab" hidden>${'<i></i>'.repeat(3)}</span>${ALIEN_ARM}`;
+    // La palma (22, 22 de su dibujo) en el centro de la carta de arriba del mazo; el brazo hacia la orilla.
+    Object.assign(h.style, { left: `${cx - box.left - 22 * k}px`, top: `${cy - box.top - 22 * k}px`, width: `${240 * k}px`, height: `${44 * k}px`, transformOrigin: `${22 * k}px ${22 * k}px` });
+    h.style.setProperty('--k', k);
+    h.style.setProperty('--back', this.back);
+    h.style.setProperty('--ang', `${ang}deg`);
+    const at = (d) => `rotate(${ang}deg) translateX(${d}px)`;
+    h.style.transform = at(far);
+    this.el.append(h);
+    const go = (d, ms, ease) => h.animate([{ transform: getComputedStyle(h).transform }, { transform: at(d) }], { duration: ms, easing: ease, fill: 'forwards' }).finished.then(() => (h.style.transform = at(d)));
+    // 19 nov 2026 (el usuario: «se ve cortada, no se ve natural que agarre, de hecho se pasa»): llega sin pasarse, con
+    // la palma junto a la carta (las puntas de los dedos sobre ella), sin salirse de la pantalla; cierra los dedos y las
+    // cartas se ven derechas entre sus dedos. peek: solo se asoma en la orilla (para aventar).
+    const stop = Math.max(0, Math.min(18 * k, dist - 16 * k)), peek = Math.max(stop, dist - 30 * k);
+    return { h, grab: (n) => { const g = h.querySelector('.ah-grab'); g.hidden = !n; g.querySelectorAll('i').forEach((x, i) => (x.hidden = i >= n)); }, close: (on) => h.classList.toggle('closed', on), come: (d = stop) => go(d, 560, 'cubic-bezier(.22,.8,.3,1)'), leave: () => go(far, 640, 'cubic-bezier(.5,0,.75,.4)'), peek, ang };
+  }
+  async handGrab(n) {
+    if (reduced()) return this.renderStock();
+    this.stockShow = this.stock.length + n;
+    this.renderStock();
+    const m = this.handEl();
+    await m.come();
+    // Cierra los dedos y las cartas pasan del mazo a su mano.
+    m.close(true);
+    buzz(25);
+    this.stockShow = null;
+    this.renderStock();
+    m.grab(Math.min(3, n));
+    await wait(260);
+    await m.leave();
+    m.h.remove();
+  }
+  // Robaste muchas veces (19 nov 2026, el usuario: «¿y si la mano sale del lado contrario de la que agarra y las avienta?
+  // con eso se entiende que ya no regresan»): la mano se asoma por la orilla contraria con tus cartas y las avienta
+  // hacia afuera por ese lado; salen en arco, crecen y se van de la pantalla sin desvanecerse.
+  async handDrop(n) {
+    if (reduced()) return;
+    const m = this.handEl(true);
+    m.grab(Math.min(3, n));
+    m.close(true);
+    await m.come(m.peek);
+    const g = m.h.querySelector('.ah-grab').getBoundingClientRect();
+    m.grab(0);
+    m.close(false);
+    m.h.animate([{ scale: 1 }, { scale: 1.12 }, { scale: 1 }], { duration: 260, easing: 'ease-out' });
+    buzz(30);
+    // Hacia adelante: lejos de la mano, cruzando la pantalla hasta salirse por el otro lado (ux, uy; 19 nov 2026, el
+    // usuario: «la aventada está al revés»), abiertas a los lados (px, py).
+    const a = (m.ang * Math.PI) / 180, ux = -Math.cos(a), uy = -Math.sin(a), px = -uy, py = ux, w = g.width || this.u;
+    const out = Math.max(innerWidth, innerHeight) * 1.25;
+    for (let i = 0; i < Math.min(3, n); i++) {
+      const f = this.flyer({}, { left: g.left, top: g.top, width: w }, false);
+      const sideK = (i - 1) * out * 0.35, dx = ux * out + px * sideK, dy = uy * out + py * sideK - out * 0.15;
+      const sp = (i % 2 ? -1 : 1) * (320 + i * 70);
+      f.animate([
+        { translate: '0 0', rotate: '0deg', scale: 1 },
+        { translate: `${dx * 0.4}px ${dy * 0.4 - out * 0.12}px`, rotate: `${sp * 0.5}deg`, scale: 1.5, offset: 0.5 },
+        { translate: `${dx}px ${dy}px`, rotate: `${sp}deg`, scale: 2 },
+      ], { duration: 1150 + i * 120, delay: i * 120, easing: 'cubic-bezier(.3,.55,.45,1)', fill: 'both' }).finished.then(() => f.remove());
+    }
+    await wait(380);
+    await m.leave();
+    m.h.remove();
+  }
+  async handBack(n) {
+    if (reduced()) return this.renderStock();
+    this.stockShow = this.stock.length - n;
+    this.renderStock();
+    const m = this.handEl();
+    m.grab(Math.min(3, n));
+    await m.come();
+    m.grab(0);
+    this.stockShow = null;
+    this.renderStock();
+    squash(this.stockTop());
+    buzz(15);
+    await wait(150);
+    await m.leave();
+    m.h.remove();
   }
   // ---------- Viento solar (17 nov 2026; el usuario escogió en dev/viento.html) ----------
   // Remolino «B» sobre el descarte con chispas doradas (las del viento solar, sin su sol). 17 nov 2026 (el usuario:
@@ -2344,16 +2469,6 @@ export class Game {
         return { p, el, ang: null, rad: 0, at: null };
       });
     }
-    // Ping-pong (17 nov 2026): dos raquetas en las orillas de la pantalla; sacan una vez cada una (el usuario: «siempre
-    // sale del mismo lado»; un rato fue una sola y pidió de regreso las dos).
-    if (L.pong) {
-      this.pads = ['l', 'r'].map((k) => {
-        const el = document.createElement('i');
-        el.className = `pong-pad ${k}`;
-        this.boardEl.append(el);
-        return el;
-      });
-    }
     this.placeMovers(false);
   }
   // Centro de una carta en el tablero (px), con su lugar de siempre.
@@ -2392,12 +2507,6 @@ export class Game {
       }
       for (const c of this.cards) c.el?.classList.toggle('orbit-hid', E.orbitOn(L, c, st) && !st.rem[c.id]);
     }
-    if (this.pads && !this.pongBusy) {
-      // Tiembla la que va a sacar, una acción antes.
-      this.padsAt();
-      const next = (Math.floor(st.actions / E.PONG_EVERY) + 1) % 2, warn = E.pongLeft(st) === 1 && !(st.freeze > 0) && !this.dealing;
-      this.pads.forEach((el, k) => el.classList.toggle('warn', warn && k === next));
-    }
   }
   // Gravedad cero: la que flotó va encima de su carta (despacito); si se deshace, regresa a su lugar.
   zeroPaint(anim) {
@@ -2410,58 +2519,50 @@ export class Game {
       else if (c.zMoved) this.place(c), (c.el.style.zIndex = c.z * 100 + c.id), (c.zMoved = false);
     }
   }
-  // Las raquetas pegadas a las orillas de la pantalla, a media altura del tablero. Devuelve de dónde sale la pelota en
-  // cada lado (px del tablero).
-  padsAt() {
-    const b = this.boardEl.getBoundingClientRect(), w = this.wrapEl.getBoundingClientRect();
-    const pw = Math.max(10, this.u * 0.24), h = this.u * 1.4, bh = parseFloat(this.boardEl.style.height) || b.height;
-    const L = w.left - b.left + 6, R = w.right - b.left - pw - 6;
-    this.pads.forEach((el, k) => Object.assign(el.style, { width: `${pw}px`, height: `${h}px`, left: `${k ? R : L}px`, top: `${bh / 2 - h / 2}px` }));
-    return { x: [L + pw, R], y: bh / 2 };
-  }
-  // Ping-pong: la pelota sale de una raqueta (se turnan), pasa por cada pareja (al pegarle, la carta da la vuelta y
-  // enseña la de abajo) y llega a la otra.
+  // Meteoro fugaz (antes ping-pong; 19 nov 2026, el usuario: «ya no quiero ninguna de las dos barras… que salga un
+  // meteoro con estela moviéndose por el tablero, que salga y se salga, así bonito, no hay más»): entra de fuera de la
+  // pantalla por un lado (se turnan), pasa por cada pareja (al pegarle, la carta da la vuelta y enseña la de abajo) y
+  // se va por el otro lado.
   pongFx(pairs) {
     const ids = pairs.flat();
     this.pongHold = new Set(ids);
     const done = () => {
       if (!this.pongHold) return;
       this.pongHold = null;
-      this.pongBusy = false;
       for (const id of ids) this.repaintFace(this.cards[id]);
       this.sync();
-      this.placeMovers(true);
     };
-    if (reduced() || !this.pads) return done();
-    const side = Math.floor(this.st.actions / E.PONG_EVERY) % 2, at = this.padsAt(), serve = this.pads[side], catcher = this.pads[1 - side];
-    this.pads.forEach((el) => el.classList.remove('warn'));
-    this.pongBusy = true;
-    const ball = document.createElement('i');
-    ball.className = 'pong-ball';
-    const bd = Math.max(16, this.u * 0.4);
-    Object.assign(ball.style, { width: `${bd}px`, height: `${bd}px`, margin: `${-bd / 2}px 0 0 ${-bd / 2}px` });
-    this.boardEl.append(ball);
-    // Las parejas en el orden en que las cruza (de la raqueta a la pared).
-    const order = pairs.map((p) => ({ p, xy: this.homeXY(p[0]) })).sort((a, b) => (side ? b.xy[0] - a.xy[0] : a.xy[0] - b.xy[0]));
-    const pts = [[at.x[side], at.y], ...order.map((o) => o.xy), [at.x[1 - side], at.y]];
-    let i = 0;
-    buzz(20);
-    serve.animate([{ scale: '1 1' }, { scale: '1.4 1.15' }, { scale: '1 1' }], 220);
-    // Como meteoro (17 nov 2026, el usuario: «un poco de aire o fuego»): deja una estela de chispas de fuego.
+    if (reduced()) return done();
+    const b = this.boardEl.getBoundingClientRect(), w = this.wrapEl.getBoundingClientRect(), u = this.u;
+    const md = Math.max(26, u * 0.85);
+    const side = Math.floor(this.st.actions / E.PONG_EVERY) % 2;
+    const out = [w.left - b.left - md * 2, w.right - b.left + md * 2];
+    // Las parejas en el orden en que las cruza.
+    const order = pairs.map((p) => ({ p, xy: this.homeXY(p[0]) })).sort((a, c) => (side ? c.xy[0] - a.xy[0] : a.xy[0] - c.xy[0]));
+    const y0 = order[0].xy[1] - u * (0.8 + Math.random() * 0.8), y1 = order.at(-1).xy[1] + u * (0.6 + Math.random() * 0.8);
+    const pts = [[out[side], y0], ...order.map((o) => o.xy), [out[1 - side], y1]];
+    const met = document.createElement('i');
+    met.className = 'meteor-fly';
+    met.innerHTML = METEOR_SVG;
+    // El centro de la piedra (46 de 64 a lo ancho) va justo en el camino; la cola sale hacia atrás.
+    Object.assign(met.style, { width: `${md * 1.6}px`, height: `${md}px`, margin: `${-md / 2}px 0 0 ${-md * 1.6 * 0.72}px` });
+    this.boardEl.append(met);
+    buzz(15);
+    // Estela de chispas de fuego que se apagan.
+    let at = pts[0];
     const trail = () => {
-      if (!ball.isConnected) return;
-      const x = parseFloat(getComputedStyle(ball).left), y = parseFloat(getComputedStyle(ball).top), d = bd * (0.45 + Math.random() * 0.45);
+      if (!met.isConnected) return;
+      const r = met.getBoundingClientRect(), x = r.left + r.width / 2 - b.left, y = r.top + r.height / 2 - b.top, d = md * (0.35 + Math.random() * 0.4);
       const t = document.createElement('i');
       t.className = 'pong-spark';
       Object.assign(t.style, { left: `${x - d / 2}px`, top: `${y - d / 2}px`, width: `${d}px`, height: `${d}px` });
       this.boardEl.append(t);
-      t.animate([{ opacity: 0.95, scale: 1, translate: '0 0' }, { opacity: 0, scale: 0.2, translate: `${(Math.random() - 0.5) * 10}px ${(Math.random() - 0.5) * 10}px` }], { duration: 420, easing: 'ease-out' }).finished.then(() => t.remove());
-      setTimeout(trail, 28);
+      t.animate([{ opacity: 0.95, scale: 1 }, { opacity: 0, scale: 0.15, translate: `${(Math.random() - 0.5) * 8}px ${(Math.random() - 0.5) * 8}px` }], { duration: 520, easing: 'ease-out' }).finished.then(() => t.remove());
+      setTimeout(trail, 24);
     };
-    trail();
-    const flipCard = (a, b) => {
-      this.pongHold?.delete(a), this.pongHold?.delete(b);
-      this.repaintFace(this.cards[b]);
+    const flipCard = (a, c) => {
+      this.pongHold?.delete(a), this.pongHold?.delete(c);
+      this.repaintFace(this.cards[c]);
       const el = this.cards[a].el;
       if (!el) return this.repaintFace(this.cards[a]);
       // Da la vuelta: se cierra de lado, cambia de cara y se abre ya con la de abajo.
@@ -2470,33 +2571,43 @@ export class Game {
         return el.animate([{ scale: '0 1.06' }, { scale: '1.08 1' }, { scale: '1 1' }], { duration: 260, easing: 'ease-out', fill: 'forwards' }).finished;
       }).then(() => el.getAnimations().forEach((x) => x.cancel()));
     };
+    let i = 0;
     const hop = () => {
-      if (!ball.isConnected) return done();
+      if (!met.isConnected) return done();
       if (i >= pts.length - 1) {
-        catcher.animate([{ scale: '1 1' }, { scale: '1.4 1.15' }, { scale: '1 1' }], 220);
-        ball.animate([{ opacity: 1, scale: 1 }, { opacity: 0, scale: 0.4 }], 250).finished.then(() => ball.remove());
+        met.remove();
         return done();
       }
-      const [x0, y0] = pts[i], [x1, y1] = pts[i + 1];
-      ball.animate([{ left: `${x0}px`, top: `${y0}px` }, { left: `${x1}px`, top: `${y1}px` }], { duration: 280, easing: 'linear', fill: 'forwards' }).finished.then(() => {
+      const [xa, ya] = pts[i], [xb, yb] = pts[i + 1], ang = (Math.atan2(yb - ya, xb - xa) * 180) / Math.PI;
+      met.style.rotate = `${ang}deg`;
+      const ms = Math.max(140, Math.hypot(xb - xa, yb - ya) / 1.1);
+      met.animate([{ left: `${xa}px`, top: `${ya}px` }, { left: `${xb}px`, top: `${yb}px` }], { duration: ms, easing: 'linear', fill: 'forwards' }).finished.then(() => {
         i++;
         if (i <= order.length) {
-          const [a, b] = order[i - 1].p;
-          flipCard(a, b);
-          const r = this.boardEl.getBoundingClientRect();
-          sparkle({ x: r.left + x1, y: r.top + y1 }, 5);
+          const [a, c] = order[i - 1].p;
+          flipCard(a, c);
+          buzz(8);
+          sparkle({ x: b.left + xb, y: b.top + yb }, 6);
         }
         hop();
       });
     };
+    Object.assign(met.style, { left: `${at[0]}px`, top: `${at[1]}px` });
+    trail();
     hop();
   }
-  // Cara de una carta con su número y palo de ahora (ping-pong).
+  // Cara de una carta con su número y palo de ahora (meteoro fugaz, gemelas).
   repaintFace(c) {
     if (!c?.el) return;
     const box = c.el.querySelector('.inner');
-    if (box) box.outerHTML = `<div class="inner">${faceHTML({ ...c, suit: this.st.suit?.[c.id] ?? c.suit }, E.rankOf(c, this.st))}${backHTML(c)}</div>`;
+    const x = this.look(c);
+    if (box) box.outerHTML = `<div class="inner">${faceHTML(x, E.rankOf(c, this.st))}${backHTML(x)}</div>`;
     c.el.dataset.sh = E.rankOf(c, this.st);
+  }
+  // Cómo se ve ahorita: con su palo de ahora; la gemela que ya jaló a su pareja ya no lleva ojal.
+  look(c) {
+    const st = this.st;
+    return { ...c, suit: st.suit?.[c.id] ?? c.suit, ...(c.twin != null && st.rem[c.twin] && { twin: null }) };
   }
   // Piedras en las cartas: caen girando desde arriba (las nuevas) y se rompen en pedacitos al llegar a 0.
   paintRocks() {
@@ -2999,6 +3110,7 @@ export class Game {
   // (la que se juega arriba, junto a su portal) y el hangar con solo level.hangar columnas a la vista y la compuerta a
   // la derecha (hw).
   layoutGrav(r) {
+    if (this.level.tubes) return this.layoutTubes(r);
     const L = this.level, n = L.hangar || L.cols.length, gap = 0.42, pad = 0.2;
     const G = { gap, pad, pile: 0.45, row1: 0.45 + 1.4 + 0.3, m: L.flip ? 0.34 : L.portal ? 0.1 : 0, hw: L.hangar ? 1.05 : 0 };
     G.row0 = G.row1 + 1.4 + 0.16;
@@ -3042,6 +3154,7 @@ export class Game {
   placeGrav(c) {
     const G = this.gravG;
     if (!G) return;
+    if (G.tubes) return this.placeTube(c);
     const k = this.gravIndex(c), j = k - 2, u = this.u;
     let y = k === 0 ? G.row0 : k === 1 ? G.row1 : G.pile - Math.min(j, 4) * 0.09;
     // Portales: al revés (la que se juega arriba, la pila abajo).
@@ -3083,8 +3196,79 @@ export class Game {
     return E.flipped(this.level, this.st) ? this.level.cols.length - 1 - i : i;
   }
 
+  // ---------- Tubos neumáticos (19 nov 2026, pedido del usuario; la v1 de dev/ideas-19-nov.html) ----------
+  // Es la gravedad: cada columna es un hueco y solo se ve su carta de abajo. Las demás van escondidas en 3 tubos de
+  // vidrio arriba (cada columna tiene su tubo: tubeOf); al vaciar un hueco, su tubo dispara la que sigue. El tubo
+  // enseña cuántas le quedan con cartitas de canto, sin número.
+  tubeOf(i) {
+    const n = this.level.cols.length, T = this.level.tubes;
+    return Math.round((i * (T - 1)) / Math.max(1, n - 1));
+  }
+  layoutTubes(r) {
+    const L = this.level, n = L.cols.length, gap = 0.42, pad = 0.25, T = L.tubes;
+    // 19 nov 2026: se probaron esferas, tubos con esferas, tubos largos con pantallita y con hoyo; el usuario pidió
+    // regresar a esta primera versión (tubos con cartitas de canto) mientras piensa otra idea.
+    const G = { tubes: true, gap, pad, th: 2.5, tw: 0.92 };
+    G.row0 = G.th + 0.55;
+    G.bw = n + (n - 1) * gap + pad * 2;
+    G.bh = G.row0 + 1.4 + 0.25;
+    G.tx = Array.from({ length: T }, (_, t) => (G.bw * (t + 0.5)) / T);
+    this.u = Math.max(18, Math.min((r.width - 10) / G.bw, (r.height - 10) / G.bh, 120));
+    this.gravG = G;
+    const u = this.u;
+    this.boardEl.style.width = `${G.bw * u}px`;
+    this.boardEl.style.height = `${G.bh * u}px`;
+    this.boardEl.style.setProperty('--cw', `${u}px`);
+    this.tubeEls?.forEach((el, t) => Object.assign(el.style, { left: `${(G.tx[t] - G.tw / 2) * u}px`, top: 0, width: `${G.tw * u}px`, height: `${G.th * u}px` }));
+    this.cards.forEach((c) => c.el && this.place(c));
+    this.paintGrav();
+    this.renderStock();
+    this.coach?.update();
+  }
+  placeTube(c) {
+    const G = this.gravG, u = this.u, k = this.gravIndex(c), hid = k > 0;
+    const x = hid ? G.tx[this.tubeOf(c.group)] - 0.5 : G.pad + this.gravSlot(c.group) * (1 + G.gap);
+    const y = hid ? G.th - 1.25 : G.row0;
+    Object.assign(c.el.style, { left: `${x * u}px`, top: `${y * u}px`, rotate: '0deg', zIndex: hid ? 600 : 900, opacity: hid ? '0' : '', pointerEvents: hid ? 'none' : '' });
+    c.el.classList.remove('g-next', 'g-deep');
+    c.gPos = { x, y, k, hid };
+  }
+  // ¡Fuuush! El tubo se infla y la carta sale por su boca, da una vuelta en el aire y cae en su hueco.
+  tubeShoot(c, dx, dy, hold) {
+    const u = this.u, tube = this.tubeEls?.[this.tubeOf(c.group)];
+    const delay = hold + 180;
+    setTimeout(() => {
+      if (!tube?.isConnected) return;
+      tube.classList.remove('puff');
+      void tube.offsetWidth;
+      tube.classList.add('puff');
+      buzz(10);
+    }, delay);
+    c.el.animate([
+      { translate: `${dx}px ${dy}px`, scale: 0.4, rotate: '0deg', opacity: 0 },
+      { opacity: 1, offset: 0.12 },
+      { translate: `${dx * 0.45}px ${dy * 0.45 - u * 0.7}px`, scale: 0.95, rotate: '200deg', offset: 0.55 },
+      { translate: '0 0', scale: '1.06 .94', rotate: '360deg', offset: 0.88 },
+      { translate: '0 0', scale: 1, rotate: '360deg' },
+    ], { duration: 640, delay, easing: 'cubic-bezier(.25,.7,.4,1)', fill: 'backwards' }).finished.then(() => {
+      if (!c.el) return;
+      const [x, y] = center(c.el.getBoundingClientRect());
+      sparkle({ x, y }, 5);
+    }, () => {});
+  }
   // Cuántas quedan en la pila de cada columna (en el hangar, de las que se ven).
   paintGrav() {
+    if (this.tubeEls) {
+      // Cartitas de canto en cada tubo (hasta 8), de abajo hacia arriba.
+      const left = this.tubeEls.map(() => 0);
+      this.level.cols.forEach((col, i) => (left[this.tubeOf(i)] += Math.max(0, col.filter((id) => !this.st.rem[id]).length - 1)));
+      this.tubeEls.forEach((el, t) => {
+        const f = el.querySelector('.tb-fill'), n = Math.min(8, left[t]);
+        if (f.childElementCount !== n) f.innerHTML = '<i></i>'.repeat(n);
+        el.classList.toggle('empty', !left[t]);
+      });
+      return;
+    }
     const shown = this.gravShown();
     this.railEls?.forEach((el, j) => {
       const i = this.level.hangar ? shown[j] : this.gravSlot(j);
@@ -3123,6 +3307,11 @@ export class Game {
       this.placeGrav(c);
       const dy = (p.y - c.gPos.y) * u, dx = ((p.x ?? c.gPos.x) - c.gPos.x) * u;
       if (reduced() || (Math.abs(dy) < 0.5 && Math.abs(dx) < 0.5)) continue;
+      // Tubos: la que sigue sale disparada del tubo y cae girando en su hueco (al deshacer, regresa al tubo sin verse).
+      if (this.gravG.tubes) {
+        if (p.hid && !c.gPos.hid) this.tubeShoot(c, dx, dy, hold);
+        continue;
+      }
       // Hangar: las columnas se recorren de lado (y la nueva sale de la compuerta).
       if (Math.abs(dx) >= 0.5) {
         const out = p.hid && !c.gPos.hid; // sale del hangar: espera a que se abra la compuerta
@@ -3460,7 +3649,7 @@ export class Game {
       if (st.shift?.[c.id] != null || el.dataset.sh) {
         const r = E.rankOf(c, st);
         // (Las que revuelve el manotazo esperan al golpe: slamHold.)
-        if (el.dataset.sh !== String(r) && this.wandOn?.id !== c.id && !this.slamHold?.has(c.id) && !this.pongHold?.has(c.id)) {
+        if (el.dataset.sh !== String(r) && this.wandOn?.id !== c.id && !this.slamHold?.has(c.id) && !this.pongHold?.has(c.id) && !this.twinHold?.has(c.id)) {
           el.dataset.sh = r;
           this.paintRank(el, r);
         }
@@ -3528,7 +3717,8 @@ export class Game {
   // El ancho es fijo (según el mazo más grande que ha tenido), así robar no empuja la bandeja;
   // lo que se recorre es el manojo.
   renderStock() {
-    const n = this.stock.length;
+    // Mano alien: mientras llega, el mazo sigue enseñando lo de antes (stockShow).
+    const n = this.stockShow ?? this.stock.length;
     const cw = this.stockEl.offsetHeight / 1.4 || 56;
     // Contando de una vez lo que traen las cartas regalo: así el mazo no se ensancha (ni mueve la bandeja) al llegar.
     this.stockMax = Math.max(this.stockMax || 0, n, 1, this.level.stock.length + this.cards.reduce((t, c) => t + (c.pack?.length || 0), 0));
@@ -3965,6 +4155,8 @@ export class Game {
     const { s, ev } = E.play(this.level, before, c.id, low);
     const burnRects = this.burnRects(ev.boom);
     this.history.push({ t: 'play', before, ev, best: this.best, bonus: this.bonus, ...(foeLock(ev) && { lock: FOE_LOCK }) });
+    // Cartas con cable: el lugar de la jugada se repinta con la pareja hasta que llega (yankTwin).
+    if (ev.tug != null) this.twinHold = new Set([c.id]);
     this.st = s;
     this.sync();
     this.best = Math.max(this.best, s.streak);
@@ -3975,9 +4167,11 @@ export class Game {
     // Vuela de centro a centro dando una vuelta y se asienta al caer.
     // Boleto partido: la primera vez solo se va la mitad jugada; la otra se queda.
     // Gemelas: primero cae la jugada (el descarte la enseña) y luego el lazo jala a la otra.
+    // Cartas con cable: el cable jala a la otra hasta el lugar de la jugada y, en el rebote, la jugada cae al descarte.
     const aEl = c.el;
     if (ev.twin != null) this.wasteShow = { rank: ev.rank, suit: c.suit };
-    if (ev.split) this.splitTicket(c, ev);
+    if (ev.tug != null) this.yankTwin(c, this.cards[ev.tug], ev, before);
+    else if (ev.split) this.splitTicket(c, ev);
     else if (ev.tri?.left) this.tearStub(c, ev);
     else this.flyToWaste(c, ev, E.cutOf(c, before), ev.tri?.stub);
     if (ev.twin != null) this.pullTwin(aEl, this.cards[ev.twin]);
@@ -4378,6 +4572,83 @@ export class Game {
     }, FLY_MS + 160);
     setTimeout(land, FLY_MS + 480);
   }
+  // Cartas con cable (19 nov 2026, el usuario: «que la jale a su lugar… en el rebote le pega a la que debe ir al descarte y esa
+  // es la que baja»): el hilo que las une se tensa, la pareja tiembla, se suelta de su lugar (aunque esté tapada) y
+  // llega volando al lugar de la jugada; al rebotar le pega a la jugada, que sale volando al descarte. La pareja se
+  // queda ahí, ya con su número y palo (el lugar de la jugada se repinta: twinHold).
+  yankTwin(a, b, ev, before) {
+    const aEl = a.el, bEl = b.el, old = before.top;
+    const finish = () => {
+      this.twinHold = null;
+      this.twinPulls = (this.twinPulls || []).filter((p) => p !== pull);
+      this.drawTwins();
+      bEl?.remove();
+      if (a.el === aEl && aEl) {
+        aEl.style.visibility = '';
+        this.repaintFace(a);
+        squash(aEl);
+      }
+      this.sync();
+    };
+    // La jugada sale del lugar y cae al descarte (una copia; el lugar se queda para la pareja).
+    const knock = () => {
+      this.wasteShow = null;
+      if (!aEl?.isConnected) return this.landWaste();
+      const r = aEl.getBoundingClientRect(), u = this.u;
+      const f = this.flyer({ ...a, rank: ev.rank, suit: before.suit?.[a.id] ?? a.suit, twin: null }, { left: r.left + r.width / 2 - u / 2, top: r.top + r.height / 2 - u * 0.7, width: u }, true);
+      f.style.rotate = '0deg';
+      aEl.style.visibility = 'hidden';
+      // ¡Chicotazo! Destello y chispas donde le pega; la jugada sale disparada al descarte dando vueltas.
+      const [fx, fy] = center(r);
+      sparkle({ x: fx, y: fy }, 12);
+      const ring = document.createElement('i');
+      ring.className = 'cable-hit';
+      Object.assign(ring.style, { left: `${fx}px`, top: `${fy}px`, width: `${u * 1.3}px`, height: `${u * 1.3}px` });
+      this.el.append(ring);
+      ring.animate([{ scale: 0.3, opacity: 1 }, { scale: 1.5, opacity: 0 }], { duration: 380, easing: 'ease-out' }).finished.then(() => ring.remove());
+      buzz(25);
+      const w = this.wasteEl.getBoundingClientRect(), [wx, wy] = center(w);
+      toss(f, { r0: a.rot }, { x1: wx - fx, y1: wy - fy, s1: w.width / u }, 720).then(() => {
+        f.remove();
+        this.landWaste();
+        buzz(12);
+      });
+    };
+    const pull = { color: twinColor(b), from: () => aEl, to: () => bEl, tight: false, cable: true };
+    b.el = null;
+    if (!bEl || !aEl || reduced()) {
+      knock();
+      return finish();
+    }
+    // El descarte sigue enseñando lo de antes hasta que cae la jugada.
+    this.wasteShow = old;
+    this.renderWaste();
+    bEl.getAnimations().forEach((x) => x.cancel());
+    bEl.classList.add('up');
+    bEl.style.zIndex = 9998;
+    (this.twinPulls ||= []).push(pull);
+    this.twinLoop();
+    const [ax, ay] = center(aEl.getBoundingClientRect()), [bx, by] = center(bEl.getBoundingClientRect());
+    const dx = ax - bx, dy = ay - by, d = Math.hypot(dx, dy) || 1, nx = dx / d, ny = dy / d;
+    // Se tensa y la pareja tiembla hacia la jugada.
+    setTimeout(() => {
+      pull.tight = true;
+      buzz(8);
+      bEl.animate([{ translate: '0 0' }, { translate: `${nx * 5}px ${ny * 5}px` }, { translate: '0 0' }, { translate: `${nx * 7}px ${ny * 7}px` }, { translate: '0 0' }], { duration: 300, easing: 'ease-in-out' });
+    }, 140);
+    // El jalón: llega pasándose un poco (le pega a la jugada) y rebota a su lugar.
+    setTimeout(() => {
+      bEl.style.rotate = `${a.rot || 0}deg`;
+      const fly = bEl.animate([
+        { translate: '0 0', rotate: `${b.rot || 0}deg`, scale: 1 },
+        { translate: `${dx + nx * this.u * 0.32}px ${dy + ny * this.u * 0.32}px`, rotate: `${(a.rot || 0) + 14}deg`, scale: 1.1, offset: 0.62 },
+        { translate: `${dx - nx * this.u * 0.06}px ${dy - ny * this.u * 0.06}px`, rotate: `${(a.rot || 0) - 2}deg`, scale: 0.98, offset: 0.82 },
+        { translate: `${dx}px ${dy}px`, rotate: `${a.rot || 0}deg`, scale: 1 },
+      ], { duration: 520, easing: 'cubic-bezier(.5,0,.5,1)', fill: 'forwards' });
+      setTimeout(knock, 520 * 0.6);
+      fly.finished.then(finish, finish);
+    }, 470);
+  }
   // Mientras haya hilos jalando, se redibujan en cada cuadro.
   twinLoop() {
     if (this.twinRaf) return;
@@ -4393,32 +4664,55 @@ export class Game {
   // pareja se juega (el hilo de la jugada sigue en twinPulls).
   paintTwins() {
     if (!this.cards.some((c) => c.twin != null)) return;
-    const u = this.u, out = [];
+    const u = this.u, out = [], cab = [];
     if (!this.dealing) for (const a of this.cards) {
       const b = this.cards[a.twin];
       if (a.twin == null || a.id > b.id || a.removed || b.removed || !a.el || !b.el) continue;
-      const eye = (c) => [c.el.offsetLeft + u / 2, c.el.offsetTop + u * 1.4 * 0.88];
-      out.push(this.twinPath(eye(a), eye(b), twinColor(a), false));
+      // El ojal: abajo en las gemelas; arriba en las de cable. Las de cable, del ojal de verdad (la carta puede ir girada).
+      const eye = (c) => (c.tug ? this.eyeAt(c.el) : [c.el.offsetLeft + u / 2, c.el.offsetTop + u * 1.4 * 0.88]);
+      (a.tug ? cab : out).push(this.twinPath(eye(a), eye(b), twinColor(a), false, !!a.tug));
     }
     this.twinRest = out.join('');
+    this.cableRest = cab.join('');
     this.drawTwins();
   }
-  twinPath([ax, ay], [bx, by], color, tight) {
+  // cable: las cartas con cable llevan un cable grueso trenzado (las gemelas, un hilo delgado).
+  twinPath([ax, ay], [bx, by], color, tight, cable = false) {
     // Cuelga un poco por debajo de las cartas (14 nov 2026, el usuario: «abajo, que cuelgue poquito»).
     const sag = Math.max(ay, by) + this.u * 0.75 + Math.hypot(bx - ax, by - ay) * 0.12;
-    const d = tight ? `M${ax.toFixed(1)} ${ay.toFixed(1)}L${bx.toFixed(1)} ${by.toFixed(1)}` : `M${ax.toFixed(1)} ${ay.toFixed(1)}Q${((ax + bx) / 2).toFixed(1)} ${sag.toFixed(1)} ${bx.toFixed(1)} ${by.toFixed(1)}`;
-    return `<path class="tt-ink" d="${d}"/><path d="${d}" style="stroke:${color}"/>`;
-  }
-  drawTwins() {
-    let svg = this.twinSvg;
-    if (!svg?.isConnected) {
-      svg = this.twinSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-      svg.classList.add('twin-threads');
-      this.boardEl.prepend(svg);
+    // El cable va tenso: casi derecho, apenas cuelga (el hilo de las gemelas cuelga más).
+    if (cable && !tight) {
+      const mx = (ax + bx) / 2, my = (ay + by) / 2 + Math.hypot(bx - ax, by - ay) * 0.05;
+      const dc = `M${ax.toFixed(1)} ${ay.toFixed(1)}Q${mx.toFixed(1)} ${my.toFixed(1)} ${bx.toFixed(1)} ${by.toFixed(1)}`;
+      return `<path class="tt-ink tt-cable" d="${dc}"/><path class="tt-cable" d="${dc}" style="stroke:${color}"/><path class="tt-braid" d="${dc}"/>`;
     }
+    const d = tight ? `M${ax.toFixed(1)} ${ay.toFixed(1)}L${bx.toFixed(1)} ${by.toFixed(1)}` : `M${ax.toFixed(1)} ${ay.toFixed(1)}Q${((ax + bx) / 2).toFixed(1)} ${sag.toFixed(1)} ${bx.toFixed(1)} ${by.toFixed(1)}`;
+    return cable ? `<path class="tt-ink tt-cable" d="${d}"/><path class="tt-cable" d="${d}" style="stroke:${color}"/><path class="tt-braid" d="${d}"/>` : `<path class="tt-ink" d="${d}"/><path d="${d}" style="stroke:${color}"/>`;
+  }
+  // Centro del ojal de una carta con cable, en el tablero (sirve aunque la carta vaya girada o volando).
+  eyeAt(el) {
+    const br = this.boardEl.getBoundingClientRect(), e = el.querySelector('.twin-eye.tug');
+    const r = (e || el).getBoundingClientRect();
+    return e ? [r.left + r.width / 2 - br.left, r.top + r.height / 2 - br.top] : [r.left + r.width / 2 - br.left, r.top + r.height * 0.12 - br.top];
+  }
+  // Cables (19 nov 2026, el usuario: «bien tensados, pásalos por atrás y un poco más delgados, en los hoyos»): tensos de
+  // ojal a ojal, en su capa por detrás de las cartas (como los hilos de las gemelas).
+  drawTwins() {
+    const layer = (k, cls, front) => {
+      let svg = this[k];
+      if (!svg?.isConnected) {
+        svg = this[k] = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.classList.add('twin-threads', ...(cls ? [cls] : []));
+        front ? this.boardEl.append(svg) : this.boardEl.prepend(svg);
+      }
+      return svg;
+    };
     const br = this.boardEl.getBoundingClientRect();
-    const eye = (e) => { const r = e.getBoundingClientRect(); return [r.left + r.width / 2 - br.left, r.top + r.height * 0.88 - br.top]; };
-    svg.innerHTML = (this.twinRest || '') + (this.twinPulls || []).map((p) => this.twinPath(eye(p.from()), eye(p.to()), p.color, p.tight)).join('');
+    const eye = (e, top) => { if (top) return this.eyeAt(e); const r = e.getBoundingClientRect(); return [r.left + r.width / 2 - br.left, r.top + r.height * 0.88 - br.top]; };
+    const pulls = (cable) => (this.twinPulls || []).filter((p) => !!p.cable === cable).map((p) => this.twinPath(eye(p.from(), p.cable), eye(p.to(), p.cable), p.color, p.tight, p.cable)).join('');
+    layer('twinSvg', '', false).innerHTML = (this.twinRest || '') + pulls(false);
+    if (this.cableRest || this.twinPulls?.some((p) => p.cable)) layer('cableSvg', 'cable-threads', false).innerHTML = (this.cableRest || '') + pulls(true);
+    else if (this.cableSvg) this.cableSvg.innerHTML = '';
   }
 
   // cut: del boleto partido, la mitad que ya se había jugado (la que queda se vuelve carta entera en el aire).
@@ -5262,7 +5556,13 @@ export class Game {
       if (h.slPay) (save.coins = Math.max(0, save.coins - h.slPay)), updateCoins();
       if (ev.split) this.unsplitTicket(this.cards[ev.id], ev, wasteRect);
       else if (ev.tri?.left) this.untearStub(this.cards[ev.id], ev, wasteRect);
-      else this.returnToBoard(this.cards[ev.id], wasteRect);
+      else if (ev.tug != null) {
+        // Cartas con cable: la pareja regresa a su lugar desde el de la jugada, y ahí vuelve a estar la jugada.
+        const a = this.cards[ev.id], from = a.el?.getBoundingClientRect() || wasteRect;
+        this.twinHold = null;
+        if (a.el) (a.el.style.visibility = ''), this.repaintFace(a), squash(a.el);
+        this.returnToBoard(this.cards[ev.tug], from);
+      } else this.returnToBoard(this.cards[ev.id], wasteRect);
       // Gemelas: la otra también regresa a su lugar.
       if (ev.twin != null) setTimeout(() => this.returnToBoard(this.cards[ev.twin], wasteRect), reduced() ? 0 : 120);
     } else if (h.t === 'hold') {
@@ -5358,7 +5658,7 @@ export class Game {
     sheet.setAttribute('role', 'dialog');
     sheet.setAttribute('aria-label', 'Ayudas');
     sheet.innerHTML = `<header class="hs-head"><b class="outl">Ayudas</b><button class="hs-x" aria-label="Cerrar">${icon('close')}</button></header>
-      <div class="hs-grid">${keys.map((k) => `<div class="hs-item" data-k="${k}"><button class="hs-card" data-use="${k}" style="background-image:${this.helpBack(k)}"><b class="badge"></b><span class="hs-name">${this.helpName(k)}</span></button><button class="hs-buy" data-buy="${k}"></button></div>`).join('')}</div>`;
+      <div class="hs-grid">${keys.map((k) => `<div class="hs-item" data-k="${k}"><button class="hs-card" data-use="${k}" style="background-image:${this.helpBack(k)}"><b class="badge"></b>${HELPS[k]?.secs ? `<span class="hs-name">${HELPS[k].secs} s</span>` : ''}</button><button class="hs-buy" data-buy="${k}"></button></div>`).join('')}</div>`;
     this.el.append(scrim, sheet);
     this.paintHelps();
     // Tamaño: hasta 4 por renglón (7 caben en 2), del tamaño que quepa (más grandes en PC).
