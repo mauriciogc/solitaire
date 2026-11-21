@@ -15,17 +15,21 @@ export const RACE_BOTS = 4;
 export const RACE_WAIT = 30 * 60 * 1000;
 // Bolsa de monedas que se reparte por lugar (1.º a 4.º); con un 5.º lugar (los 4 te ganaron) va el del 4.º.
 // 20 nov 2026 (el usuario): cofres −35% (bolsa 3,000 → 1,950; si te caes 30+40 → 20+26 por escalón).
-export const RACE_POT = 1950;
+// 21 nov 2026 (el usuario): otro −17% (bolsa 1,950 → 1,620; si te caes 20+26 → 17+22 por escalón) y luego −3%
+// (bolsa 1,570; si te caes 16+21).
+export const RACE_POT = 1570;
 export const RACE_SPLIT = [0.5, 0.25, 0.15, 0.1];
+// 21 nov 2026 (el usuario): al 1.º se le quitan un deshacer, el reloj y el ojo (ver 3); al 2.º, un deshacer.
 export const RACE_HELPS = [
-  { wild: 2, undo: 3, helps: { reloj: 1, ver3: 1 } },
-  { wild: 1, undo: 2, helps: { ver3: 1 } },
+  { wild: 2, undo: 2 },
+  { wild: 1, undo: 1, helps: { ver3: 1 } },
   { undo: 2, helps: { reloj: 1 } },
   { undo: 1 },
 ];
 export const RACE_METAL = ['oro', 'plata', 'bronce', 'cobre'];
 // Si te caes: monedas por escalón (con 0 escalones también hay algo).
-export const RACE_LOSE = { base: 20, step: 26 };
+// 21 nov 2026 (el usuario): si te caes, 50% menos (16 + 21 → 8 + 10.5).
+export const RACE_LOSE = { base: 8, step: 10.5 };
 // Mejora con las constelaciones (el usuario: «conforme avanzan las galaxias»): +10% por constelación, tope ×3.
 export const raceK = () => Math.min(3, 1 + 0.1 * Math.floor((save.open || 0) / 10));
 // Viajeros: cuántos pasan cada nivel y cuántas estrellas sacan (en promedio ~2.4 por nivel).
@@ -44,7 +48,10 @@ export const raceWaitLeft = (now = Date.now()) => (race()?.on ? 0 : Math.max(0, 
 export const raceReady = () => !race()?.on && !raceWaitLeft();
 
 export function raceStart(r = Math.random) {
-  const names = [...NAMES].sort(() => r() - 0.5).slice(0, RACE_BOTS);
+  // 21 nov 2026 (el usuario): en la primera carrera (al abrirse) siempre va Peter, con otros 3 al azar.
+  const first = !race();
+  const names = [...NAMES].filter((n) => !first || n !== 'Peter').sort(() => r() - 0.5).slice(0, RACE_BOTS - first);
+  if (first) names.splice(Math.floor(r() * RACE_BOTS), 0, 'Peter');
   const bots = names.map((name, i) => {
     let fall = RACE_STEPS;
     for (let k = 0; k < RACE_STEPS; k++) if (r() > SURVIVE) { fall = k; break; }

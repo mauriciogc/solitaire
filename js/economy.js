@@ -113,16 +113,24 @@ export const richOff = (coins) => RICH_OFF[richTier(coins) - 1]?.[1] || 0;
 // ---------- Regalo diario: camino de 28 días ----------
 // Premios modestos para que dure semanas. Si un día no se reclama, se vuelve al día 1 (salvo con escudo).
 // El día 7 de cada semana es el agujero de gusano: escupe premios sorpresa (`openSurprise`) y una pieza de planeta.
-const c = (coins) => ({ coins: round5(coins * COIN_UP) });
+// 21 nov 2026 (el usuario): +15 monedas a cada día de monedas, y luego otras +80 (+95 en total).
+const c = (coins) => ({ coins: round5(coins * COIN_UP) + 95 });
+// 21 nov 2026 (el usuario): día 3 boletos + 1 deshacer, día 4 monedas + 1 comodín, día 5 monedas + 1 deshacer,
+// día 6 monedas + 2 deshacer + 1 ver 3 s.
+const d3 = (tickets) => ({ tickets, undo: 1 });
+const d4 = (coins) => ({ ...c(coins), wild: 1 });
+const d5 = (coins) => ({ ...c(coins), undo: 1 });
+const d6 = (coins) => ({ ...c(coins), undo: 2, helps: { ver3: 1 } });
 export const DAILY_PATH = [
-  c(20), c(25), { tickets: 1 }, c(30), c(30), c(40), { surprise: 1 },
-  c(30), c(35), { tickets: 1 }, c(40), c(40), c(50), { surprise: 2 },
-  c(35), c(40), { tickets: 1 }, c(45), c(45), c(55), { surprise: 3 },
-  c(40), c(45), { tickets: 2 }, c(50), c(50), c(60), { surprise: 4 },
+  c(20), c(25), d3(1), d4(30), d5(30), d6(40), { surprise: 1 },
+  c(30), c(35), d3(1), d4(40), d5(40), d6(50), { surprise: 2 },
+  c(35), c(40), d3(1), d4(45), d5(45), d6(55), { surprise: 3 },
+  c(40), c(45), d3(2), d4(50), d5(50), d6(60), { surprise: 4 },
 ];
 // Contenido de la caja sorpresa: monedas que crecen con la semana más 1 extra al azar (2 extras la semana 4).
 export function openSurprise(tier, r = Math.random) {
-  const p = { coins: round5((40 + tier * 20 + Math.floor(r() * 4) * 10) * COIN_UP) };
+  // 21 nov 2026 (el usuario): +100 monedas a la caja sorpresa, y luego otras +80 (+180 en total).
+  const p = { coins: round5((40 + tier * 20 + Math.floor(r() * 4) * 10) * COIN_UP) + 180 };
   const extras = [{ tickets: tier > 2 ? 2 : 1 }, { undo: 2 + Math.floor(tier / 2) }, { wild: 1 }];
   for (let k = tier >= 4 ? 2 : 1; k > 0; k--) Object.assign(p, extras.splice(Math.floor(r() * extras.length), 1)[0]);
   return p;

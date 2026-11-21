@@ -4625,7 +4625,8 @@ function openDaily() {
   let nodes = '';
   for (let i = week; i < week + 6; i++) {
     const p = DAILY_PATH[i], k = stateOf(i);
-    const main = p.coins ? `${coin()}<b>${p.coins}</b>` : p.tickets ? `${icon('ticket')}<b>${p.tickets}</b>` : '';
+    // 21 nov 2026 (el usuario): debajo solo los iconos de lo que trae, sin cantidades.
+    const main = [p.coins && coin(), p.tickets && icon('ticket'), p.undo && icon('undo'), p.wild && icon('wild'), ...Object.keys(p.helps || {}).map((h) => icon(HELPS[h].ico))].filter(Boolean).join('');
     nodes += `<div class="dnode ${k}" data-i="${i}"><span class="dpl">${miniPlanet(DAY_PLANETS[i - week])}${mark(k, i - week + 1)}${k === 'today' ? tap : ''}</span><span class="dp">${main}</span></div>`;
   }
   const big = week + 6, bk = stateOf(big);
@@ -4678,6 +4679,7 @@ function openDaily() {
     save.tickets += p.tickets || 0;
     save.undo += p.undo || 0;
     save.wild += p.wild || 0;
+    for (const [h, n] of Object.entries(p.helps || {})) save.helps[h] = (save.helps[h] || 0) + n;
     won = p;
     wonAt = { x: r.left + r.width / 2, y: r.top + r.height / 2 };
     save.daily = { day: (st.day + 1) % N, last: new Date().toDateString(), shield: Math.min(DAILY_SHIELD_MAX, (save.daily.shield || 0) - (st.saved || 0) + (last ? 1 : 0)) };
@@ -6212,7 +6214,10 @@ setInterval(() => document.querySelector('[data-a="tripulacion"]') && refreshCre
 const CREW_DOT = 30;
 const crewRoad = (t) => {
   const pc = (x) => Math.min(100, (x / crewMax()) * 100), mid = CREW_GOALS.slice(0, -1);
-  const dots = Array.from({ length: crewMax() / CREW_DOT - 1 }, (_, k) => (k + 1) * CREW_DOT).map((x) => {
+  // 21 nov 2026: las bases ya no caen en múltiplos de 30 (105/165/225): van en su lugar y los puntitos que les quedan
+  // muy cerca se quitan.
+  const at = Array.from({ length: Math.ceil(crewMax() / CREW_DOT) - 1 }, (_, k) => (k + 1) * CREW_DOT).filter((x) => mid.every((g) => Math.abs(g - x) > CREW_DOT / 2));
+  const dots = [...at, ...mid].sort((a, b) => a - b).map((x) => {
     const m = mid.indexOf(x);
     return m >= 0 ? `<span class="cw-mark m${m}${t >= x ? ' got' : ''}" style="left:${pc(x)}%"><i></i><b>${x}</b></span>` : `<i class="cw-dot${t >= x ? ' on' : ''}" style="left:${pc(x)}%"></i>`;
   }).join('');

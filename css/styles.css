@@ -3571,7 +3571,8 @@ p.met-sale.vip { background: #fff1c2; }
 .dnode:nth-child(even) { margin-top: 26px; }
 .dnode .dpl { position: relative; width: 44px; height: 44px; display: grid; place-items: center; transition: scale .3s var(--spring); }
 .dnode .dpl > .ico { width: 100%; height: 100%; filter: drop-shadow(0 3px 0 #2a1f5c55); }
-.dnode .dp { display: flex; align-items: center; gap: 1px; font: 400 14px/1 'Lilita One'; }
+/* 21 nov 2026: solo iconos; con 4 (día 6) van de 2 en 2. */
+.dnode .dp { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 1px; max-width: 42px; font: 400 14px/1 'Lilita One'; }
 .dnode .dp .ico { width: 20px; height: 20px; }
 .dnode .ok { position: absolute; right: -6px; bottom: -4px; width: 24px; height: 24px; }
 .dnode .ok .ico { width: 100%; height: 100%; }
@@ -3593,7 +3594,7 @@ p.met-sale.vip { background: #fff1c2; }
 @keyframes worm-gulp { 0% { scale: 1; } 60% { scale: 1.35; rotate: -40deg; box-shadow: 0 0 0 10px #b36bff55, 0 0 40px #7c55e0; } 85% { scale: .85; } 100% { scale: 1.1; } }
 .dnode.d7 .q { font: 400 15px/1 'Lilita One'; color: #6c3fd4; margin-top: 2px; }
 .dnode.d7.got .worm { filter: grayscale(.6); opacity: .6; }
-@media (max-width: 420px) { .dnode .dpl { width: 36px; height: 36px; } .dnode.d7 .dpl.worm { width: 54px; height: 54px; } .dnode .dp { font-size: 12px; } .dnode .dp .ico { width: 16px; height: 16px; } }
+@media (max-width: 420px) { .dnode .dpl { width: 36px; height: 36px; } .dnode.d7 .dpl.worm { width: 54px; height: 54px; } .dnode .dp { font-size: 12px; max-width: 34px; } .dnode .dp .ico { width: 16px; height: 16px; } }
 @media (max-height: 500px) { .dpath { min-height: 140px; padding-top: 30px; } .dnode:nth-child(even) { margin-top: 18px; } .dly-top { padding: 4px 10px; } .dly-planet { width: 46px; height: 46px; } .dly-top p small { display: none; } }
 @media (prefers-reduced-motion: reduce) { .tap-me, .worm > i:not(.ok), .dnode.today .dpl::before { animation: none; } }
 /* Vertical (pantalla angosta): el camino va de arriba hacia abajo en zigzag; cada planetita con su día y premio al

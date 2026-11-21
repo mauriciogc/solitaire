@@ -24,10 +24,13 @@ export const STATION_STYLES = {
 };
 const STYLE_ORDER = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j'];
 export const PIECES = 5;
-// Lo que cuesta cada pieza, en orden (20 bloques la estación; un planeta da hasta 30 estrellas).
-export const PIECE_COST = [2, 3, 4, 5, 6];
-// Estación completa: cofre planeta de oro con monedas (+10% por constelación, tope ×3) y un deshacer.
-export const stationPrize = (w) => ({ coins: round5(300 * Math.min(3, 1 + 0.1 * Math.floor(w / 10))), undo: 1, metal: 'oro' });
+// Lo que cuesta cada pieza, en orden (25 bloques la estación; un planeta da hasta 30 estrellas).
+// 21 nov 2026 (el usuario): 20 → 25 bloques (eran 2, 3, 4, 5, 6).
+export const PIECE_COST = [3, 4, 5, 6, 7];
+// Estación completa: cofre planeta de oro con monedas (+13% por constelación, tope ×3) y un deshacer.
+// 21 nov 2026 (el usuario): cofre −20% (300 → 240) y que suba 13% por constelación (era 10%).
+export const BUILD_UP = 0.13;
+export const stationPrize = (w) => ({ coins: round5(240 * Math.min(3, 1 + BUILD_UP * Math.floor(w / 10))), undo: 1, metal: 'oro' });
 // Las 10 estaciones de una constelación: cápsula con un exclusivo, el siguiente que no tengas de esta lista.
 // 19 nov 2026 (el usuario): además de los 5 títulos, 3 disfraces, 3 marcos, 2 reversos y 2 naves, intercalados; el
 // primero sigue siendo Albañil estelar. Ya con todos, la constelación da un cofre con monedas (buildBonus).
@@ -38,8 +41,8 @@ export const BUILD_PRIZES = [
   ['title', 'arquitecto_galactico'], ['ring', 'minacristales'], ['avatar', 'caballerogalactico'],
   ['title', 'urbanista_cosmos'], ['back', 'carrusel'], ['ring', 'templodorado'],
 ];
-// Cofre de cuando ya tienes los 15: monedas (+10% por constelación, tope ×3).
-export const buildBonus = (r) => ({ coins: round5(1500 * Math.min(3, 1 + 0.1 * r)), metal: 'oro' });
+// Cofre de cuando ya tienes los 15: monedas (+13% por constelación, tope ×3).
+export const buildBonus = (r) => ({ coins: round5(1500 * Math.min(3, 1 + BUILD_UP * r)), metal: 'oro' });
 
 export const buildOn = () => (save.next || 0) >= UNLOCK.construir;
 export const styleOf = (w) => STYLE_ORDER[Math.floor(w / 10) % STYLE_ORDER.length];
