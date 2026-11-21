@@ -21,10 +21,10 @@ const FLY_EASE = 'cubic-bezier(0.33, 0.6, 0.35, 1)';
 // mismo texto en su ventana al aparecer, en Tu camino y en Cómo jugar. Cada una: qué hace y, si hace falta, cuándo.
 export const MECH_KINDS = [
   ['Se abren después', ['lock', 'slock', 'curtain', 'ice', 'vine', 'sleep']],
-  ['Cambian con los turnos', ['live', 'ghost', 'cham']],
-  ['Reglas al jugar', ['double', 'arrow', 'ticket', 'domino', 'triple', 'twin', 'tug']],
+  ['Cambian con los turnos', ['live', 'ghost', 'cham', 'clone']],
+  ['Reglas al jugar', ['double', 'arrow', 'ticket', 'domino', 'triple', 'twin', 'tug', 'mirror', 'echo']],
   ['No se juegan', ['pack', 'bomb', 'comet']],
-  ['Te ayudan', ['coin', 'turbo', 'bolt', 'cst', 'magnet', 'rainbow', 'paint', 'scope', 'lasso', 'wand']],
+  ['Te ayudan', ['coin', 'turbo', 'bolt', 'cst', 'magnet', 'rainbow', 'paint', 'scope', 'lasso', 'wand', 'bubble']],
 ];
 // Dibujos que viven en main.js y dev.js (la carta de ejemplo y el icono de cada mesa): main.js los pone al arrancar.
 export const ART = { mechCard: () => '', tableIcon: () => '' };
@@ -62,6 +62,11 @@ export const TIPS = {
   wand: 'Se juega normal. Después tocas una carta libre y le sale una pestaña con <b>+</b> y <b>−</b>: le <b>subes o bajas hasta 3</b>. Con la palomita queda así.',
   twin: 'Van atadas con un <b>lazo</b>. Al jugar una, la otra sale de donde esté, aunque esté tapada, y cae al <b>descarte</b>: sigues desde ella.',
   tug: 'Van unidas con un <b>cable</b>. Al jugar una, el cable <b>jala</b> a la otra de donde esté, aunque esté tapada, y la deja en el <b>lugar</b> de la que jugaste.',
+  // 21 nov 2026 (pedido del usuario; escogidas en dev/ideas-21-nov.html).
+  mirror: 'Se juega normal, pero al caer en tu descarte <b>se refleja</b> y vale su <b>opuesto</b>: A↔K, 2↔Q, 3↔J, 4↔10, 5↔9, 6↔8. El 7 se queda en 7.',
+  echo: 'Se juega normal y tu siguiente jugada también puede ser una carta <b>del mismo número</b> (un 7 sobre el 7). Las que entran así <b>vibran</b>.',
+  bubble: 'Se juega normal y tu racha se mete en una <b>burbuja</b>: la próxima vez que robes, <b>revienta la burbuja</b> en lugar de tu racha y sigues contando.',
+  clone: 'No tiene número propio: <b>copia</b> a la carta de su <b>izquierda</b> en su fila (si no hay, a la de la derecha). Cuando esa se va, <b>se transforma</b> en la siguiente.',
   vine: 'No se juega mientras la tape la <b>enredadera</b>, que <b>crece</b> cada 5 jugadas o robos. Juega la carta de <b>fuego</b> y las quema todas.',
 };
 // La ayuda que sirve contra cada carta (11 nov 2026, pedido del usuario): sale con su carta en la ventana de la primera
@@ -70,6 +75,7 @@ export const TIP_HELP = {
   // 13 nov 2026 (pedido del usuario): la carta imán presenta también la ayuda imán, como la mesa de asteroides al láser.
   magnet: ['iman', 'himan', '<b>Imán:</b> también lo compras en tus ayudas, para usarlo cuando quieras.'],
   wand: ['varita', 'hvarita', '<b>Varita:</b> también la compras en tus ayudas, para usarla cuando quieras.'],
+  bubble: ['burbuja', 'hburbuja', '<b>Burbuja:</b> también la compras en tus ayudas, para cuidar tu racha cuando quieras.'],
   scope: ['tele', 'htele', '<b>Telescopio:</b> también lo compras en tus ayudas y deja ver todo <b>5 turnos</b>.'],
   lock: ['llave', 'hllave', '<b>Llave maestra:</b> abre todos los candados y cortinas.'],
   slock: ['llave', 'hllave', '<b>Llave maestra:</b> abre todos los candados y cortinas.'],
@@ -80,7 +86,7 @@ export const TIP_HELP = {
   ghost: ['reloj', 'hreloj', '<b>Reloj de arena:</b> congela 3 turnos todo lo que cuenta.'],
   vine: ['reloj', 'hreloj', '<b>Reloj de arena:</b> congela 3 turnos todo lo que cuenta.'],
 };
-const MECH_FIELD = { tug: 'tug', lasso: 'lasso', wand: 'wand', lock: 'lock', pack: 'pack', ice: 'ice', double: 'alt', arrow: 'arrow', curtain: 'curtain', bomb: 'bomb', live: 'live', ticket: 'half', comet: 'comet', turbo: 'turbo', ghost: 'ghost', ship: 'ship', coin: 'coin', cham: 'cham', bolt: 'bolt', cst: 'cst', vine: 'vine', magnet: 'magnet', rainbow: 'rainbow', sleep: 'sleep', domino: 'dom', triple: 'tri', slock: 'sl', paint: 'paint', scope: 'scope', twin: 'twin' };
+const MECH_FIELD = { tug: 'tug', lasso: 'lasso', wand: 'wand', lock: 'lock', pack: 'pack', ice: 'ice', double: 'alt', arrow: 'arrow', curtain: 'curtain', bomb: 'bomb', live: 'live', ticket: 'half', comet: 'comet', turbo: 'turbo', ghost: 'ghost', ship: 'ship', coin: 'coin', cham: 'cham', bolt: 'bolt', cst: 'cst', vine: 'vine', magnet: 'magnet', rainbow: 'rainbow', sleep: 'sleep', domino: 'dom', triple: 'tri', slock: 'sl', paint: 'paint', scope: 'scope', twin: 'twin', mirror: 'mirror', echo: 'echo', bubble: 'bubble', clone: 'clone' };
 // Constelación (10 nov 2026, pedido del usuario): al juntarla, CST_HELP de las veces una ayuda y si no monedas, de 50 a
 // 200 (casi siempre de las bajas: el promedio queda en ~100, unas 2 veces lo que paga un nivel ahí).
 const CST_HELP = 0.15;
@@ -141,7 +147,7 @@ export function faceHTML(c, rank = c.rank) {
   // Carta viva: en la esquina va la flecha de hacia dónde cambia (el número está al centro).
   // Cohete turbo: en la esquina va el cohete (es el que despega al jugarla); por lo demás, carta normal.
   const corner = c.live ? `<span class="rk dir${c.live < 0 ? ' down' : ''}">${LIVE_DIR[c.live > 0 ? 'up' : 'down']}</span>` : c.turbo ? `<span class="rk tb-rk">${icon('rocket')}</span>` : `<span class="rk${SIXNINE(r)}">${r}</span>`;
-  const kind = c.live ? ' live' : c.cham ? ' cham' : c.arrow ? ' arrowed' : c.lock != null ? ' locked' : c.key != null ? ' keyed' : '';
+  const kind = c.clone ? ' clone' : c.mirror ? ' mirror' : c.live ? ' live' : c.cham ? ' cham' : c.arrow ? ' arrowed' : c.lock != null ? ' locked' : c.key != null ? ' keyed' : '';
   // Candado y llave: carta del color de su pareja, con su dibujo dentro en el lugar del palo
   // (el palo sale cuando se abre el candado).
   const pair = c.lock ?? c.key;
@@ -149,7 +155,7 @@ export function faceHTML(c, rank = c.rank) {
   const badge = c.lock != null ? `<span class="lk-badge">${lockIcon(LOCK_HUES[c.lock])}</span>` : c.key != null ? `<span class="lk-badge">${keyIcon(LOCK_HUES[c.key])}</span>` : '';
   // 11 nov 2026 (pedido del usuario: igual que el cohete turbo): rayo, fantasma y llave de puerta llevan su dibujo
   // arriba a la derecha, en el lugar del palo; la constelación, su estrellita abajo a la derecha, dentro de la carta.
-  const mk = c.bolt ? 'rayo' : c.fire ? 'flame' : c.magnet ? 'iman' : c.scope ? 'telescopio' : c.lasso ? 'lazoVaquero' : c.wand ? 'varitaEstrella' : c.rainbow ? 'arcoiris' : c.ghost ? 'ghost' : c.doorKey ? 'llavePuerta' : null;
+  const mk = c.bolt ? 'rayo' : c.fire ? 'flame' : c.magnet ? 'iman' : c.scope ? 'telescopio' : c.lasso ? 'lazoVaquero' : c.wand ? 'varitaEstrella' : c.rainbow ? 'arcoiris' : c.mirror ? 'espejo' : c.echo ? 'eco' : c.bubble ? 'burbujaRacha' : c.ghost ? 'ghost' : c.doorKey ? 'llavePuerta' : null;
   const suit = c.key != null ? '' : c.coin ? `<span class="cs coin-cs">${icon('monedas')}</span>` : mk ? `<span class="cs mk-cs">${icon(mk)}</span>` : `<span class="${cs}">${s}</span>`;
   return `<div class="face front${red}${kind}"${tint}>${corner}${suit}${badge}<span class="big${r === '10' ? ' ten' : ''}${SIXNINE(r)}">${r}</span>${arrow}${c.cst ? `<span class="cst-mk">${icon('star')}</span>` : ''}${c.paint ? `<span class="paint-mk">${PAINT_ICO}</span>` : ''}${c.cham ? `${CHAM_FACE('cham-eyes')}<span class="cham-ov">${CHAM_FACE('cham-face')}</span>` : ''}${c.twin != null ? twinEye(c) : ''}</div>`;
 }
@@ -424,6 +430,11 @@ const BACK_MARK = (c) =>
   : c.cst ? ['#ffc83d', 'tb-ico mk-cst', icon('star')]
   : c.ghost ? ['#b9aef0', 'tb-ico mk-ghost', icon('ghost')]
   : c.doorKey ? ['#c9893a', 'tb-ico mk-door', icon('llavePuerta')]
+  // Espejo, eco, burbuja de racha y clon (21 nov 2026).
+  : c.mirror ? ['#8fc6f0', 'tb-ico mk-mirror', icon('espejo')]
+  : c.echo ? ['#5fd47a', 'tb-ico mk-echo', icon('eco')]
+  : c.bubble ? ['#4fc3e8', 'tb-ico mk-bubble', icon('burbujaRacha')]
+  : c.clone ? ['#5ff0ff', 'tb-ico mk-clone', icon('clon')]
   // Pintura (17 nov 2026): orilla rosa con la brocha al centro.
   : c.paint ? ['#ff5f7e', 'tb-ico mk-paint', PAINT_ICO]
   : null;
@@ -920,7 +931,7 @@ export class Game {
     const L = this.level;
     if (L.event) return '';
     // Arena de jefes: no es un nivel del camino; va la corona.
-    if (L.arena) return `<span class="lvl-tag arena-tag" aria-label="Arena de jefes"><small>Arena</small>${icon('crown')}</span>`;
+    if (L.arena) return `<span class="lvl-tag arena-tag" aria-label="Arena de jefes">${icon('crown')}</span>`;
     const [t, n] = L.secret ? ['Secreto', L.world + 1] : ['Nivel', L.g + 1];
     return `<span class="lvl-tag" aria-label="${t} ${n}"><small>${t}</small><b>${n.toLocaleString('es-MX')}</b></span>`;
   }
@@ -2608,7 +2619,7 @@ export class Game {
   // Cómo se ve ahorita: con su palo de ahora; la gemela que ya jaló a su pareja ya no lleva ojal.
   look(c) {
     const st = this.st;
-    return { ...c, suit: st.suit?.[c.id] ?? c.suit, ...(c.twin != null && st.rem[c.twin] && { twin: null }) };
+    return { ...c, suit: st.suit?.[c.id] ?? (c.clone ? E.cloneSuit(c, st) : c.suit), ...(c.twin != null && st.rem[c.twin] && { twin: null }) };
   }
   // Piedras en las cartas: caen girando desde arriba (las nuevas) y se rompen en pedacitos al llegar a 0.
   paintRocks() {
@@ -3554,6 +3565,8 @@ export class Game {
     this.el.classList.toggle('fire-low', E.fireLow(st));
     // Arcoíris encendido: las cartas que puedes jugar ahorita se pintan de colores (cambian con cada descarte).
     const rbCan = st.top?.rb > 0 && !this.dealing ? new Set(E.legal(level, st).map((c) => c.id)) : null;
+    // Eco: las que entran por ser del mismo número vibran.
+    const echoCan = st.top?.echo && !this.dealing ? new Set(E.legal(level, st).filter((c) => E.playRank(level, c, st) === st.top.rank).map((c) => c.id)) : null;
     for (const c of this.cards) {
       // Fénix: la que se jugó se lleva su fuego, que se apaga en el camino.
       if (c.removed && c.el) this.fireOn(c, false);
@@ -3567,6 +3580,20 @@ export class Game {
       if (!this.dealing) el.classList.toggle('up', this.shownUp(c) || see);
       el.classList.toggle('scope-see', see);
       el.classList.toggle('rb-can', !!rbCan?.has(c.id));
+      el.classList.toggle('echo-can', !!echoCan?.has(c.id));
+      // Clon (21 nov 2026): cuando su vecina se va, se transforma en la siguiente (se aguada y rebota, como el camaleón).
+      if (c.clone) {
+        const r = E.rankOf(c, st), key = `${r}:${E.cloneSuit(c, st)}`, was = el.dataset.cl;
+        if (was !== key) {
+          el.dataset.cl = key;
+          const box = el.querySelector('.inner'), swap = () => { const f = box?.querySelector('.front'); if (f) f.outerHTML = faceHTML(this.look(c), r); };
+          if (was == null || reduced() || this.dealing || !box) swap();
+          else {
+            box.animate([{ scale: '1 1', filter: 'none' }, { scale: '0.55 1.05', filter: 'blur(2px) hue-rotate(80deg)', offset: 0.4 }, { scale: '1.1 0.95', filter: 'none', offset: 0.75 }, { scale: '1 1' }], { duration: 560, easing: 'ease-out' });
+            setTimeout(swap, 220);
+          }
+        }
+      }
       // Rayo: la carta liberada va por encima de las que la tapaban.
       const lifted = !!st.lift?.includes(c.id);
       if (lifted !== el.classList.contains('lifted')) {
@@ -3757,8 +3784,38 @@ export class Game {
     // El cohete turbo ya despegó de la esquina: en el descarte se ve con su número.
     // Arcoíris (13 nov 2026, pedido del usuario: sin el ±2 ni las bolitas): el descarte lleva una orilla de colores, un
     // color por cada jugada ±2 que queda; cada jugada le quita uno.
-    this.wasteEl.innerHTML = top ? `<div class="card up${top.rb ? ' rb-top' : ''}"${top.rb ? ` data-rb="${top.rb}"` : ''}>${inner({ ...top, arrow: top.arrow, turbo: false })}</div>` : '';
+    this.wasteEl.innerHTML = top ? `<div class="card up${top.rb ? ' rb-top' : ''}${top.echo ? ' echo-top' : ''}${top.mirror && !this.wasteShow ? ' mirror-top' : ''}"${top.rb ? ` data-rb="${top.rb}"` : ''}>${inner({ ...top, arrow: top.arrow, turbo: false })}</div>` : '';
     this.wasteEl.classList.toggle('arrowed', !!top?.arrow);
+  }
+
+  // Espejo (21 nov 2026): la carta del descarte se voltea como en un espejo, pasa un brillo y queda con su opuesto.
+  mirrorFx() {
+    const old = this.wasteEl.firstElementChild;
+    if (!this.wasteShow || !old || reduced()) return (this.wasteShow = null), this.renderWaste();
+    old.animate([{ scale: '1 1' }, { scale: '0 1' }], { duration: 170, easing: 'ease-in', fill: 'forwards' }).finished.then(() => {
+      this.wasteShow = null;
+      this.renderWaste();
+      const card = this.wasteEl.firstElementChild;
+      if (!card) return;
+      card.animate([{ scale: '0 1' }, { scale: '1.12 1' }, { scale: '1 1' }], { duration: 300, easing: 'ease-out' });
+      const sh = document.createElement('i');
+      sh.className = 'mirror-shine';
+      (card.querySelector('.front') || card).append(sh);
+      sh.animate([{ translate: '-130% 0' }, { translate: '130% 0' }], { duration: 650, easing: 'ease-in-out', fill: 'forwards' }).finished.then(() => sh.remove());
+      buzz(12);
+    });
+  }
+  // Eco (21 nov 2026): dos ondas verdes salen del descarte; las del mismo número vibran (echo-can, en refresh).
+  echoFx() {
+    const card = this.wasteEl.firstElementChild;
+    if (!card || reduced()) return;
+    for (let i = 0; i < 2; i++) {
+      const r = document.createElement('i');
+      r.className = 'echo-ring';
+      card.append(r);
+      r.animate([{ scale: 1, opacity: 0.9 }, { scale: 1.9, opacity: 0 }], { duration: 700, delay: i * 220, easing: 'ease-out', fill: 'both' }).finished.then(() => r.remove());
+    }
+    buzz(8);
   }
 
   landWaste() {
@@ -3797,11 +3854,40 @@ export class Game {
     // Jefe (15 nov 2026, pedido del usuario): su barra de vida va dentro de la racha, a la derecha (se conserva el
     // mismo elemento para que no se reinicie su ancho).
     const fb = this.el.querySelector('.foe-bar');
-    this.comboEl.innerHTML = `${this.levelTag()}${tb ? `<span class="turbo-chip">${icon('rocket')}<b>×2</b><span class="tps">${pips}</span></span>` : ''}<span class="dots">${from ? `<b>×${from}</b>` : ''}${dots}${prize}</span>${near ? `<em class="need outl">¡Falta ${left}!</em>` : ''}`;
+    // Burbuja de racha (21 nov 2026, el usuario: «no sé si funcione envolver todo el de racha»): no envuelve la barra;
+    // una burbuja chiquita va pegada a los puntos, se mece mientras te cuida y revienta al robar (bubbleFx).
+    const bub = !!this.st.bub, bubWas = !!this.bubShown, oldBub = this.comboEl.querySelector('.bub-chip')?.getBoundingClientRect();
+    this.bubShown = bub;
+    this.comboEl.classList.toggle('bubbled', bub);
+    this.comboEl.innerHTML = `${this.levelTag()}${bub ? `<span class="bub-chip">${icon('burbujaRacha')}</span>` : ''}${tb ? `<span class="turbo-chip">${icon('rocket')}<b>×2</b><span class="tps">${pips}</span></span>` : ''}<span class="dots">${from ? `<b>×${from}</b>` : ''}${dots}${prize}</span>${near ? `<em class="need outl">¡Falta ${left}!</em>` : ''}`;
     if (fb) this.comboEl.append(fb);
     if (cur !== prev) this.turboFx(cur, prev, oldChip, oldRect);
+    if (bub !== bubWas) this.bubbleFx(bub, oldBub);
     this.comboEl.classList.toggle('near', near);
     this.comboEl.classList.toggle('hot', near && left === 1);
+  }
+
+  // Burbuja: llega inflándose; al robar revienta en gotitas (la racha se queda) o se va sola al deshacer.
+  bubbleFx(on, rect) {
+    if (reduced()) return;
+    const chip = this.comboEl.querySelector('.bub-chip');
+    if (on && chip) return chip.animate([{ scale: 0, opacity: 0 }, { scale: 1.4, opacity: 1, offset: 0.6 }, { scale: 1 }], { duration: 520, easing: 'cubic-bezier(0.34, 1.45, 0.64, 1)' });
+    if (on || !rect?.width) return;
+    const [x, y] = center(rect);
+    for (let i = 0; i < 9; i++) {
+      const d = document.createElement('i');
+      d.className = 'bub-drop';
+      Object.assign(d.style, { left: `${x}px`, top: `${y}px` });
+      document.body.append(d);
+      const a = (i / 9) * Math.PI * 2, r = 22 + Math.random() * 14;
+      d.animate([{ translate: '-50% -50%', scale: 1, opacity: 1 }, { translate: `calc(-50% + ${Math.cos(a) * r}px) calc(-50% + ${Math.sin(a) * r}px)`, scale: 0.3, opacity: 0 }], { duration: 520, easing: 'ease-out', fill: 'forwards' }).finished.then(() => d.remove());
+    }
+    const ring = document.createElement('i');
+    ring.className = 'bub-drop ring';
+    Object.assign(ring.style, { left: `${x}px`, top: `${y}px`, width: `${rect.width}px`, height: `${rect.height}px` });
+    document.body.append(ring);
+    ring.animate([{ translate: '-50% -50%', scale: 1, opacity: 1 }, { translate: '-50% -50%', scale: 1.8, opacity: 0 }], { duration: 380, easing: 'ease-out', fill: 'forwards' }).finished.then(() => ring.remove());
+    buzz([10, 30, 10]);
   }
 
   // Animaciones del chip del turbo. Llega: entra de golpe. Se usa una jugada: el "×2" brinca y el puntito usado
@@ -4146,6 +4232,8 @@ export class Game {
     // Cartas con cable: el cable jala a la otra hasta el lugar de la jugada y, en el rebote, la jugada cae al descarte.
     const aEl = c.el;
     if (ev.twin != null) this.wasteShow = { rank: ev.rank, suit: c.suit };
+    // Espejo: llega con su número y, ya en el descarte, se refleja (mirrorFx).
+    if (ev.mirror) this.wasteShow = { rank: ev.mirror.from, suit: before.suit?.[c.id] ?? c.suit };
     if (ev.tug != null) this.yankTwin(c, this.cards[ev.tug], ev, before);
     else if (ev.split) this.splitTicket(c, ev);
     else if (ev.tri?.left) this.tearStub(c, ev);
@@ -4885,6 +4973,9 @@ export class Game {
       this.history[this.history.length - 1].slPay = pay;
     }
     if (ev.paint) this.paintFx(ev.paint);
+    // Espejo y eco (21 nov 2026): ya en el descarte, se refleja o suena el eco.
+    if (ev.mirror) setTimeout(() => this.mirrorFx(), FLY_MS + 80);
+    if (ev.echo) setTimeout(() => this.echoFx(), FLY_MS + 80);
     if (ev.pong) this.pongFx(ev.pong);
     if (ev.bolted) this.boltFx(ev.bolted);
     // Medusa: la jugaste sobre su color y se descarga.
@@ -5604,14 +5695,16 @@ export class Game {
       // Telescopio y astronauta (14 nov 2026): se venden cuando ya los conoces (niveles 81 y 171) o si tienes alguno.
       tele: this.cards.some((c) => left(c) && !this.shownUp(c)) && !(st.scope > 0) && (!!save.seen.scope || save.helps.tele > 0),
       astro: this.astroTable() && !E.astroHere(level, st) && st.hold == null && (!!save.seen.astro || save.helps.astro > 0),
+      // Burbuja (21 nov 2026): se vende cuando ya conoces la carta (nivel 831) o tienes alguna.
+      burbuja: !st.bub && (!!save.seen.bubble || save.helps.burbuja > 0),
     };
     // 13 nov 2026 (pedido del usuario): de la más barata a la más cara; las que no se compran (ver 4 y 5 s), al final.
     const cost = (k) => (k === 'wild' || buyable(k) ? this.priceOf(k) : Infinity);
-    if (this.opts.arena) return ['wild', 'iman', 'varita', 'reloj', 'laser', 'escudo', 'ver2', 'ver3', 'ver4', 'ver5', 'astro', 'tele', 'llave'].filter((k) => this.helpHave(k) > 0);
-    return ['wild', 'iman', 'varita', 'reloj', 'laser', 'escudo', 'ver2', 'ver3', 'ver4', 'ver5', 'astro', 'tele', 'llave'].filter((k) => k === 'wild' || ((buyable(k) || (save.helps[k] || 0) > 0) && useful[HELPS[k].secs ? 'ver' : k])).sort((a, b) => cost(a) - cost(b));
+    if (this.opts.arena) return ['wild', 'burbuja', 'iman', 'varita', 'reloj', 'laser', 'escudo', 'ver2', 'ver3', 'ver4', 'ver5', 'astro', 'tele', 'llave'].filter((k) => this.helpHave(k) > 0);
+    return ['wild', 'burbuja', 'iman', 'varita', 'reloj', 'laser', 'escudo', 'ver2', 'ver3', 'ver4', 'ver5', 'astro', 'tele', 'llave'].filter((k) => k === 'wild' || ((buyable(k) || (save.helps[k] || 0) > 0) && useful[HELPS[k].secs ? 'ver' : k])).sort((a, b) => cost(a) - cost(b));
   }
   helpName(k) {
-    return k === 'wild' ? 'Comodín' : HELPS[k].secs ? `Ver ${HELPS[k].secs} s` : k === 'reloj' ? 'Reloj' : k === 'laser' ? 'Láser' : k === 'escudo' ? 'Escudo' : k === 'iman' ? 'Imán' : k === 'varita' ? 'Varita' : k === 'tele' ? 'Telescopio' : k === 'astro' ? 'Astronauta' : 'Llave';
+    return k === 'wild' ? 'Comodín' : HELPS[k].secs ? `Ver ${HELPS[k].secs} s` : k === 'reloj' ? 'Reloj' : k === 'laser' ? 'Láser' : k === 'escudo' ? 'Escudo' : k === 'iman' ? 'Imán' : k === 'varita' ? 'Varita' : k === 'burbuja' ? 'Burbuja' : k === 'tele' ? 'Telescopio' : k === 'astro' ? 'Astronauta' : 'Llave';
   }
   // El astronauta solo cabe en mesas normales (como cuando sale en el nivel).
   astroTable() {
@@ -5619,7 +5712,7 @@ export class Game {
     return !L.scroll && !L.tide && !L.belt && !L.doors && !L.hole && !L.rocks && !L.neb;
   }
   helpBack(k) {
-    return cardBackURL(k === 'wild' ? 'comodin' : k === 'reloj' ? 'hreloj' : k === 'llave' ? 'hllave' : k === 'laser' ? 'hlaser' : k === 'escudo' ? 'hescudo' : k === 'iman' ? 'himan' : k === 'varita' ? 'hvarita' : k === 'tele' ? 'htele' : k === 'astro' ? 'hastro' : 'hver');
+    return cardBackURL(k === 'wild' ? 'comodin' : k === 'reloj' ? 'hreloj' : k === 'llave' ? 'hllave' : k === 'laser' ? 'hlaser' : k === 'escudo' ? 'hescudo' : k === 'iman' ? 'himan' : k === 'varita' ? 'hvarita' : k === 'burbuja' ? 'hburbuja' : k === 'tele' ? 'htele' : k === 'astro' ? 'hastro' : 'hver');
   }
   helpHave(k) {
     return k === 'wild' ? save.wild : save.helps[k] || 0;
@@ -5747,6 +5840,7 @@ export class Game {
     const { level, st } = this, left = (c) => !st.rem[c.id] && c.el;
     if (k === 'reloj' && !level.rocks && E.vineLeft(level, st) == null && !E.bossAlive(level, st) && !this.cards.some((c) => left(c) && (c.bomb || c.comet || c.live || c.ghost || c.cham || c.ring || c.belt))) return 'Aquí no hay cuentas que congelar';
     if (k === 'laser' && !Object.keys(st.rock || {}).length) return 'No hay piedras que romper';
+    if (k === 'burbuja') return st.bub ? 'Ya tienes la burbuja puesta' : null;
     if (k === 'varita') return st.wand ? 'Ya tienes la varita lista: toca una carta' : !this.cards.some((c) => c.el && E.canWand(level, c, { ...st, wand: true })) ? 'No hay carta libre que cambiar' : null;
     if (k === 'iman') return !this.stock.length ? 'Ya no hay cartas en el mazo' : st.magnet ? 'Ya tienes un imán esperando tu robo' : null;
     if (k === 'escudo') return !level.ship ? 'Aquí no pasa la nave ladrona' : st.shield ? 'Ya tienes el escudo puesto' : null;
@@ -5772,11 +5866,12 @@ export class Game {
     if (HELPS[k].secs) return this.peekAll(HELPS[k].secs);
     const st = this.st;
     this.history.push({ t: 'help', k, before: st, best: this.best, bonus: this.bonus });
-    this.st = k === 'reloj' ? E.useClock(st) : k === 'laser' ? E.useLaser(st) : k === 'escudo' ? E.useShield(st) : k === 'iman' ? E.useMagnet(st) : k === 'varita' ? E.useWandHelp(st) : k === 'tele' ? E.useScope(st) : k === 'astro' ? E.useAstro(st) : E.useMaster(st);
+    this.st = k === 'reloj' ? E.useClock(st) : k === 'laser' ? E.useLaser(st) : k === 'escudo' ? E.useShield(st) : k === 'iman' ? E.useMagnet(st) : k === 'varita' ? E.useWandHelp(st) : k === 'burbuja' ? E.useBubble(st) : k === 'tele' ? E.useScope(st) : k === 'astro' ? E.useAstro(st) : E.useMaster(st);
     if (k === 'laser') this.laserHit = true;
     // (El escudo trae su propio aviso: shieldFx, con la burbuja sobre el mazo.)
-    if (k !== 'escudo') toast(k === 'tele' ? `${icon('telescopio')} ¡Ves todas las cartas ${E.SCOPE_HELP} turnos!` : k === 'astro' ? `${icon('astronauta')} ¡Llegó Peter! Tócalo para que te guarde una carta` : k === 'iman' ? `${icon('iman')} ¡Imán! Tu siguiente robo te sirve` : k === 'varita' ? `${icon('varitaEstrella')} ¡Varita! Toca una carta libre` : k === 'reloj' ? `${icon('arena')} ¡Todo congelado ${E.CLOCK_TURNS} turnos!` : k === 'laser' ? `${icon('laser')} ¡Piedras rotas!` : `${icon('llaveMaestra')} ¡Candados y cortinas abiertos!`);
+    if (k !== 'escudo') toast(k === 'tele' ? `${icon('telescopio')} ¡Ves todas las cartas ${E.SCOPE_HELP} turnos!` : k === 'astro' ? `${icon('astronauta')} ¡Llegó Peter! Tócalo para que te guarde una carta` : k === 'iman' ? `${icon('iman')} ¡Imán! Tu siguiente robo te sirve` : k === 'varita' ? `${icon('varitaEstrella')} ¡Varita! Toca una carta libre` : k === 'burbuja' ? `${icon('burbujaRacha')} ¡Tu racha está protegida!` : k === 'reloj' ? `${icon('arena')} ¡Todo congelado ${E.CLOCK_TURNS} turnos!` : k === 'laser' ? `${icon('laser')} ¡Piedras rotas!` : `${icon('llaveMaestra')} ¡Candados y cortinas abiertos!`);
     this.refresh();
+    if (k === 'burbuja') this.showCombo();
     if (k === 'escudo') this.shieldFx();
     this.updateCounts();
     this.save();

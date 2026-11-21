@@ -14,7 +14,8 @@ export const RACE_STEPS = 7;
 export const RACE_BOTS = 4;
 export const RACE_WAIT = 30 * 60 * 1000;
 // Bolsa de monedas que se reparte por lugar (1.º a 4.º); con un 5.º lugar (los 4 te ganaron) va el del 4.º.
-export const RACE_POT = 3000;
+// 20 nov 2026 (el usuario): cofres −35% (bolsa 3,000 → 1,950; si te caes 30+40 → 20+26 por escalón).
+export const RACE_POT = 1950;
 export const RACE_SPLIT = [0.5, 0.25, 0.15, 0.1];
 export const RACE_HELPS = [
   { wild: 2, undo: 3, helps: { reloj: 1, ver3: 1 } },
@@ -24,7 +25,7 @@ export const RACE_HELPS = [
 ];
 export const RACE_METAL = ['oro', 'plata', 'bronce', 'cobre'];
 // Si te caes: monedas por escalón (con 0 escalones también hay algo).
-export const RACE_LOSE = { base: 30, step: 40 };
+export const RACE_LOSE = { base: 20, step: 26 };
 // Mejora con las constelaciones (el usuario: «conforme avanzan las galaxias»): +10% por constelación, tope ×3.
 export const raceK = () => Math.min(3, 1 + 0.1 * Math.floor((save.open || 0) / 10));
 // Viajeros: cuántos pasan cada nivel y cuántas estrellas sacan (en promedio ~2.4 por nivel).

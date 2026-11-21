@@ -9,7 +9,7 @@ export const TICKET_PRICE = 250;
 // Boosters: el comodín, el pack de 3 deshacer y +5 cartas suben con el avance, en los mismos escalones que los boletos
 // (1, 2 o 3 boletos por nivel). Subidos el 7 nov 2026 (antes 250/350/450, 50/75/100 y 100/150/200): el usuario
 // gastaba +5 "a granel" y le seguían sobrando monedas; que duela.
-const TIERS = { wild: [500, 650, 800], undo: [150, 200, 250], extra: [300, 400, 500], reloj: [300, 400, 500], ver2: [150, 200, 250], ver3: [250, 325, 400], llave: [2000, 2500, 3000], tele: [2000, 2500, 3000], astro: [1700, 2125, 2550], laser: [250, 325, 400], escudo: [250, 325, 400], iman: [700, 910, 1120], varita: [1250, 1575, 1900] };
+const TIERS = { wild: [500, 650, 800], undo: [150, 200, 250], extra: [300, 400, 500], reloj: [300, 400, 500], ver2: [150, 200, 250], ver3: [250, 325, 400], llave: [2000, 2500, 3000], tele: [2000, 2500, 3000], astro: [1700, 2125, 2550], laser: [250, 325, 400], escudo: [250, 325, 400], iman: [700, 910, 1120], varita: [1250, 1575, 1900], burbuja: [400, 520, 640] };
 // Mazo de ayudas (7 nov 2026): la carta dorada del tablero abre el comodín y estas. save.helps = clave -> cuántas.
 // Las que no tienen precio solo se ganan (ver 4 y 5 s; la de 5 casi solo en eventos). La llave maestra es cara a propósito.
 export const HELPS = {
@@ -31,6 +31,8 @@ export const HELPS = {
   astro: { name: 'Astronauta', ico: 'astronauta', text: 'Llega a tu nivel y te <b>guarda una carta</b> libre. Cuando conecte, la manda al descarte.' },
   // 15 nov 2026 (pedido del usuario): la varita también se compra, entre el comodín y el telescopio.
   varita: { name: 'Varita', ico: 'varitaEstrella', text: 'Toca una carta libre y <b>súbele o bájale hasta 3</b>.' },
+  // 21 nov 2026 (pedido del usuario): la burbuja de racha también es ayuda, entre el reloj y el comodín.
+  burbuja: { name: 'Burbuja', ico: 'burbujaRacha', text: 'Tu racha se mete en una <b>burbuja</b>: la próxima vez que robes, <b>revienta la burbuja</b> y tu racha sigue.' },
   iman: { name: 'Imán', ico: 'iman', text: 'Tu <b>siguiente robo</b> saca del mazo la carta que <b>más te sirve</b>, sin cortar tu racha, y te enseña cuál jugar.' },
 };
 export const buyable = (k) => !!TIERS[k];

@@ -15,10 +15,11 @@ export const CREW_BOTS = 4;
 // sale con ellos; la plata y el oro piden que tú ayudes (~40 y ~100 tuyas).
 export const CREW_GOALS = [90, 150, 210];
 export const CREW_METAL = ['bronce', 'plata', 'oro'];
+// 20 nov 2026 (el usuario): premios −25% (300/600/1,200 → 225/450/900).
 export const CREW_PRIZE = [
-  { coins: 300, undo: 1 },
-  { coins: 600, wild: 1, undo: 1 },
-  { coins: 1200, wild: 2, undo: 2, helps: { reloj: 1, ver3: 1 } },
+  { coins: 225, undo: 1 },
+  { coins: 450, wild: 1, undo: 1 },
+  { coins: 900, wild: 2, undo: 2, helps: { reloj: 1, ver3: 1 } },
 ];
 // Mejora con las constelaciones, como la carrera: +10% por constelación, tope ×3.
 export const crewK = () => Math.min(3, 1 + 0.1 * Math.floor((save.open || 0) / 10));

@@ -1184,6 +1184,10 @@ function mechCard(m, x = 0) {
   if (m === 'twin') return mini(x, '5', 'h', { twin: 1 });
   if (m === 'tug') return mini(x, '8', 'c', { twin: 1, tug: 1 });
   if (m === 'rainbow') return mini(x, '6', 'c', { rainbow: 1 });
+  if (m === 'mirror') return mini(x, '3', 'h', { mirror: 1 });
+  if (m === 'echo') return mini(x, '7', 's', { echo: 1 });
+  if (m === 'bubble') return mini(x, '6', 'd', { bubble: 1 });
+  if (m === 'clone') return mini(x, '10', 'c', { clone: [0] });
   if (m === 'sleep') return mini(x, '8', 'd', { marks: `<span class="sleep-ov"><i class="sl-cap">${icon('dormida')}</i><span class="zz"><i>z</i><i>z</i><i>z</i></span><b>3</b></span>` }, 'asleep');
   if (m === 'comet') return `<div class="card comet-card up" style="left:${x}px"><div class="inner"><div class="face front"></div></div><span class="comet-face">${icon('comet')}<b>4</b><em>+3</em></span></div>`;
   return '';
@@ -1228,6 +1232,8 @@ function roadItems() {
     ['logros', UNLOCK.logros, 'Logros', 'trophy', 'Todo suma para siempre: bronce, plata, oro, platino y diamante.'],
     ['carrera', UNLOCK.carrera, 'Carrera de 7', 'carrera', 'Gana 7 niveles nuevos seguidos al primer intento contra 4 viajeros: el lugar se decide por estrellas.'],
     ['tripulacion', UNLOCK.tripulacion, 'Tripulación lunar', 'tripulacion', 'Cada semana juntas estrellas con 4 viajeros: el vehículo lunar llega a 3 bases y cada una te da un cofre.'],
+    // Arena de jefes (21 nov 2026, el usuario): se abre al ganar el nivel 100, el primer jefe de constelación.
+    ['arena', 100, 'Arena de jefes', 'crown', 'Vuelve a retar a los jefes que ya venciste, con la corona de abajo: otro tablero cada vez, con la dificultad y hasta 3 ayudas que escojas.'],
     ['meteoro', MET_FROM, 'Lluvia de meteoritos', 'meteoro', 'Cae sin aviso 30 minutos: doble de monedas y un premio sorpresa.'],
     ['estrellas', STAR_FROM, 'Lluvia de estrellas', 'starFall', 'Cae sin aviso 15 minutos: triple de monedas y hasta 3 premios.'],
     ['cometas', SHOWERS.comet.from, 'Lluvia de cometas', 'cometaLluvia', 'Cae sin aviso 20 minutos: niveles sin gastar boletos, 1 boleto más por victoria y un premio sorpresa.'],
@@ -1277,6 +1283,7 @@ function roadItems() {
     helpStop('ayuda-tele', 'scope', 'htele', 'Telescopio (ayuda)', 'Lo compras en tus ayudas: deja ver todas las cartas del tablero 5 turnos.'),
     helpStop('ayuda-astro', 'astro', 'hastro', 'Astronauta (ayuda)', 'Lo compras en tus ayudas: llega a tu nivel y te guarda una carta.'),
     helpStop('ayuda-varita', 'wand', 'hvarita', 'Varita (ayuda)', 'La compras en tus ayudas: tocas una carta libre y le subes o bajas hasta 3.'),
+    helpStop('ayuda-burbuja', 'bubble', 'hburbuja', 'Burbuja (ayuda)', 'La compras en tus ayudas: la próxima vez que robes, revienta la burbuja y tu racha sigue.'),
   ];
   // Jefes de constelación (15 nov 2026): la primera vez que sale cada uno (100, 200, 300…), solo cuando ya pasaste ese
   // nivel (no se anuncian con «?»: son sorpresa). Con el texto corto de Cómo jugar (17 nov 2026, el usuario).
@@ -3118,8 +3125,8 @@ const vecesTxt = (n) => `${n} ${n === 1 ? 'vez' : 'veces'}`;
 const arenaBtn = () => (arenaOn() ? `<button class="iconbtn tb press arena-tog${save.intro?.arena ? '' : ' fresh'}" data-a="arena" aria-label="Arena de jefes" title="Arena de jefes">${icon('crown')}</button>` : '');
 // Ayudas para escoger: comodín y deshacer siempre; las demás, las que ya conoces (alguna vez tuviste o ya salió su
 // carta en el camino).
-const ARENA_HELPS = [['wild', 'Comodín', 'wild'], ['undo', 'Deshacer ×3', 'undo'], ['reloj', 'Reloj de arena', 'arena'], ['ver3', 'Ver cartas', 'ojo'], ['llave', 'Llave maestra', 'llaveMaestra'], ['tele', 'Telescopio', 'telescopio'], ['varita', 'Varita', 'varitaEstrella'], ['iman', 'Imán', 'iman'], ['astro', 'Astronauta', 'astronauta']];
-const ARENA_SEEN = { iman: 'magnet', varita: 'wand', tele: 'scope', astro: 'astro' };
+const ARENA_HELPS = [['wild', 'Comodín', 'wild'], ['undo', 'Deshacer ×3', 'undo'], ['reloj', 'Reloj de arena', 'arena'], ['ver3', 'Ver cartas', 'ojo'], ['llave', 'Llave maestra', 'llaveMaestra'], ['tele', 'Telescopio', 'telescopio'], ['varita', 'Varita', 'varitaEstrella'], ['iman', 'Imán', 'iman'], ['burbuja', 'Burbuja', 'burbujaRacha'], ['astro', 'Astronauta', 'astronauta']];
+const ARENA_SEEN = { iman: 'magnet', varita: 'wand', tele: 'scope', astro: 'astro', burbuja: 'bubble' };
 const arenaHelpOk = (k) => {
   const has = save.helps || {};
   if (k === 'wild' || k === 'undo') return true;
@@ -6434,6 +6441,7 @@ const hcard = (k) => `<span class="help-card" style="background-image:${cardBack
 const MECH_INTRO_HELP = { 'Se abren después': 'Esperan algo para poder jugarse.', 'Cambian con los turnos': 'Cambian solas mientras juegas.', 'Reglas al jugar': 'Se juegan distinto a las demás.', 'No se juegan': 'Se destapan, no se juegan.', 'Te ayudan': 'Al jugarlas te dan algo extra.' };
 const CARD_SHORT = {
   tug: 'al jugar una, el <b>cable</b> jala a la otra a su <b>lugar</b>.',
+  mirror: 'en el descarte vale su <b>opuesto</b> (A↔K, 3↔J).', echo: 'la siguiente puede ser del <b>mismo número</b>.', bubble: 'tu siguiente robo <b>no corta</b> tu racha.', clone: '<b>copia</b> a su vecina de la izquierda.',
   lock: 'se abre al jugar la carta con la <b>llave</b> de su color.', slock: 'juega cartas de su <b>palo</b> para romper sus cadenas; te da monedas.', curtain: 'sigue <b>boca abajo</b> hasta jugar la del <b>telón</b>.', ice: 'se <b>derrite</b> con cada carta que juegas.', vine: 'la tapa la <b>enredadera</b>; la carta de <b>fuego</b> la quema.', sleep: 'despierta con su número de cartas <b>seguidas</b>.',
   live: 'su número <b>sube o baja</b> con cada turno.', ghost: '<b>aparece y desaparece</b>; juégala cuando se vea.', cham: 'a ratos se vuelve <b>comodín</b>.',
   double: 'vale <b>dos números</b>.', arrow: 'la siguiente tiene que ir hacia donde marca la <b>flecha</b>.', ticket: '<b>dos mitades</b>: juega una y la otra se queda.', domino: 'entras por un número y en el descarte queda <b>el otro</b>.', triple: '<b>3 talones</b>: primero los de las puntas.', twin: 'al jugar una, la <b>otra</b> cae al descarte.',
@@ -6485,6 +6493,7 @@ function openHelp(tab = 'basico', then) {
         ${S(hcard('hescudo'), '<b>Escudo:</b> la nave ya no te roba.', 'ship')}
         ${S(hcard('himan'), '<b>Imán:</b> tu siguiente robo te da la que más sirve.', 'magnet')}
         ${S(hcard('hvarita'), '<b>Varita:</b> sube o baja hasta 3 una carta libre.', 'wand')}
+        ${S(hcard('hburbuja'), '<b>Burbuja:</b> tu siguiente robo no corta tu racha.', 'bubble')}
         ${S(hcard('htele'), '<b>Telescopio:</b> ves todas las cartas 5 turnos.', 'scope')}
         ${S(hcard('hastro'), '<b>Astronauta:</b> te guarda una carta.', 'astro')}
         ${S(`<span class="help-btn">${icon('undo')}</span>`, '<b>Deshacer:</b> regresa tu última jugada o robo.')}

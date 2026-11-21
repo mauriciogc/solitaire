@@ -433,6 +433,17 @@ const ICONS = {
   // Arcoíris (13 nov 2026): cuatro arcos de color y dos nubes.
   arcoiris: () => ['#ff5f7e', '#ffd54a', '#5fd47a', '#5ab0ff'].map((c, i) => `<path d="M${4 + i * 3} 24a${12 - i * 3} ${12 - i * 3} 0 0 1 ${24 - i * 6} 0" fill="none" stroke="${K}" stroke-width="5.2"/><path d="M${4 + i * 3} 24a${12 - i * 3} ${12 - i * 3} 0 0 1 ${24 - i * 6} 0" fill="none" stroke="${c}" stroke-width="2.8"/>`).join('')
     + tshape('M1.5 26.5a3.6 3.6 0 0 1 3-4.5 4 4 0 0 1 7 1.3 3 3 0 0 1 .3 5.7h-8a2.6 2.6 0 0 1-2.3-2.5z', '#fff', '#dfe6f5', '', 1.8) + tshape('M20.2 26.5a3.6 3.6 0 0 1 3-4.5 4 4 0 0 1 7 1.3 3 3 0 0 1 .3 5.7h-8a2.6 2.6 0 0 1-2.3-2.5z', '#fff', '#dfe6f5', '', 1.8),
+  // Espejo, eco, burbuja de racha y clon (21 nov 2026, escogidas en dev/ideas-21-nov.html).
+  espejo: () => tshape('M16 2.5c6 0 10 5 10 11.5S22 25.5 16 25.5 6 20.5 6 14 10 2.5 16 2.5z', '#d6ecff', '#a9c9ec', `<path d="M11 10l5-4M11 16l9-8" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/>`, 2.2)
+    + tshape('M13.5 25h5v3.5h4v2.5h-13v-2.5h4z', '#c9a6ff', '#a07ad8', '', 1.8),
+  eco: () => tshape(CIRCLE(16, 16, 4.6), '#5fd47a', '#3aa85a', '', 2)
+    + `<path d="M9.5 9.5a9 9 0 0 0 0 13M22.5 9.5a9 9 0 0 1 0 13" fill="none" stroke="${K}" stroke-width="2.6" stroke-linecap="round"/>`
+    + `<path d="M5 5.5a15 15 0 0 0 0 21M27 5.5a15 15 0 0 1 0 21" fill="none" stroke="${K}" stroke-width="4.6" stroke-linecap="round"/><path d="M5 5.5a15 15 0 0 0 0 21M27 5.5a15 15 0 0 1 0 21" fill="none" stroke="#7dffb0" stroke-width="2.2" stroke-linecap="round"/>`,
+  burbujaRacha: () => `<circle cx="16" cy="16" r="13" fill="#9be7ff55" stroke="${K}" stroke-width="2.2"/><circle cx="16" cy="16" r="11" fill="none" stroke="#4fc3e8" stroke-width="1.6"/>`
+    + tshape('M16 7.5c3.6 4.4 6.6 6.8 6.6 11a6.6 6.6 0 0 1-13.2 0c0-3.2 2-4.6 3.2-6.8 1 2 2.2 2.4 3.4 1.2z', '#ff8a3d', '#e0602a', `<path d="M16 16.5c2 2 3 3.4 3 4.8a3 3 0 0 1-6 0c0-1.4 1.4-2.4 3-4.8z" fill="#ffd54a"/>`, 1.8)
+    + `<path d="M8 11.5a9 9 0 0 1 5-5" stroke="#fff" stroke-width="2.2" stroke-linecap="round" fill="none"/>`,
+  clon: () => tshape('M3 8h14v20H3z', '#fff', '#dfe6f5', '', 2)
+    + `<path d="M13 4h14v20H13z" fill="#bfe9ff" stroke="${K}" stroke-width="2" stroke-dasharray="3 2" stroke-linejoin="round"/><path d="M17 14h6M20 11v6" stroke="${K}" stroke-width="2.4" stroke-linecap="round"/>`,
   // Carta dormida (13 nov 2026): gorro de dormir con borla.
   dormida: () => tshape('M3 25C6 12 16 5 28 8l-3 7c-7-1-12 3-14 10z', '#7c55e0', '#5a3bbf', `<path d="M8 22c3-6 8-9 14-9" fill="none" stroke="#a37bff" stroke-width="2" stroke-linecap="round"/>`, 2.2)
     + tshape(CIRCLE(27.5, 8.5, 3.6), '#fff', '#dfe6f5', '', 2) + tshape('M2 23.5h12.5v4.5H2z', '#fff', '#dfe6f5', '', 2),
@@ -788,6 +799,7 @@ export const BACKS = {
   htele: { a: '#8a7cf0', b: '#6a5ad4', dots: '#efeaff', art: () => `<g transform="translate(17 37) scale(2.06)">${ICONS.telescopio()}</g>` },
   hastro: { a: '#3a4a9a', b: '#2a3680', dots: '#e6ecff', art: () => `<g transform="translate(17 37) scale(2.06)">${ICONS.astronauta()}</g>` },
   himan: { a: '#ff7a8e', b: '#e8506a', dots: '#ffe6ea', art: () => `<g transform="translate(17 37) scale(2.06)">${ICONS.iman()}</g>` },
+  hburbuja: { a: '#7fd8f5', b: '#3fb0dc', dots: '#e6f8ff', art: () => `<g transform="translate(17 37) scale(2.06)">${ICONS.burbujaRacha()}</g>` },
   hvarita: { a: '#b48cff', b: '#8a5cf0', dots: '#efe6ff', art: () => `<g transform="translate(17 37) scale(2.06)">${ICONS.varitaEstrella()}</g>` },
   // Mazo de ayudas (botón de la bandeja): genérico, turquesa con un destello mágico (no es el comodín).
   ayudas: { a: '#2fb4b0', b: '#1f9490', dots: '#e6fffb',

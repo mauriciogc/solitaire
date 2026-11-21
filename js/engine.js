@@ -66,6 +66,14 @@
 //             tablero de ese palo (s.sp = cuántas de cada palo llevas). Al abrirse da monedas (las da el juego)
 //   paint     pintura (17 nov 2026): al jugarla, la orilla del descarte se pinta de su color (s.paint). Si las PAINT_N
 //             jugadas siguientes son de ese color, cae una carta de regalo al mazo; otro color o robar la lavan
+//   echo      eco (21 nov 2026): al jugarla, la siguiente jugada también puede ser del mismo número (s.top.echo; robar
+//             lo apaga porque el descarte cambia)
+//   mirror    espejo (21 nov 2026): al caer en el descarte vale su opuesto (12 − número: A↔K, 2↔Q… el 7 se queda)
+//   clone     clon (21 nov 2026): ids de sus vecinas de fila (la de la izquierda más cercana primero, luego las de la
+//             derecha) con su número y palo impresos (cloneR, cloneS). Vale lo que la primera que siga en el tablero
+//             (con lo que le haya cambiado la varita o el ping-pong); si ya no queda ninguna, su propio número
+//   bubble    burbuja de racha (21 nov 2026): al jugarla, tu siguiente robo no corta la racha (s.bub). La ayuda Burbuja
+//             hace lo mismo (useBubble)
 //   scope     telescopio (14 nov 2026): al jugarlo se ven todas las cartas del tablero SCOPE_TURNS acciones (s.scope =
 //             las que quedan; solo es para ver: no cambia qué se puede jugar). La ayuda Telescopio da SCOPE_HELP
 //
@@ -197,7 +205,9 @@ export const triPick = (c, s, want = null) => {
 // también lo usaba, se quitó el 17 nov 2026.)
 export function miss(level, s0) {
   const s = cloneState(s0);
-  s.streak = 0;
+  // (Cuenta como robo: la burbuja también la cuida.)
+  if (s.bub && s.streak > 0) s.bub = false;
+  else s.streak = 0;
   s.turbo = 0;
   tick(s);
   return { s, ev: { t: 'miss' } };
@@ -218,7 +228,17 @@ export const holeTook = (c, t) => !!c.ring && t > 0 && c.ring[t % c.ring.length]
 // Número que muestra ahora una carta (la carta viva cambia con las acciones; del boleto partido, la mitad que queda;
 // la del agujero negro, la que le toca en el giro).
 export const rankOf = (c, s) => (s.shift?.[c.id] ? mod13(rank0(c, s) + s.shift[c.id]) : rank0(c, s));
-const rank0 = (c, s) => (c.ring ? c.ring[holeTurn(s) % c.ring.length] : c.live ? mod13(c.rank + c.live * s.actions) : cutOf(c, s) === 1 ? c.half : c.tri && triOf(c, s) & 1 ? triRank(c, triEnds(c, s)[0] ?? 0) : c.rank);
+// Clon: de cuál vecina copia ahora (índice en c.clone; -1 = ya no queda ninguna y vale su propio número).
+export const cloneAt = (c, s) => (c.clone ? c.clone.findIndex((j) => !s.rem[j]) : -1);
+const cloneRank = (c, s) => {
+  const k = cloneAt(c, s);
+  return k < 0 ? c.rank : mod13(c.cloneR[k] + (s.shift?.[c.clone[k]] || 0));
+};
+export const cloneSuit = (c, s) => {
+  const k = cloneAt(c, s);
+  return k < 0 ? c.suit : s.suit?.[c.clone[k]] ?? c.cloneS[k];
+};
+const rank0 = (c, s) => (c.clone ? cloneRank(c, s) : c.ring ? c.ring[holeTurn(s) % c.ring.length] : c.live ? mod13(c.rank + c.live * s.actions) : cutOf(c, s) === 1 ? c.half : c.tri && triOf(c, s) & 1 ? triRank(c, triEnds(c, s)[0] ?? 0) : c.rank);
 
 // ¿Vale el rango r sobre el descarte? A y K se conectan. Una flecha en el descarte obliga a una dirección.
 // Una carta doble en el descarte abre dos caminos (vale seguir desde cualquiera de sus dos números).
@@ -235,6 +255,8 @@ export function follows(top, r) {
   if (!top || r == null) return false;
   if (top.wild) return true;
   if (top.arrow) return r === mod13(top.rank + top.arrow);
+  // Eco: también vale el mismo número.
+  if (top.echo && (r === top.rank || (top.alt != null && r === top.alt))) return true;
   if (top.rb > 0 && (near2(top.rank, r) || (top.alt != null && near2(top.alt, r)))) return true;
   return near(top.rank, r) || (top.alt != null && near(top.alt, r));
 }
@@ -596,7 +618,7 @@ function zeroStep(level, s) {
 // atrás (se cambian número y palo con s.shift y s.suit). El reloj de arena la detiene. 17 nov 2026 (el usuario: «en
 // algunos niveles no se ve el cambio»): antes solo cartas sin mecánica y en tableros con muchas especiales casi nunca
 // había pareja; ahora cualquiera de un solo número fijo (la marca de su mecánica se queda en su lugar).
-const swappable = (c) => c.rank != null && !special(c) && !c.live && !c.ring && c.half == null && !c.tri && c.dom == null && c.alt == null && !c.cham && c.twin == null && !c.ghost && c.belt == null && c.door == null && !c.neb;
+const swappable = (c) => c.rank != null && !special(c) && !c.live && !c.ring && c.half == null && !c.tri && c.dom == null && c.alt == null && !c.cham && c.twin == null && !c.ghost && c.belt == null && c.door == null && !c.neb && !c.clone;
 export const PONG_EVERY = 4, PONG_PAIRS = 2;
 export const pongLeft = (s) => PONG_EVERY - (s.actions % PONG_EVERY);
 function pongStep(level, s0, s) {
@@ -619,7 +641,7 @@ function pongStep(level, s0, s) {
   return pairs.length ? pairs : null;
 }
 // Candado de palo: suma los palos de las cartas que bajaste y devuelve los candados que se abrieron con eso.
-const suitOf = (level, s, j) => s.suit?.[j] ?? level.cards[j].suit;
+const suitOf = (level, s, j) => s.suit?.[j] ?? (level.cards[j].clone ? cloneSuit(level.cards[j], s) : level.cards[j].suit);
 function countSuits(level, s0, s, ids) {
   const before = s0.sp || [0, 0, 0, 0];
   s.sp = before.slice();
@@ -663,7 +685,7 @@ export function play(level, s0, id, low = false, forced = false) {
   // La carta doble llega al descarte con sus dos números; la flecha, con su obligación.
   // Dominó: en el descarte se queda el otro número (por el que no entraste).
   const exit = c.dom != null ? (r === c.rank ? c.dom : c.rank) : null;
-  const suit = s0.suit?.[id] ?? c.suit;
+  const suit = s0.suit?.[id] ?? (c.clone ? cloneSuit(c, s0) : c.suit);
   s.top = chamWild(c, s0) ? { wild: true } : c.alt != null ? { rank: c.rank, alt: c.alt, suit } : exit != null ? { rank: exit, suit } : { rank: r, suit, ...(c.arrow && { arrow: c.arrow }) };
   // Fénix: una carta con ceniza que se juega ya no la trae.
   if (s.ash?.length) s.ash = s.ash.filter((j) => j !== id);
@@ -683,6 +705,12 @@ export function play(level, s0, id, low = false, forced = false) {
   // Arcoíris: el descarte lleva las jugadas ±2 que quedan.
   const rb = c.rainbow ? RAINBOW : Math.max(0, (s0.top?.rb || 0) - 1);
   if (rb && !s.top.wild) s.top.rb = rb;
+  // Espejo: en el descarte vale su opuesto (12 − número). Eco: la siguiente puede ser del mismo número.
+  const mirror = c.mirror && !s.top.wild ? { from: s.top.rank, to: mod13(12 - s.top.rank) } : null;
+  if (mirror) (s.top.rank = mirror.to), (s.top.mirror = 1);
+  if (c.echo && !s.top.wild) s.top.echo = 1;
+  // Burbuja: tu siguiente robo no corta la racha.
+  if (c.bubble) s.bub = true;
   // Imán: espera tu siguiente robo.
   if (c.magnet) s.magnet = true;
   // Varita y lazo: esperan a que escojas carta; si no, se pierden con esta jugada.
@@ -760,7 +788,7 @@ export function play(level, s0, id, low = false, forced = false) {
   const zero = level.zero ? zeroStep(level, s) : null;
   const pong = level.pong ? pongStep(level, s0, s) : null;
   const boss = bossStep(level, s0, s, true);
-  return { s, ev: { t: 'play', ...(zero && { zero }), ...(pong && { pong }), id, rank: r, ...(boss && { boss }), packs, defused, reward, boost, boom, wished, wishes, gone, ...(c.turbo && { turbo: true }), ...(twin != null && { twin }), ...(tug != null && { tug }), ...(split && { split }), ...(tri && { tri }), ...(exit != null && { exit }), ...(shipBack && { shipBack }), ...(c.doorKey && { key: true }), ...(cst && { cst }), ...(rockOff.length && { rockOff }), ...(bolted.length && { bolted }), ...(burnt && { burnt }), ...(zapOff && { zapOff }), ...(slOpen.length && { slOpen }), ...(paint && { paint }) } };
+  return { s, ev: { t: 'play', ...(zero && { zero }), ...(pong && { pong }), id, rank: r, ...(boss && { boss }), packs, defused, reward, boost, boom, wished, wishes, gone, ...(c.turbo && { turbo: true }), ...(twin != null && { twin }), ...(tug != null && { tug }), ...(split && { split }), ...(tri && { tri }), ...(exit != null && { exit }), ...(shipBack && { shipBack }), ...(c.doorKey && { key: true }), ...(cst && { cst }), ...(rockOff.length && { rockOff }), ...(bolted.length && { bolted }), ...(burnt && { burnt }), ...(zapOff && { zapOff }), ...(slOpen.length && { slOpen }), ...(paint && { paint }), ...(mirror && { mirror }), ...(c.echo && { echo: true }), ...(c.bubble && { bubble: true }) } };
 }
 
 // Abrir la puerta d con una llave. No es jugada ni robo: no mueve la racha ni las cuentas, salvo su premio
@@ -790,7 +818,7 @@ export function openDoor(level, s0, d) {
 // (ni boletos, dominó, gemelas, cartas vivas, fantasmas, camaleón, agujero negro ni raspadita). Las de la enredadera sí,
 // si todavía no las tapa (14 nov 2026, el usuario: «¿por qué no deja las otras?»); la de constelación también.
 export const astroHere = (level, s) => !!(level.astro || s.astroOn) && !s.astroGone;
-export const canHold = (level, c, s) => astroHere(level, s) && s.hold == null && c.rank != null && isOpen(level, c, s) && !special(c) && c.half == null && !c.tri && c.dom == null && c.twin == null && !c.live && !c.ghost && !c.cham && !c.ring && !c.doorKey && !c.coin;
+export const canHold = (level, c, s) => astroHere(level, s) && s.hold == null && c.rank != null && isOpen(level, c, s) && !special(c) && c.half == null && !c.tri && c.dom == null && c.twin == null && !c.live && !c.ghost && !c.cham && !c.ring && !c.doorKey && !c.coin && !c.clone;
 // Guardar: la carta sale del tablero (destapa lo de abajo). No es jugada ni robo: no toca racha ni cuentas.
 export function hold(level, s0, id) {
   const c = level.cards[id];
@@ -1275,7 +1303,8 @@ function bossAct(level, s0, s, played) {
 // Fénix: tocaste una carta con fuego que no conecta. Cuenta como robo: se corta la racha y pasa una acción.
 export function blind(level, s0, id) {
   const s = cloneState(s0);
-  s.streak = 0;
+  if (s.bub && s.streak > 0) s.bub = false;
+  else s.streak = 0;
   s.turbo = 0;
   s.wand = s.lasso = false;
   tick(s);
@@ -1287,7 +1316,7 @@ export function blind(level, s0, id) {
 // Después de jugarla, una carta libre de número fijo sube o baja hasta WAND_MAX (d = −3…3, sin 0). No es jugada ni
 // robo: no mueve la racha ni las cuentas.
 export const WAND_MAX = 3;
-const plain = (c) => c.rank != null && !special(c) && c.half == null && !c.tri && c.dom == null && c.alt == null && c.twin == null && !c.live && !c.ghost && !c.cham && !c.ring;
+const plain = (c) => c.rank != null && !special(c) && c.half == null && !c.tri && c.dom == null && c.alt == null && c.twin == null && !c.live && !c.ghost && !c.cham && !c.ring && !c.clone;
 export const canWand = (level, c, s) => !!s.wand && !s.rem[c.id] && plain(c) && isOpen(level, c, s);
 export function useWand(level, s0, id, d) {
   const c = level.cards[id];
@@ -1361,7 +1390,10 @@ export function draw(level, s0) {
   const paintOff = !!s.paint;
   s.paint = null;
   tick(s);
-  if (!pick) s.streak = 0;
+  // Burbuja: revienta en lugar de tu racha (si el imán ya la cuidó, la burbuja se queda para el siguiente robo).
+  const popped = !pick && !!s.bub && s.streak > 0;
+  if (popped) s.bub = false;
+  else if (!pick) s.streak = 0;
   s.turbo = card.turbo ? TURBO : 0;
   const boom = checkBombs(level, s);
   const gone = checkComets(level, s);
@@ -1378,11 +1410,14 @@ export function draw(level, s0) {
   const rocks = dropRocks(level, s, s0.freeze > 0);
   const pong = level.pong ? pongStep(level, s0, s) : null;
   const boss = bossStep(level, s0, s, false);
-  return { s, ev: { t: 'draw', ...(pong && { pong }), card, ...(boss && { boss }), boom, gone, ...act, wishes, ...(card.turbo && { turbo: true }), ...(ship && { ship }), ...(cst && { cst }), ...(rockOff.length && { rockOff }), ...(rocks.length && { rocks }), ...(s0.magnet && { pulled, aim }), ...(paintOff && { paint: { off: true } }) } };
+  return { s, ev: { t: 'draw', ...(pong && { pong }), card, ...(boss && { boss }), boom, gone, ...act, wishes, ...(card.turbo && { turbo: true }), ...(ship && { ship }), ...(cst && { cst }), ...(rockOff.length && { rockOff }), ...(rocks.length && { rocks }), ...(s0.magnet && { pulled, aim }), ...(paintOff && { paint: { off: true } }), ...(popped && { popped: true }) } };
 }
 
+// Ayuda Burbuja (21 nov 2026): como la carta, tu siguiente robo no corta la racha. No es jugada ni robo.
+export const useBubble = (s0) => ({ ...cloneState(s0), bub: true });
+
 // ---------- Solucionador y bot ----------
-const sig = (c) => (c.wild ? 'w' : `${c.rank}${c.alt != null ? `/${c.alt}` : ''}${c.arrow ? (c.arrow > 0 ? '+' : '-') : ''}${c.turbo ? 't' : ''}${c.rb ? `r${c.rb}` : ''}`);
+const sig = (c) => (c.wild ? 'w' : `${c.rank}${c.alt != null ? `/${c.alt}` : ''}${c.arrow ? (c.arrow > 0 ? '+' : '-') : ''}${c.turbo ? 't' : ''}${c.rb ? `r${c.rb}` : ''}${c.echo ? 'e' : ''}`);
 // Niveles con cohete turbo: el turbo que queda también es parte del estado.
 const hasTurbo = (level) => level.cards.some((c) => c.turbo) || level.stock.some((c) => c.turbo);
 
@@ -1398,7 +1433,7 @@ export function solve(level, s0, limit = 250000, wilds = 0, kill = false) {
   const dfs = (s, w = wilds) => {
     if (won(s, level)) return !kill || s.hp <= 0;
     if (++nodes > limit) return false;
-    const key = `${w}|${s.rem.map((b, i) => (b ? 1 : s.cut?.[i] ? s.cut[i] + 1 : 0)).join('')}|${s.stock.map(sig).join(',')}|${sig(s.top)}|${(s.streak <= LAST_REWARD ? s.streak : LAST_REWARD + 1 + ((s.streak - LAST_REWARD) % 3))}${timed ? `|${s.actions}|${s.boom}|${s.freeze || 0}` : ''}${level.ship ? `|${s.shipIn}|${s.stolen.map(sig).join('.')}` : ''}${level.tide ? `|${s.tq}` : ''}${s.master ? '|m' : ''}${turbo ? `|${s.turbo}` : ''}${level.rocks ? `|${s.rq}|${Object.entries(s.rock).join(';')}` : ''}${s.lift ? `|${s.lift}` : ''}${s.shield ? '|S' : ''}${s.burnt ? '|B' : ''}${s.magnet ? '|M' : ''}${s.awake ? `|a${s.awake}` : ''}${s.sp ? `|p${s.sp}` : ''}${level.zero ? `|o${Object.entries(s.ontop)}` : ''}${s.suit ? `|u${Object.entries(s.suit)}` : ''}${s.paint ? `|q${s.paint.red ? 1 : 0}${s.paint.n}` : ''}${s.shift ? `|w${Object.entries(s.shift).join(';')}` : ''}${level.foe ? `|b${s.hp}|${s.tickle}|${(s.ink || []).map((t) => `${t.ids}:${t.d}`).join('/')}|${s.belly.map((b) => `${b.id}:${b.at}`).join('/')}|${Object.entries(s.ontop).join('/')}|${s.ash}|${s.melt || ''}|z${s.zap || ''}:${s.zd || 0}:${s.zt || 0}|c${(s.wh || []).map((w) => w.id)}:${Object.entries(s.frz || {}).filter(([, a]) => a > s.actions)}:${s.cpend ? 1 : 0}:${s.sc || 0}:${s.dl ? 1 : 0}:${s.suit ? Object.entries(s.suit) : ''}:${Object.entries(s.spot || {})}|v${(s.wp || []).map(sig)}:${s.ws || 0}:${s.wpend ? 1 : 0}|h${(s.grab || []).map(sig)}:${s.hs || 0}:${s.hd || 0}` : ''}`;
+    const key = `${w}|${s.rem.map((b, i) => (b ? 1 : s.cut?.[i] ? s.cut[i] + 1 : 0)).join('')}|${s.stock.map(sig).join(',')}|${sig(s.top)}|${(s.streak <= LAST_REWARD ? s.streak : LAST_REWARD + 1 + ((s.streak - LAST_REWARD) % 3))}${timed ? `|${s.actions}|${s.boom}|${s.freeze || 0}` : ''}${level.ship ? `|${s.shipIn}|${s.stolen.map(sig).join('.')}` : ''}${level.tide ? `|${s.tq}` : ''}${s.master ? '|m' : ''}${turbo ? `|${s.turbo}` : ''}${level.rocks ? `|${s.rq}|${Object.entries(s.rock).join(';')}` : ''}${s.lift ? `|${s.lift}` : ''}${s.shield ? '|S' : ''}${s.burnt ? '|B' : ''}${s.magnet ? '|M' : ''}${s.bub ? '|O' : ''}${s.awake ? `|a${s.awake}` : ''}${s.sp ? `|p${s.sp}` : ''}${level.zero ? `|o${Object.entries(s.ontop)}` : ''}${s.suit ? `|u${Object.entries(s.suit)}` : ''}${s.paint ? `|q${s.paint.red ? 1 : 0}${s.paint.n}` : ''}${s.shift ? `|w${Object.entries(s.shift).join(';')}` : ''}${level.foe ? `|b${s.hp}|${s.tickle}|${(s.ink || []).map((t) => `${t.ids}:${t.d}`).join('/')}|${s.belly.map((b) => `${b.id}:${b.at}`).join('/')}|${Object.entries(s.ontop).join('/')}|${s.ash}|${s.melt || ''}|z${s.zap || ''}:${s.zd || 0}:${s.zt || 0}|c${(s.wh || []).map((w) => w.id)}:${Object.entries(s.frz || {}).filter(([, a]) => a > s.actions)}:${s.cpend ? 1 : 0}:${s.sc || 0}:${s.dl ? 1 : 0}:${s.suit ? Object.entries(s.suit) : ''}:${Object.entries(s.spot || {})}|v${(s.wp || []).map(sig)}:${s.ws || 0}:${s.wpend ? 1 : 0}|h${(s.grab || []).map(sig)}:${s.hs || 0}:${s.hd || 0}` : ''}`;
     if (seen.has(key)) return false;
     seen.add(key);
     const moves = legal(level, s);

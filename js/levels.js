@@ -1253,7 +1253,7 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
   }
 
   // Candado de palo, pintura, telescopio y gemelas: solas en los 5 primeros niveles de su mundo (se ponen al final de buildLevel).
-  if ((world === MECH_INTRO.slock || world === MECH_INTRO.paint || world === MECH_INTRO.scope || world === MECH_INTRO.twin || world === MECH_INTRO.tug || world === MECH_INTRO.lasso || world === MECH_INTRO.wand) && index < 5) [...mech].filter((x) => x !== 'comet').forEach((x) => mech.delete(x));
+  if ((world === MECH_INTRO.slock || world === MECH_INTRO.paint || world === MECH_INTRO.scope || world === MECH_INTRO.twin || world === MECH_INTRO.tug || world === MECH_INTRO.lasso || world === MECH_INTRO.wand || world === MECH_INTRO.mirror || world === MECH_INTRO.echo || world === MECH_INTRO.bubble || world === MECH_INTRO.clone) && index < 5) [...mech].filter((x) => x !== 'comet').forEach((x) => mech.delete(x));
 
   // Carta regalo: una carta especial (sin número) que se activa sola al quedar destapada del todo
   // y manda 2-5 cartas al final del mazo. Va tapada y en el primer 40% del orden de retirada.
@@ -1348,7 +1348,7 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
   for (const id of [...bombIds, ...cometIds]) delete cards[id].rank;
   for (const [id, x] of doms) cards[id].dom = x;
   if (flipOn) for (const c of cards) c.flipBy = flipBy[c.id];
-  const SPECIAL = ['lock', 'key', 'pack', 'ice', 'alt', 'arrow', 'curtain', 'curtainKey', 'bomb', 'live', 'comet', 'turbo', 'half', 'dom', 'tri', 'sl', 'paint', 'ghost', 'coin', 'cham', 'ring', 'doorKey', 'belt', 'bolt', 'shield', 'vine', 'fire', 'sleep', 'rainbow', 'magnet', 'twin', 'scope', 'lasso', 'wand'];
+  const SPECIAL = ['lock', 'key', 'pack', 'ice', 'alt', 'arrow', 'curtain', 'curtainKey', 'bomb', 'live', 'comet', 'turbo', 'half', 'dom', 'tri', 'sl', 'paint', 'ghost', 'coin', 'cham', 'ring', 'doorKey', 'belt', 'bolt', 'shield', 'vine', 'fire', 'sleep', 'rainbow', 'magnet', 'twin', 'scope', 'lasso', 'wand', 'echo', 'mirror', 'clone', 'bubble'];
   const plain = (id) => SPECIAL.every((f) => cards[id][f] == null);
 
   // Boleto partido (1-2): la referencia juega primero la mitad de arriba (su número de la cadena) y la de abajo al final
@@ -1990,6 +1990,48 @@ export function buildLevel(g, ev = null, t = 0, tier = ev?.tier || 0) {
       if (!(refLeft(level) >= 0 || (!T && solve(level, initState(level), 60000)))) delete c.paint;
     }
   }
+  // Espejo, eco, burbuja de racha y clon (21 nov 2026, pedido del usuario; escogidas en dev/ideas-21-nov.html): al
+  // final, con su sorteo (los niveles de antes no cambian). Cada una se comprueba con la referencia y, si no, con el
+  // solucionador (no en los duros); si no se gana, se quita. No en mesas que se recorren.
+  // Espejo: donde la referencia roba justo después (el descarte cambia) o es la última; si no, cualquiera.
+  // Eco: solo abre jugadas. Burbuja: de preferencia antes de un robo, para que cuide la racha.
+  const stepOk = (x) => !x.tail && plain(x.id) && cards[x.id].suit != null;
+  // En los 5 primeros niveles de su estreno, sola (sin las otras tres).
+  const solo = ['mirror', 'echo', 'bubble', 'clone'].find((m) => world === MECH_INTRO[m] && index < 5);
+  const keep = (c, f, ok = () => true) => (ok() && (refLeft(level) >= 0 || (!T && solve(level, initState(level), 60000)))) || (delete c[f], false);
+  for (const [m, f, odds, seed] of [['mirror', 'mirror', MIRROR_ODDS, 7039], ['echo', 'echo', ECHO_ODDS, 7451], ['bubble', 'bubble', BUBBLE_ODDS, 7883]]) {
+    const rr = mulberry32(hash(g * seed + t * 139 + 41));
+    if (scroll || (solo && solo !== m) || world < MECH_INTRO[m] || !(world === MECH_INTRO[m] || rr() < odds * fin)) continue;
+    const good = [], any = [];
+    seq.forEach((x, i) => {
+      if (!stepOk(x) || i > seq.length * 0.85) return;
+      any.push(x.id);
+      if (m === 'echo' || !seq[i + 1] || seq[i + 1].dn > 0) good.push(x.id);
+    });
+    const ids = shuffle(rr, [...new Set(good.length ? good : any)]);
+    for (const id of ids.slice(0, world === MECH_INTRO[m] ? 6 : 2)) {
+      cards[id][f] = 1;
+      if (keep(cards[id], f)) break;
+    }
+  }
+  // Clon: copia a su vecina de fila (la de la izquierda más cercana primero, luego las de la derecha), de las que
+  // tienen un solo número fijo. Se prueban varias hasta que la referencia (o el solucionador) siga ganando.
+  const rcl = mulberry32(hash(g * 8111 + t * 149 + 53));
+  if (!scroll && (!solo || solo === 'clone') && !level.pong && !level.foe && world >= MECH_INTRO.clone && (world === MECH_INTRO.clone || rcl() < CLONE_ODDS * fin)) {
+    const fixed = (id) => plain(id) && cards[id].rank != null && cards[id].suit != null;
+    const row = (c) => {
+      const mates = cards.filter((x) => x.id !== c.id && Math.abs(x.y - c.y) < 0.01 && (x.group ?? 0) === (c.group ?? 0) && fixed(x.id));
+      const L = mates.filter((x) => x.x < c.x).sort((a, b) => b.x - a.x), R = mates.filter((x) => x.x > c.x).sort((a, b) => a.x - b.x);
+      return [...L, ...R];
+    };
+    const ids = shuffle(rcl, [...new Set(seq.filter((x) => stepOk(x)).map((x) => x.id))]).filter((id) => row(cards[id]).length);
+    for (const id of ids.slice(0, world === MECH_INTRO.clone ? 12 : 4)) {
+      const c = cards[id], nb = row(c);
+      Object.assign(c, { clone: nb.map((x) => x.id), cloneR: nb.map((x) => x.rank), cloneS: nb.map((x) => x.suit) });
+      if (refLeft(level) >= 0 || (!T && solve(level, initState(level), 60000))) break;
+      delete c.clone, delete c.cloneR, delete c.cloneS;
+    }
+  }
   level.meta.mechs = MECHANICS.filter((m) => cards.some((c) => c[MECH_FIELD[m]] != null && !(m === 'twin' && c.tug)) || (m === 'turbo' && stock.some((c) => c.turbo)) || (m === 'ship' && level.ship) || (m === 'astro' && level.astro));
   return level;
 }
@@ -2107,10 +2149,10 @@ export function festivalLevel(day, k, world, n = FESTIVAL_PER_PLANET) {
 }
 
 // ---------- Mecánicas por mundo ----------
-export const MECHANICS = ['lock', 'pack', 'ice', 'double', 'arrow', 'curtain', 'bomb', 'live', 'ticket', 'comet', 'turbo', 'ghost', 'ship', 'coin', 'cham', 'bolt', 'cst', 'vine', 'magnet', 'rainbow', 'sleep', 'domino', 'triple', 'slock', 'paint', 'scope', 'twin', 'astro', 'lasso', 'wand', 'tug'];
-const MECH_FIELD = { lock: 'lock', pack: 'pack', ice: 'ice', double: 'alt', arrow: 'arrow', curtain: 'curtain', bomb: 'bomb', live: 'live', ticket: 'half', comet: 'comet', turbo: 'turbo', ghost: 'ghost', ship: 'ship', coin: 'coin', cham: 'cham', bolt: 'bolt', cst: 'cst', vine: 'vine', magnet: 'magnet', rainbow: 'rainbow', sleep: 'sleep', domino: 'dom', triple: 'tri', slock: 'sl', paint: 'paint', scope: 'scope', twin: 'twin', astro: 'astro', lasso: 'lasso', wand: 'wand', tug: 'tug' };
+export const MECHANICS = ['lock', 'pack', 'ice', 'double', 'arrow', 'curtain', 'bomb', 'live', 'ticket', 'comet', 'turbo', 'ghost', 'ship', 'coin', 'cham', 'bolt', 'cst', 'vine', 'magnet', 'rainbow', 'sleep', 'domino', 'triple', 'slock', 'paint', 'scope', 'twin', 'astro', 'lasso', 'wand', 'tug', 'mirror', 'echo', 'bubble', 'clone'];
+const MECH_FIELD = { lock: 'lock', pack: 'pack', ice: 'ice', double: 'alt', arrow: 'arrow', curtain: 'curtain', bomb: 'bomb', live: 'live', ticket: 'half', comet: 'comet', turbo: 'turbo', ghost: 'ghost', ship: 'ship', coin: 'coin', cham: 'cham', bolt: 'bolt', cst: 'cst', vine: 'vine', magnet: 'magnet', rainbow: 'rainbow', sleep: 'sleep', domino: 'dom', triple: 'tri', slock: 'sl', paint: 'paint', scope: 'scope', twin: 'twin', astro: 'astro', lasso: 'lasso', wand: 'wand', tug: 'tug' , mirror: 'mirror', echo: 'echo', bubble: 'bubble', clone: 'clone' };
 // Van con su sorteo, fuera de chooseMechanics (si entraran, cambiarían todos los niveles ya probados).
-const OWN_DRAW = ['ticket', 'ghost', 'ship', 'coin', 'cham', 'bolt', 'cst', 'vine', 'magnet', 'rainbow', 'sleep', 'domino', 'triple', 'slock', 'paint', 'scope', 'twin', 'astro', 'lasso', 'wand', 'tug'];
+const OWN_DRAW = ['ticket', 'ghost', 'ship', 'coin', 'cham', 'bolt', 'cst', 'vine', 'magnet', 'rainbow', 'sleep', 'domino', 'triple', 'slock', 'paint', 'scope', 'twin', 'astro', 'lasso', 'wand', 'tug', 'mirror', 'echo', 'bubble', 'clone'];
 // Mundo (índice desde 0) en el que se presenta cada una.
 // 8 nov 2026: corridas para que cada estreno quede a 10 niveles o más del anterior (antes lock 1, pack 2, ice 4, double 7,
 // arrow 11, curtain 15, bomb 19, live 24, ticket 20, comet 12, turbo 16, ghost 29, ship 34, coin 26, cham 32).
@@ -2127,10 +2169,11 @@ const OWN_DRAW = ['ticket', 'ghost', 'ship', 'coin', 'cham', 'bolt', 'cst', 'vin
 // enredadera 521, imán 531, arcoíris 571, dormida 581, dominó 621, triple 631 y raspadita 651. Antes: { lock: 1, pack: 2, ice: 6, double: 12, arrow: 17, curtain: 22, bomb: 27, live: 33, ticket: 28, comet: 19, turbo: 24, ghost: 39, ship: 44, coin: 36, cham: 42, bolt: 47, cst: 49, vine: 52, magnet: 54, rainbow: 56, sleep: 58, domino: 60, triple: 62, scratch: 63, scope: 7, twin: 8, astro: 14 };
 // 15 nov 2026 (pedido del usuario): lazo 67 (671) y varita 68 (681); la raspadita se recorre al final, 72 (721). La caja
 // galáctica (mesa del 651) se quitó el 16 nov 2026. 17 nov 2026 (pedido del usuario): se quitó la raspadita; en su
-// lugar, candado de palo 72 (721) y pintura 73 (731).
-export const MECH_INTRO = { lock: 1, pack: 2, ice: 7, scope: 8, twin: 12, double: 13, astro: 17, arrow: 18, comet: 22, curtain: 23, turbo: 27, bomb: 28, ticket: 32, live: 33, coin: 37, ghost: 38, cham: 42, ship: 43, bolt: 47, cst: 48, vine: 52, magnet: 53, rainbow: 57, sleep: 58, domino: 62, triple: 63, lasso: 67, wand: 68, slock: 72, paint: 73, tug: 77 };
+// lugar, candado de palo 72 (721) y pintura 73 (731). 21 nov 2026 (pedido del usuario): espejo 78 (781), eco 82 (821),
+// burbuja de racha 83 (831) y clon 87 (871).
+export const MECH_INTRO = { lock: 1, pack: 2, ice: 7, scope: 8, twin: 12, double: 13, astro: 17, arrow: 18, comet: 22, curtain: 23, turbo: 27, bomb: 28, ticket: 32, live: 33, coin: 37, ghost: 38, cham: 42, ship: 43, bolt: 47, cst: 48, vine: 52, magnet: 53, rainbow: 57, sleep: 58, domino: 62, triple: 63, lasso: 67, wand: 68, slock: 72, paint: 73, tug: 77 , mirror: 78, echo: 82, bubble: 83, clone: 87 };
 export const MECH_NAMES = {
-  lock: 'Candado', pack: 'Carta regalo', ice: 'Hielo', double: 'Carta doble', arrow: 'Flecha', curtain: 'Cortina', bomb: 'Bomba', live: 'Carta viva', ticket: 'Boleto partido', comet: 'Cometa', turbo: 'Cohete turbo', ghost: 'Fantasma', ship: 'Nave ladrona', coin: 'Carta moneda', cham: 'Camaleón', bolt: 'Rayo', cst: 'Constelación', vine: 'Enredadera', magnet: 'Imán', rainbow: 'Arcoíris', sleep: 'Carta dormida', domino: 'Dominó', triple: 'Boleto triple', slock: 'Candado de palo', paint: 'Pintura', scope: 'Telescopio', twin: 'Cartas gemelas', astro: 'Astronauta', lasso: 'Lazo', wand: 'Varita', tug: 'Cartas con cable',
+  lock: 'Candado', pack: 'Carta regalo', ice: 'Hielo', double: 'Carta doble', arrow: 'Flecha', curtain: 'Cortina', bomb: 'Bomba', live: 'Carta viva', ticket: 'Boleto partido', comet: 'Cometa', turbo: 'Cohete turbo', ghost: 'Fantasma', ship: 'Nave ladrona', coin: 'Carta moneda', cham: 'Camaleón', bolt: 'Rayo', cst: 'Constelación', vine: 'Enredadera', magnet: 'Imán', rainbow: 'Arcoíris', sleep: 'Carta dormida', domino: 'Dominó', triple: 'Boleto triple', slock: 'Candado de palo', paint: 'Pintura', scope: 'Telescopio', twin: 'Cartas gemelas', astro: 'Astronauta', lasso: 'Lazo', wand: 'Varita', tug: 'Cartas con cable', mirror: 'Espejo', echo: 'Eco', bubble: 'Burbuja de racha', clone: 'Clon',
 };
 // Cartas de regalo (cometa y cohete turbo): no entran al sorteo de mecánicas, van aparte (buildLevel).
 // En el camino sin ayudas cada una sale de 1 a 4 veces en cada tramo de 30-35 niveles (extraPlan, pedido 6 nov 2026).
@@ -2157,6 +2200,8 @@ export const MAGNET_ODDS = 0.1, RAINBOW_ODDS = 0.1, SLEEP_ODDS = 0.12;
 export const DOM_ODDS = 0.12, TRI_ODDS = 0.1;
 // Candado de palo y pintura (17 nov 2026): al final de buildLevel, con su sorteo.
 export const SL_ODDS = 0.1, PAINT_ODDS = 0.1;
+// Espejo, eco, burbuja de racha y clon (21 nov 2026): al final de buildLevel, con su sorteo.
+export const MIRROR_ODDS = 0.1, ECHO_ODDS = 0.1, BUBBLE_ODDS = 0.1, CLONE_ODDS = 0.1;
 // Telescopio, gemelas y astronauta (14 nov 2026): al final de buildLevel, con su sorteo.
 export const SCOPE_ODDS = 0.1, TWIN_ODDS = 0.12, ASTRO_ODDS = 0.1, TUG_ODDS = 0.12;
 // Lazo y varita (15 nov 2026): al final de buildLevel, con su sorteo.
@@ -2220,12 +2265,17 @@ function chooseMechanics(r, world, index, boss, n, ev = null, T = null) {
 
 // Cada intento de un nivel cambia las cartas sin cambiar el tablero: se suma lo mismo a todos los rangos
 // (mod 13, así ±1 y A–K siguen valiendo igual) y se barajan los palos. El intento 0 es el original.
+// El clon cambia también lo que copia de sus vecinas y el agujero negro los números de cada vuelta (20 nov 2026: al
+// repetir se quedaban con los del intento 0).
 export function variantLevel(level, v) {
   if (!v) return level;
   const r = mulberry32(hash(level.g * 7919 + v));
   const k = randInt(r, 1, 12);
-  const perm = shuffle(r, [0, 1, 2, 3]);
-  const map = (c) => (c.rank == null ? { ...c } : { ...c, rank: (c.rank + k) % 13, suit: perm[c.suit], ...(c.alt != null && { alt: (c.alt + k) % 13 }), ...(c.half != null && { half: (c.half + k) % 13 }), ...(c.dom != null && { dom: (c.dom + k) % 13 }), ...(c.tri && { tri: c.tri.map((x) => (x + k) % 13) }), ...(c.sl != null && { sl: perm[c.sl] }) });
+  // Palos: se cambian sin revolver colores (rojos con rojos o todos los rojos por negros), para que la pintura siga
+  // teniendo sus jugadas del mismo color (20 nov 2026).
+  const blk = r() < 0.5 ? [0, 3] : [3, 0], rd = r() < 0.5 ? [1, 2] : [2, 1], [B, R] = r() < 0.5 ? [blk, rd] : [rd, blk];
+  const perm = [B[0], R[0], R[1], B[1]];
+  const map = (c) => (c.rank == null ? { ...c } : { ...c, rank: (c.rank + k) % 13, suit: perm[c.suit], ...(c.alt != null && { alt: (c.alt + k) % 13 }), ...(c.half != null && { half: (c.half + k) % 13 }), ...(c.dom != null && { dom: (c.dom + k) % 13 }), ...(c.tri && { tri: c.tri.map((x) => (x + k) % 13) }), ...(c.ring && { ring: c.ring.map((x) => (x + k) % 13) }), ...(c.sl != null && { sl: perm[c.sl] }), ...(c.clone && { cloneR: c.cloneR.map((x) => (x + k) % 13), cloneS: c.cloneS.map((x) => perm[x]) }) });
   const mapCard = (c) => ({ ...map(c), ...(c.pack && { pack: c.pack.map(map) }) });
   return { ...level, variant: v, cards: level.cards.map(mapCard), stock: level.stock.map(map), waste0: map(level.waste0) };
 }
