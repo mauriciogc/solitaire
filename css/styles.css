@@ -217,7 +217,8 @@ button:disabled { cursor: default; }
 .rbar { position: absolute; left: calc(100% / var(--cols, 7) / 2); right: calc(100% / var(--cols, 7) / 2); top: 51px; height: 10px; border-radius: 5px; background: #e3d6c0; border: 2px solid var(--ink); overflow: hidden; }
 .rbar i { display: block; height: 100%; width: calc(var(--fill) * 100%); background: linear-gradient(#ffc83d, #ff8a3d); transition: width 600ms var(--ease-out); }
 .rg { position: relative; display: grid; grid-template-rows: 80px 40px; justify-items: center; }
-.rps { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; padding-top: 4px; }
+/* 21 nov 2026: solo iconos, de 2 en 2. */
+.rps { position: relative; z-index: 1; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; max-width: 36px; margin-inline: auto; padding-top: 4px; }
 .rg > i { --s: 40px; position: relative; display: grid; place-items: center; width: var(--s); height: var(--s); align-self: end; margin-bottom: calc(24px - var(--s) / 2); border-radius: 50%; background: var(--cream); border: 2.5px solid var(--ink); box-shadow: inset 0 -4px 0 var(--cream-d); font-style: normal; color: var(--ink); z-index: 1; }
 .rg > i b { font: 400 calc(var(--s) * .42) 'Lilita One'; line-height: 1; }
 .rg > i .ico { width: 55%; height: 55%; }
@@ -264,7 +265,7 @@ button.rg:active > i { scale: .92; }
   .racha-modal .rclaim { display: inline-flex; flex: none; animation: ready-wiggle 1.6s ease-in-out infinite; }
   .racha-modal .mbtns { display: none; }
 }
-@media (max-width: 420px) { .rg > i { --s: 34px; } .rg.t2 > i { --s: 38px; } .rg.t3 > i { --s: 42px; } .rg.t4 > i { --s: 44px; } .rg.t5 > i { --s: 48px; } .rg.t4 .rps, .rg.t5 .rps { padding-top: 4px; } .rg .rays { width: 110px; height: 110px; } .rp { font-size: 11px !important; } .rp .ico { width: 13px; height: 13px; } }
+@media (max-width: 420px) { .rg > i { --s: 34px; } .rg.t2 > i { --s: 38px; } .rg.t3 > i { --s: 42px; } .rg.t4 > i { --s: 44px; } .rg.t5 > i { --s: 48px; } .rg.t4 .rps, .rg.t5 .rps { padding-top: 4px; } .rg .rays { width: 110px; height: 110px; } .rp { font-size: 11px !important; } .rp .ico { width: 13px; height: 13px; } .rps { max-width: 30px; } }
 /* Portal a la constelación vecina, en la orilla de la guía. */
 .portal { position: absolute; left: 0; top: 0; translate: -50% calc(var(--k) * -42px); display: flex; flex-direction: column; align-items: center; gap: 4px; pointer-events: auto; }
 .portal .hit { width: calc(96px * var(--k)); height: calc(84px * var(--k)); border-radius: 50%; }

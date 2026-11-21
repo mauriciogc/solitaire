@@ -2595,7 +2595,8 @@ function openStreak() {
   streakPendToFeats();
   const r = dailyStreak(), t = streakTheme(), miss = r.miss || [], N = STREAK_GOALS.length;
   const stateOf = (i) => (miss.includes(i) ? 'miss' : r.got.includes(i) ? 'got' : 'next');
-  const prize = (x) => `<div class="rps"><span class="rp">${coin()}<b>${x.coins}</b></span>${x.wild ? `<span class="rp">${icon('wild')}<b>×${x.wild}</b></span>` : ''}${x.undo ? `<span class="rp">${icon('undo')}<b>×${x.undo}</b></span>` : ''}</div>`;
+  // 21 nov 2026 (el usuario): como el regalo diario, solo los iconos de lo que trae, sin cantidades.
+  const prize = (x) => `<div class="rps">${[coin(), x.wild && icon('wild'), x.undo && icon('undo'), ...Object.keys(x.helps || {}).map((k) => icon(HELPS[k].ico))].filter(Boolean).map((i) => `<span class="rp">${i}</span>`).join('')}</div>`;
   // Entre más lejos en la fila, más grande y más vistoso el punto (el último lleva rayos).
   // Los alcanzados llevan palomita; los que se perdieron (guardados de antes), tache.
   const node = (i) => {
@@ -3803,13 +3804,15 @@ const FEAT_KIND = {
 };
 const FEAT_WORD = { mis: ['misión', 'misiones'], bonus: ['cofre', 'cofres'], logro: ['logro', 'logros'], racha: ['premio de racha', 'premios de racha'], pase: ['sello', 'sellos'], secreto: ['premio secreto', 'premios secretos'] };
 const featPrize = (fs) => {
-  const p = { coins: 0, wild: 0, undo: 0 };
+  const p = { coins: 0, wild: 0, undo: 0, helps: {} };
   fs.forEach((f) => ['coins', 'wild', 'undo'].forEach((k) => (p[k] += f[k] || 0)));
+  // 21 nov 2026: la racha también da ayudas (ver 3 s).
+  fs.forEach((f) => Object.entries(f.helps || {}).forEach(([k, n]) => (p.helps[k] = (p.helps[k] || 0) + n)));
   return p;
 };
 function featHTML(fs) {
   const f = fs[0], p = featPrize(fs), t = fs.length > 1 ? 'many' : f.t, K = FEAT_KIND[t];
-  const prize = [p.coins && [coin(), p.coins], p.wild && [icon('wild'), p.wild], p.undo && [icon('undo'), p.undo]].filter(Boolean)
+  const prize = [p.coins && [coin(), p.coins], p.wild && [icon('wild'), p.wild], p.undo && [icon('undo'), p.undo], ...Object.entries(p.helps).map(([k, n]) => n && [icon(HELPS[k].ico), n])].filter(Boolean)
     .map(([ico, n]) => `<span class="ft-chip">${ico}<b class="outl" data-n="${n}">+0</b></span>`).join('')
     // Pasaporte y secretos: el exclusivo que trae, con el dibujo de su sección y su nombre.
     + (fs.length === 1 && f.item ? `<span class="ft-chip ft-ex">${icon(SHOP_ICO[f.item[0]])}<b class="outl">${esc(item(...f.item).name)}</b></span>` : '');

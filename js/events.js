@@ -28,20 +28,22 @@ export const isOn = (k) => (save.next || 0) >= UNLOCK[k];
 // En estrellas (7 nov 2026: llegaba a 30 victorias sin problema porque contaba cualquiera): cada victoria suma sus
 // estrellas. Primera fila: 15/30/60/90/150/240 (= 5, 10, 20, 30, 50 y 80 niveles con 3★). Luego una fila sin fin
 // cada 150 (150, 300, 450…): se turnan comodín y deshacer, con monedas que suben poco a poco.
+// 21 nov 2026 (el usuario): +30 monedas a todos; 30 con 1 deshacer, 60 con 2, 90 con 2 deshacer y un ojo (ver 3 s),
+// 240 con comodín, 2 deshacer y 2 ojos.
 export const STREAK_GOALS = [
-  { n: 15, coins: 25 },
-  { n: 30, coins: 35 },
-  { n: 60, coins: 45, undo: 1 },
-  { n: 90, coins: 60 },
-  { n: 150, coins: 70 },
-  { n: 240, coins: 90, wild: 1 },
+  { n: 15, coins: 55 },
+  { n: 30, coins: 65, undo: 1 },
+  { n: 60, coins: 75, undo: 2 },
+  { n: 90, coins: 90, undo: 2, helps: { ver3: 1 } },
+  { n: 150, coins: 100 },
+  { n: 240, coins: 120, wild: 1, undo: 2, helps: { ver3: 2 } },
 ];
 export const STREAK_STEP = 150;
 // Premio i (índice global): los primeros son la fila de arriba; del 6 en adelante, la fila de 50 en 50.
 export function streakGoal(i) {
   if (i < STREAK_GOALS.length) return STREAK_GOALS[i];
   const j = i - STREAK_GOALS.length;
-  return { n: STREAK_STEP * (j + 1), coins: round5((100 + 20 * j) * COIN_UP), ...(j % 2 ? { undo: 1 } : { wild: 1 }) };
+  return { n: STREAK_STEP * (j + 1), coins: round5((100 + 20 * j) * COIN_UP) + 30, ...(j % 2 ? { undo: 1 } : { wild: 1 }) };
 }
 // Índice del primer premio que todavía no alcanza esa racha.
 export const goalIndex = (n) => (n < STREAK_GOALS[STREAK_GOALS.length - 1].n ? STREAK_GOALS.findIndex((g) => g.n > n) : STREAK_GOALS.length + Math.floor(n / STREAK_STEP));
@@ -99,7 +101,8 @@ export function streakWin(stars = 1) {
     save.coins += g.coins;
     save.wild += g.wild || 0;
     save.undo += g.undo || 0;
-    (save.feats ||= []).push({ t: 'racha', n: g.n, coins: g.coins, wild: g.wild || 0, undo: g.undo || 0 });
+    for (const [k, n] of Object.entries(g.helps || {})) save.helps[k] = (save.helps[k] || 0) + n;
+    (save.feats ||= []).push({ t: 'racha', n: g.n, coins: g.coins, wild: g.wild || 0, undo: g.undo || 0, ...(g.helps && { helps: { ...g.helps } }) });
     any = true;
   }
   persist();
@@ -128,7 +131,8 @@ export function streakPendToFeats() {
     save.coins += g.coins;
     save.wild += g.wild || 0;
     save.undo += g.undo || 0;
-    (save.feats ||= []).push({ t: 'racha', n: g.n, coins: g.coins, wild: g.wild || 0, undo: g.undo || 0 });
+    for (const [k, n] of Object.entries(g.helps || {})) save.helps[k] = (save.helps[k] || 0) + n;
+    (save.feats ||= []).push({ t: 'racha', n: g.n, coins: g.coins, wild: g.wild || 0, undo: g.undo || 0, ...(g.helps && { helps: { ...g.helps } }) });
   }
   r.pend = [];
   persist();
