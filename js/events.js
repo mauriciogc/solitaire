@@ -40,13 +40,33 @@ export const STREAK_GOALS = [
 ];
 export const STREAK_STEP = 150;
 // Premio i (índice global): los primeros son la fila de arriba; del 6 en adelante, la fila de 50 en 50.
+// 21 nov 2026 (el usuario): la fila sin fin empieza en 300 (antes había una meta «150» que se pagaba junto con la del
+// 240) y cada meta trae, además de sus monedas y su deshacer o comodín, 1 comodín más, 2 ojos (ver 3 s) y hasta 2
+// ayudas especiales al azar de las que ya conoces (spec; se sortean al cobrar, streakSpecials).
 export function streakGoal(i) {
   if (i < STREAK_GOALS.length) return STREAK_GOALS[i];
   const j = i - STREAK_GOALS.length;
-  return { n: STREAK_STEP * (j + 1), coins: round5((100 + 20 * j) * COIN_UP) + 30, ...(j % 2 ? { undo: 1 } : { wild: 1 }) };
+  const base = j % 2 ? { wild: 1 } : { undo: 1 };
+  return { n: STREAK_STEP * (j + 2), coins: round5((120 + 20 * j) * COIN_UP) + 30, ...base, wild: (base.wild || 0) + 1, helps: { ver3: 2 }, spec: 2 };
 }
 // Índice del primer premio que todavía no alcanza esa racha.
-export const goalIndex = (n) => (n < STREAK_GOALS[STREAK_GOALS.length - 1].n ? STREAK_GOALS.findIndex((g) => g.n > n) : STREAK_GOALS.length + Math.floor(n / STREAK_STEP));
+export const goalIndex = (n) => (n < STREAK_GOALS[STREAK_GOALS.length - 1].n ? STREAK_GOALS.findIndex((g) => g.n > n) : STREAK_GOALS.length + Math.floor(n / STREAK_STEP) - 1);
+// Ayudas especiales que ya conoces (como en la arena de jefes: alguna vez tuviste o ya salió su carta en el camino).
+const SPECIALS = ['reloj', 'llave', 'tele', 'varita', 'iman', 'burbuja', 'astro', 'laser', 'escudo'];
+const SPECIAL_SEEN = { iman: 'magnet', varita: 'wand', tele: 'scope', astro: 'astro', burbuja: 'bubble' };
+export const knownSpecials = () => SPECIALS.filter((k) => k in (save.helps || {}) || !!save.seen?.[SPECIAL_SEEN[k]]);
+// Hasta n especiales distintas al azar (1 de cada una).
+export function streakSpecials(n) {
+  const pool = knownSpecials().sort(() => Math.random() - 0.5);
+  return Object.fromEntries(pool.slice(0, n).map((k) => [k, 1]));
+}
+// Lo que se cobra de la meta i: sus ayudas más las especiales sorteadas.
+function streakPay(i) {
+  const g = streakGoal(i);
+  const helps = { ...(g.helps || {}) };
+  for (const [k, n] of Object.entries(g.spec ? streakSpecials(g.spec) : {})) helps[k] = (helps[k] || 0) + n;
+  return { ...g, helps };
+}
 // Nombre, icono y color de la ventana.
 const STREAK_THEME = { key: 'cohete', name: 'Racha cohete', ico: 'rocket', color: 'pink' };
 
@@ -96,13 +116,13 @@ export function streakWin(stars = 1) {
   let any = false;
   for (let i = 0; i < goalIndex(r.n); i++) {
     if (r.got.includes(i)) continue;
-    const g = streakGoal(i);
+    const g = streakPay(i);
     r.got.push(i);
     save.coins += g.coins;
     save.wild += g.wild || 0;
     save.undo += g.undo || 0;
     for (const [k, n] of Object.entries(g.helps || {})) save.helps[k] = (save.helps[k] || 0) + n;
-    (save.feats ||= []).push({ t: 'racha', n: g.n, coins: g.coins, wild: g.wild || 0, undo: g.undo || 0, ...(g.helps && { helps: { ...g.helps } }) });
+    (save.feats ||= []).push({ t: 'racha', n: g.n, coins: g.coins, wild: g.wild || 0, undo: g.undo || 0, ...(Object.keys(g.helps).length && { helps: { ...g.helps } }) });
     any = true;
   }
   persist();
@@ -127,12 +147,12 @@ export function streakPendToFeats() {
   const r = dailyStreak();
   if (!r.pend?.length) return false;
   for (const i of r.pend) {
-    const g = streakGoal(i);
+    const g = streakPay(i);
     save.coins += g.coins;
     save.wild += g.wild || 0;
     save.undo += g.undo || 0;
     for (const [k, n] of Object.entries(g.helps || {})) save.helps[k] = (save.helps[k] || 0) + n;
-    (save.feats ||= []).push({ t: 'racha', n: g.n, coins: g.coins, wild: g.wild || 0, undo: g.undo || 0, ...(g.helps && { helps: { ...g.helps } }) });
+    (save.feats ||= []).push({ t: 'racha', n: g.n, coins: g.coins, wild: g.wild || 0, undo: g.undo || 0, ...(Object.keys(g.helps).length && { helps: { ...g.helps } }) });
   }
   r.pend = [];
   persist();

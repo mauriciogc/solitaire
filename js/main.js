@@ -2596,7 +2596,7 @@ function openStreak() {
   const r = dailyStreak(), t = streakTheme(), miss = r.miss || [], N = STREAK_GOALS.length;
   const stateOf = (i) => (miss.includes(i) ? 'miss' : r.got.includes(i) ? 'got' : 'next');
   // 21 nov 2026 (el usuario): como el regalo diario, solo los iconos de lo que trae, sin cantidades.
-  const prize = (x) => `<div class="rps">${[coin(), x.wild && icon('wild'), x.undo && icon('undo'), ...Object.keys(x.helps || {}).map((k) => icon(HELPS[k].ico))].filter(Boolean).map((i) => `<span class="rp">${i}</span>`).join('')}</div>`;
+  const prize = (x) => `<div class="rps">${[coin(), x.wild && icon('wild'), x.undo && icon('undo'), ...Object.keys(x.helps || {}).map((k) => icon(HELPS[k].ico)), x.spec && icon('ayudas')].filter(Boolean).map((i) => `<span class="rp">${i}</span>`).join('')}</div>`;
   // Entre más lejos en la fila, más grande y más vistoso el punto (el último lleva rayos).
   // Los alcanzados llevan palomita; los que se perdieron (guardados de antes), tache.
   const node = (i) => {
