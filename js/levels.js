@@ -2271,13 +2271,16 @@ export function variantLevel(level, v) {
   if (!v) return level;
   const r = mulberry32(hash(level.g * 7919 + v));
   const k = randInt(r, 1, 12);
+  // Con espejo (vale 12 − su número) sumar k lo deja restado: ahí se voltean todos los números (A↔K, 2↔Q…), que sí lo
+  // respeta (la carta viva y la flecha cambian de sentido), en los intentos nones (20 nov 2026: al repetir, los niveles con espejo dejaban de poder ganarse).
+  const flip = level.cards.some((c) => c.mirror), rk = (x) => (flip ? (v % 2 ? 12 - x : x) : (x + k) % 13);
   // Palos: se cambian sin revolver colores (rojos con rojos o todos los rojos por negros), para que la pintura siga
   // teniendo sus jugadas del mismo color (20 nov 2026).
   const blk = r() < 0.5 ? [0, 3] : [3, 0], rd = r() < 0.5 ? [1, 2] : [2, 1], [B, R] = r() < 0.5 ? [blk, rd] : [rd, blk];
   const perm = [B[0], R[0], R[1], B[1]];
-  const map = (c) => (c.rank == null ? { ...c } : { ...c, rank: (c.rank + k) % 13, suit: perm[c.suit], ...(c.alt != null && { alt: (c.alt + k) % 13 }), ...(c.half != null && { half: (c.half + k) % 13 }), ...(c.dom != null && { dom: (c.dom + k) % 13 }), ...(c.tri && { tri: c.tri.map((x) => (x + k) % 13) }), ...(c.ring && { ring: c.ring.map((x) => (x + k) % 13) }), ...(c.sl != null && { sl: perm[c.sl] }), ...(c.clone && { cloneR: c.cloneR.map((x) => (x + k) % 13), cloneS: c.cloneS.map((x) => perm[x]) }) });
+  const map = (c) => (c.rank == null ? { ...c } : { ...c, rank: rk(c.rank), suit: perm[c.suit], ...(c.alt != null && { alt: rk(c.alt) }), ...(c.half != null && { half: rk(c.half) }), ...(c.dom != null && { dom: rk(c.dom) }), ...(c.tri && { tri: c.tri.map(rk) }), ...(c.ring && { ring: c.ring.map(rk) }), ...(flip && v % 2 && { ...(c.live && { live: -c.live }), ...(c.arrow && { arrow: -c.arrow }) }), ...(c.sl != null && { sl: perm[c.sl] }), ...(c.clone && { cloneR: c.cloneR.map(rk), cloneS: c.cloneS.map((x) => perm[x]) }) });
   const mapCard = (c) => ({ ...map(c), ...(c.pack && { pack: c.pack.map(map) }) });
-  return { ...level, variant: v, cards: level.cards.map(mapCard), stock: level.stock.map(map), waste0: map(level.waste0) };
+  return { ...level, variant: v, ...(flip && v % 2 && { revRank: true }), cards: level.cards.map(mapCard), stock: level.stock.map(map), waste0: map(level.waste0) };
 }
 
 // Acomoda los grupos en filas: prueba 1..n filas y elige la que deja las cartas más grandes.

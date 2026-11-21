@@ -475,11 +475,12 @@ export function cometWish(level, s) {
   return next ? Math.min(5, Math.max(3, next.at - s.streak)) : 4;
 }
 
-// La carta útil es vecina (+1) de la primera carta jugable del tablero, por id.
+// La carta útil es vecina (+1) de la primera carta jugable del tablero, por id (−1 en un intento con los números
+// volteados, level.revRank: ver variantLevel).
 function rewardCard(level, s, kind) {
   if (kind === 'wild') return { wild: true, reward: true };
   const c = level.cards.find((c) => isOpen(level, c, s)) || level.cards.find((c) => !s.rem[c.id] && !special(c));
-  return { rank: c ? mod13(rankOf(c, s) + 1) : 0, suit: c ? (c.id + 1) % 4 : 0, reward: true };
+  return { rank: c ? mod13(rankOf(c, s) + (level.revRank ? -1 : 1)) : 0, suit: c ? (c.id + 1) % 4 : 0, reward: true };
 }
 
 // at: racha del premio (el cometa suma varios puntos de golpe y cada uno puede traer el suyo).
