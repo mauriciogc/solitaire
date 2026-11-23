@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="180" height="180">
+  <!-- Mascotita de Claude: un bichito naranja con su carta. Dibujo original para este README. -->
+  <g stroke="#2a1f5c" stroke-width="5" stroke-linejoin="round" stroke-linecap="round">
+    <!-- antenita con chispa -->
+    <path d="M100 52 V30" fill="none"/>
+    <path d="M100 10 l5 11 11 5 -11 5 -5 11 -5 -11 -11 -5 11 -5z" fill="#ffd54a"/>
+    <!-- patitas -->
+    <path d="M78 160 v18 h-12" fill="none"/>
+    <path d="M122 160 v18 h12" fill="none"/>
+    <!-- cuerpo -->
+    <ellipse cx="100" cy="112" rx="56" ry="58" fill="#d97757"/>
+    <ellipse cx="86" cy="84" rx="18" ry="10" fill="#ec9a7c" stroke="none"/>
+    <!-- bracito izquierdo saludando -->
+    <path d="M47 112 C30 104 26 88 30 76" fill="none"/>
+    <!-- carta en la mano derecha -->
+    <g transform="rotate(14 160 120)">
+      <rect x="138" y="92" width="40" height="56" rx="7" fill="#fffaf0"/>
+      <text x="158" y="130" font-family="Arial Rounded MT Bold, Arial, sans-serif" font-size="28" font-weight="900" text-anchor="middle" fill="#e5484d" stroke="none">A</text>
+    </g>
+    <path d="M153 118 C150 122 146 124 150 128" fill="none"/>
+  </g>
+  <!-- ojos y cachetes -->
+  <ellipse cx="82" cy="110" rx="8" ry="11" fill="#2a1f5c"/>
+  <ellipse cx="118" cy="110" rx="8" ry="11" fill="#2a1f5c"/>
+  <circle cx="85" cy="106" r="3" fill="#fff"/>
+  <circle cx="121" cy="106" r="3" fill="#fff"/>
+  <ellipse cx="70" cy="128" rx="8" ry="5" fill="#f2a08a"/>
+  <ellipse cx="130" cy="128" rx="8" ry="5" fill="#f2a08a"/>
+  <path d="M92 130 q8 8 16 0" fill="none" stroke="#2a1f5c" stroke-width="4" stroke-linecap="round"/>
+</svg>
