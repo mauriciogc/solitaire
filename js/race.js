@@ -5,19 +5,20 @@
 // - Los viajeros suben contigo, escalón por escalón, o se caen. Todo se sortea al empezar (recargar no cambia nada).
 // - Al llegar al 7: lugar por estrellas entre los que llegaron (21★ = 1.º; si empatas, el lugar es tuyo). Cofre con
 //   el metal del lugar: oro, plata, bronce, cobre. Si te caes: cofre chico de cobre por los escalones que llevabas.
-// - Siempre se da algo. Al terminar, 30 minutos para la siguiente.
+// - Siempre se da algo. Al terminar, 1 hora para la siguiente (23 nov 2026; eran 30 minutos).
 // Los premios se guardan en cuanto se deciden (aunque cierres antes de ver la ventana); la ventana va en main.js.
 import { save, persist } from './storage.js';
 import { track } from './missions.js';
 
 export const RACE_STEPS = 7;
 export const RACE_BOTS = 4;
-export const RACE_WAIT = 30 * 60 * 1000;
+// 23 nov 2026 (el usuario): una carrera cada hora (eran 30 minutos).
+export const RACE_WAIT = 60 * 60 * 1000;
 // Bolsa de monedas que se reparte por lugar (1.º a 4.º); con un 5.º lugar (los 4 te ganaron) va el del 4.º.
 // 20 nov 2026 (el usuario): cofres −35% (bolsa 3,000 → 1,950; si te caes 30+40 → 20+26 por escalón).
 // 21 nov 2026 (el usuario): otro −17% (bolsa 1,950 → 1,620; si te caes 20+26 → 17+22 por escalón) y luego −3%
-// (bolsa 1,570; si te caes 16+21).
-export const RACE_POT = 1570;
+// (bolsa 1,570; si te caes 16+21). 23 nov 2026 (el usuario): otro −10% (bolsa 1,415; si te caes 8+10.5 → 7.2+9.45).
+export const RACE_POT = 1415;
 export const RACE_SPLIT = [0.5, 0.25, 0.15, 0.1];
 // 21 nov 2026 (el usuario): al 1.º se le quitan un deshacer, el reloj y el ojo (ver 3); al 2.º, un deshacer.
 export const RACE_HELPS = [
@@ -29,7 +30,7 @@ export const RACE_HELPS = [
 export const RACE_METAL = ['oro', 'plata', 'bronce', 'cobre'];
 // Si te caes: monedas por escalón (con 0 escalones también hay algo).
 // 21 nov 2026 (el usuario): si te caes, 50% menos (16 + 21 → 8 + 10.5).
-export const RACE_LOSE = { base: 8, step: 10.5 };
+export const RACE_LOSE = { base: 7.2, step: 9.45 };
 // Mejora con las constelaciones (el usuario: «conforme avanzan las galaxias»): +10% por constelación, tope ×3.
 export const raceK = () => Math.min(3, 1 + 0.1 * Math.floor((save.open || 0) / 10));
 // Viajeros: cuántos pasan cada nivel y cuántas estrellas sacan (en promedio ~2.4 por nivel).

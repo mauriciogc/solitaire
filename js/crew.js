@@ -14,7 +14,8 @@ export const CREW_BOTS = 4;
 // Estrellas de todos juntos para cada base (bronce, plata, oro). Los viajeros juntan ~100 en la semana: el bronce casi
 // sale con ellos; la plata y el oro piden que tú ayudes (~40 y ~100 tuyas).
 // 21 nov 2026 (el usuario): +15 estrellas a cada base (90/150/210 → 105/165/225).
-export const CREW_GOALS = [105, 165, 225];
+// 23 nov 2026 (el usuario): +20% (105/165/225 → 126/198/270).
+export const CREW_GOALS = [126, 198, 270];
 export const CREW_METAL = ['bronce', 'plata', 'oro'];
 // 20 nov 2026 (el usuario): premios −25% (300/600/1,200 → 225/450/900). 21 nov 2026: −3% (220/435/875).
 export const CREW_PRIZE = [

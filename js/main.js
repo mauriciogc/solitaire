@@ -6217,7 +6217,7 @@ setInterval(() => document.querySelector('[data-a="tripulacion"]') && refreshCre
 const CREW_DOT = 30;
 const crewRoad = (t) => {
   const pc = (x) => Math.min(100, (x / crewMax()) * 100), mid = CREW_GOALS.slice(0, -1);
-  // 21 nov 2026: las bases ya no caen en múltiplos de 30 (105/165/225): van en su lugar y los puntitos que les quedan
+  // 21 nov 2026: las bases ya no caen en múltiplos de 30 (hoy 126/198/270): van en su lugar y los puntitos que les quedan
   // muy cerca se quitan.
   const at = Array.from({ length: Math.ceil(crewMax() / CREW_DOT) - 1 }, (_, k) => (k + 1) * CREW_DOT).filter((x) => mid.every((g) => Math.abs(g - x) > CREW_DOT / 2));
   const dots = [...at, ...mid].sort((a, b) => a - b).map((x) => {

@@ -753,7 +753,7 @@ export function openDevMenu({ onGallery, onPlanets, onFestivals, onGoLevel, onRe
     ['Racha cohete', UNLOCK.racha, 'rocket'],
     ['Misiones del día', UNLOCK.mis, 'misiones', null, '3 cada día (las de cartas especiales, cuando ya llegaste a su mundo). Se cambian a medianoche.'],
     ['Logros', UNLOCK.logros, 'trophy', null, 'Para siempre. Los de cartas especiales salen al llegar al mundo de su carta.'],
-    ['Carrera de 7', UNLOCK.carrera, 'carrera', null, 'Sale «¡Nueva: Carrera de 7!» con sus reglas. Tú le das Empezar; al terminar, 30 minutos para la siguiente.'],
+    ['Carrera de 7', UNLOCK.carrera, 'carrera', null, 'Sale «¡Nueva: Carrera de 7!» con sus reglas. Tú le das Empezar; al terminar, 1 hora para la siguiente.'],
     ['Tripulación lunar', UNLOCK.tripulacion, 'tripulacion', null, 'Cada semana (lunes a domingo), con 4 viajeros: 3 bases con cofre (90, 150 y 210 estrellas de todos).'],
     // Las próximas lluvias del horario: iguales en todos los teléfonos, a la misma hora de cada uno.
     ['Lluvia de meteoritos', MET_FROM, 'meteoro', nextShowers(6).map((x) => ['meteoro', when(x), until(x), '']), '2 o 3 veces por semana, 30 minutos a cualquier hora, sin aviso. Es igual en todos los teléfonos.'],
